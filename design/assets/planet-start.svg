@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+  <!-- Start planet. Centre (60,60), radius 34. Lit side faces the star: upper-right.
+       Gradient centre = planet centre + (+0.36 r, -0.36 r), gradient radius = 1.25 r.
+       In objectBoundingBox terms: cx 0.68, cy 0.32, r 0.625.
+       Stops: 0.00 #9CCBFF (highlight), 0.42 #3D8BFF (base), 1.00 #142B5E (shadow). -->
+  <defs>
+    <radialGradient id="startBody" cx="0.68" cy="0.32" r="0.625" fx="0.68" fy="0.32">
+      <stop offset="0" stop-color="#9CCBFF"/>
+      <stop offset="0.42" stop-color="#3D8BFF"/>
+      <stop offset="1" stop-color="#142B5E"/>
+    </radialGradient>
+  </defs>
+  <circle cx="60" cy="60" r="34" fill="url(#startBody)"/>
+  <!-- 1 px limb line so the dark side still reads against bg.base -->
+  <circle cx="60" cy="60" r="33.5" fill="none" stroke="#9CCBFF" stroke-opacity="0.16" stroke-width="1"/>
+</svg>

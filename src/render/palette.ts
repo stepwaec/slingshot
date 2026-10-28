@@ -1,0 +1,58 @@
+/** Palette tokens from design/style.md. Hex strings are sRGB. */
+
+export const palette = {
+  bg: "#050710",
+  vignette: "#0B1024",
+  starsFar: "#6E7FA6",
+  starsMid: "#AAB8DD",
+  starsNear: "#FFFFFF",
+  starCore: "#FFF8E1",
+  starBody: "#FFC857",
+  starCorona: "#FF8C2E",
+  starGlow: "#FF5A1F",
+  planetStartHighlight: "#9CCBFF",
+  planetStartBase: "#3D8BFF",
+  planetStartShadow: "#142B5E",
+  planetXHighlight: "#B5FFF0",
+  planetXBase: "#3DE0C2",
+  planetXShadow: "#0E4A40",
+  shipHull: "#F2F5FF",
+  shipOutline: "#0A0D1A",
+  shipCockpit: "#5EA0FF",
+  thrustCore: "#FFE08A",
+  thrustOuter: "#FF6A2A",
+  trail: "#5EA0FF",
+  path: "#DCE4FF",
+  arrow: "#FFFFFF",
+  text: "#ECF0FA",
+  textMuted: "#8B95B5",
+  fuelFull: "#3DE0C2",
+  fuelLow: "#FFC857",
+  fuelCritical: "#FF5A5F",
+  resultWin: "#3DE0C2",
+  resultCrash: "#FF5A5F",
+  resultLost: "#B48CFF",
+  node: "#FFC857",
+} as const;
+
+/** Linear blend in sRGB, matching the arrow.power ramp in design/canvas-notes.md §9. */
+export function lerpHex(a: string, b: string, t: number): string {
+  const A = Number.parseInt(a.slice(1), 16);
+  const B = Number.parseInt(b.slice(1), 16);
+  const ch = (shift: number) =>
+    Math.round(((A >> shift) & 255) + (((B >> shift) & 255) - ((A >> shift) & 255)) * t);
+  return `#${((ch(16) << 16) | (ch(8) << 8) | ch(0)).toString(16).padStart(6, "0")}`.toUpperCase();
+}
+
+/** arrow.power: mint → amber → critical, linear in sRGB. 62% is #FFAE59. */
+export function powerHex(power: number): string {
+  const p = Math.min(1, Math.max(0, power));
+  if (p < 0.5) return lerpHex(palette.planetXBase, palette.fuelLow, p * 2);
+  return lerpHex(palette.fuelLow, palette.fuelCritical, (p - 0.5) * 2);
+}
+
+/** sRGB hex as 0–1 channels. Custom shaders write these straight out (no extra encode). */
+export function srgb01(hex: string): [number, number, number] {
+  const n = Number.parseInt(hex.slice(1), 16);
+  return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
+}

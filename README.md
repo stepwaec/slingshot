@@ -41,7 +41,25 @@ The fuel budget is **60**. A slingshot launch plus its capture node costs **38.9
 
 - `src/sim/physics.ts` — Newtonian gravity, fixed-step velocity Verlet, burn nodes, and the cached prediction. No DOM. Prediction and flight both call `advancePlan`.
 - `src/level/passage.ts` — bodies, fuel, and the reference slingshot and direct plans.
-- `src/render/` — camera, starfield, and canvas drawing.
+- `src/render/` — orthographic Three.js view (WebGL). The HUD and result cards are HTML over the canvas. A parked perspective camera sits on the same world group for a later tilted view.
+
+## Swapping a visual
+
+v1 is flat and calm on purpose. A later pass can replace one element with something realistic (a textured planet, a bloom star, a glTF ship) without touching the sim or the other elements.
+
+Colors, sizes, and asset paths live in `src/render/theme.ts`. Each element is built by one factory in `src/render/visuals/index.ts`. A factory returns a `Visual` (`src/render/visual.ts`): an object, a space (`background`, `world`, or `screen`), and `update` / `dispose`. The view only walks that list.
+
+| Element | Factory to replace | Theme keys | What a realistic version would load |
+| --- | --- | --- | --- |
+| Starfield | `createStarfield` | `assets.starfield`, `starfield` | A real catalog or cubemap. Stay screen-fixed unless you also add parallax. |
+| Star | `createStar` | `assets.star`, `star` | A textured star. Bloom belongs here, not on the whole scene. |
+| Planets | `createPlanets` | `assets.planetStart`, `assets.planetX`, `planet` | Lit textured meshes. The star's position is already the light direction. |
+| Ship | `createShip` | `assets.ship`, `assets.shipThrust`, `ship`, `thrust` | A glTF on the same group. Keep the heading lerp and the screen-pixel size rule, or drop the size rule if the model should scale with the world. |
+| Trail | `createTrail` | `assets.trail`, `trail` | Another ribbon. Read `game.trail`; do not trim it in the sim. |
+| Path | `createPath` | `assets.predictedPath`, `path` | Another dotted or meshed look-ahead. Read `game.prediction` only. |
+| Nodes | `createNodes` | `assets.dragArrow`, `nodes` | Another handle. The tip must stay on `burnHandleOffset`, which is what clicking and dragging hit-test. |
+
+Replace the factory in `visualFactories` and, if the new file path differs, the matching `theme.assets` entry. Leave `src/sim`, `src/game`, and the other factories alone.
 - `src/game/` — the plan, flight, and pointer input.
 - `tests/` — prediction matches flight at 1×, 2×, and 4× with three nodes; editing a later node leaves the earlier path unchanged; the slingshot captures inside the budget and the direct plan is over it; an over-budget plan cannot launch.
 

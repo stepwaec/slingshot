@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">
+  <!-- Central star. Centre (200,200). Body radius 46, corona to r 130, glow to r 200 (alpha 0).
+       Three concentric radial gradients, all centred (cx cy 0.5), drawn back to front:
+       1. glow   r 200  #FF5A1F  stops 0.00 a0.50 | 0.23 a0.45 | 0.65 a0.12 | 1.00 a0
+       2. corona r 130  #FF8C2E  stops 0.00 a0.90 | 0.35 a0.70 | 0.62 a0.22 | 1.00 a0   (blur sd 3)
+       3. body  r 46   stops 0.00 #FFF8E1 | 0.55 #FFC857 | 1.00 #FF8C2E
+       Offsets are fractions of each layer's own radius (0.23 = 46/200, 0.35 = 46/130). -->
+  <defs>
+    <radialGradient id="starGlow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#FF5A1F" stop-opacity="0.50"/>
+      <stop offset="0.23" stop-color="#FF5A1F" stop-opacity="0.45"/>
+      <stop offset="0.65" stop-color="#FF5A1F" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#FF5A1F" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="starCorona" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#FF8C2E" stop-opacity="0.90"/>
+      <stop offset="0.35" stop-color="#FF8C2E" stop-opacity="0.70"/>
+      <stop offset="0.62" stop-color="#FF8C2E" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#FF8C2E" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="starBody" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#FFF8E1"/>
+      <stop offset="0.55" stop-color="#FFC857"/>
+      <stop offset="1" stop-color="#FF8C2E"/>
+    </radialGradient>
+    <filter id="softCorona" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur stdDeviation="3"/>
+    </filter>
+  </defs>
+  <circle cx="200" cy="200" r="200" fill="url(#starGlow)"/>
+  <circle cx="200" cy="200" r="130" fill="url(#starCorona)" filter="url(#softCorona)"/>
+  <circle cx="200" cy="200" r="46" fill="url(#starBody)"/>
+</svg>

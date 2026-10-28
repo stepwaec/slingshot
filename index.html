@@ -4,59 +4,51 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Slingshot</title>
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%23e7eefc' d='M2 12 L8 2 L14 12 L8 9 Z'/%3E%3C/svg%3E" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%23F2F5FF' d='M8 1.2 L14.2 14.2 L8 11.2 L1.8 14.2 Z'/%3E%3C/svg%3E" />
   </head>
   <body>
-    <div id="app">
+    <div id="app" data-mode="planning">
       <canvas id="space"></canvas>
+      <div id="node-layer"></div>
+      <div id="aim-label" hidden></div>
       <div id="hud">
-        <section class="panel readout">
-          <header>
-            <h1>Slingshot</h1>
-            <p>Passage</p>
-          </header>
-          <dl>
-            <div>
-              <dt>Fuel left</dt>
-              <dd id="fuel-value">60.0</dd>
-            </div>
-            <div>
-              <dt id="burn-label">Plan</dt>
-              <dd id="burn-value">0.0</dd>
-            </div>
-          </dl>
+        <p class="wordmark">Slingshot</p>
+        <p id="mode-label" class="mode-label">Planning</p>
+        <div class="fuel-block">
+          <div class="fuel-head">
+            <span class="hud-label">Fuel</span>
+            <span id="fuel-value">100 %</span>
+          </div>
           <div class="fuel-track" aria-hidden="true">
-            <div id="fuel-spent"></div>
-            <div id="fuel-burn"></div>
-            <div id="fuel-left"></div>
+            <div id="fuel-fill"></div>
           </div>
-          <p id="path-value" data-status="aim">Coast</p>
+        </div>
+        <p id="telemetry">v   —  ·  dX    0</p>
+        <span id="fps">— fps</span>
+        <div class="dock">
           <div id="node-row" hidden>
-            <p id="node-readout"></p>
+            <p id="node-readout" hidden></p>
             <button id="delete" type="button">Delete</button>
-          </div>
-          <p id="hint"></p>
-        </section>
-        <section class="panel controls">
-          <button id="launch" type="button" disabled>Launch</button>
-          <button type="button" data-reset>Reset</button>
-          <button id="clear" type="button" data-clear>Clear plan</button>
-          <div class="speeds" role="group" aria-label="Simulation speed">
-            <button type="button" data-speed="1" aria-pressed="true">1×</button>
-            <button type="button" data-speed="2" aria-pressed="false">2×</button>
-            <button type="button" data-speed="4" aria-pressed="false">4×</button>
-          </div>
-          <span id="fps">— fps</span>
-        </section>
-      </div>
-      <div id="overlay" hidden>
-        <div class="card">
-          <h2 id="overlay-title"></h2>
-          <p id="overlay-detail"></p>
-          <div class="card-actions">
-            <button type="button" data-reset>Reset</button>
             <button type="button" data-clear>Clear plan</button>
           </div>
+          <div id="planning-actions">
+            <button id="launch" type="button" disabled>Launch</button>
+          </div>
+          <div id="flight-actions" hidden>
+            <div class="speeds" role="group" aria-label="Simulation speed">
+              <button type="button" data-speed="1" aria-pressed="true">1x</button>
+              <button type="button" data-speed="2" aria-pressed="false">2x</button>
+              <button type="button" data-speed="4" aria-pressed="false">4x</button>
+            </div>
+            <button type="button" data-reset>Reset</button>
+          </div>
+        </div>
+      </div>
+      <div id="overlay" hidden>
+        <div class="card" data-result="win">
+          <h2 id="overlay-title"></h2>
+          <p id="overlay-detail"></p>
+          <button type="button" class="primary" data-reset>Fly again</button>
         </div>
       </div>
     </div>

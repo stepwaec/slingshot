@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240">
+  <!-- Planet X (target). Centre (120,120), radius 30. Lit side faces the star: lower-left.
+       Body gradient centre = planet centre + (-0.36 r, +0.36 r), gradient radius = 1.25 r.
+       objectBoundingBox: cx 0.32, cy 0.68, r 0.625.
+       Stops: 0.00 #B5FFF0 (highlight), 0.42 #3DE0C2 (base), 1.00 #0E4A40 (shadow).
+       Halo: radius 1.8 r = 54, #3DE0C2, alpha 0.35 at the planet edge (offset 0.556) -> 0 at the rim.
+       Capture ring: radius 78, #3DE0C2, stroke 1.5, dash 6/6, alpha 0.55 (pulses 0.35-0.70 in game). -->
+  <defs>
+    <radialGradient id="xHalo" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#3DE0C2" stop-opacity="0.35"/>
+      <stop offset="0.556" stop-color="#3DE0C2" stop-opacity="0.35"/>
+      <stop offset="0.78" stop-color="#3DE0C2" stop-opacity="0.10"/>
+      <stop offset="1" stop-color="#3DE0C2" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="xBody" cx="0.32" cy="0.68" r="0.625" fx="0.32" fy="0.68">
+      <stop offset="0" stop-color="#B5FFF0"/>
+      <stop offset="0.42" stop-color="#3DE0C2"/>
+      <stop offset="1" stop-color="#0E4A40"/>
+    </radialGradient>
+  </defs>
+  <circle cx="120" cy="120" r="54" fill="url(#xHalo)"/>
+  <circle cx="120" cy="120" r="30" fill="url(#xBody)"/>
+  <circle cx="120" cy="120" r="29.5" fill="none" stroke="#B5FFF0" stroke-opacity="0.18" stroke-width="1"/>
+  <circle cx="120" cy="120" r="78" fill="none" stroke="#3DE0C2" stroke-opacity="0.55" stroke-width="1.5" stroke-dasharray="6 6"/>
+</svg>

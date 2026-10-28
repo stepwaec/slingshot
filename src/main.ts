@@ -1,9 +1,12 @@
 import "./style.css";
 import { bindInput } from "./game/input";
 import {
+  burnHandleOffset,
   canLaunch,
   createGame,
   launch,
+  nodeIncoming,
+  nodePosition,
   outcomeCopy,
   planFuel,
   selectNode,
@@ -11,11 +14,9 @@ import {
   tick,
   type Game,
 } from "./game/state";
-import { frameLevel } from "./render/camera";
-import { draw } from "./render/draw";
-import { createStarfield } from "./render/stars";
-import { passage } from "./level/passage";
-import type { BurnNode, FlightStatus } from "./sim/physics";
+import { frameLevel, worldToScreen } from "./render/camera";
+import { SpaceView } from "./render/view";
+import type { BurnNode } from "./sim/physics";
 
 function required<T extends Element>(selector: string): T {
   const element = document.querySelector<T>(selector);
@@ -23,38 +24,38 @@ function required<T extends Element>(selector: string): T {
   return element;
 }
 
+const app = required<HTMLElement>("#app");
 const canvas = required<HTMLCanvasElement>("#space");
 const launchButton = required<HTMLButtonElement>("#launch");
 const deleteButton = required<HTMLButtonElement>("#delete");
-const fuelSpent = required<HTMLElement>("#fuel-spent");
 const fuelValue = required<HTMLElement>("#fuel-value");
-const burnLabel = required<HTMLElement>("#burn-label");
-const burnValue = required<HTMLElement>("#burn-value");
-const pathValue = required<HTMLElement>("#path-value");
-const fuelLeft = required<HTMLElement>("#fuel-left");
-const fuelBurn = required<HTMLElement>("#fuel-burn");
+const fuelFill = required<HTMLElement>("#fuel-fill");
+const modeLabel = required<HTMLElement>("#mode-label");
+const telemetry = required<HTMLElement>("#telemetry");
 const nodeRow = required<HTMLElement>("#node-row");
 const nodeReadout = required<HTMLElement>("#node-readout");
+const nodeLayer = required<HTMLElement>("#node-layer");
+const aimLabel = required<HTMLElement>("#aim-label");
+const planningActions = required<HTMLElement>("#planning-actions");
+const flightActions = required<HTMLElement>("#flight-actions");
 const fpsValue = required<HTMLElement>("#fps");
 const overlay = required<HTMLElement>("#overlay");
+const card = required<HTMLElement>(".card");
 const overlayTitle = required<HTMLElement>("#overlay-title");
 const overlayDetail = required<HTMLElement>("#overlay-detail");
-const hint = required<HTMLElement>("#hint");
 
-const context = canvas.getContext("2d");
-if (!context) throw new Error("Could not get a canvas drawing context");
-const ctx = context;
-
-const game = createGame(passage);
-const stars = createStarfield({ minX: -900, maxX: 1700, minY: -700, maxY: 1400 }, 1500);
+const game = createGame();
+const view = new SpaceView(canvas, game);
 const resetButtons = [...document.querySelectorAll<HTMLButtonElement>("[data-reset]")];
 const clearButtons = [...document.querySelectorAll<HTMLButtonElement>("[data-clear]")];
 const speedButtons = [...document.querySelectorAll<HTMLButtonElement>("[data-speed]")];
+const tagPool: HTMLSpanElement[] = [];
 
 let fps = 0;
 let fpsFrames = 0;
 let fpsStamp = performance.now();
 let framed = false;
+let overlayOpen = false;
 
 bindInput(
   game,
@@ -68,13 +69,11 @@ resize();
 requestAnimationFrame(loop);
 
 function resize(): void {
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
   const width = canvas.clientWidth;
   const height = canvas.clientHeight;
-  canvas.width = Math.max(1, Math.floor(width * dpr));
-  canvas.height = Math.max(1, Math.floor(height * dpr));
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  if (!framed && width > 0 && height > 0) {
+  if (width < 2 || height < 2) return;
+  view.resize(width, height);
+  if (!framed) {
     frameLevel(game.camera, width, height, game.level);
     framed = true;
   }
@@ -88,41 +87,37 @@ function loop(now: number): void {
     fpsStamp = now;
   }
   tick(game);
-  draw(ctx, game, game.camera, stars, canvas.clientWidth, canvas.clientHeight);
+  if (canvas.clientWidth > 1 && canvas.clientHeight > 1) view.render(game, now);
   syncHud(game);
   requestAnimationFrame(loop);
 }
 
 function syncHud(current: Game): void {
+  const width = canvas.clientWidth;
+  const height = canvas.clientHeight;
   const budget = current.level.fuel;
   const fuel = planFuel(current);
   const planning = current.mode === "planning";
-  const spent = budget - current.fuel;
-  if (planning) {
-    burnLabel.textContent = "Plan";
-    fuelValue.textContent = fuel.left.toFixed(1);
-    burnValue.textContent = fuel.total.toFixed(1);
-    fuelSpent.style.width = "0%";
-    fuelBurn.style.width = `${Math.min(100, (100 * fuel.total) / budget)}%`;
-    fuelLeft.style.width = `${Math.max(0, Math.min(100, (100 * fuel.left) / budget))}%`;
-    fuelBurn.classList.toggle("over", !fuel.affordable);
-    fuelValue.classList.toggle("over", fuel.left < -1e-6);
-  } else {
-    burnLabel.textContent = "Spent";
-    fuelValue.textContent = current.fuel.toFixed(1);
-    burnValue.textContent = spent.toFixed(1);
-    fuelSpent.style.width = `${(100 * spent) / budget}%`;
-    fuelBurn.style.width = "0%";
-    fuelLeft.style.width = `${Math.max(0, (100 * current.fuel) / budget)}%`;
-    fuelBurn.classList.remove("over");
-    fuelValue.classList.remove("over");
-  }
+  app.dataset.mode = current.mode;
+  modeLabel.textContent = planning ? "Planning" : "In flight";
+  planningActions.hidden = !planning;
+  flightActions.hidden = planning;
 
-  const status: FlightStatus | "aim" =
-    current.mode === "finished" ? current.ship.status : (current.prediction.status ?? "aim");
-  const over = planning && !fuel.affordable;
-  pathValue.textContent = pathLabel(current, status, over);
-  pathValue.dataset.status = over ? "over" : status;
+  const remaining = planning ? fuel.left : current.fuel;
+  const ratio = remaining / budget;
+  const clamped = Math.max(0, Math.min(1, ratio));
+  fuelFill.style.width = clamped <= 0 ? "0px" : `${Math.max(8, Math.round(220 * clamped))}px`;
+  fuelFill.dataset.band = clamped >= 0.3 ? "full" : clamped >= 0.1 ? "low" : "critical";
+  fuelValue.textContent = `${Math.round(ratio * 100)} %`;
+  fuelValue.dataset.band = ratio < -1e-6 ? "critical" : "ok";
+
+  const pose = planning ? current.initial : current.ship;
+  const target = current.level.bodies.find((body) => body.id === current.level.targetId);
+  const distance = target ? Math.hypot(pose.x - target.x, pose.y - target.y) : 0;
+  const speed = Math.hypot(pose.vx, pose.vy);
+  const vText = planning ? "  —" : speed.toFixed(2).padStart(5, " ");
+  const dText = Math.round(distance).toString().padStart(4, " ");
+  telemetry.textContent = `v ${vText}  ·  dX ${dText}`;
   fpsValue.textContent = `${Math.round(fps)} fps`;
 
   launchButton.disabled = !canLaunch(current);
@@ -132,25 +127,104 @@ function syncHud(current: Game): void {
     button.setAttribute("aria-pressed", button.dataset.speed === String(current.speed) ? "true" : "false");
   }
 
-  const selected = planning ? current.selected : null;
-  if (selected === null) {
-    nodeRow.hidden = true;
+  const showNodes = planning && current.nodes.length > 0;
+  nodeRow.hidden = !showNodes;
+  if (current.selected === null || !planning) {
+    nodeReadout.hidden = true;
   } else {
-    nodeRow.hidden = false;
-    const line = nodeLine(current, selected, fuel);
+    nodeReadout.hidden = false;
+    const line = nodeLine(current, current.selected, fuel);
     nodeReadout.textContent = line.text;
     nodeReadout.dataset.over = line.over ? "true" : "false";
   }
 
+  syncMarkers(current, width, height, fuel);
+  syncOverlay(current, budget);
+}
+
+function syncMarkers(
+  current: Game,
+  width: number,
+  height: number,
+  fuel: ReturnType<typeof planFuel>,
+): void {
+  if (current.mode !== "planning" || width < 2) {
+    nodeLayer.hidden = true;
+    aimLabel.hidden = true;
+    return;
+  }
+  nodeLayer.hidden = false;
+  let shown = 0;
+  for (let i = 0; i < current.nodes.length; i++) {
+    const pos = nodePosition(current, i);
+    if (!pos) continue;
+    const screen = worldToScreen(current.camera, width, height, pos.x, pos.y);
+    let tag = tagPool[shown];
+    if (!tag) {
+      tag = document.createElement("span");
+      tag.className = "node-tag";
+      nodeLayer.append(tag);
+      tagPool.push(tag);
+    }
+    tag.hidden = false;
+    tag.textContent = String(i + 1);
+    tag.style.left = `${screen.x}px`;
+    tag.style.top = `${screen.y}px`;
+    tag.dataset.over = fuel.costs[i]?.exceeds ? "true" : "false";
+    shown += 1;
+  }
+  for (let i = shown; i < tagPool.length; i++) tagPool[i].hidden = true;
+
+  const selected = current.selected;
+  const node = selected === null ? undefined : current.nodes[selected];
+  const pos = selected === null ? null : nodePosition(current, selected);
+  if (selected === null || !node || !pos) {
+    aimLabel.hidden = true;
+    return;
+  }
+  const offset = burnHandleOffset(node.dvx, node.dvy, current.level.dvPerPixel, nodeIncoming(current, selected));
+  if (offset.placing) {
+    aimLabel.hidden = true;
+    return;
+  }
+  const screen = worldToScreen(current.camera, width, height, pos.x, pos.y);
+  const tipX = screen.x + offset.x;
+  const tipY = screen.y + offset.y;
+  const power = Math.min(1, (fuel.costs[selected]?.cost ?? 0) / current.level.fuel);
+  aimLabel.hidden = false;
+  aimLabel.textContent = `${Math.round(power * 100)} %`;
+  aimLabel.style.left = `${Math.round(tipX + 2)}px`;
+  aimLabel.style.top = `${Math.round(tipY + (Math.sin(Math.atan2(offset.y, offset.x)) > 0 ? -14 : 25))}px`;
+}
+
+function syncOverlay(current: Game, budget: number): void {
   const outcome = outcomeCopy(current);
-  if (outcome) {
-    overlay.hidden = false;
-    overlayTitle.textContent = outcome.title;
-    overlayDetail.textContent = `${outcome.detail} Fuel used ${spent.toFixed(1)}.`;
-    hint.textContent = "Reset keeps this plan. Clear plan removes every node.";
+  if (!outcome) {
+    if (overlayOpen) {
+      overlay.classList.remove("is-in");
+      overlay.hidden = true;
+      overlayOpen = false;
+    }
+    return;
+  }
+  const kind = current.ship.status === "won" ? "win" : current.ship.status === "crashed" ? "crash" : "lost";
+  card.dataset.result = kind;
+  if (kind === "win") {
+    const spare = Math.max(0, Math.round((current.fuel / budget) * 100));
+    overlayTitle.textContent = "Planet X reached";
+    overlayDetail.textContent = `Captured with ${spare} % fuel to spare.`;
+  } else if (kind === "crash") {
+    overlayTitle.textContent = "Crashed";
+    overlayDetail.textContent = outcome.detail;
   } else {
-    overlay.hidden = true;
-    hint.textContent = hintFor(current.mode);
+    overlayTitle.textContent = "Lost in space";
+    overlayDetail.textContent = outcome.detail;
+  }
+  if (!overlayOpen) {
+    overlay.hidden = false;
+    overlay.classList.remove("is-in");
+    requestAnimationFrame(() => overlay.classList.add("is-in"));
+    overlayOpen = true;
   }
 }
 
@@ -163,30 +237,6 @@ function nodeLine(current: Game, index: number, fuel: ReturnType<typeof planFuel
   const base = `Node ${index + 1} of ${current.nodes.length} · ${where} · Δv ${magnitude.toFixed(1)} · cost ${cost.cost.toFixed(1)}`;
   if (cost.exceeds) return { text: `${base} · exceeds fuel`, over: true };
   return { text: `${base} · ${cost.remainingBefore.toFixed(1)} left`, over: false };
-}
-
-function hintFor(mode: Game["mode"]): string {
-  if (mode === "flying") return "The ship is flying the plan. Each burn fires at its step.";
-  return "Click the dotted path to add a burn. Drag a handle to aim it, or drag the node along the path. Delete removes the selected node.";
-}
-
-function pathLabel(current: Game, status: FlightStatus | "aim", over: boolean): string {
-  if (current.mode === "flying") return "In flight";
-  if (current.mode === "finished") {
-    if (current.ship.status === "won") return "In orbit";
-    if (current.ship.status === "crashed") return "Crashed";
-    return "Lost in space";
-  }
-  const timing = `${current.predictMs.toFixed(1)} ms`;
-  if (over) return `Over budget · ${timing}`;
-  const hasBurn = current.nodes.some((node) => Math.hypot(node.dvx, node.dvy) >= 0.05);
-  if (status === "won") return `In orbit · ${timing}`;
-  if (status === "crashed") return `Crash · ${timing}`;
-  if (status === "lost" && current.prediction.lostReason === "flyby") return `Flyby · ${timing}`;
-  if (status === "lost" && current.prediction.lostReason === "timeout" && !hasBurn) return `Coast · ${timing}`;
-  if (status === "lost" && current.prediction.lostReason === "timeout") return `Timeout · ${timing}`;
-  if (status === "lost") return `Lost in space · ${timing}`;
-  return "Add a burn";
 }
 
 declare global {
