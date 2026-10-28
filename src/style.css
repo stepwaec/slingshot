@@ -127,8 +127,10 @@ dd {
   display: flex;
   align-items: center;
   gap: 8px;
+  width: auto;
   padding: 8px;
   align-self: flex-start;
+  white-space: nowrap;
 }
 
 button {
@@ -174,7 +176,10 @@ button:disabled {
   border-color: transparent;
 }
 
-#fps { margin-left: 4px; }
+#fps {
+  margin-left: 4px;
+  white-space: nowrap;
+}
 
 #overlay {
   position: absolute;
