@@ -18,10 +18,10 @@
           <dl>
             <div>
               <dt>Fuel left</dt>
-              <dd id="fuel-value">80.0</dd>
+              <dd id="fuel-value">60.0</dd>
             </div>
             <div>
-              <dt>Burn</dt>
+              <dt id="burn-label">Plan</dt>
               <dd id="burn-value">0.0</dd>
             </div>
           </dl>
@@ -30,13 +30,17 @@
             <div id="fuel-burn"></div>
             <div id="fuel-left"></div>
           </div>
-          <p id="path-value" data-status="aim">Aim a burn</p>
+          <p id="path-value" data-status="aim">Coast</p>
+          <div id="node-row" hidden>
+            <p id="node-readout"></p>
+            <button id="delete" type="button">Delete</button>
+          </div>
           <p id="hint"></p>
         </section>
         <section class="panel controls">
           <button id="launch" type="button" disabled>Launch</button>
-          <button id="skip" type="button" hidden>Skip</button>
           <button type="button" data-reset>Reset</button>
+          <button id="clear" type="button" data-clear>Clear plan</button>
           <div class="speeds" role="group" aria-label="Simulation speed">
             <button type="button" data-speed="1" aria-pressed="true">1×</button>
             <button type="button" data-speed="2" aria-pressed="false">2×</button>
@@ -49,7 +53,10 @@
         <div class="card">
           <h2 id="overlay-title"></h2>
           <p id="overlay-detail"></p>
-          <button type="button" data-reset>Reset</button>
+          <div class="card-actions">
+            <button type="button" data-reset>Reset</button>
+            <button type="button" data-clear>Clear plan</button>
+          </div>
         </div>
       </div>
     </div>

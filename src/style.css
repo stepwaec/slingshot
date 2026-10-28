@@ -108,7 +108,10 @@ dd {
 
 #fuel-spent { background: #3c4b63; }
 #fuel-burn { background: #e2c27a; }
+#fuel-burn.over { background: #e07a72; }
 #fuel-left { background: #8fceaa; }
+
+#fuel-value.over { color: #f0b2aa; }
 
 #path-value {
   margin-top: 10px;
@@ -117,9 +120,35 @@ dd {
 }
 
 #path-value[data-status="won"] { color: #b7e0c2; }
-#path-value[data-status="capture"] { color: #9ec4ff; }
-#path-value[data-status="crashed"] { color: #f0b2aa; }
+#path-value[data-status="crashed"],
+#path-value[data-status="over"] { color: #f0b2aa; }
 #path-value[data-status="lost"] { color: #c5cedc; }
+
+#node-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+#node-row[hidden] { display: none; }
+
+#node-readout {
+  margin: 0;
+  color: #d7deea;
+  font-size: 13px;
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
+}
+
+#node-readout[data-over="true"] { color: #f0b2aa; }
+
+#node-row button {
+  flex: none;
+  padding: 4px 8px;
+  font-size: 12px;
+}
 
 #hint {
   margin-top: 8px;
@@ -161,8 +190,6 @@ button:disabled {
 }
 
 #launch:disabled { background: #2a3344; color: #8b97ab; }
-
-#skip[hidden] { display: none; }
 
 .speeds { display: flex; }
 
@@ -209,4 +236,4 @@ button:disabled {
 
 .card h2 { font-size: 22px; }
 .card p { margin-top: 8px; color: #c5cedc; line-height: 1.45; }
-.card button { margin-top: 14px; }
+.card-actions { display: flex; gap: 8px; margin-top: 14px; }

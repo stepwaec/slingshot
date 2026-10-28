@@ -1,8 +1,8 @@
 # Slingshot
 
-A ship in orbit around Home has a fixed fuel budget and two burns. The first sends it toward Planet X. The second, offered only when the ship enters Planet X's capture radius, has to leave the ship bound in an orbit there: specific orbital energy below zero, periapsis above the surface, and apoapsis inside the capture radius. The star in between makes that much cheaper than a route that stays clear of it.
+A ship in orbit around Home has a fixed fuel budget and a plan made of burn nodes. Each node is a sim step on the predicted path and an impulsive delta-v applied there. The launch burn can sit at step 0. A later node at Planet X's sphere is what captures the ship: specific orbital energy below zero, periapsis above the surface, and apoapsis inside the capture radius. The star in between makes that much cheaper than a route that stays clear of it.
 
-This package is deterministic flight, one level, launch planning, and a single capture burn. Later packages can add hazards, resources, free mid-flight correction, and multi-sun uncertainty on top of the same simulator.
+Prediction and flight use the same fixed-step integrator. Editing a node recomputes from that node forward, and the path before it stays put. There is no live pause: capture is just another node in the plan.
 
 ## Run
 
@@ -22,24 +22,28 @@ npm run build
 
 ## How to play
 
-- Drag from the ship to set the launch burn. Length is delta-v. Fuel cost is proportional to that length and cannot exceed the fuel you have left.
-- The dotted line is the flight that burn will produce. It uses the same integrator as flight.
-- A blue line that says "Reach X" ends at Planet X's capture ring, where the sim pauses.
-- Drag a second burn from the ship. Green and "Captured" means the burn leaves the ship in orbit. "Flyby" means it will leave the sphere unbound. Confirm fires the burn. Skip spends nothing and flies on.
+- The dotted line is the coast the ship will fly. Click it to add a burn node at that sim step. Step 0, on the ship, is the launch node.
+- Drag a node's handle to set direction and strength. Drag the node marker to slide it along the path. Delete (button or the Delete key) removes the selected node. Clear plan removes every node.
+- The readout shows the plan total, the selected node's burn and fuel cost, and the fuel left. A node that costs more than the fuel remaining when the ship reaches it is marked in red. That plan cannot launch.
+- The path after each node is the trajectory that burn produces. Green, with a closed ellipse, means the plan ends in orbit around Planet X. Blue means a flyby. Red means a crash.
+- Launch flies the plan. Burns fire at their steps. 1× / 2× / 4× run more fixed steps per frame. The time step never changes, so the path does not change.
 - A captured orbit is bound to Planet X, clears the surface, and stays inside the dashed ring. Missing that and leaving the ring is lost in space. Hitting a body is a crash. Leaving the chart or running out of time is also lost in space.
 - Drag empty space to pan. Scroll to zoom.
-- Reset returns to planning. 1× / 2× / 4× run more fixed steps per frame. The time step never changes, so the path does not change.
-- Space launches, and confirms a capture burn. R resets. 1, 2, and 4 set the speed.
+- Reset returns to planning and keeps the nodes. Space launches. R resets. 1, 2, and 4 set the speed.
 
-The fuel budget is **60**. A slingshot launch plus its capture burn costs **39.48** (22.00 + 17.48). The direct route costs **95.63** (76.00 + 19.63), which is over budget. A modest burn along the ship's orbital motion is the one that fits.
+The fuel budget is **60**. A slingshot launch plus its capture node costs **38.91** (22.00 + 16.91). The direct route costs **95.18** (76.00 + 19.18), which is over budget, so it cannot launch. A modest burn along the ship's orbital motion is the one that fits.
+
+![Three burn nodes on the predicted path](docs/nodes-on-path.png)
+
+![The slingshot plan captured into orbit around Planet X](docs/orbit-win.png)
 
 ## Layout
 
-- `src/sim/physics.ts` — Newtonian gravity, fixed-step velocity Verlet, and the capture check. No DOM. Prediction and flight both call `step` and `resolveCapture`.
-- `src/level/passage.ts` — bodies, fuel, orbit, and the reference launch and capture burns.
+- `src/sim/physics.ts` — Newtonian gravity, fixed-step velocity Verlet, burn nodes, and the cached prediction. No DOM. Prediction and flight both call `advancePlan`.
+- `src/level/passage.ts` — bodies, fuel, and the reference slingshot and direct plans.
 - `src/render/` — camera, starfield, and canvas drawing.
-- `src/game/` — planning, flight, capture planning, and pointer input.
-- `tests/` — prediction matches flight at 1×, 2×, and 4× with the capture burn; the slingshot captures for less than half the direct fuel and fits the budget; a flyby with no capture burn does not win.
+- `src/game/` — the plan, flight, and pointer input.
+- `tests/` — prediction matches flight at 1×, 2×, and 4× with three nodes; editing a later node leaves the earlier path unchanged; the slingshot captures inside the budget and the direct plan is over it; an over-budget plan cannot launch.
 
 ## Continuous integration
 

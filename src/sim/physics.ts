@@ -1,9 +1,14 @@
 /**
  * Deterministic Newtonian flight.
  *
- * Prediction and live flight both advance only through `step` / `advanceFrame`.
- * Sim speed changes how many fixed steps run per frame. It never changes `dt`.
- * This module does not touch the DOM.
+ * A plan is an ordered list of burn nodes. Each node is a sim step and an
+ * impulsive delta-v applied at that step, before the step integrates. Step 0
+ * is the launch instant. Prediction and live flight both advance only through
+ * `advancePlan` / `advanceFrame`. Sim speed changes how many fixed steps run
+ * per frame. It never changes `dt`.
+ *
+ * `predictPlan` caches the state at each node. Editing node k recomputes from
+ * k onward and reuses the path before it. This module does not touch the DOM.
  */
 
 export interface Vec2 {
@@ -23,8 +28,8 @@ export interface Body {
   /** Surface radius. Touching it crashes the ship. */
   radius: number;
   /**
-   * Sphere of influence around the target. Entering it pauses for one capture
-   * burn. A captured orbit must keep its apoapsis inside this radius.
+   * Sphere of influence around the target. A captured orbit must keep its
+   * apoapsis inside this radius. Entering and then leaving it unbound is a flyby.
    */
   captureRadius?: number;
 }
@@ -48,7 +53,7 @@ export interface SimConfig {
   periapsisMargin: number;
 }
 
-export type FlightStatus = "flying" | "capture" | "won" | "crashed" | "lost";
+export type FlightStatus = "flying" | "won" | "crashed" | "lost";
 
 export type LostReason = "bounds" | "timeout" | "flyby";
 
@@ -63,19 +68,70 @@ export interface SimState {
   status: FlightStatus;
   crashedBodyId: string | null;
   lostReason: LostReason | null;
-  /** Set once the capture burn has been fired or skipped. */
-  captureResolved: boolean;
+  /** True once the trajectory has touched the target's capture sphere. */
+  enteredCapture: boolean;
+}
+
+/** One impulsive burn at an exact sim step. Nodes are ordered by `step`. */
+export interface BurnNode {
+  /** Applied when `state.step` equals this, before that step integrates. 0 is launch. */
+  step: number;
+  dvx: number;
+  dvy: number;
+}
+
+export interface PathSample {
+  x: number;
+  y: number;
+  /** Sim step that produced this position. */
+  step: number;
 }
 
 export interface Prediction {
   /** Position after each fixed step, not including the pre-step pose. */
-  path: Vec2[];
+  path: PathSample[];
   status: FlightStatus;
   crashedBodyId: string | null;
   lostReason: LostReason | null;
   steps: number;
   /** Closed orbit around the target when the flight ends captured. */
   orbit: Vec2[] | null;
+}
+
+/** Cached coast into one node. Reused when a later node is the one being edited. */
+export interface NodeSnapshot {
+  step: number;
+  dvx: number;
+  dvy: number;
+  /** State at `step` before this burn. */
+  before: SimState;
+  /** State at `step` after this burn. May already be won. */
+  after: SimState;
+  /**
+   * Samples after the previous node through this node's step, inclusive.
+   * Empty for a node at the same step as the state it starts from (launch).
+   */
+  approach: PathSample[];
+  /** False when the flight ended before this step. */
+  reached: boolean;
+}
+
+export interface PlanForecast extends Prediction {
+  snapshots: NodeSnapshot[];
+  /** Samples after the last reached node until the flight ends. */
+  tail: PathSample[];
+  final: SimState;
+}
+
+export interface PlanReuse {
+  snapshots: readonly NodeSnapshot[];
+  /** First node index to recompute. Earlier snapshots are kept. */
+  from: number;
+  /**
+   * "burn" — only this node's delta-v changed. Keep its approach and pre-burn state.
+   * "coast" — the step changed, or nodes were inserted or deleted. Resimulate from the previous node.
+   */
+  kind: "burn" | "coast";
 }
 
 export const SIM_SPEEDS = [1, 2, 4] as const;
@@ -132,12 +188,45 @@ export function makeState(
     status: "flying",
     crashedBodyId: null,
     lostReason: null,
-    captureResolved: false,
+    enteredCapture: false,
   };
 }
 
 export function fuelCost(dvx: number, dvy: number, fuelPerDv: number): number {
   return fuelPerDv * Math.hypot(dvx, dvy);
+}
+
+export interface NodeCost {
+  cost: number;
+  /** Fuel still available before this node fires. */
+  remainingBefore: number;
+  /** This burn is larger than the fuel remaining when the ship reaches it. */
+  exceeds: boolean;
+}
+
+export interface PlanFuel {
+  costs: NodeCost[];
+  total: number;
+  /** Budget minus the sum of every node. Negative when the plan is over budget. */
+  left: number;
+  affordable: boolean;
+}
+
+/** Fuel for a whole plan. Costs accumulate in node order. */
+export function assessPlan(nodes: readonly BurnNode[], fuel: number, fuelPerDv: number): PlanFuel {
+  const costs: NodeCost[] = [];
+  let spent = 0;
+  let affordable = true;
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i];
+    const cost = fuelCost(node.dvx, node.dvy, fuelPerDv);
+    const remainingBefore = fuel - spent;
+    const exceeds = cost > remainingBefore + 1e-9;
+    if (exceeds) affordable = false;
+    costs.push({ cost, remainingBefore, exceeds });
+    spent += cost;
+  }
+  return { costs, total: spent, left: fuel - spent, affordable };
 }
 
 export type ImpulseResult =
@@ -160,19 +249,6 @@ export function tryApplyImpulse(
   state.vx += dvx;
   state.vy += dvy;
   return { ok: true, cost, fuel: fuel - cost };
-}
-
-export function clampDv(
-  dvx: number,
-  dvy: number,
-  fuel: number,
-  fuelPerDv: number,
-): Vec2 {
-  const mag = Math.hypot(dvx, dvy);
-  const max = fuelPerDv > 0 ? fuel / fuelPerDv : 0;
-  if (mag === 0 || mag <= max) return { x: dvx, y: dvy };
-  const scale = max / mag;
-  return { x: dvx * scale, y: dvy * scale };
 }
 
 /** First time t in [0, 1] when the segment enters the circle. */
@@ -302,9 +378,9 @@ function targetBody(config: SimConfig): Body | undefined {
 }
 
 /**
- * One velocity-Verlet step of size `config.dt`, then capture / crash / lost checks.
- * `capture` pauses on the target's sphere until `resolveCapture`. Terminal states
- * are not advanced. `dt` never depends on sim speed.
+ * One velocity-Verlet step of size `config.dt`, then crash / capture / lost checks.
+ * Burns are not applied here — `advancePlan` applies them before calling `step`.
+ * Terminal states are not advanced. `dt` never depends on sim speed.
  */
 export function step(state: SimState, config: SimConfig): void {
   if (state.status !== "flying") return;
@@ -336,14 +412,7 @@ export function step(state: SimState, config: SimConfig): void {
     }
   }
 
-  const target = targetBody(config);
-  const captureRadius = target?.captureRadius;
-  let captureT: number | null = null;
-  if (target && captureRadius !== undefined && !state.captureResolved) {
-    captureT = circleEntry(x0, y0, x1, y1, target.x, target.y, captureRadius);
-  }
-
-  if (crashBody !== null && (captureT === null || crashT <= captureT)) {
+  if (crashBody !== null) {
     const body = bodies.find((item) => item.id === crashBody);
     state.x = x0 + (x1 - x0) * crashT;
     state.y = y0 + (y1 - y0) * crashT;
@@ -364,24 +433,17 @@ export function step(state: SimState, config: SimConfig): void {
     return;
   }
 
-  if (target && captureRadius !== undefined && captureT !== null) {
-    const entryX = x0 + (x1 - x0) * captureT;
-    const entryY = y0 + (y1 - y0) * captureT;
-    placeExactly(state, target, captureRadius, entryX, entryY);
-    const impact = acceleration(state.x, state.y, config);
-    state.ax = impact.ax;
-    state.ay = impact.ay;
-    state.status = "capture";
-    return;
-  }
-
-  if (target && captureRadius !== undefined && state.captureResolved) {
+  const target = targetBody(config);
+  const captureRadius = target?.captureRadius;
+  if (target && captureRadius !== undefined) {
+    const dist = Math.hypot(state.x - target.x, state.y - target.y);
+    const crossed = circleEntry(x0, y0, x1, y1, target.x, target.y, captureRadius) !== null;
+    if (dist <= captureRadius + 1e-6 || crossed) state.enteredCapture = true;
     if (isCapturedOrbit(state, config)) {
       state.status = "won";
       return;
     }
-    const outside = Math.hypot(state.x - target.x, state.y - target.y) > captureRadius + 1e-6;
-    if (outside) {
+    if (state.enteredCapture && dist > captureRadius + 1e-6) {
       state.status = "lost";
       state.lostReason = "flyby";
       return;
@@ -401,37 +463,44 @@ export function step(state: SimState, config: SimConfig): void {
   }
 }
 
-function placeExactly(state: SimState, body: Body, radius: number, x: number, y: number): void {
-  const dx = x - body.x;
-  const dy = y - body.y;
-  const distance = Math.hypot(dx, dy);
-  if (distance < 1e-8) {
-    state.x = body.x + radius;
-    state.y = body.y;
-    return;
-  }
-  state.x = body.x + (dx / distance) * radius;
-  state.y = body.y + (dy / distance) * radius;
+interface PlanHooks {
+  onBurn?: (index: number, before: SimState, after: SimState) => void;
+  onIntegrated?: (state: SimState) => void;
 }
 
 /**
- * Fire or skip the single capture burn. The ship must be paused in `capture`.
- * A zero burn is a skip. Winning orbits are recognized here, before the next step.
+ * Apply every node scheduled at the current step, then integrate one step.
+ * A burn that leaves the ship in a captured orbit wins before the next step.
+ * `dt` stays fixed. Frame grouping lives in `advanceFrame`.
  */
-export function resolveCapture(
+export function advancePlan(
   state: SimState,
-  dvx: number,
-  dvy: number,
-  fuel: number,
-  fuelPerDv: number,
   config: SimConfig,
-): ImpulseResult {
-  if (state.status !== "capture") return { ok: false, cost: fuelCost(dvx, dvy, fuelPerDv) };
-  const applied = tryApplyImpulse(state, dvx, dvy, fuel, fuelPerDv);
-  if (!applied.ok) return applied;
-  state.captureResolved = true;
-  state.status = isCapturedOrbit(state, config) ? "won" : "flying";
-  return applied;
+  nodes: readonly BurnNode[],
+  cursor: { index: number },
+  hooks?: PlanHooks,
+): void {
+  if (state.status !== "flying") return;
+
+  while (cursor.index < nodes.length && nodes[cursor.index].step < state.step) {
+    cursor.index += 1;
+  }
+
+  while (cursor.index < nodes.length && nodes[cursor.index].step === state.step) {
+    const index = cursor.index;
+    const node = nodes[index];
+    const before = hooks?.onBurn ? cloneState(state) : null;
+    state.vx += node.dvx;
+    state.vy += node.dvy;
+    cursor.index = index + 1;
+    const more = cursor.index < nodes.length && nodes[cursor.index].step === state.step;
+    if (!more && isCapturedOrbit(state, config)) state.status = "won";
+    if (before && hooks?.onBurn) hooks.onBurn(index, before, cloneState(state));
+    if (state.status !== "flying") return;
+  }
+
+  step(state, config);
+  hooks?.onIntegrated?.(state);
 }
 
 /** Advance one rendered frame. `stepsThisFrame` is 1, 2, or 4 — `dt` stays fixed. */
@@ -439,17 +508,20 @@ export function advanceFrame(
   state: SimState,
   config: SimConfig,
   stepsThisFrame: number,
-  samples: Vec2[],
+  samples: PathSample[],
+  nodes: readonly BurnNode[],
+  cursor: { index: number },
 ): void {
   samples.length = 0;
   for (let i = 0; i < stepsThisFrame; i++) {
     if (state.status !== "flying") return;
-    step(state, config);
-    samples.push({ x: state.x, y: state.y });
+    const stepBefore = state.step;
+    advancePlan(state, config, nodes, cursor);
+    if (state.step !== stepBefore) samples.push({ x: state.x, y: state.y, step: state.step });
   }
 }
 
-function predictionFrom(state: SimState, config: SimConfig, path: Vec2[]): Prediction {
+function predictionFrom(state: SimState, config: SimConfig, path: PathSample[]): Prediction {
   const target = targetBody(config);
   const orbit = state.status === "won" && target ? sampleOrbit(state, target, config.g) : null;
   return {
@@ -462,57 +534,149 @@ function predictionFrom(state: SimState, config: SimConfig, path: Vec2[]): Predi
   };
 }
 
-/** Fly until the ship pauses for capture, wins, crashes, or is lost. */
-export function flyUntilDone(from: SimState, config: SimConfig, stepsThisFrame: number): Prediction {
-  const state = cloneState(from);
-  const path: Vec2[] = [];
-  const frame: Vec2[] = [];
-  while (state.status === "flying") {
-    advanceFrame(state, config, stepsThisFrame, frame);
-    for (let i = 0; i < frame.length; i++) path.push(frame[i]);
-  }
-  return predictionFrom(state, config, path);
-}
-
-/**
- * Full flight including the capture burn. This is the predictor used once the
- * ship is paused in capture, and the same stepper live flight uses afterward.
- * `stepsThisFrame` is the sim-speed grouping. It does not change `dt`.
- */
-export function flyMission(
+/** Fly a plan until it wins, crashes, or is lost. `stepsThisFrame` does not change `dt`. */
+export function flyPlan(
   from: SimState,
   config: SimConfig,
+  nodes: readonly BurnNode[],
   stepsThisFrame: number,
-  captureDv: Vec2,
-  fuel: number,
-  fuelPerDv: number,
 ): Prediction {
   const state = cloneState(from);
-  const path: Vec2[] = [];
-  const frame: Vec2[] = [];
-  let fuelLeft = fuel;
-  while (state.status === "flying" || state.status === "capture") {
-    if (state.status === "capture") {
-      const resolved = resolveCapture(state, captureDv.x, captureDv.y, fuelLeft, fuelPerDv, config);
-      if (!resolved.ok) break;
-      fuelLeft = resolved.fuel;
-      continue;
-    }
-    const pathLength = path.length;
-    advanceFrame(state, config, stepsThisFrame, frame);
+  const cursor = { index: 0 };
+  const path: PathSample[] = [];
+  const frame: PathSample[] = [];
+  let guard = 0;
+  while (state.status === "flying" && guard++ <= config.maxSteps + nodes.length + 2) {
+    advanceFrame(state, config, stepsThisFrame, frame, nodes, cursor);
     for (let i = 0; i < frame.length; i++) path.push(frame[i]);
-    if (path.length === pathLength && state.status === "flying") break;
   }
   return predictionFrom(state, config, path);
 }
 
+function reuseIsValid(nodes: readonly BurnNode[], reuse: PlanReuse): boolean {
+  if (reuse.from < 0 || reuse.from > nodes.length) return false;
+  for (let i = 0; i < reuse.from; i++) {
+    const snap = reuse.snapshots[i];
+    const node = nodes[i];
+    if (!snap || snap.step !== node.step || snap.dvx !== node.dvx || snap.dvy !== node.dvy) return false;
+  }
+  if (reuse.kind === "burn") {
+    if (reuse.from >= nodes.length) return false;
+    const snap = reuse.snapshots[reuse.from];
+    const node = nodes[reuse.from];
+    if (!snap?.reached || snap.step !== node.step) return false;
+  } else if (reuse.from > 0) {
+    const prev = reuse.snapshots[reuse.from - 1];
+    if (!prev) return false;
+  }
+  return true;
+}
+
+function unreachedSnapshot(node: BurnNode, state: SimState): NodeSnapshot {
+  const frozen = cloneState(state);
+  return {
+    step: node.step,
+    dvx: node.dvx,
+    dvy: node.dvy,
+    before: frozen,
+    after: cloneState(frozen),
+    approach: [],
+    reached: false,
+  };
+}
+
 /**
- * Planning prediction. Identical integrator to flight; always one fixed step
- * per internal frame so the sampled path is the full step-by-step trajectory.
- * Without a capture burn, flight stops when the ship reaches Planet X's sphere.
+ * Deterministic prediction of `nodes`, with the state at each node cached.
+ * Pass `reuse` after an edit so nodes before the edit are not resimulated.
+ * The returned path matches `flyPlan` step for step.
  */
-export function predict(from: SimState, config: SimConfig): Prediction {
-  return flyUntilDone(from, config, 1);
+export function predictPlan(
+  from: SimState,
+  config: SimConfig,
+  nodes: readonly BurnNode[],
+  reuse?: PlanReuse,
+): PlanForecast {
+  const active = reuse !== undefined && reuseIsValid(nodes, reuse) ? reuse : undefined;
+  const kept: NodeSnapshot[] = [];
+  let state: SimState;
+  let startIndex: number;
+  let approach: PathSample[];
+  // False while `approach` still aliases a cached array. The first write copies it.
+  let approachOwned: boolean;
+
+  if (active?.kind === "burn") {
+    for (let i = 0; i < active.from; i++) kept.push(active.snapshots[i]);
+    const snap = active.snapshots[active.from];
+    state = cloneState(snap.before);
+    startIndex = active.from;
+    approach = snap.approach;
+    approachOwned = false;
+  } else if (active && active.kind === "coast" && active.from > 0) {
+    for (let i = 0; i < active.from; i++) kept.push(active.snapshots[i]);
+    const previous = active.snapshots[active.from - 1];
+    state = cloneState(previous.after);
+    startIndex = active.from;
+    approach = [];
+    approachOwned = true;
+  } else {
+    state = cloneState(from);
+    startIndex = 0;
+    approach = [];
+    approachOwned = true;
+  }
+
+  const fresh: Array<NodeSnapshot | undefined> = new Array(Math.max(0, nodes.length - startIndex));
+  const cursor = { index: startIndex };
+  if (state.status === "flying") {
+    const hooks: PlanHooks = {
+      onBurn: (index, before, after) => {
+        const node = nodes[index];
+        fresh[index - startIndex] = {
+          step: node.step,
+          dvx: node.dvx,
+          dvy: node.dvy,
+          before,
+          after,
+          approach,
+          reached: true,
+        };
+        approach = [];
+        approachOwned = true;
+      },
+      onIntegrated: (integrated) => {
+        if (!approachOwned) {
+          approach = approach.slice();
+          approachOwned = true;
+        }
+        approach.push({ x: integrated.x, y: integrated.y, step: integrated.step });
+      },
+    };
+    let guard = 0;
+    while (state.status === "flying" && guard++ <= config.maxSteps + nodes.length + 2) {
+      advancePlan(state, config, nodes, cursor, hooks);
+    }
+  }
+
+  const tail = approach;
+  for (let i = startIndex; i < nodes.length; i++) {
+    if (!fresh[i - startIndex]) fresh[i - startIndex] = unreachedSnapshot(nodes[i], state);
+  }
+  const snapshots = kept.concat(fresh as NodeSnapshot[]);
+  const path: PathSample[] = [];
+  for (let i = 0; i < snapshots.length; i++) {
+    const snap = snapshots[i];
+    if (!snap.reached) continue;
+    for (let j = 0; j < snap.approach.length; j++) path.push(snap.approach[j]);
+  }
+  for (let i = 0; i < tail.length; i++) path.push(tail[i]);
+
+  const summary = predictionFrom(state, config, path);
+  return {
+    ...summary,
+    snapshots,
+    tail,
+    final: cloneState(state),
+  };
 }
 
 /** Minimum distance from sampled positions to a point. */

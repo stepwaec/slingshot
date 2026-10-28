@@ -1,18 +1,17 @@
-import type { Body, Bounds, SimConfig } from "../sim/physics";
+import type { Body, Bounds, BurnNode, SimConfig } from "../sim/physics";
 
 /**
  * Passage.
  *
  * Home is at the origin. The ship starts in a counterclockwise circular orbit
  * on Home's right-hand side, so its motion already points toward the star.
- * Planet X sits off to the right. A modest prograde burn falls past the star
- * and reaches X's sphere; a second burn there captures the ship into orbit.
- * Staying clear of the star costs much more fuel. The budget covers the
- * slingshot plus its capture burn, and it does not cover the direct route.
+ * Planet X sits off to the right. A launch node drops the ship past the star,
+ * and a capture node at Planet X's sphere binds it into orbit. A direct plan
+ * that stays clear of the star costs more than the fuel budget.
  *
  * Reference costs (fuel per unit delta-v is 1):
- * - Slingshot launch 22.00 + capture 17.48 = 39.48, inside the budget of 60.
- * - Direct launch 76.00 + capture 19.63 = 95.63, over the budget.
+ * - Slingshot launch 22.00 + capture 16.91 = 38.91, inside the budget of 60.
+ * - Direct launch 76.00 + capture 19.18 = 95.18, over the budget.
  */
 export interface Level {
   id: string;
@@ -113,21 +112,34 @@ export const directLaunch: LaunchSolution = {
 };
 
 /**
- * Capture burn at X's sphere for the slingshot approach.
- * Puts the ship at apoapsis of an ellipse inside the capture radius.
+ * Capture node for the slingshot approach, applied on the step the ship is
+ * inside Planet X's sphere. It sets that point as apoapsis of an ellipse that
+ * clears the surface and stays inside the capture radius.
  */
-export const slingshotCapture: LaunchSolution = {
-  name: "slingshot-capture",
-  dvx: 1.991544505686151,
-  dvy: 17.366199018107896,
+export const slingshotCapture: BurnNode = {
+  step: 2089,
+  dvx: 3.594076494194162,
+  dvy: 16.52559927915481,
 };
 
-/** Capture burn for the direct approach. The launch plus this burn exceeds the budget. */
-export const directCapture: LaunchSolution = {
-  name: "direct-capture",
-  dvx: -15.335415053137007,
-  dvy: -12.259747984032177,
+/** Capture node for the direct approach. The launch alone already exceeds the budget. */
+export const directCapture: BurnNode = {
+  step: 1216,
+  dvx: -13.397801068244888,
+  dvy: -13.725593551547226,
 };
+
+/** Launch node at t = 0 plus the capture node. Wins inside the fuel budget. */
+export const slingshotPlan: readonly BurnNode[] = [
+  { step: 0, dvx: slingshotLaunch.dvx, dvy: slingshotLaunch.dvy },
+  slingshotCapture,
+];
+
+/** Launch node at t = 0 plus the capture node. Captures, and costs more than the budget. */
+export const directPlan: readonly BurnNode[] = [
+  { step: 0, dvx: directLaunch.dvx, dvy: directLaunch.dvy },
+  directCapture,
+];
 
 export function simConfigFromLevel(level: Level): SimConfig {
   return {
