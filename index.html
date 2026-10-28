@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Slingshot</title>
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="space"></canvas>
+      <div id="hud">
+        <section class="panel readout">
+          <header>
+            <h1>Slingshot</h1>
+            <p>Passage</p>
+          </header>
+          <dl>
+            <div>
+              <dt>Fuel left</dt>
+              <dd id="fuel-value">80.0</dd>
+            </div>
+            <div>
+              <dt>Burn</dt>
+              <dd id="burn-value">0.0</dd>
+            </div>
+          </dl>
+          <div class="fuel-track" aria-hidden="true">
+            <div id="fuel-burn"></div>
+            <div id="fuel-left"></div>
+          </div>
+          <p id="path-value" data-status="aim">Aim a burn</p>
+          <p id="hint"></p>
+        </section>
+        <section class="panel controls">
+          <button id="launch" type="button" disabled>Launch</button>
+          <button type="button" data-reset>Reset</button>
+          <div class="speeds" role="group" aria-label="Simulation speed">
+            <button type="button" data-speed="1" aria-pressed="true">1×</button>
+            <button type="button" data-speed="2" aria-pressed="false">2×</button>
+            <button type="button" data-speed="4" aria-pressed="false">4×</button>
+          </div>
+          <span id="fps">— fps</span>
+        </section>
+      </div>
+      <div id="overlay" hidden>
+        <div class="card">
+          <h2 id="overlay-title"></h2>
+          <p id="overlay-detail"></p>
+          <button type="button" data-reset>Reset</button>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
