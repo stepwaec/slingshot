@@ -1,55 +1,84 @@
 import { describe, expect, it } from "vitest";
+import { slingshotLaunch, passage, simConfigFromLevel } from "../src/level/passage";
+import { createGame, launch, setPlan, tick } from "../src/game/state";
 import {
-  directCapture,
-  directLaunch,
-  passage,
-  simConfigFromLevel,
-  slingshotCapture,
-  slingshotLaunch,
-  type LaunchSolution,
-} from "../src/level/passage";
-import { SIM_SPEEDS, flyMission, makeState, stepsPerFrame, tryApplyImpulse, type Vec2 } from "../src/sim/physics";
+  SIM_SPEEDS,
+  flyPlan,
+  makeState,
+  predictPlan,
+  stepsPerFrame,
+  type BurnNode,
+  type PathSample,
+  type Prediction,
+} from "../src/sim/physics";
 
-const FUEL_POOL = 200;
-
-const routes: Array<{ launch: LaunchSolution; capture: LaunchSolution }> = [
-  { launch: slingshotLaunch, capture: slingshotCapture },
-  { launch: directLaunch, capture: directCapture },
+/** Three burns, all before the ship reaches Planet X. */
+const nodes: BurnNode[] = [
+  { step: 0, dvx: slingshotLaunch.dvx, dvy: slingshotLaunch.dvy },
+  { step: 400, dvx: 0.6, dvy: -0.3 },
+  { step: 900, dvx: -0.4, dvy: 0.55 },
 ];
 
-function afterLaunch(launch: LaunchSolution) {
+function initial() {
   const config = simConfigFromLevel(passage);
   const state = makeState(passage.ship.x, passage.ship.y, passage.ship.vx, passage.ship.vy, config);
-  const impulse = tryApplyImpulse(state, launch.dvx, launch.dvy, FUEL_POOL, passage.fuelPerDv);
-  expect(impulse.ok).toBe(true);
-  if (!impulse.ok) throw new Error("launch");
-  return { config, state, fuelLeft: impulse.fuel, capture: { x: 0, y: 0 } as Vec2 };
+  return { config, state };
+}
+
+function assertSameFlight(actual: Prediction, expected: Prediction, label: string): void {
+  expect(actual.status, label).toBe(expected.status);
+  expect(actual.steps, label).toBe(expected.steps);
+  expect(actual.crashedBodyId, label).toBe(expected.crashedBodyId);
+  expect(actual.lostReason, label).toBe(expected.lostReason);
+  expect(actual.orbit, label).toEqual(expected.orbit);
+  expect(actual.path, label).toHaveLength(expected.path.length);
+  for (let i = 0; i < expected.path.length; i++) {
+    const got = actual.path[i];
+    const want = expected.path[i];
+    if (got.x !== want.x || got.y !== want.y || got.step !== want.step) {
+      throw new Error(
+        `${label} diverged at sample ${i} (step ${want.step}): (${got.x}, ${got.y}) vs (${want.x}, ${want.y})`,
+      );
+    }
+  }
+}
+
+function flyWithGame(plan: readonly BurnNode[], speed: (typeof SIM_SPEEDS)[number]): PathSample[] {
+  const game = createGame();
+  setPlan(game, plan);
+  game.speed = speed;
+  expect(launch(game)).toBeUndefined();
+  expect(game.mode).toBe("flying");
+  const samples: PathSample[] = [];
+  let guard = 0;
+  while (game.mode === "flying" && guard++ < passage.maxSteps) {
+    tick(game);
+    for (let i = 0; i < game.frameSamples.length; i++) samples.push(game.frameSamples[i]);
+  }
+  return samples;
 }
 
 describe("prediction uses the flight integrator", () => {
-  it.each(routes)("matches $launch.name with its capture burn at every sim speed", ({ launch, capture }) => {
-    const { config, state, fuelLeft } = afterLaunch(launch);
-    const captureDv = { x: capture.dvx, y: capture.dvy };
-    const predicted = flyMission(state, config, 1, captureDv, fuelLeft, passage.fuelPerDv);
-    expect(predicted.status).toBe("won");
-    expect(predicted.path.length).toBeGreaterThan(50);
-    expect(predicted.orbit?.length).toBeGreaterThan(10);
+  it("matches a 3-node plan step for step at 1x, 2x, and 4x", () => {
+    const { config, state } = initial();
+    const predicted = predictPlan(state, config, nodes);
+    expect(nodes.length).toBeGreaterThanOrEqual(3);
+    expect(predicted.path.length).toBeGreaterThan(nodes[2].step);
+    expect(predicted.path.some((sample) => sample.step > nodes[0].step)).toBe(true);
+    expect(predicted.path.some((sample) => sample.step > nodes[1].step)).toBe(true);
+    expect(predicted.path.some((sample) => sample.step > nodes[2].step)).toBe(true);
+
+    const reference = flyPlan(state, config, nodes, 1);
+    assertSameFlight(reference, predicted, "predictPlan");
 
     for (const speed of SIM_SPEEDS) {
-      const flown = flyMission(state, config, stepsPerFrame(speed), captureDv, fuelLeft, passage.fuelPerDv);
-      expect(flown.status).toBe(predicted.status);
-      expect(flown.steps).toBe(predicted.steps);
-      expect(flown.crashedBodyId).toBe(predicted.crashedBodyId);
-      expect(flown.lostReason).toBe(predicted.lostReason);
-      expect(flown.path).toHaveLength(predicted.path.length);
-      expect(flown.orbit).toEqual(predicted.orbit);
-      for (let i = 0; i < predicted.path.length; i++) {
-        const actual = flown.path[i];
-        const expected = predicted.path[i];
-        if (actual.x !== expected.x || actual.y !== expected.y) {
-          throw new Error(
-            `speed ${speed}x diverged at step ${i}: (${actual.x}, ${actual.y}) vs (${expected.x}, ${expected.y})`,
-          );
+      const flown = flyPlan(state, config, nodes, stepsPerFrame(speed));
+      assertSameFlight(flown, reference, `flyPlan ${speed}x`);
+      const played = flyWithGame(nodes, speed);
+      expect(played).toHaveLength(reference.path.length);
+      for (let i = 0; i < reference.path.length; i++) {
+        if (played[i].x !== reference.path[i].x || played[i].y !== reference.path[i].y || played[i].step !== reference.path[i].step) {
+          throw new Error(`game ${speed}x diverged at sample ${i}`);
         }
       }
     }

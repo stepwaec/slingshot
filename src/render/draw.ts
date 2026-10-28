@@ -1,6 +1,5 @@
-import type { Game } from "../game/state";
-import { sampleOrbit, type FlightStatus, type Vec2 } from "../sim/physics";
-import { simConfigFromLevel } from "../level/passage";
+import { burnHandleOffset, nodeIncoming, nodePosition, planFuel, type Game } from "../game/state";
+import type { FlightStatus, Vec2 } from "../sim/physics";
 import { worldToScreen, type Camera } from "./camera";
 import type { Star } from "./stars";
 
@@ -45,33 +44,22 @@ export function draw(
 
   for (const body of game.level.bodies) drawBody(ctx, camera, width, height, body);
 
-  const aiming = game.mode === "planning" || game.mode === "capture";
-  const pose = game.mode === "planning" ? game.initial : game.ship;
-  if (aiming && game.prediction && game.prediction.path.length > 0) {
-    strokePath(ctx, camera, width, height, [pose, ...game.prediction.path], pathColor(game.prediction.status), true);
-  }
-  const predictedOrbit = game.prediction?.orbit;
-  const wonOrbit =
-    game.mode === "finished" && game.ship.status === "won"
-      ? sampleOrbit(game.ship, targetOf(game), simConfigFromLevel(game.level).g)
-      : null;
-  const orbit = predictedOrbit ?? wonOrbit;
-  if (orbit && orbit.length > 1) {
-    strokePath(ctx, camera, width, height, [...orbit, orbit[0]], "rgba(167, 224, 178, 0.95)", true);
-  }
+  const fuel = planFuel(game);
+  drawPrediction(ctx, game, camera, width, height);
 
   if (game.trail.length > 1) {
     strokePath(ctx, camera, width, height, game.trail, "rgba(255, 178, 92, 0.95)", false);
   }
 
-  const aim = plannedVelocity(game);
-  if (aiming && aim.mag > 0.05) {
-    drawBurn(ctx, camera, width, height, game, pose);
-  }
-
-  const nose = aiming ? aim.velocity : { x: pose.vx, y: pose.vy };
+  const pose = game.mode === "planning" ? game.initial : game.ship;
+  const nose = noseVelocity(game);
   const screen = worldToScreen(camera, width, height, pose.x, pose.y);
   drawShip(ctx, screen.x, screen.y, Math.atan2(-nose.y, nose.x));
+
+  const planning = game.mode === "planning";
+  for (let i = 0; i < game.nodes.length; i++) {
+    drawNode(ctx, game, camera, width, height, i, planning, fuel.costs[i]?.exceeds ?? false);
+  }
 
   ctx.font = "12px system-ui, Segoe UI, sans-serif";
   ctx.textAlign = "center";
@@ -85,6 +73,126 @@ export function draw(
     ctx.fillStyle = "#d7deea";
     ctx.fillText(text, label.x, y);
   }
+}
+
+/** Transfer in blue, then the segment after the last node in the outcome color. */
+function drawPrediction(
+  ctx: CanvasRenderingContext2D,
+  game: Game,
+  camera: Camera,
+  width: number,
+  height: number,
+): void {
+  const forecast = game.prediction;
+  const hasBurn = game.nodes.some((node) => Math.hypot(node.dvx, node.dvy) >= 0.05);
+  let splitStep = game.initial.step;
+  for (let i = 0; i < forecast.snapshots.length; i++) {
+    if (forecast.snapshots[i].reached) splitStep = forecast.snapshots[i].step;
+  }
+  const head: Vec2[] = [game.initial];
+  const tail: Vec2[] = [];
+  let joint: Vec2 = game.initial;
+  for (let i = 0; i < forecast.path.length; i++) {
+    const sample = forecast.path[i];
+    if (sample.step <= splitStep) {
+      head.push(sample);
+      joint = sample;
+    } else {
+      tail.push(sample);
+    }
+  }
+  if (head.length > 1) {
+    strokePath(
+      ctx,
+      camera,
+      width,
+      height,
+      head,
+      hasBurn ? "rgba(148, 196, 255, 0.95)" : "rgba(196, 206, 222, 0.92)",
+      true,
+    );
+  }
+  if (tail.length > 0) {
+    strokePath(
+      ctx,
+      camera,
+      width,
+      height,
+      [joint, ...tail],
+      pathColor(forecast.status, forecast.lostReason, hasBurn),
+      true,
+    );
+  }
+  const orbit = forecast.orbit;
+  if (orbit && orbit.length > 1) {
+    strokePath(ctx, camera, width, height, [...orbit, orbit[0]], "rgba(167, 224, 178, 0.95)", true);
+  }
+}
+
+function drawNode(
+  ctx: CanvasRenderingContext2D,
+  game: Game,
+  camera: Camera,
+  width: number,
+  height: number,
+  index: number,
+  planning: boolean,
+  exceeds: boolean,
+): void {
+  const pos = nodePosition(game, index);
+  if (!pos) return;
+  const node = game.nodes[index];
+  const screen = worldToScreen(camera, width, height, pos.x, pos.y);
+  const incoming = nodeIncoming(game, index);
+  const offset = burnHandleOffset(node.dvx, node.dvy, game.level.dvPerPixel, incoming);
+  const endX = screen.x + offset.x;
+  const endY = screen.y + offset.y;
+  const selected = planning && game.selected === index;
+  const color = exceeds ? "rgba(240, 178, 170, 0.98)" : "rgba(244, 247, 252, 0.95)";
+
+  if (!offset.placing || planning) {
+    ctx.beginPath();
+    ctx.moveTo(screen.x, screen.y);
+    ctx.lineTo(endX, endY);
+    ctx.strokeStyle = offset.placing ? "rgba(244, 247, 252, 0.45)" : color;
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash(offset.placing ? [2, 4] : []);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    if (!offset.placing) {
+      const angle = Math.atan2(endY - screen.y, endX - screen.x);
+      ctx.beginPath();
+      ctx.moveTo(endX, endY);
+      ctx.lineTo(endX - 8 * Math.cos(angle - 0.4), endY - 8 * Math.sin(angle - 0.4));
+      ctx.lineTo(endX - 8 * Math.cos(angle + 0.4), endY - 8 * Math.sin(angle + 0.4));
+      ctx.closePath();
+      ctx.fillStyle = color;
+      ctx.fill();
+    }
+    if (planning) {
+      ctx.beginPath();
+      ctx.arc(endX, endY, selected ? 5 : 4, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+    }
+  }
+
+  ctx.beginPath();
+  ctx.arc(screen.x, screen.y, selected ? 7 : 5.5, 0, Math.PI * 2);
+  ctx.fillStyle = exceeds ? "rgba(224, 122, 114, 0.95)" : "rgba(226, 194, 122, 0.95)";
+  ctx.fill();
+  ctx.lineWidth = selected ? 2 : 1;
+  ctx.strokeStyle = selected ? "#f4f7fb" : exceeds ? "#f0b2aa" : "rgba(8, 12, 20, 0.55)";
+  ctx.stroke();
+
+  ctx.font = "11px system-ui, Segoe UI, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "bottom";
+  const label = String(index + 1);
+  ctx.fillStyle = "rgba(5, 8, 14, 0.8)";
+  ctx.fillText(label, screen.x + 1, screen.y - 8);
+  ctx.fillStyle = exceeds ? "#f0b2aa" : "#f4f7fb";
+  ctx.fillText(label, screen.x, screen.y - 9);
 }
 
 function drawStars(
@@ -121,9 +229,16 @@ function strokePath(
   ctx.beginPath();
   const first = worldToScreen(camera, width, height, points[0].x, points[0].y);
   ctx.moveTo(first.x, first.y);
+  let previousX = first.x;
+  let previousY = first.y;
   for (let i = 1; i < points.length; i++) {
     const screen = worldToScreen(camera, width, height, points[i].x, points[i].y);
+    const close = (screen.x - previousX) * (screen.x - previousX) + (screen.y - previousY) * (screen.y - previousY) < 4;
+    const last = i === points.length - 1;
+    if (close && !last) continue;
     ctx.lineTo(screen.x, screen.y);
+    previousX = screen.x;
+    previousY = screen.y;
   }
   ctx.strokeStyle = color;
   ctx.lineWidth = dashed ? 1.4 : 1.75;
@@ -172,38 +287,6 @@ function bodyPalette(kind: Game["level"]["bodies"][number]["kind"]): { highlight
   return { highlight: "#d5e6ff", base: "#3d7ed8", edge: "#1a3d78" };
 }
 
-function drawBurn(
-  ctx: CanvasRenderingContext2D,
-  camera: Camera,
-  width: number,
-  height: number,
-  game: Game,
-  origin: { x: number; y: number },
-): void {
-  const mag = Math.hypot(game.plannedDv.x, game.plannedDv.y);
-  const pixels = mag / game.level.dvPerPixel;
-  const world = pixels / camera.zoom;
-  const dirX = game.plannedDv.x / mag;
-  const dirY = game.plannedDv.y / mag;
-  const start = worldToScreen(camera, width, height, origin.x, origin.y);
-  const end = worldToScreen(camera, width, height, origin.x + dirX * world, origin.y + dirY * world);
-  ctx.beginPath();
-  ctx.moveTo(start.x, start.y);
-  ctx.lineTo(end.x, end.y);
-  ctx.strokeStyle = "rgba(244, 247, 252, 0.92)";
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-
-  const angle = Math.atan2(end.y - start.y, end.x - start.x);
-  ctx.beginPath();
-  ctx.moveTo(end.x, end.y);
-  ctx.lineTo(end.x - 8 * Math.cos(angle - 0.4), end.y - 8 * Math.sin(angle - 0.4));
-  ctx.lineTo(end.x - 8 * Math.cos(angle + 0.4), end.y - 8 * Math.sin(angle + 0.4));
-  ctx.closePath();
-  ctx.fillStyle = "rgba(244, 247, 252, 0.92)";
-  ctx.fill();
-}
-
 function drawShip(ctx: CanvasRenderingContext2D, x: number, y: number, angle: number): void {
   ctx.save();
   ctx.translate(x, y);
@@ -222,24 +305,20 @@ function drawShip(ctx: CanvasRenderingContext2D, x: number, y: number, angle: nu
   ctx.restore();
 }
 
-function pathColor(status: FlightStatus): string {
+function pathColor(status: FlightStatus, lostReason: Game["prediction"]["lostReason"], hasBurn: boolean): string {
   if (status === "won") return "rgba(167, 224, 178, 0.95)";
   if (status === "crashed") return "rgba(240, 168, 160, 0.95)";
-  if (status === "capture") return "rgba(148, 196, 255, 0.95)";
+  if (hasBurn && status === "lost" && lostReason === "flyby") return "rgba(148, 196, 255, 0.95)";
   return "rgba(196, 206, 222, 0.92)";
 }
 
-function targetOf(game: Game) {
-  const body = game.level.bodies.find((item) => item.id === game.level.targetId);
-  if (!body) throw new Error("Level is missing Planet X");
-  return body;
-}
-
-function plannedVelocity(game: Game): { mag: number; velocity: Vec2 } {
+function noseVelocity(game: Game): Vec2 {
   const pose = game.mode === "planning" ? game.initial : game.ship;
-  const velocity = {
-    x: pose.vx + game.plannedDv.x,
-    y: pose.vy + game.plannedDv.y,
-  };
-  return { mag: Math.hypot(game.plannedDv.x, game.plannedDv.y), velocity };
+  if (game.mode === "planning") {
+    for (let i = 0; i < game.nodes.length; i++) {
+      const node = game.nodes[i];
+      if (node.step === pose.step) return { x: pose.vx + node.dvx, y: pose.vy + node.dvy };
+    }
+  }
+  return { x: pose.vx, y: pose.vy };
 }

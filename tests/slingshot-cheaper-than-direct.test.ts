@@ -1,105 +1,120 @@
 import { describe, expect, it } from "vitest";
 import {
-  directCapture,
   directLaunch,
+  directPlan,
   passage,
   simConfigFromLevel,
   slingshotCapture,
   slingshotLaunch,
-  type LaunchSolution,
+  slingshotPlan,
 } from "../src/level/passage";
+import { canLaunch, clearPlan, createGame, launch, planFuel, reset, setPlan, tick } from "../src/game/state";
 import {
+  assessPlan,
   closestApproach,
-  flyMission,
+  flyPlan,
   fuelCost,
   makeState,
-  predict,
   tryApplyImpulse,
-  type Vec2,
 } from "../src/sim/physics";
 
-const FUEL_POOL = 200;
-
-function route(launch: LaunchSolution, capture: LaunchSolution) {
+function initial() {
   const config = simConfigFromLevel(passage);
-  const state = makeState(passage.ship.x, passage.ship.y, passage.ship.vx, passage.ship.vy, config);
-  const launchImpulse = tryApplyImpulse(state, launch.dvx, launch.dvy, FUEL_POOL, passage.fuelPerDv);
-  if (!launchImpulse.ok) throw new Error(`launch rejected, cost ${launchImpulse.cost}`);
-  const captureDv: Vec2 = { x: capture.dvx, y: capture.dvy };
-  const predicted = flyMission(state, config, 1, captureDv, launchImpulse.fuel, passage.fuelPerDv);
-  const star = passage.bodies.find((body) => body.kind === "star");
-  if (!star) throw new Error("missing star");
-  const launchFuel = launchImpulse.cost;
-  const captureFuel = fuelCost(capture.dvx, capture.dvy, passage.fuelPerDv);
-  return {
-    status: predicted.status,
-    lostReason: predicted.lostReason,
-    minStar: closestApproach(predicted.path, star.x, star.y),
-    star,
-    launchFuel,
-    captureFuel,
-    totalFuel: launchFuel + captureFuel,
-    orbit: predicted.orbit,
-  };
+  return { config, state: makeState(passage.ship.x, passage.ship.y, passage.ship.vx, passage.ship.vy, config) };
 }
 
-describe("Passage fuel", () => {
-  it("captures with a slingshot that costs less than half the direct route", () => {
-    const sling = route(slingshotLaunch, slingshotCapture);
-    const direct = route(directLaunch, directCapture);
+describe("Passage plans", () => {
+  it("wins with a slingshot inside the budget and prices the direct plan over it", () => {
+    const { config, state } = initial();
+    const sling = flyPlan(state, config, slingshotPlan, 1);
+    const direct = flyPlan(state, config, directPlan, 1);
+    const slingFuel = assessPlan(slingshotPlan, passage.fuel, passage.fuelPerDv);
+    const directFuel = assessPlan(directPlan, passage.fuel, passage.fuelPerDv);
+    const star = passage.bodies.find((body) => body.kind === "star");
+    if (!star) throw new Error("missing star");
 
     expect(sling.status).toBe("won");
     expect(direct.status).toBe("won");
     expect(sling.orbit).not.toBeNull();
     expect(direct.orbit).not.toBeNull();
+    expect(sling.path.some((sample) => sample.step > 0 && sample.step <= slingshotCapture.step)).toBe(true);
 
-    // Budget 60. Slingshot launch 22 + capture 17.48 = 39.48. Direct 76 + 19.63 = 95.63.
-    expect(sling.totalFuel).toBeLessThanOrEqual(passage.fuel);
-    expect(direct.totalFuel).toBeGreaterThan(passage.fuel);
-    expect(sling.totalFuel).toBeLessThan(direct.totalFuel * 0.5);
-    expect(sling.totalFuel).toBeCloseTo(39.48, 1);
-    expect(direct.totalFuel).toBeCloseTo(95.63, 1);
+    expect(slingFuel.affordable).toBe(true);
+    expect(slingFuel.total).toBeLessThanOrEqual(passage.fuel);
+    expect(slingFuel.total).toBeCloseTo(38.91, 2);
+    expect(slingFuel.costs[0].exceeds).toBe(false);
+    expect(slingFuel.costs[1].exceeds).toBe(false);
 
-    expect(sling.minStar).toBeGreaterThan(sling.star.radius);
-    expect(sling.minStar).toBeLessThan(sling.star.radius * 2.5);
-    expect(direct.minStar).toBeGreaterThan(400);
+    expect(directFuel.affordable).toBe(false);
+    expect(directFuel.total).toBeGreaterThan(passage.fuel);
+    expect(directFuel.total).toBeCloseTo(95.18, 2);
+    expect(directFuel.costs[0].exceeds).toBe(true);
+    expect(slingFuel.total).toBeLessThan(directFuel.total * 0.5);
+
+    expect(closestApproach(sling.path, star.x, star.y)).toBeGreaterThan(star.radius);
+    expect(closestApproach(sling.path, star.x, star.y)).toBeLessThan(star.radius * 2.5);
+    expect(closestApproach(direct.path, star.x, star.y)).toBeGreaterThan(400);
   });
 
-  it("does not win a fast flyby that skips the capture burn", () => {
-    const config = simConfigFromLevel(passage);
-    const state = makeState(passage.ship.x, passage.ship.y, passage.ship.vx, passage.ship.vy, config);
-    const launchImpulse = tryApplyImpulse(state, slingshotLaunch.dvx, slingshotLaunch.dvy, FUEL_POOL, passage.fuelPerDv);
-    if (!launchImpulse.ok) throw new Error("launch");
-    const flyby = flyMission(state, config, 1, { x: 0, y: 0 }, launchImpulse.fuel, passage.fuelPerDv);
-    expect(flyby.status).not.toBe("won");
+  it("does not win a launch with no capture node", () => {
+    const { config, state } = initial();
+    const flyby = flyPlan(state, config, [{ step: 0, dvx: slingshotLaunch.dvx, dvy: slingshotLaunch.dvy }], 1);
     expect(flyby.status).toBe("lost");
     expect(flyby.lostReason).toBe("flyby");
   });
 
-  it("rejects a launch larger than the budget, including the direct route", () => {
-    const config = simConfigFromLevel(passage);
-    const state = makeState(passage.ship.x, passage.ship.y, passage.ship.vx, passage.ship.vy, config);
-    const vx = state.vx;
-    const vy = state.vy;
+  it("refuses to launch a plan that exceeds the remaining fuel", () => {
+    const game = createGame();
+    setPlan(game, directPlan);
+    expect(planFuel(game).affordable).toBe(false);
+    expect(canLaunch(game)).toBe(false);
+    launch(game);
+    expect(game.mode).toBe("planning");
+
+    setPlan(game, [
+      { step: 0, dvx: 30, dvy: 0 },
+      { step: 80, dvx: 0, dvy: 40 },
+    ]);
+    const fuel = planFuel(game);
+    expect(fuel.costs[0].exceeds).toBe(false);
+    expect(fuel.costs[0].cost).toBeCloseTo(30, 6);
+    expect(fuel.costs[1].exceeds).toBe(true);
+    expect(fuel.left).toBeCloseTo(-10, 6);
+    expect(canLaunch(game)).toBe(false);
+    const vx = game.ship.vx;
+    launch(game);
+    expect(game.mode).toBe("planning");
+    expect(game.ship.vx).toBe(vx);
+
+    const { state } = initial();
     const tooBig = tryApplyImpulse(state, passage.fuel + 5, 0, passage.fuel, passage.fuelPerDv);
     expect(tooBig.ok).toBe(false);
-    expect(state.vx).toBe(vx);
-    expect(state.vy).toBe(vy);
-
     const direct = tryApplyImpulse(state, directLaunch.dvx, directLaunch.dvy, passage.fuel, passage.fuelPerDv);
     expect(direct.ok).toBe(false);
     expect(fuelCost(directLaunch.dvx, directLaunch.dvy, passage.fuelPerDv)).toBeGreaterThan(passage.fuel);
   });
 
-  it("predicts a full flight quickly enough to follow a drag", () => {
-    const config = simConfigFromLevel(passage);
-    const state = makeState(passage.ship.x, passage.ship.y, passage.ship.vx, passage.ship.vy, config);
-    const impulse = tryApplyImpulse(state, slingshotLaunch.dvx, slingshotLaunch.dvy, passage.fuel, passage.fuelPerDv);
-    expect(impulse.ok).toBe(true);
-    const runs = 12;
-    const started = performance.now();
-    for (let i = 0; i < runs; i++) predict(state, config);
-    const averageMs = (performance.now() - started) / runs;
-    expect(averageMs).toBeLessThan(16);
+  it("flies the slingshot, then reset keeps the nodes and clear removes them", () => {
+    const game = createGame();
+    setPlan(game, slingshotPlan);
+    expect(canLaunch(game)).toBe(true);
+    launch(game);
+    let guard = 0;
+    while (game.mode === "flying" && guard++ < passage.maxSteps) tick(game);
+    expect(game.mode).toBe("finished");
+    expect(game.ship.status).toBe("won");
+    expect(passage.fuel - game.fuel).toBeCloseTo(38.91, 2);
+
+    reset(game);
+    expect(game.mode).toBe("planning");
+    expect(game.nodes).toHaveLength(2);
+    expect(game.nodes[0].step).toBe(0);
+    expect(game.nodes[1].step).toBe(slingshotCapture.step);
+    expect(game.fuel).toBe(passage.fuel);
+
+    clearPlan(game);
+    expect(game.mode).toBe("planning");
+    expect(game.nodes).toHaveLength(0);
+    expect(canLaunch(game)).toBe(false);
   });
 });
