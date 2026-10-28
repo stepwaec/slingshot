@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+  <!-- Slingshot ship, nose pointing UP (-y). Anchor / centre of rotation: (12, 12).
+       Hull  #F2F5FF  (ship.hull)     outline #0A0D1A 1 px (ship.outline)
+       Fins  #F2F5FF  (ship.hull)     cockpit #5EA0FF (ship.cockpit)
+       Hull polygon (24-unit space): 12,2  18.5,21  12,16.5  5.5,21   (dart with a tail notch)
+       Fin L: 8.2,12.5  4,19.2  7,19.6      Fin R: 15.8,12.5  20,19.2  17,19.6
+       Cockpit: rounded slit x 11.2  y 7.5  w 1.6  h 4  rx 0.8 -->
+  <g stroke="#0A0D1A" stroke-width="1" stroke-linejoin="round">
+    <polygon fill="#F2F5FF" points="8.2,12.5 4,19.2 7,19.6"/>
+    <polygon fill="#F2F5FF" points="15.8,12.5 20,19.2 17,19.6"/>
+    <polygon fill="#F2F5FF" points="12,2 18.5,21 12,16.5 5.5,21"/>
+  </g>
+  <rect x="11.2" y="7.5" width="1.6" height="4" rx="0.8" fill="#5EA0FF"/>
+</svg>
