@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="48" viewBox="0 0 32 48">
+  <!-- Ship (same geometry as ship.svg, translated by 4,2: nose at 16,4, tail notch at 16,18.5,
+       wing tips at y 23) with the thrust flash behind it. Anchor = ship centre (16,14).
+       The flash is two flat triangles, drawn before (under) the hull:
+         outer  #FF6A2A (thrust.outer) α 0.90, 10 wide × 21.5 long from the tail notch (11,19.5 21,19.5 16,41)
+         core   #FFE08A (thrust.core)  α 1.00,  5.2 wide × 14 long                  (13.4,19.5 18.6,19.5 16,33.5)
+       This asset keeps a small presentation blur (feGaussianBlur σ 1.2 outer / 0.4 core). Canvas draws the same
+       two triangles with NO blur, composited "lighter" (canvas-notes §6, style.md §7). -->
+  <defs>
+    <filter id="thrustOuter" x="-50%" y="-20%" width="200%" height="140%">
+      <feGaussianBlur stdDeviation="1.2"/>
+    </filter>
+    <filter id="thrustCore" x="-50%" y="-20%" width="200%" height="140%">
+      <feGaussianBlur stdDeviation="0.4"/>
+    </filter>
+  </defs>
+  <polygon fill="#FF6A2A" fill-opacity="0.9" points="11,19.5 21,19.5 16,41" filter="url(#thrustOuter)"/>
+  <polygon fill="#FFE08A" points="13.4,19.5 18.6,19.5 16,33.5" filter="url(#thrustCore)"/>
+  <g transform="translate(4 2)">
+    <g stroke="#0A0D1A" stroke-width="1" stroke-linejoin="round">
+      <polygon fill="#F2F5FF" points="8.2,12.5 4,19.2 7,19.6"/>
+      <polygon fill="#F2F5FF" points="15.8,12.5 20,19.2 17,19.6"/>
+      <polygon fill="#F2F5FF" points="12,2 18.5,21 12,16.5 5.5,21"/>
+    </g>
+    <rect x="11.2" y="7.5" width="1.6" height="4" rx="0.8" fill="#5EA0FF"/>
+  </g>
+</svg>
