@@ -99,12 +99,14 @@ dd {
   background: #1a2230;
 }
 
+#fuel-spent,
 #fuel-burn,
 #fuel-left {
   height: 100%;
   flex: none;
 }
 
+#fuel-spent { background: #3c4b63; }
 #fuel-burn { background: #e2c27a; }
 #fuel-left { background: #8fceaa; }
 
@@ -115,6 +117,7 @@ dd {
 }
 
 #path-value[data-status="won"] { color: #b7e0c2; }
+#path-value[data-status="capture"] { color: #9ec4ff; }
 #path-value[data-status="crashed"] { color: #f0b2aa; }
 #path-value[data-status="lost"] { color: #c5cedc; }
 
@@ -158,6 +161,8 @@ button:disabled {
 }
 
 #launch:disabled { background: #2a3344; color: #8b97ab; }
+
+#skip[hidden] { display: none; }
 
 .speeds { display: flex; }
 

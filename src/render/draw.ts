@@ -1,5 +1,6 @@
 import type { Game } from "../game/state";
-import type { FlightStatus, Vec2 } from "../sim/physics";
+import { sampleOrbit, type FlightStatus, type Vec2 } from "../sim/physics";
+import { simConfigFromLevel } from "../level/passage";
 import { worldToScreen, type Camera } from "./camera";
 import type { Star } from "./stars";
 
@@ -44,9 +45,19 @@ export function draw(
 
   for (const body of game.level.bodies) drawBody(ctx, camera, width, height, body);
 
-  if (game.mode === "planning" && game.prediction && game.prediction.path.length > 0) {
-    const origin = { x: game.initial.x, y: game.initial.y };
-    strokePath(ctx, camera, width, height, [origin, ...game.prediction.path], pathColor(game.prediction.status), true);
+  const aiming = game.mode === "planning" || game.mode === "capture";
+  const pose = game.mode === "planning" ? game.initial : game.ship;
+  if (aiming && game.prediction && game.prediction.path.length > 0) {
+    strokePath(ctx, camera, width, height, [pose, ...game.prediction.path], pathColor(game.prediction.status), true);
+  }
+  const predictedOrbit = game.prediction?.orbit;
+  const wonOrbit =
+    game.mode === "finished" && game.ship.status === "won"
+      ? sampleOrbit(game.ship, targetOf(game), simConfigFromLevel(game.level).g)
+      : null;
+  const orbit = predictedOrbit ?? wonOrbit;
+  if (orbit && orbit.length > 1) {
+    strokePath(ctx, camera, width, height, [...orbit, orbit[0]], "rgba(167, 224, 178, 0.95)", true);
   }
 
   if (game.trail.length > 1) {
@@ -54,12 +65,11 @@ export function draw(
   }
 
   const aim = plannedVelocity(game);
-  if (game.mode === "planning" && aim.mag > 0.05) {
-    drawBurn(ctx, camera, width, height, game);
+  if (aiming && aim.mag > 0.05) {
+    drawBurn(ctx, camera, width, height, game, pose);
   }
 
-  const pose = game.mode === "planning" ? game.initial : game.ship;
-  const nose = game.mode === "planning" ? aim.velocity : { x: pose.vx, y: pose.vy };
+  const nose = aiming ? aim.velocity : { x: pose.vx, y: pose.vy };
   const screen = worldToScreen(camera, width, height, pose.x, pose.y);
   drawShip(ctx, screen.x, screen.y, Math.atan2(-nose.y, nose.x));
 
@@ -162,20 +172,21 @@ function bodyPalette(kind: Game["level"]["bodies"][number]["kind"]): { highlight
   return { highlight: "#d5e6ff", base: "#3d7ed8", edge: "#1a3d78" };
 }
 
-function drawBurn(ctx: CanvasRenderingContext2D, camera: Camera, width: number, height: number, game: Game): void {
+function drawBurn(
+  ctx: CanvasRenderingContext2D,
+  camera: Camera,
+  width: number,
+  height: number,
+  game: Game,
+  origin: { x: number; y: number },
+): void {
   const mag = Math.hypot(game.plannedDv.x, game.plannedDv.y);
   const pixels = mag / game.level.dvPerPixel;
   const world = pixels / camera.zoom;
   const dirX = game.plannedDv.x / mag;
   const dirY = game.plannedDv.y / mag;
-  const start = worldToScreen(camera, width, height, game.initial.x, game.initial.y);
-  const end = worldToScreen(
-    camera,
-    width,
-    height,
-    game.initial.x + dirX * world,
-    game.initial.y + dirY * world,
-  );
+  const start = worldToScreen(camera, width, height, origin.x, origin.y);
+  const end = worldToScreen(camera, width, height, origin.x + dirX * world, origin.y + dirY * world);
   ctx.beginPath();
   ctx.moveTo(start.x, start.y);
   ctx.lineTo(end.x, end.y);
@@ -214,13 +225,21 @@ function drawShip(ctx: CanvasRenderingContext2D, x: number, y: number, angle: nu
 function pathColor(status: FlightStatus): string {
   if (status === "won") return "rgba(167, 224, 178, 0.95)";
   if (status === "crashed") return "rgba(240, 168, 160, 0.95)";
+  if (status === "capture") return "rgba(148, 196, 255, 0.95)";
   return "rgba(196, 206, 222, 0.92)";
 }
 
+function targetOf(game: Game) {
+  const body = game.level.bodies.find((item) => item.id === game.level.targetId);
+  if (!body) throw new Error("Level is missing Planet X");
+  return body;
+}
+
 function plannedVelocity(game: Game): { mag: number; velocity: Vec2 } {
+  const pose = game.mode === "planning" ? game.initial : game.ship;
   const velocity = {
-    x: game.initial.vx + game.plannedDv.x,
-    y: game.initial.vy + game.plannedDv.y,
+    x: pose.vx + game.plannedDv.x,
+    y: pose.vy + game.plannedDv.y,
   };
   return { mag: Math.hypot(game.plannedDv.x, game.plannedDv.y), velocity };
 }

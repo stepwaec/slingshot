@@ -15,6 +15,8 @@ function required<T extends Element>(selector: string): T {
 
 const canvas = required<HTMLCanvasElement>("#space");
 const launchButton = required<HTMLButtonElement>("#launch");
+const skipButton = required<HTMLButtonElement>("#skip");
+const fuelSpent = required<HTMLElement>("#fuel-spent");
 const fuelValue = required<HTMLElement>("#fuel-value");
 const burnValue = required<HTMLElement>("#burn-value");
 const pathValue = required<HTMLElement>("#path-value");
@@ -39,10 +41,11 @@ let fps = 0;
 let fpsFrames = 0;
 let fpsStamp = performance.now();
 let framed = false;
+let previousMode = game.mode;
 
 bindInput(
   game,
-  { canvas, launchButton, resetButtons, speedButtons },
+  { canvas, launchButton, skipButton, resetButtons, speedButtons },
   () => ({ width: canvas.clientWidth, height: canvas.clientHeight }),
   () => frameLevel(game.camera, canvas.clientWidth, canvas.clientHeight, game.level),
 );
@@ -72,20 +75,24 @@ function loop(now: number): void {
     fpsStamp = now;
   }
   tick(game);
+  if (game.mode === "capture" && previousMode !== "capture") frameCapture();
+  previousMode = game.mode;
   draw(ctx, game, game.camera, stars, canvas.clientWidth, canvas.clientHeight);
   syncHud(game);
   requestAnimationFrame(loop);
 }
 
 function syncHud(current: Game): void {
-  const cost = current.mode === "planning" ? plannedCost(current) : current.level.fuel - current.fuel;
-  const remaining = current.mode === "planning" ? current.level.fuel - cost : current.fuel;
-  fuelValue.textContent = remaining.toFixed(1);
-  burnValue.textContent = cost.toFixed(1);
-  const burnWidth = Math.min(100, (cost / current.level.fuel) * 100);
-  const leftWidth = Math.min(100, (remaining / current.level.fuel) * 100);
-  fuelBurn.style.width = `${burnWidth}%`;
-  fuelLeft.style.width = `${leftWidth}%`;
+  const budget = current.level.fuel;
+  const planningBurn = current.mode === "planning" || current.mode === "capture";
+  const planned = planningBurn ? plannedCost(current) : 0;
+  const spent = budget - current.fuel;
+  const remaining = current.fuel - planned;
+  fuelValue.textContent = Math.max(0, remaining).toFixed(1);
+  burnValue.textContent = (planningBurn ? planned : spent).toFixed(1);
+  fuelSpent.style.width = `${(100 * (planningBurn ? spent : 0)) / budget}%`;
+  fuelBurn.style.width = `${(100 * (planningBurn ? planned : spent)) / budget}%`;
+  fuelLeft.style.width = `${(100 * Math.max(0, remaining)) / budget}%`;
 
   const status: FlightStatus | "aim" =
     current.mode === "finished" ? current.ship.status : (current.prediction?.status ?? "aim");
@@ -93,7 +100,10 @@ function syncHud(current: Game): void {
   pathValue.dataset.status = status;
   fpsValue.textContent = `${Math.round(fps)} fps`;
 
-  launchButton.disabled = current.mode !== "planning" || cost < 0.25;
+  const capturing = current.mode === "capture";
+  launchButton.textContent = capturing ? "Confirm" : "Launch";
+  launchButton.disabled = capturing ? planned < 0.25 : current.mode !== "planning" || planned < 0.25;
+  skipButton.hidden = !capturing;
   for (const button of speedButtons) {
     button.setAttribute("aria-pressed", button.dataset.speed === String(current.speed) ? "true" : "false");
   }
@@ -102,28 +112,50 @@ function syncHud(current: Game): void {
   if (outcome) {
     overlay.hidden = false;
     overlayTitle.textContent = outcome.title;
-    overlayDetail.textContent = `${outcome.detail} Fuel used ${cost.toFixed(1)}.`;
+    overlayDetail.textContent = `${outcome.detail} Fuel used ${spent.toFixed(1)}.`;
     hint.textContent = "Reset returns to planning.";
   } else {
     overlay.hidden = true;
-    hint.textContent =
-      current.mode === "flying"
-        ? "The ship is following the planned burn. The trail is where it has been."
-        : "Drag from the ship to aim. The dotted line is the flight the burn will fly. Drag empty space to pan, scroll to zoom.";
+    hint.textContent = hintFor(current.mode);
   }
+}
+
+function hintFor(mode: Game["mode"]): string {
+  if (mode === "flying") return "The ship is following the planned burn. The trail is where it has been.";
+  if (mode === "capture") {
+    return "Drag a capture burn. The dotted line is the orbit it will fly. Confirm fires it. Skip leaves the burn unused.";
+  }
+  return "Drag from the ship to aim. The dotted line is the flight the burn will fly. Drag empty space to pan, scroll to zoom.";
 }
 
 function pathLabel(current: Game, status: FlightStatus | "aim"): string {
   if (current.mode === "flying") return "In flight";
   if (current.mode === "finished") {
-    if (current.ship.status === "won") return "Arrived";
+    if (current.ship.status === "won") return "In orbit";
     if (current.ship.status === "crashed") return "Crashed";
     return "Lost in space";
   }
-  if (status === "won") return `Capture · ${current.predictMs.toFixed(1)} ms`;
-  if (status === "crashed") return `Crash · ${current.predictMs.toFixed(1)} ms`;
-  if (status === "lost") return `Lost in space · ${current.predictMs.toFixed(1)} ms`;
+  const timing = `${current.predictMs.toFixed(1)} ms`;
+  if (current.mode === "capture") {
+    if (status === "won") return `Captured · ${timing}`;
+    if (status === "crashed") return `Crash · ${timing}`;
+    if (status === "lost" && current.prediction?.lostReason === "flyby") return `Flyby · ${timing}`;
+    if (status === "lost") return `Lost in space · ${timing}`;
+    return "Aim a capture burn";
+  }
+  if (status === "capture") return `Reach X · ${timing}`;
+  if (status === "crashed") return `Crash · ${timing}`;
+  if (status === "lost") return `Lost in space · ${timing}`;
   return "Aim a burn";
+}
+
+function frameCapture(): void {
+  const planet = game.level.bodies.find((body) => body.id === game.level.targetId);
+  if (!planet?.captureRadius) return;
+  const span = Math.min(canvas.clientWidth, canvas.clientHeight);
+  game.camera.x = planet.x;
+  game.camera.y = planet.y;
+  game.camera.zoom = (span * 0.58) / (planet.captureRadius * 2);
 }
 
 declare global {

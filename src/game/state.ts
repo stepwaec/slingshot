@@ -3,9 +3,11 @@ import {
   advanceFrame,
   clampDv,
   cloneState,
+  flyMission,
   fuelCost,
   makeState,
   predict,
+  resolveCapture,
   stepsPerFrame,
   tryApplyImpulse,
   type Prediction,
@@ -15,7 +17,7 @@ import {
 } from "../sim/physics";
 import type { Camera } from "../render/camera";
 
-export type GameMode = "planning" | "flying" | "finished";
+export type GameMode = "planning" | "flying" | "capture" | "finished";
 
 export interface Game {
   level: Level;
@@ -55,24 +57,29 @@ export function plannedCost(game: Game): number {
 }
 
 export function setPlannedDv(game: Game, dvx: number, dvy: number): void {
-  if (game.mode !== "planning") return;
-  const clamped = clampDv(dvx, dvy, game.level.fuel, game.level.fuelPerDv);
+  if (game.mode !== "planning" && game.mode !== "capture") return;
+  const clamped = clampDv(dvx, dvy, game.fuel, game.level.fuelPerDv);
   game.plannedDv = clamped;
   const magnitude = Math.hypot(clamped.x, clamped.y);
-  if (magnitude < 0.05) {
-    game.prediction = null;
-    game.predictMs = 0;
-    return;
-  }
-  const preview = cloneState(game.initial);
-  const applied = tryApplyImpulse(preview, clamped.x, clamped.y, game.level.fuel, game.level.fuelPerDv);
-  if (!applied.ok) {
+  const config = simConfigFromLevel(game.level);
+  if (game.mode === "planning" && magnitude < 0.05) {
     game.prediction = null;
     game.predictMs = 0;
     return;
   }
   const started = performance.now();
-  game.prediction = predict(preview, simConfigFromLevel(game.level));
+  if (game.mode === "planning") {
+    const preview = cloneState(game.initial);
+    const applied = tryApplyImpulse(preview, clamped.x, clamped.y, game.fuel, game.level.fuelPerDv);
+    if (!applied.ok) {
+      game.prediction = null;
+      game.predictMs = 0;
+      return;
+    }
+    game.prediction = predict(preview, config);
+  } else {
+    game.prediction = flyMission(game.ship, config, 1, clamped, game.fuel, game.level.fuelPerDv);
+  }
   game.predictMs = performance.now() - started;
 }
 
@@ -94,7 +101,38 @@ export function tick(game: Game): void {
   if (game.mode !== "flying") return;
   advanceFrame(game.ship, simConfigFromLevel(game.level), stepsPerFrame(game.speed), game.frameSamples);
   for (let i = 0; i < game.frameSamples.length; i++) game.trail.push(game.frameSamples[i]);
+  if (game.ship.status === "capture") {
+    game.mode = "capture";
+    game.plannedDv = { x: 0, y: 0 };
+    setPlannedDv(game, 0, 0);
+    return;
+  }
   if (game.ship.status !== "flying") game.mode = "finished";
+}
+
+/** Fire the capture burn that is currently aimed. */
+export function confirmCapture(game: Game): void {
+  if (game.mode !== "capture") return;
+  const applied = resolveCapture(
+    game.ship,
+    game.plannedDv.x,
+    game.plannedDv.y,
+    game.fuel,
+    game.level.fuelPerDv,
+    simConfigFromLevel(game.level),
+  );
+  if (!applied.ok) return;
+  game.fuel = applied.fuel;
+  game.plannedDv = { x: 0, y: 0 };
+  game.prediction = null;
+  game.mode = game.ship.status === "flying" ? "flying" : "finished";
+}
+
+/** Continue with no capture burn. A fast flyby then leaves the sphere unbound. */
+export function skipCapture(game: Game): void {
+  if (game.mode !== "capture") return;
+  game.plannedDv = { x: 0, y: 0 };
+  confirmCapture(game);
 }
 
 export function setSpeed(game: Game, speed: SimSpeed): void {
@@ -123,8 +161,8 @@ export function outcomeCopy(game: Game): { title: string; detail: string } | nul
   if (game.mode !== "finished") return null;
   if (game.ship.status === "won") {
     return {
-      title: "Arrived at Planet X",
-      detail: "The ship entered Planet X's capture radius.",
+      title: "In orbit around Planet X",
+      detail: "The ship is bound to Planet X. Periapsis clears the surface, and apoapsis stays inside the capture radius.",
     };
   }
   if (game.ship.status === "crashed") {
@@ -134,6 +172,11 @@ export function outcomeCopy(game: Game): { title: string; detail: string } | nul
       detail: `The ship hit ${body?.name ?? "a body"}.`,
     };
   }
-  const why = game.ship.lostReason === "timeout" ? "Time ran out." : "The ship left the charted system.";
+  const why =
+    game.ship.lostReason === "timeout"
+      ? "Time ran out."
+      : game.ship.lostReason === "flyby"
+        ? "The ship flew past Planet X without being captured."
+        : "The ship left the charted system.";
   return { title: "Lost in space", detail: why };
 }

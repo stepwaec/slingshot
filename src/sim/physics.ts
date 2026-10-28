@@ -22,7 +22,10 @@ export interface Body {
   mass: number;
   /** Surface radius. Touching it crashes the ship. */
   radius: number;
-  /** Entering this radius around the target is a win. Larger than `radius`. */
+  /**
+   * Sphere of influence around the target. Entering it pauses for one capture
+   * burn. A captured orbit must keep its apoapsis inside this radius.
+   */
   captureRadius?: number;
 }
 
@@ -41,9 +44,13 @@ export interface SimConfig {
   bounds: Bounds;
   maxSteps: number;
   targetId: string;
+  /** Captured periapsis must clear the surface by this much. */
+  periapsisMargin: number;
 }
 
-export type FlightStatus = "flying" | "won" | "crashed" | "lost";
+export type FlightStatus = "flying" | "capture" | "won" | "crashed" | "lost";
+
+export type LostReason = "bounds" | "timeout" | "flyby";
 
 export interface SimState {
   x: number;
@@ -55,7 +62,9 @@ export interface SimState {
   step: number;
   status: FlightStatus;
   crashedBodyId: string | null;
-  lostReason: "bounds" | "timeout" | null;
+  lostReason: LostReason | null;
+  /** Set once the capture burn has been fired or skipped. */
+  captureResolved: boolean;
 }
 
 export interface Prediction {
@@ -63,8 +72,10 @@ export interface Prediction {
   path: Vec2[];
   status: FlightStatus;
   crashedBodyId: string | null;
-  lostReason: "bounds" | "timeout" | null;
+  lostReason: LostReason | null;
   steps: number;
+  /** Closed orbit around the target when the flight ends captured. */
+  orbit: Vec2[] | null;
 }
 
 export const SIM_SPEEDS = [1, 2, 4] as const;
@@ -121,6 +132,7 @@ export function makeState(
     status: "flying",
     crashedBodyId: null,
     lostReason: null,
+    captureResolved: false,
   };
 }
 
@@ -189,9 +201,110 @@ function circleEntry(
   return null;
 }
 
+export interface OrbitElements {
+  bound: boolean;
+  energy: number;
+  periapsis: number;
+  apoapsis: number;
+  eccentricity: number;
+}
+
+/** Two-body elements of the ship relative to one fixed body. */
+export function orbitAbout(state: SimState, body: Body, g: number): OrbitElements | null {
+  const rx = state.x - body.x;
+  const ry = state.y - body.y;
+  const r = Math.hypot(rx, ry);
+  if (r < 1e-8) return null;
+  const mu = g * body.mass;
+  if (mu <= 0) return null;
+  const energy = (state.vx * state.vx + state.vy * state.vy) / 2 - mu / r;
+  const h = rx * state.vy - ry * state.vx;
+  const ex = (state.vy * h) / mu - rx / r;
+  const ey = (-state.vx * h) / mu - ry / r;
+  const eccentricity = Math.hypot(ex, ey);
+  if (energy >= -1e-9) {
+    return { bound: false, energy, periapsis: Infinity, apoapsis: Infinity, eccentricity };
+  }
+  const semiMajor = -mu / (2 * energy);
+  const ecc = Math.min(eccentricity, 0.999999);
+  return {
+    bound: true,
+    energy,
+    periapsis: semiMajor * (1 - ecc),
+    apoapsis: semiMajor * (1 + ecc),
+    eccentricity: ecc,
+  };
+}
+
 /**
- * One velocity-Verlet step of size `config.dt`, then win / crash / lost checks.
- * Terminal states are not advanced further.
+ * Bound to the target, periapsis above the surface plus margin, apoapsis inside
+ * the capture radius. A burn at the sphere's edge can sit at apoapsis, so the
+ * apoapsis check allows the radius itself.
+ */
+export function isCapturedOrbit(state: SimState, config: SimConfig): boolean {
+  const body = targetBody(config);
+  if (!body?.captureRadius) return false;
+  const elements = orbitAbout(state, body, config.g);
+  if (!elements?.bound) return false;
+  return (
+    elements.energy < 0 &&
+    elements.periapsis > body.radius + config.periapsisMargin &&
+    elements.apoapsis <= body.captureRadius + 1e-3
+  );
+}
+
+/** Points around the osculating ellipse, or null when the ship is not bound. */
+export function sampleOrbit(state: SimState, body: Body, g: number, count = 120): Vec2[] | null {
+  const elements = orbitAbout(state, body, g);
+  if (!elements?.bound) return null;
+  const rx = state.x - body.x;
+  const ry = state.y - body.y;
+  const r = Math.hypot(rx, ry);
+  const mu = g * body.mass;
+  const h = rx * state.vy - ry * state.vx;
+  const ex = (state.vy * h) / mu - rx / r;
+  const ey = (-state.vx * h) / mu - ry / r;
+  const ecc = elements.eccentricity;
+  let px: number;
+  let py: number;
+  if (ecc > 1e-5) {
+    const eLen = Math.hypot(ex, ey);
+    px = ex / eLen;
+    py = ey / eLen;
+  } else {
+    px = rx / r;
+    py = ry / r;
+  }
+  const sign = h >= 0 ? 1 : -1;
+  const tx = -py * sign;
+  const ty = px * sign;
+  const semiMajor = -mu / (2 * elements.energy);
+  const parameter = semiMajor * (1 - ecc * ecc);
+  const points: Vec2[] = [];
+  for (let i = 0; i < count; i++) {
+    const anomaly = (i / count) * Math.PI * 2;
+    const radius = parameter / (1 + ecc * Math.cos(anomaly));
+    const cos = Math.cos(anomaly);
+    const sin = Math.sin(anomaly);
+    points.push({
+      x: body.x + radius * (cos * px + sin * tx),
+      y: body.y + radius * (cos * py + sin * ty),
+    });
+  }
+  return points;
+}
+
+function targetBody(config: SimConfig): Body | undefined {
+  for (let i = 0; i < config.bodies.length; i++) {
+    if (config.bodies[i].id === config.targetId) return config.bodies[i];
+  }
+  return undefined;
+}
+
+/**
+ * One velocity-Verlet step of size `config.dt`, then capture / crash / lost checks.
+ * `capture` pauses on the target's sphere until `resolveCapture`. Terminal states
+ * are not advanced. `dt` never depends on sim speed.
  */
 export function step(state: SimState, config: SimConfig): void {
   if (state.status !== "flying") return;
@@ -211,38 +324,68 @@ export function step(state: SimState, config: SimConfig): void {
   state.y = y1;
   state.step += 1;
 
-  let bestT = Infinity;
-  let bestKind: "won" | "crashed" | null = null;
-  let bestBody: string | null = null;
-
+  let crashT = Infinity;
+  let crashBody: string | null = null;
   const bodies = config.bodies;
   for (let i = 0; i < bodies.length; i++) {
     const body = bodies[i];
-    const crashT = circleEntry(x0, y0, x1, y1, body.x, body.y, body.radius);
-    if (crashT !== null && crashT < bestT) {
-      bestT = crashT;
-      bestKind = "crashed";
-      bestBody = body.id;
-    }
-    if (body.id === config.targetId && body.captureRadius !== undefined) {
-      const winT = circleEntry(x0, y0, x1, y1, body.x, body.y, body.captureRadius);
-      if (winT !== null && winT < bestT) {
-        bestT = winT;
-        bestKind = "won";
-        bestBody = body.id;
-      }
+    const hit = circleEntry(x0, y0, x1, y1, body.x, body.y, body.radius);
+    if (hit !== null && hit < crashT) {
+      crashT = hit;
+      crashBody = body.id;
     }
   }
 
-  if (bestKind !== null) {
-    state.x = x0 + (x1 - x0) * bestT;
-    state.y = y0 + (y1 - y0) * bestT;
+  const target = targetBody(config);
+  const captureRadius = target?.captureRadius;
+  let captureT: number | null = null;
+  if (target && captureRadius !== undefined && !state.captureResolved) {
+    captureT = circleEntry(x0, y0, x1, y1, target.x, target.y, captureRadius);
+  }
+
+  if (crashBody !== null && (captureT === null || crashT <= captureT)) {
+    const body = bodies.find((item) => item.id === crashBody);
+    state.x = x0 + (x1 - x0) * crashT;
+    state.y = y0 + (y1 - y0) * crashT;
+    if (body) {
+      const dx = state.x - body.x;
+      const dy = state.y - body.y;
+      const distance = Math.hypot(dx, dy);
+      if (distance > 1e-8) {
+        state.x = body.x + (dx / distance) * body.radius;
+        state.y = body.y + (dy / distance) * body.radius;
+      }
+    }
     const impact = acceleration(state.x, state.y, config);
     state.ax = impact.ax;
     state.ay = impact.ay;
-    state.status = bestKind;
-    state.crashedBodyId = bestKind === "crashed" ? bestBody : null;
+    state.status = "crashed";
+    state.crashedBodyId = crashBody;
     return;
+  }
+
+  if (target && captureRadius !== undefined && captureT !== null) {
+    const entryX = x0 + (x1 - x0) * captureT;
+    const entryY = y0 + (y1 - y0) * captureT;
+    placeExactly(state, target, captureRadius, entryX, entryY);
+    const impact = acceleration(state.x, state.y, config);
+    state.ax = impact.ax;
+    state.ay = impact.ay;
+    state.status = "capture";
+    return;
+  }
+
+  if (target && captureRadius !== undefined && state.captureResolved) {
+    if (isCapturedOrbit(state, config)) {
+      state.status = "won";
+      return;
+    }
+    const outside = Math.hypot(state.x - target.x, state.y - target.y) > captureRadius + 1e-6;
+    if (outside) {
+      state.status = "lost";
+      state.lostReason = "flyby";
+      return;
+    }
   }
 
   const bounds = config.bounds;
@@ -256,6 +399,39 @@ export function step(state: SimState, config: SimConfig): void {
     state.status = "lost";
     state.lostReason = "timeout";
   }
+}
+
+function placeExactly(state: SimState, body: Body, radius: number, x: number, y: number): void {
+  const dx = x - body.x;
+  const dy = y - body.y;
+  const distance = Math.hypot(dx, dy);
+  if (distance < 1e-8) {
+    state.x = body.x + radius;
+    state.y = body.y;
+    return;
+  }
+  state.x = body.x + (dx / distance) * radius;
+  state.y = body.y + (dy / distance) * radius;
+}
+
+/**
+ * Fire or skip the single capture burn. The ship must be paused in `capture`.
+ * A zero burn is a skip. Winning orbits are recognized here, before the next step.
+ */
+export function resolveCapture(
+  state: SimState,
+  dvx: number,
+  dvy: number,
+  fuel: number,
+  fuelPerDv: number,
+  config: SimConfig,
+): ImpulseResult {
+  if (state.status !== "capture") return { ok: false, cost: fuelCost(dvx, dvy, fuelPerDv) };
+  const applied = tryApplyImpulse(state, dvx, dvy, fuel, fuelPerDv);
+  if (!applied.ok) return applied;
+  state.captureResolved = true;
+  state.status = isCapturedOrbit(state, config) ? "won" : "flying";
+  return applied;
 }
 
 /** Advance one rendered frame. `stepsThisFrame` is 1, 2, or 4 — `dt` stays fixed. */
@@ -273,7 +449,20 @@ export function advanceFrame(
   }
 }
 
-/** Fly until win, crash, or lost. Uses the same frame stepper as live flight. */
+function predictionFrom(state: SimState, config: SimConfig, path: Vec2[]): Prediction {
+  const target = targetBody(config);
+  const orbit = state.status === "won" && target ? sampleOrbit(state, target, config.g) : null;
+  return {
+    path,
+    status: state.status,
+    crashedBodyId: state.crashedBodyId,
+    lostReason: state.lostReason,
+    steps: state.step,
+    orbit,
+  };
+}
+
+/** Fly until the ship pauses for capture, wins, crashes, or is lost. */
 export function flyUntilDone(from: SimState, config: SimConfig, stepsThisFrame: number): Prediction {
   const state = cloneState(from);
   const path: Vec2[] = [];
@@ -282,18 +471,45 @@ export function flyUntilDone(from: SimState, config: SimConfig, stepsThisFrame: 
     advanceFrame(state, config, stepsThisFrame, frame);
     for (let i = 0; i < frame.length; i++) path.push(frame[i]);
   }
-  return {
-    path,
-    status: state.status,
-    crashedBodyId: state.crashedBodyId,
-    lostReason: state.lostReason,
-    steps: state.step,
-  };
+  return predictionFrom(state, config, path);
+}
+
+/**
+ * Full flight including the capture burn. This is the predictor used once the
+ * ship is paused in capture, and the same stepper live flight uses afterward.
+ * `stepsThisFrame` is the sim-speed grouping. It does not change `dt`.
+ */
+export function flyMission(
+  from: SimState,
+  config: SimConfig,
+  stepsThisFrame: number,
+  captureDv: Vec2,
+  fuel: number,
+  fuelPerDv: number,
+): Prediction {
+  const state = cloneState(from);
+  const path: Vec2[] = [];
+  const frame: Vec2[] = [];
+  let fuelLeft = fuel;
+  while (state.status === "flying" || state.status === "capture") {
+    if (state.status === "capture") {
+      const resolved = resolveCapture(state, captureDv.x, captureDv.y, fuelLeft, fuelPerDv, config);
+      if (!resolved.ok) break;
+      fuelLeft = resolved.fuel;
+      continue;
+    }
+    const pathLength = path.length;
+    advanceFrame(state, config, stepsThisFrame, frame);
+    for (let i = 0; i < frame.length; i++) path.push(frame[i]);
+    if (path.length === pathLength && state.status === "flying") break;
+  }
+  return predictionFrom(state, config, path);
 }
 
 /**
  * Planning prediction. Identical integrator to flight; always one fixed step
  * per internal frame so the sampled path is the full step-by-step trajectory.
+ * Without a capture burn, flight stops when the ship reaches Planet X's sphere.
  */
 export function predict(from: SimState, config: SimConfig): Prediction {
   return flyUntilDone(from, config, 1);
