@@ -100,7 +100,7 @@ class PathVisual implements Visual {
 
   update(frame: VisualFrame): void {
     const { game, width, height } = frame;
-    const planning = game.mode === "planning";
+    const planning = game.mode === "planning" || game.mode === "paused";
     if (!planning) {
       this.path.mesh.visible = false;
       this.orbit.mesh.visible = false;
@@ -131,8 +131,9 @@ class PathVisual implements Visual {
     for (let i = 0; i < snaps.length; i++) {
       if (snaps[i].reached) splitStep = snaps[i].step;
     }
+    const origin = game.mode === "paused" ? game.ship : game.initial;
     this.chain = game.prediction.path;
-    this.chainPrefix = { x: game.initial.x, y: game.initial.y, step: game.initial.step };
+    this.chainPrefix = { x: origin.x, y: origin.y, step: origin.step };
     this.chainClose = false;
     const count = this.sample(width, height, this.path.centers, splitStep);
     const head = srgb01(this.theme.colors.path);

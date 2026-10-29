@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { bodyPose, type Body } from "../../sim/physics";
 import type { Theme } from "../theme";
 import { disposeObject, type Visual, type VisualFactory, type VisualFrame } from "../visual";
 import { shader, srgbVec } from "./materials";
@@ -58,6 +59,7 @@ class StarVisual implements Visual {
   readonly space = "world" as const;
   readonly object = new THREE.Group();
   private mesh: THREE.Mesh | null = null;
+  private body: Body | null = null;
   private bodyRadius = 46;
   private readonly theme: Theme;
 
@@ -67,6 +69,7 @@ class StarVisual implements Visual {
     this.object.userData.asset = theme.assets.star;
     const body = level.bodies.find((item) => item.kind === "star");
     if (!body) return;
+    this.body = body;
     this.bodyRadius = body.radius;
     const star = theme.star;
     const colors = theme.colors;
@@ -90,7 +93,10 @@ class StarVisual implements Visual {
   }
 
   update(frame: VisualFrame): void {
-    if (!this.mesh) return;
+    if (!this.mesh || !this.body) return;
+    const time = (frame.game.mode === "planning" ? 0 : frame.game.ship.step) * frame.game.level.dt;
+    const pose = bodyPose(this.body, time, frame.game.level.bodies);
+    this.mesh.position.set(pose.x, pose.y, 0);
     const star = this.theme.star;
     const breathe = 1 + star.breathe * Math.sin((frame.now / star.periodMs) * Math.PI * 2);
     this.mesh.scale.setScalar((this.bodyRadius / star.bodyRadius) * breathe);

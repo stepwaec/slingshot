@@ -3,20 +3,28 @@ import { bindInput } from "./game/input";
 import {
   burnHandleOffset,
   canLaunch,
+  canPause,
   createGame,
+  isEditing,
   launch,
+  loadLevel,
   nodeIncoming,
   nodePosition,
   outcomeCopy,
   planFuel,
+  queuedBurns,
   selectNode,
   setPlan,
   tick,
   type Game,
 } from "./game/state";
+import { burnLimit, passage, pauseRuleOf, simConfigFromLevel, type Level } from "./level/passage";
+import { relay } from "./level/relay";
 import { frameLevel, worldToScreen } from "./render/camera";
 import { SpaceView } from "./render/view";
-import type { BurnNode } from "./sim/physics";
+import { horizonSteps, type BurnNode } from "./sim/physics";
+
+const levels: readonly Level[] = [passage, relay];
 
 function required<T extends Element>(selector: string): T {
   const element = document.querySelector<T>(selector);
@@ -39,6 +47,11 @@ const aimLabel = required<HTMLElement>("#aim-label");
 const planningActions = required<HTMLElement>("#planning-actions");
 const flightActions = required<HTMLElement>("#flight-actions");
 const fpsValue = required<HTMLElement>("#fps");
+const planNote = required<HTMLElement>("#plan-note");
+const levelSelect = required<HTMLSelectElement>("#level");
+const pauseButton = required<HTMLButtonElement>("#pause");
+const resumeButton = required<HTMLButtonElement>("#resume");
+const slowButton = required<HTMLButtonElement>("#slow");
 const overlay = required<HTMLElement>("#overlay");
 const card = required<HTMLElement>(".card");
 const overlayTitle = required<HTMLElement>("#overlay-title");
@@ -57,9 +70,33 @@ let fpsStamp = performance.now();
 let framed = false;
 let overlayOpen = false;
 
+for (const level of levels) {
+  const option = document.createElement("option");
+  option.value = level.id;
+  option.textContent = level.name;
+  levelSelect.append(option);
+}
+levelSelect.addEventListener("change", () => {
+  const next = levels.find((level) => level.id === levelSelect.value) ?? passage;
+  loadLevel(game, next);
+  view.reload(next);
+  frameLevel(game.camera, canvas.clientWidth, canvas.clientHeight, next);
+  framed = true;
+});
+
 bindInput(
   game,
-  { canvas, launchButton, deleteButton, resetButtons, clearButtons, speedButtons },
+  {
+    canvas,
+    launchButton,
+    deleteButton,
+    resetButtons,
+    clearButtons,
+    speedButtons,
+    pauseButton,
+    resumeButton,
+    slowButton,
+  },
   () => ({ width: canvas.clientWidth, height: canvas.clientHeight }),
   () => frameLevel(game.camera, canvas.clientWidth, canvas.clientHeight, game.level),
 );
@@ -98,10 +135,16 @@ function syncHud(current: Game): void {
   const budget = current.level.fuel;
   const fuel = planFuel(current);
   const planning = current.mode === "planning";
+  const editing = isEditing(current);
   app.dataset.mode = current.mode;
-  modeLabel.textContent = planning ? "Planning" : "In flight";
+  modeLabel.textContent = planning ? "Planning" : current.mode === "paused" ? "Paused" : "In flight";
   planningActions.hidden = !planning;
   flightActions.hidden = planning;
+  pauseButton.hidden = current.mode !== "flying";
+  resumeButton.hidden = current.mode !== "paused";
+  pauseButton.disabled = !canPause(current);
+  slowButton.setAttribute("aria-pressed", current.slow ? "true" : "false");
+  if (levelSelect.value !== current.level.id) levelSelect.value = current.level.id;
 
   const remaining = planning ? fuel.left : current.fuel;
   const ratio = remaining / budget;
@@ -121,15 +164,16 @@ function syncHud(current: Game): void {
   fpsValue.textContent = `${Math.round(fps)} fps`;
 
   launchButton.disabled = !canLaunch(current);
-  deleteButton.disabled = !planning || current.selected === null;
+  deleteButton.disabled = !editing || current.selected === null;
   for (const button of clearButtons) button.disabled = current.mode === "flying";
+  syncPlanNote(current);
   for (const button of speedButtons) {
     button.setAttribute("aria-pressed", button.dataset.speed === String(current.speed) ? "true" : "false");
   }
 
-  const showNodes = planning && current.nodes.length > 0;
+  const showNodes = editing && current.nodes.length > 0;
   nodeRow.hidden = !showNodes;
-  if (current.selected === null || !planning) {
+  if (current.selected === null || !editing) {
     nodeReadout.hidden = true;
   } else {
     nodeReadout.hidden = false;
@@ -148,7 +192,7 @@ function syncMarkers(
   height: number,
   fuel: ReturnType<typeof planFuel>,
 ): void {
-  if (current.mode !== "planning" || width < 2) {
+  if (!isEditing(current) || width < 2) {
     nodeLayer.hidden = true;
     aimLabel.hidden = true;
     return;
@@ -226,6 +270,31 @@ function syncOverlay(current: Game, budget: number): void {
     requestAnimationFrame(() => overlay.classList.add("is-in"));
     overlayOpen = true;
   }
+}
+
+function syncPlanNote(current: Game): void {
+  const parts: string[] = [];
+  if (current.level.horizon) {
+    const origin = current.mode === "paused" ? current.ship : current.initial;
+    const seconds = horizonSteps(origin, simConfigFromLevel(current.level)) * current.level.dt;
+    parts.push(`horizon ${seconds.toFixed(1)}s`);
+  }
+  if (current.level.maxPlannedBurns !== undefined && current.level.maxPlannedBurns <= 4) {
+    parts.push(`burns ${queuedBurns(current)}/${burnLimit(current.level)}`);
+  }
+  const rule = pauseRuleOf(current.level);
+  if (rule.kind === "free") {
+    const left = Math.max(0, rule.count - current.pausesUsed);
+    parts.push(left === 1 ? "1 pause" : `${left} pauses`);
+  } else if (rule.kind === "score") {
+    parts.push(`score ${Math.max(0, Math.round(current.score))}`);
+  }
+  if (parts.length === 0) {
+    planNote.hidden = true;
+    return;
+  }
+  planNote.hidden = false;
+  planNote.textContent = parts.join("  ·  ");
 }
 
 function nodeLine(current: Game, index: number, fuel: ReturnType<typeof planFuel>): { text: string; over: boolean } {

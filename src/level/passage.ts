@@ -1,4 +1,4 @@
-import type { Body, Bounds, BurnNode, SimConfig } from "../sim/physics";
+import type { Body, Bounds, BurnNode, Horizon, PauseRule, SimConfig } from "../sim/physics";
 
 /**
  * Passage.
@@ -31,6 +31,15 @@ export interface Level {
   dvPerPixel: number;
   /** Captured periapsis must clear the surface by this much. */
   periapsisMargin: number;
+  /**
+   * Future burns the player may queue at once. Omitted levels allow 2.
+   * Passage keeps room for the extra nodes in the original lessons.
+   */
+  maxPlannedBurns?: number;
+  /** Look-ahead of the predicted line. Omitted levels draw the whole flight. */
+  horizon?: Horizon;
+  /** How pausing works. Omitted levels pause for free, without a limit. */
+  pause?: PauseRule;
 }
 
 export interface LaunchSolution {
@@ -95,6 +104,7 @@ export const passage: Level = {
   maxSteps: 4500,
   dvPerPixel: 0.2,
   periapsisMargin: 8,
+  maxPlannedBurns: 8,
 };
 
 /** Close flyby of the star, then a bend into Planet X. */
@@ -141,6 +151,14 @@ export const directPlan: readonly BurnNode[] = [
   directCapture,
 ];
 
+export function burnLimit(level: Level): number {
+  return level.maxPlannedBurns ?? 2;
+}
+
+export function pauseRuleOf(level: Level): PauseRule {
+  return level.pause ?? { kind: "unlimited" };
+}
+
 export function simConfigFromLevel(level: Level): SimConfig {
   return {
     g: level.g,
@@ -150,5 +168,6 @@ export function simConfigFromLevel(level: Level): SimConfig {
     maxSteps: level.maxSteps,
     targetId: level.targetId,
     periapsisMargin: level.periapsisMargin,
+    horizon: level.horizon,
   };
 }

@@ -4,11 +4,17 @@
  * A plan is an ordered list of burn nodes. Each node is a sim step and an
  * impulsive delta-v applied at that step, before the step integrates. Step 0
  * is the launch instant. Prediction and live flight both advance only through
- * `advancePlan` / `advanceFrame`. Sim speed changes how many fixed steps run
- * per frame. It never changes `dt`.
+ * `advancePlan` / `advanceFrame`. Sim speed and slow motion change how many
+ * fixed steps run per frame. They never change `dt`.
+ *
+ * Bodies with an `orbit` move on analytic circles keyed by sim time
+ * (`step * dt`). The same pose is used by gravity, crashes, capture, and the
+ * prediction. A body without an orbit stays at `x`, `y`.
  *
  * `predictPlan` caches the state at each node. Editing node k recomputes from
- * k onward and reuses the path before it. This module does not touch the DOM.
+ * k onward and reuses the path before it. A configured horizon stops the
+ * predicted line early; the live flight does not. This module does not touch
+ * the DOM.
  */
 
 export interface Vec2 {
@@ -16,12 +22,29 @@ export interface Vec2 {
   y: number;
 }
 
-export type BodyKind = "home" | "star" | "target";
+export type BodyKind = "home" | "star" | "target" | "moon";
+
+/**
+ * Circular orbit. Position at time t is the center plus
+ * `radius * (cos(phase + omega t), sin(phase + omega t))`.
+ * `centerId` orbits another body. Otherwise the center is fixed at `cx`, `cy`.
+ */
+export interface BodyOrbit {
+  centerId?: string;
+  cx?: number;
+  cy?: number;
+  radius: number;
+  /** Radians at t = 0. 0 sits on the center's +x side. */
+  phase: number;
+  /** Radians per second. Positive is counterclockwise. */
+  omega: number;
+}
 
 export interface Body {
   id: string;
   name: string;
   kind: BodyKind;
+  /** Position at t = 0. Ignored while `orbit` is set, except as a fallback. */
   x: number;
   y: number;
   mass: number;
@@ -32,6 +55,15 @@ export interface Body {
    * apoapsis inside this radius. Entering and then leaving it unbound is a flyby.
    */
   captureRadius?: number;
+  orbit?: BodyOrbit;
+}
+
+/** World position and velocity of one body at an instant. */
+export interface Pose {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
 }
 
 export interface Bounds {
@@ -39,6 +71,23 @@ export interface Bounds {
   maxX: number;
   minY: number;
   maxY: number;
+}
+
+/**
+ * How far `predictPlan` draws the coast. Live flight ignores this and runs
+ * until the ship wins, crashes, or is lost.
+ *
+ * The look-ahead is `seconds`, optionally capped at one period of the
+ * dominant body, then shortened by local gravity:
+ * `factor = 1 / (1 + shorten * |a| / ref)`.
+ */
+export interface Horizon {
+  seconds: number;
+  oneOrbit: boolean;
+  /** 0 leaves the horizon at its full length. */
+  shorten: number;
+  /** Acceleration (world units / s²) that sets the shorten scale. */
+  ref: number;
 }
 
 export interface SimConfig {
@@ -51,6 +100,19 @@ export interface SimConfig {
   targetId: string;
   /** Captured periapsis must clear the surface by this much. */
   periapsisMargin: number;
+  /** When set, `predictPlan` stops at this look-ahead. Flight does not. */
+  horizon?: Horizon;
+}
+
+/** How many times a flight may freeze so the player can edit burns. */
+export type PauseRule =
+  | { kind: "unlimited" }
+  | { kind: "free"; count: number }
+  | { kind: "score"; cost: number; budget: number };
+
+export interface PauseBudget {
+  used: number;
+  score: number;
 }
 
 export type FlightStatus = "flying" | "won" | "crashed" | "lost";
@@ -142,14 +204,92 @@ export function stepsPerFrame(speed: SimSpeed): number {
   return speed;
 }
 
+/** Rendered frames per one fixed step while slow motion is on. */
+export const SLOW_MOTION_FRAMES = 2;
+
+/**
+ * Steps to integrate this rendered frame. Slow motion emits one step every
+ * `SLOW_MOTION_FRAMES` frames and leaves `dt` alone. `phase` is the number of
+ * slow frames already accumulated toward the next step.
+ */
+export function frameStepCount(
+  speed: SimSpeed,
+  slow: boolean,
+  phase: number,
+): { steps: number; phase: number } {
+  if (!slow) return { steps: stepsPerFrame(speed), phase: 0 };
+  const next = phase + 1;
+  if (next >= SLOW_MOTION_FRAMES) return { steps: 1, phase: 0 };
+  return { steps: 0, phase: next };
+}
+
+export function canSpendPause(rule: PauseRule, budget: PauseBudget): boolean {
+  if (rule.kind === "unlimited") return true;
+  if (rule.kind === "free") return budget.used < rule.count;
+  return budget.score + 1e-9 >= rule.cost;
+}
+
+/** The budget after one pause, or null when the rule refuses it. */
+export function spendPause(rule: PauseRule, budget: PauseBudget): PauseBudget | null {
+  if (!canSpendPause(rule, budget)) return null;
+  if (rule.kind === "free") return { used: budget.used + 1, score: budget.score };
+  if (rule.kind === "score") return { used: budget.used + 1, score: budget.score - rule.cost };
+  return { used: budget.used, score: budget.score };
+}
+
 export function cloneState(state: SimState): SimState {
   return { ...state };
+}
+
+function findBody(bodies: readonly Body[], id: string): Body | undefined {
+  for (let i = 0; i < bodies.length; i++) {
+    if (bodies[i].id === id) return bodies[i];
+  }
+  return undefined;
+}
+
+/**
+ * Analytic pose at `time` seconds. Static bodies return their fixed point and
+ * zero velocity. Nested orbits resolve the center at the same time.
+ */
+export function bodyPose(body: Body, time: number, bodies: readonly Body[]): Pose {
+  if (!body.orbit) return { x: body.x, y: body.y, vx: 0, vy: 0 };
+  return poseFromOrbit(body, time, bodies, 0);
+}
+
+function poseFromOrbit(body: Body, time: number, bodies: readonly Body[], depth: number): Pose {
+  const orbit = body.orbit;
+  if (!orbit || depth > 4) return { x: body.x, y: body.y, vx: 0, vy: 0 };
+  let cx = orbit.cx ?? 0;
+  let cy = orbit.cy ?? 0;
+  let cvx = 0;
+  let cvy = 0;
+  if (orbit.centerId) {
+    const center = findBody(bodies, orbit.centerId);
+    if (center) {
+      const pose = center.orbit ? poseFromOrbit(center, time, bodies, depth + 1) : { x: center.x, y: center.y, vx: 0, vy: 0 };
+      cx = pose.x;
+      cy = pose.y;
+      cvx = pose.vx;
+      cvy = pose.vy;
+    }
+  }
+  const angle = orbit.phase + orbit.omega * time;
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  return {
+    x: cx + orbit.radius * cos,
+    y: cy + orbit.radius * sin,
+    vx: cvx - orbit.radius * orbit.omega * sin,
+    vy: cvy + orbit.radius * orbit.omega * cos,
+  };
 }
 
 export function acceleration(
   x: number,
   y: number,
   config: SimConfig,
+  time = 0,
 ): { ax: number; ay: number } {
   let ax = 0;
   let ay = 0;
@@ -157,8 +297,15 @@ export function acceleration(
   const bodies = config.bodies;
   for (let i = 0; i < bodies.length; i++) {
     const body = bodies[i];
-    const dx = body.x - x;
-    const dy = body.y - y;
+    let bx = body.x;
+    let by = body.y;
+    if (body.orbit) {
+      const pose = bodyPose(body, time, bodies);
+      bx = pose.x;
+      by = pose.y;
+    }
+    const dx = bx - x;
+    const dy = by - y;
     const r2 = dx * dx + dy * dy;
     if (r2 < 1e-12) continue;
     const invR = 1 / Math.sqrt(r2);
@@ -277,6 +424,48 @@ function circleEntry(
   return null;
 }
 
+/** Earliest hit against a body that moves linearly between its poses at t0 and t1. */
+function movingCircleEntry(
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  body: Body,
+  t0: number,
+  t1: number,
+  bodies: readonly Body[],
+  radius: number,
+): number | null {
+  const p0 = bodyPose(body, t0, bodies);
+  const p1 = bodyPose(body, t1, bodies);
+  return circleEntry(x0 - p0.x, y0 - p0.y, x1 - p1.x, y1 - p1.y, 0, 0, radius);
+}
+
+interface RelativePose {
+  rx: number;
+  ry: number;
+  vx: number;
+  vy: number;
+  cx: number;
+  cy: number;
+}
+
+/** Ship position and velocity relative to a body. Static bodies keep the absolute velocity. */
+function relativePose(state: SimState, body: Body, time: number, bodies?: readonly Body[]): RelativePose {
+  if (!body.orbit) {
+    return { rx: state.x - body.x, ry: state.y - body.y, vx: state.vx, vy: state.vy, cx: body.x, cy: body.y };
+  }
+  const pose = bodyPose(body, time, bodies ?? []);
+  return {
+    rx: state.x - pose.x,
+    ry: state.y - pose.y,
+    vx: state.vx - pose.vx,
+    vy: state.vy - pose.vy,
+    cx: pose.x,
+    cy: pose.y,
+  };
+}
+
 export interface OrbitElements {
   bound: boolean;
   energy: number;
@@ -285,18 +474,28 @@ export interface OrbitElements {
   eccentricity: number;
 }
 
-/** Two-body elements of the ship relative to one fixed body. */
-export function orbitAbout(state: SimState, body: Body, g: number): OrbitElements | null {
-  const rx = state.x - body.x;
-  const ry = state.y - body.y;
+/**
+ * Two-body elements relative to one body. A moving body uses the ship's
+ * velocity minus the body's analytic velocity at `time`.
+ */
+export function orbitAbout(
+  state: SimState,
+  body: Body,
+  g: number,
+  time = 0,
+  bodies?: readonly Body[],
+): OrbitElements | null {
+  const pose = relativePose(state, body, time, bodies);
+  const rx = pose.rx;
+  const ry = pose.ry;
   const r = Math.hypot(rx, ry);
   if (r < 1e-8) return null;
   const mu = g * body.mass;
   if (mu <= 0) return null;
-  const energy = (state.vx * state.vx + state.vy * state.vy) / 2 - mu / r;
-  const h = rx * state.vy - ry * state.vx;
-  const ex = (state.vy * h) / mu - rx / r;
-  const ey = (-state.vx * h) / mu - ry / r;
+  const energy = (pose.vx * pose.vx + pose.vy * pose.vy) / 2 - mu / r;
+  const h = rx * pose.vy - ry * pose.vx;
+  const ex = (pose.vy * h) / mu - rx / r;
+  const ey = (-pose.vx * h) / mu - ry / r;
   const eccentricity = Math.hypot(ex, ey);
   if (energy >= -1e-9) {
     return { bound: false, energy, periapsis: Infinity, apoapsis: Infinity, eccentricity };
@@ -320,7 +519,7 @@ export function orbitAbout(state: SimState, body: Body, g: number): OrbitElement
 export function isCapturedOrbit(state: SimState, config: SimConfig): boolean {
   const body = targetBody(config);
   if (!body?.captureRadius) return false;
-  const elements = orbitAbout(state, body, config.g);
+  const elements = orbitAbout(state, body, config.g, state.step * config.dt, config.bodies);
   if (!elements?.bound) return false;
   return (
     elements.energy < 0 &&
@@ -330,16 +529,24 @@ export function isCapturedOrbit(state: SimState, config: SimConfig): boolean {
 }
 
 /** Points around the osculating ellipse, or null when the ship is not bound. */
-export function sampleOrbit(state: SimState, body: Body, g: number, count = 120): Vec2[] | null {
-  const elements = orbitAbout(state, body, g);
+export function sampleOrbit(
+  state: SimState,
+  body: Body,
+  g: number,
+  count = 120,
+  time = 0,
+  bodies?: readonly Body[],
+): Vec2[] | null {
+  const elements = orbitAbout(state, body, g, time, bodies);
   if (!elements?.bound) return null;
-  const rx = state.x - body.x;
-  const ry = state.y - body.y;
+  const rel = relativePose(state, body, time, bodies);
+  const rx = rel.rx;
+  const ry = rel.ry;
   const r = Math.hypot(rx, ry);
   const mu = g * body.mass;
-  const h = rx * state.vy - ry * state.vx;
-  const ex = (state.vy * h) / mu - rx / r;
-  const ey = (-state.vx * h) / mu - ry / r;
+  const h = rx * rel.vy - ry * rel.vx;
+  const ex = (rel.vy * h) / mu - rx / r;
+  const ey = (-rel.vx * h) / mu - ry / r;
   const ecc = elements.eccentricity;
   let px: number;
   let py: number;
@@ -363,8 +570,8 @@ export function sampleOrbit(state: SimState, body: Body, g: number, count = 120)
     const cos = Math.cos(anomaly);
     const sin = Math.sin(anomaly);
     points.push({
-      x: body.x + radius * (cos * px + sin * tx),
-      y: body.y + radius * (cos * py + sin * ty),
+      x: rel.cx + radius * (cos * px + sin * tx),
+      y: rel.cy + radius * (cos * py + sin * ty),
     });
   }
   return points;
@@ -386,11 +593,13 @@ export function step(state: SimState, config: SimConfig): void {
   if (state.status !== "flying") return;
 
   const dt = config.dt;
+  const t0 = state.step * dt;
+  const t1 = t0 + dt;
   const x0 = state.x;
   const y0 = state.y;
   const x1 = x0 + state.vx * dt + 0.5 * state.ax * dt * dt;
   const y1 = y0 + state.vy * dt + 0.5 * state.ay * dt * dt;
-  const a1 = acceleration(x1, y1, config);
+  const a1 = acceleration(x1, y1, config, t1);
 
   state.vx += 0.5 * (state.ax + a1.ax) * dt;
   state.vy += 0.5 * (state.ay + a1.ay) * dt;
@@ -405,7 +614,9 @@ export function step(state: SimState, config: SimConfig): void {
   const bodies = config.bodies;
   for (let i = 0; i < bodies.length; i++) {
     const body = bodies[i];
-    const hit = circleEntry(x0, y0, x1, y1, body.x, body.y, body.radius);
+    const hit = body.orbit
+      ? movingCircleEntry(x0, y0, x1, y1, body, t0, t1, bodies, body.radius)
+      : circleEntry(x0, y0, x1, y1, body.x, body.y, body.radius);
     if (hit !== null && hit < crashT) {
       crashT = hit;
       crashBody = body.id;
@@ -417,15 +628,22 @@ export function step(state: SimState, config: SimConfig): void {
     state.x = x0 + (x1 - x0) * crashT;
     state.y = y0 + (y1 - y0) * crashT;
     if (body) {
-      const dx = state.x - body.x;
-      const dy = state.y - body.y;
+      let cx = body.x;
+      let cy = body.y;
+      if (body.orbit) {
+        const pose = bodyPose(body, t0 + crashT * dt, bodies);
+        cx = pose.x;
+        cy = pose.y;
+      }
+      const dx = state.x - cx;
+      const dy = state.y - cy;
       const distance = Math.hypot(dx, dy);
       if (distance > 1e-8) {
-        state.x = body.x + (dx / distance) * body.radius;
-        state.y = body.y + (dy / distance) * body.radius;
+        state.x = cx + (dx / distance) * body.radius;
+        state.y = cy + (dy / distance) * body.radius;
       }
     }
-    const impact = acceleration(state.x, state.y, config);
+    const impact = acceleration(state.x, state.y, config, t0 + crashT * dt);
     state.ax = impact.ax;
     state.ay = impact.ay;
     state.status = "crashed";
@@ -436,8 +654,18 @@ export function step(state: SimState, config: SimConfig): void {
   const target = targetBody(config);
   const captureRadius = target?.captureRadius;
   if (target && captureRadius !== undefined) {
-    const dist = Math.hypot(state.x - target.x, state.y - target.y);
-    const crossed = circleEntry(x0, y0, x1, y1, target.x, target.y, captureRadius) !== null;
+    let tx = target.x;
+    let ty = target.y;
+    let crossed: boolean;
+    if (target.orbit) {
+      const p1 = bodyPose(target, t1, bodies);
+      tx = p1.x;
+      ty = p1.y;
+      crossed = movingCircleEntry(x0, y0, x1, y1, target, t0, t1, bodies, captureRadius) !== null;
+    } else {
+      crossed = circleEntry(x0, y0, x1, y1, target.x, target.y, captureRadius) !== null;
+    }
+    const dist = Math.hypot(state.x - tx, state.y - ty);
     if (dist <= captureRadius + 1e-6 || crossed) state.enteredCapture = true;
     if (isCapturedOrbit(state, config)) {
       state.status = "won";
@@ -523,7 +751,10 @@ export function advanceFrame(
 
 function predictionFrom(state: SimState, config: SimConfig, path: PathSample[]): Prediction {
   const target = targetBody(config);
-  const orbit = state.status === "won" && target ? sampleOrbit(state, target, config.g) : null;
+  const orbit =
+    state.status === "won" && target
+      ? sampleOrbit(state, target, config.g, 120, state.step * config.dt, config.bodies)
+      : null;
   return {
     path,
     status: state.status,
@@ -585,10 +816,70 @@ function unreachedSnapshot(node: BurnNode, state: SimState): NodeSnapshot {
   };
 }
 
+function nodeAtStep(nodes: readonly BurnNode[], step: number): boolean {
+  for (let i = 0; i < nodes.length; i++) {
+    if (nodes[i].step === step) return true;
+    if (nodes[i].step > step) return false;
+  }
+  return false;
+}
+
+/**
+ * Steps of predicted coast from `state`. Without a horizon this is the room
+ * left until `maxSteps`. With one, it is N seconds, optionally one orbit,
+ * shortened where `|a|` is large. Live flight does not call this.
+ */
+export function horizonSteps(state: SimState, config: SimConfig): number {
+  const room = Math.max(0, config.maxSteps - state.step);
+  const horizon = config.horizon;
+  if (!horizon) return room;
+  if (room === 0) return 0;
+  const ref = horizon.ref > 0 ? horizon.ref : 1;
+  const shorten = horizon.shorten > 0 ? horizon.shorten : 0;
+  const accel = Math.hypot(state.ax, state.ay);
+  const factor = 1 / (1 + (shorten * accel) / ref);
+  let seconds = horizon.seconds * factor;
+  if (horizon.oneOrbit) {
+    const period = dominantPeriod(state, config);
+    if (period !== null && period > 0) seconds = Math.min(seconds, period);
+  }
+  if (!Number.isFinite(seconds) || seconds <= 0) return 1;
+  const steps = Math.floor(seconds / config.dt + 1e-12);
+  return Math.max(1, Math.min(room, steps));
+}
+
+/** Orbital period of the body that pulls hardest on `state`, or a circular stand-in. */
+function dominantPeriod(state: SimState, config: SimConfig): number | null {
+  const time = state.step * config.dt;
+  const bodies = config.bodies;
+  let best = 0;
+  let period: number | null = null;
+  for (let i = 0; i < bodies.length; i++) {
+    const body = bodies[i];
+    const pose = body.orbit ? bodyPose(body, time, bodies) : { x: body.x, y: body.y, vx: 0, vy: 0 };
+    const rx = pose.x - state.x;
+    const ry = pose.y - state.y;
+    const r2 = rx * rx + ry * ry;
+    if (r2 < 1e-12 || body.mass <= 0) continue;
+    const mu = config.g * body.mass;
+    const accel = mu / r2;
+    if (accel <= best) continue;
+    best = accel;
+    const r = Math.sqrt(r2);
+    const vx = state.vx - pose.vx;
+    const vy = state.vy - pose.vy;
+    const energy = (vx * vx + vy * vy) / 2 - mu / r;
+    const semi = energy < -1e-9 ? -mu / (2 * energy) : r;
+    period = 2 * Math.PI * Math.sqrt((semi * semi * semi) / mu);
+  }
+  return period;
+}
+
 /**
  * Deterministic prediction of `nodes`, with the state at each node cached.
  * Pass `reuse` after an edit so nodes before the edit are not resimulated.
- * The returned path matches `flyPlan` step for step.
+ * The returned path matches `flyPlan` step for step. A horizon stops the line
+ * at that look-ahead; samples up to the stop still match the flight.
  */
 export function predictPlan(
   from: SimState,
@@ -651,8 +942,11 @@ export function predictPlan(
         approach.push({ x: integrated.x, y: integrated.y, step: integrated.step });
       },
     };
+    const end = config.horizon ? from.step + horizonSteps(from, config) : Number.POSITIVE_INFINITY;
     let guard = 0;
-    while (state.status === "flying" && guard++ <= config.maxSteps + nodes.length + 2) {
+    const guardLimit = config.maxSteps + nodes.length + 2;
+    while (state.status === "flying" && state.step <= end && guard++ <= guardLimit) {
+      if (state.step === end && !nodeAtStep(nodes, state.step)) break;
       advancePlan(state, config, nodes, cursor, hooks);
     }
   }

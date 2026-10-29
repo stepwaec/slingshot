@@ -103,7 +103,10 @@ class ShipVisual implements Visual {
     const { game, width, height } = frame;
     const spec = this.theme.ship;
     if (game.mode !== this.lastMode) {
-      this.angleReady = false;
+      const flightPause =
+        (this.lastMode === "flying" && game.mode === "paused") ||
+        (this.lastMode === "paused" && game.mode === "flying");
+      if (!flightPause) this.angleReady = false;
       this.lastMode = game.mode;
       if (game.mode === "planning") this.lastSpent = 0;
     }
