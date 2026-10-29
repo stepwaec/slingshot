@@ -11,6 +11,20 @@ import redGiantUrl from "../../design/assets/bodies/red-giant.svg?url";
 import whiteDwarfUrl from "../../design/assets/bodies/white-dwarf.svg?url";
 import gasBandedUrl from "../../design/assets/bodies/gas-banded.svg?url";
 import moonChainUrl from "../../design/assets/bodies/moon-chain.svg?url";
+import hullBaseUrl from "../../design/assets/ship/hull-base.svg?url";
+import platingUrl from "../../design/assets/ship/module-plating.svg?url";
+import solarUrl from "../../design/assets/ship/module-solar.svg?url";
+import tanksUrl from "../../design/assets/ship/module-tanks.svg?url";
+import cryoUrl from "../../design/assets/ship/module-cryo.svg?url";
+import scoopUrl from "../../design/assets/ship/module-scoop.svg?url";
+import sensorsUrl from "../../design/assets/ship/module-sensors.svg?url";
+import shieldUrl from "../../design/assets/ship/module-shield.svg?url";
+import engineChemicalUrl from "../../design/assets/ship/engine-chemical.svg?url";
+import engineIonUrl from "../../design/assets/ship/engine-ion.svg?url";
+import enginePulseUrl from "../../design/assets/ship/engine-pulse.svg?url";
+import damage75Url from "../../design/assets/ship/damage-75.svg?url";
+import damage45Url from "../../design/assets/ship/damage-45.svg?url";
+import damage15Url from "../../design/assets/ship/damage-15.svg?url";
 import { palette } from "./palette";
 
 /**
@@ -34,6 +48,20 @@ export const theme = {
     starfield: starfieldUrl,
     predictedPath: predictedPathUrl,
     dragArrow: dragArrowUrl,
+    hull: hullBaseUrl,
+    plating: platingUrl,
+    solar: solarUrl,
+    tanks: tanksUrl,
+    cryo: cryoUrl,
+    scoop: scoopUrl,
+    sensors: sensorsUrl,
+    shield: shieldUrl,
+    engineChemical: engineChemicalUrl,
+    engineIon: engineIonUrl,
+    enginePulse: enginePulseUrl,
+    damage75: damage75Url,
+    damage45: damage45Url,
+    damage15: damage15Url,
   },
   colors: palette,
   starfield: {
@@ -75,13 +103,13 @@ export const theme = {
   ship: {
     lengthAtZoom1: 22,
     minPx: 12,
-    hullUnits: 19,
+    /** Nose-to-tail length in the shared 96×160 frame. 22 px at zoom 1. */
+    hullUnits: 48.6,
+    frameWidth: 96,
+    frameHeight: 160,
     headingLerp: 0.18,
-    /** Polygons from ship.svg, SVG y-down, nose at y = 2. */
-    hull: [12, 2, 18.5, 21, 12, 16.5, 5.5, 21],
-    finL: [8.2, 12.5, 4, 19.2, 7, 19.6],
-    finR: [15.8, 12.5, 20, 19.2, 17, 19.6],
-    cockpit: { x: 0, y: 2.5, w: 1.6, h: 4 },
+    /** Aft of the tail (tail is −22.6). Nose is +Y. */
+    nozzle: -23,
   },
   /**
    * Exhaust plume, in the ship's local space (nose is +Y).
