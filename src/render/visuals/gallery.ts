@@ -10,6 +10,7 @@ import {
   pulsarBeamScale,
   sunBreathe,
   sunFlameAngle,
+  sunGrainAngle,
   sunWispAngle,
   SUN_PROMINENCES,
 } from "../art-motion";
@@ -26,7 +27,7 @@ import {
   stripWindow,
 } from "../art-motion";
 import { zoomBucket } from "../ship-art";
-import { keepBase, keepHalo, keepLight, stripsFor, surfaceKind, type StripSpec } from "../surface-art";
+import { keepBase, keepHalo, keepLight, stripsFor, surfaceKind, type StripSpec, type SurfaceKind } from "../surface-art";
 import { rasterMarkup } from "../svg-bake";
 import { shader, srgbVec } from "./materials";
 import { beamAxis, bodyPose, type Body, type Nebula } from "../../sim/physics";
@@ -37,10 +38,21 @@ import { disposeObject, type Visual, type VisualFactory, type VisualFrame } from
  * Claude's SVG assets. A sun is several layers so the haze, rings, prominences
  * and flare can follow star.svg. A comet's dust and ion tails are separate
  * sprites. A pulsar's beams are scaled onto the level's damage reach.
- * Home, Planet X and gas giants scroll their strips under a light layer that
- * turns toward the brightest star. Other planets still turn as one picture.
+ * Home, Planet X, gas giants, moons and the dwarf scroll their strips under a
+ * light layer that turns toward the brightest star. The sun's granulation
+ * turns under a fixed limb, and the flare keeps the 22 s timeline.
  */
 export const createGallery: VisualFactory = (theme, level) => new GalleryVisual(theme, level);
+
+const SURFACE_ROOT: Record<SurfaceKind, { id: string; fill: string }> = {
+  ocean: { id: "planetStart", fill: "#1E5BD6" },
+  planetx: { id: "planetX", fill: "#17B39C" },
+  giant: { id: "gasBanded", fill: "#EBA75E" },
+  moon: { id: "moon", fill: "#A6A2B6" },
+  "moon-icy": { id: "moonIcy", fill: "#DCE4FF" },
+  "moon-volcanic": { id: "moonVolcanic", fill: "#E0C25A" },
+  dwarf: { id: "dwarf", fill: "#CDA273" },
+};
 
 type Role =
   | "body"
@@ -48,6 +60,8 @@ type Role =
   | "wisp"
   | "flame"
   | "front"
+  | "grain"
+  | "limb"
   | "prom"
   | "flare"
   | "tail"
@@ -140,10 +154,6 @@ class GalleryVisual implements Visual {
     const haze: ArtFit = { ...base, bake: { tag: "sun-haze", prep: sunHaze } };
     const wisp: ArtFit = { ...base, bake: { tag: "sun-wisp", prep: sunRing("starWispRing") } };
     const flame: ArtFit = { ...base, bake: { tag: "sun-flame", prep: sunRing("starFlameRing") } };
-    const front: ArtFit = {
-      ...base,
-      bake: { tag: "sun-front", prep: sunFront },
-    };
     this.add(haze, `${body.id}-haze`, body, null, "haze", 0, true);
     this.add(wisp, `${body.id}-wisp`, body, null, "wisp", 1);
     this.add(flame, `${body.id}-flame`, body, null, "flame", 2);
@@ -158,8 +168,11 @@ class GalleryVisual implements Visual {
       ...base,
       bake: { tag: "sun-flare", prep: sunFlare },
     };
+    const grain: ArtFit = { ...base, bake: { tag: "sun-grain", prep: sunGrain } };
+    const limb: ArtFit = { ...base, bake: { tag: "sun-limb", prep: sunLimb } };
     this.add(flare, `${body.id}-flare`, body, null, "flare", 4);
-    this.add(front, `${body.id}-front`, body, null, "front", 5);
+    this.add(grain, `${body.id}-grain`, body, null, "grain", 5);
+    this.add(limb, `${body.id}-limb`, body, null, "limb", 6);
   }
 
   private addComet(body: Body): void {
@@ -190,11 +203,12 @@ class GalleryVisual implements Visual {
     this.add(star, body.id, body, null, "body", 1);
   }
 
-  private addSurface(body: Body, kind: "ocean" | "planetx" | "giant"): void {
+  private addSurface(body: Body, kind: SurfaceKind): void {
     const base = artForBody(body, this.theme);
     if (!base) return;
-    const rootId = kind === "ocean" ? "planetStart" : kind === "planetx" ? "planetX" : "gasBanded";
-    const fill = kind === "ocean" ? "#1E5BD6" : kind === "planetx" ? "#17B39C" : "#EBA75E";
+    const root = SURFACE_ROOT[kind];
+    const rootId = root.id;
+    const fill = root.fill;
     const disc: ArtFit = { ...base, spin: "none", bake: { tag: `${kind}-base`, prep: (doc) => keepBase(doc, rootId, fill) } };
     const light: ArtFit = { ...base, bake: { tag: `${kind}-light`, prep: (doc) => keepLight(doc, rootId) } };
     if (kind === "planetx") {
@@ -231,8 +245,12 @@ class GalleryVisual implements Visual {
     if (!base) return;
     const star: ArtFit = { ...base, bake: { tag: "rg-star", prep: redGiantStar } };
     const atmo: ArtFit = { ...base, bake: { tag: "rg-atmo", prep: redGiantAtmo } };
+    const grain: ArtFit = { ...base, bake: { tag: "rg-grain", prep: redGiantGrain } };
+    const flare: ArtFit = { ...base, bake: { tag: "rg-flare", prep: redGiantFlare } };
     this.add(atmo, `${body.id}-atmo`, body, null, "atmo", 0);
-    this.add(star, `${body.id}-star`, body, null, "body", 1);
+    this.add(grain, `${body.id}-grain`, body, null, "grain", 1);
+    this.add(star, `${body.id}-star`, body, null, "body", 2);
+    this.add(flare, `${body.id}-flare`, body, null, "flare", 3);
     const edge = new THREE.Mesh(
       new THREE.PlaneGeometry(2, 2),
       shader(edgeFrag, {
@@ -243,7 +261,7 @@ class GalleryVisual implements Visual {
     );
     edge.name = `${body.id}-edge`;
     edge.frustumCulled = false;
-    edge.renderOrder = 2;
+    edge.renderOrder = 4;
     this.object.add(edge);
     this.sprites.push({ mesh: edge, fit: base, body, cloud: null, role: "edge" });
   }
@@ -470,6 +488,14 @@ class GalleryVisual implements Visual {
         poseArt(sprite.mesh, sprite.fit, pose.x, pose.y, body.radius, rot);
         continue;
       }
+      if (sprite.role === "grain") {
+        poseArt(sprite.mesh, sprite.fit, pose.x, pose.y, body.radius, sunGrainAngle(seconds));
+        continue;
+      }
+      if (sprite.role === "limb") {
+        poseArt(sprite.mesh, sprite.fit, pose.x, pose.y, body.radius, 0);
+        continue;
+      }
       if (sprite.role === "strip" && sprite.strip) {
         poseStrip(sprite.mesh, sprite.strip, pose.x, pose.y, body.radius, seconds);
         continue;
@@ -654,6 +680,30 @@ function sunFront(doc: Document): void {
   for (const id of ["starBreathe", "starProminences", "starFlare"]) doc.getElementById(id)?.remove();
 }
 
+function sunGrain(doc: Document): void {
+  sunFront(doc);
+  const disc = doc.getElementById("starDisc");
+  if (!disc) return;
+  for (const child of [...disc.children]) {
+    if (child.getAttribute("filter") !== "url(#starSurf)") child.remove();
+  }
+  rimStroke(doc.getElementById("star"))?.remove();
+}
+
+function sunLimb(doc: Document): void {
+  sunFront(doc);
+  const disc = doc.getElementById("starDisc");
+  if (!disc) return;
+  for (const child of [...disc.children]) {
+    if (child.getAttribute("filter") === "url(#starSurf)") child.remove();
+  }
+}
+
+function rimStroke(root: Element | null): Element | undefined {
+  if (!root) return undefined;
+  return [...root.children].find((child) => child.localName === "circle" && child.hasAttribute("stroke"));
+}
+
 function sunProm(id: string): (doc: Document) => void {
   return (doc) => {
     for (const drop of ["starBreathe", "starFlare", "starDisc"]) doc.getElementById(drop)?.remove();
@@ -819,6 +869,34 @@ function cometKnot(doc: Document): void {
 
 function redGiantStar(doc: Document): void {
   doc.getElementById("rgAtmosphere")?.remove();
+  doc.getElementById("rgStarFlare")?.remove();
+  doc.querySelector("#rgStarDisc circle[filter]")?.remove();
+}
+
+function redGiantGrain(doc: Document): void {
+  const circle = doc.querySelector("#rgStarDisc circle[filter]");
+  if (!circle) return;
+  keepAncestors(circle);
+}
+
+function redGiantFlare(doc: Document): void {
+  const flare = doc.getElementById("rgStarFlare");
+  if (!flare) return;
+  flare.removeAttribute("opacity");
+  flare.querySelectorAll("animate").forEach((node) => node.remove());
+  keepAncestors(flare);
+}
+
+function keepAncestors(node: Element): void {
+  let current = node;
+  const svg = node.ownerDocument.documentElement;
+  while (current.parentElement && current.parentElement !== svg) {
+    const parent = current.parentElement;
+    for (const child of [...parent.children]) {
+      if (child !== current) child.remove();
+    }
+    current = parent;
+  }
 }
 
 function redGiantAtmo(doc: Document): void {

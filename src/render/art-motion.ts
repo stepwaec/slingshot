@@ -18,6 +18,11 @@ export const SUN_BREATHE_AMP = 0.03;
 export const SUN_WISP_PERIOD = 300;
 /** #starFlameRing rotates 0 → +360° over 200 s. */
 export const SUN_FLAME_PERIOD = 200;
+/**
+ * Granulation turn. star.svg bakes the disc still; LU1 scrolls the cells
+ * once per 90 s, inside the 60–180 s surface range in style.md.
+ */
+export const SUN_GRAIN_PERIOD = 90;
 
 export function sunBreathe(seconds: number): number {
   return 1 + SUN_BREATHE_AMP * Math.sin((Math.PI * 2 * seconds) / SUN_BREATHE_PERIOD);
@@ -29,6 +34,10 @@ export function sunWispAngle(seconds: number): number {
 
 export function sunFlameAngle(seconds: number): number {
   return (Math.PI * 2 * seconds) / SUN_FLAME_PERIOD;
+}
+
+export function sunGrainAngle(seconds: number): number {
+  return (Math.PI * 2 * seconds) / SUN_GRAIN_PERIOD;
 }
 
 /** Wrapped 0..1 phase. */

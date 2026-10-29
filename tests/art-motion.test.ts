@@ -20,6 +20,7 @@ import {
   stripWindow,
   sunBreathe,
   sunFlameAngle,
+  sunGrainAngle,
   sunWispAngle,
 } from "../src/render/art-motion";
 
@@ -53,6 +54,8 @@ describe("sun haze and rings", () => {
     expect(sunWispAngle(150)).toBeCloseTo(-Math.PI, 5);
     expect(sunFlameAngle(0)).toBeCloseTo(0, 5);
     expect(sunFlameAngle(100)).toBeCloseTo(Math.PI, 5);
+    expect(sunGrainAngle(0)).toBeCloseTo(0, 5);
+    expect(sunGrainAngle(45)).toBeCloseTo(Math.PI, 5);
   });
 });
 

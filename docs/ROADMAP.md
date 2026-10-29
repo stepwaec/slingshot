@@ -45,7 +45,7 @@ Physics stays game-like but true to its real shape, and prediction always matche
 
 | Package | Status | Scope |
 | --- | --- | --- |
-| LU1: lively surfaces | Planned | Subtle animation on every body: star granulation and flares, gas giant bands drifting, cloud layers moving, planets rotating. Visual only. |
+| LU1: lively surfaces | In progress, opened 2026-10-29 in [PR #41](https://github.com/stepwaec/slingshot/pull/41) | Subtle animation on every body: star granulation and flares, gas giant bands drifting, cloud layers moving, planets rotating. Visual only. Home, Planet X and gas giants already scroll from the visual review. This pass adds the moons and the dwarf on the same strips, turns the sun's granulation under a fixed limb, and plays the red giant's flare on the sun's 22 s timeline. |
 | LU2: moving bodies | Planned | Planets orbit stars or black holes, and moons orbit planets, on deterministic on-rails Kepler orbits where position is a function of time. Prediction uses the bodies' future positions, with ghost markers for the target's future position. Reuse the elliptical comet orbits. Start with one or two levels. |
 | LU3: scripted collisions and consumption | Planned | Timed, deterministic events: a comet hits a planet, a planet spirals into a star and burns up, a star is pulled into a black hole's accretion disk. Debris and changing gravity become gameplay (escape windows, narrowing gaps). |
 | LU4: level design that uses motion | Planned | Launch windows, catching up with a moving target, and moon slingshots. |
