@@ -4,12 +4,16 @@ import {
   markerPulse,
   sampleBurnAnim,
   simSeconds,
+  tailFromBurn,
+  thrustDuration,
   windupFlicker,
+  type ThrustTail,
 } from "../src/render/burn-anim";
 import { theme, type Theme } from "../src/render/theme";
 import { syncTopDown } from "../src/render/camera";
 import { createNodes } from "../src/render/visuals/nodes";
 import { createShip } from "../src/render/visuals/ship";
+import { createTrail } from "../src/render/visuals/trail";
 import type { Visual, VisualFrame } from "../src/render/visual";
 import {
   createGame,
@@ -27,6 +31,7 @@ import { passage, slingshotCapture, slingshotLaunch, slingshotPlan } from "../sr
 import type { BurnNode } from "../src/sim/physics";
 
 const dt = 1 / 60;
+const fixedTail: ThrustTail = { base: 0.75, perDv: 0, max: 0.75 };
 
 describe("burn windows", () => {
   it("opens the wind-up half a sim second before the burn and closes the tail after it", () => {
@@ -88,8 +93,8 @@ describe("burn windows", () => {
     expect(coarse.amount).toBe(fine.amount);
     expect(coarse.offset).toBe(fine.offset);
 
-    const held = sampleBurnAnim(100, dt, [{ step: 120 }], 0.5, 0.75);
-    expect(sampleBurnAnim(100, dt, [{ step: 120 }], 0.5, 0.75)).toEqual(held);
+    const held = sampleBurnAnim(100, dt, [{ step: 120 }], 0.5, fixedTail);
+    expect(sampleBurnAnim(100, dt, [{ step: 120 }], 0.5, fixedTail)).toEqual(held);
     expect(windupFlicker(held.time, held.windup, 9)).toBe(windupFlicker(held.time, held.windup, 9));
     expect(markerPulse(held.time, 3.5)).toBe(markerPulse(held.time, 3.5));
     expect(simSeconds(100, dt)).toBe(held.time);
@@ -97,21 +102,60 @@ describe("burn windows", () => {
 
   it("tracks an edited plan and does not write the nodes", () => {
     const nodes = Object.freeze([Object.freeze({ step: 120 }), Object.freeze({ step: 90 })]);
-    const before = sampleBurnAnim(100, dt, nodes, 0.5, 0.75);
+    const before = sampleBurnAnim(100, dt, nodes, 0.5, fixedTail);
     expect(before.cues.map((cue) => cue.phase)).toEqual(["windup", "tail"]);
     expect(before.thrust).toBeGreaterThan(0);
     expect(before.windup).toBeGreaterThan(0);
     expect(before.cues[0].index).toBe(0);
     expect(before.cues[1].index).toBe(1);
 
-    const moved = sampleBurnAnim(100, dt, [{ step: 400 }], 0.5, 0.75);
+    const moved = sampleBurnAnim(100, dt, [{ step: 400 }], 0.5, fixedTail);
     expect(moved.windup).toBe(0);
     expect(moved.thrust).toBe(0);
     expect(moved.cues).toEqual([]);
 
-    const removed = sampleBurnAnim(100, dt, [], 0.5, 0.75);
+    const removed = sampleBurnAnim(100, dt, [], 0.5, fixedTail);
     expect(removed.cues).toEqual([]);
     expect(nodes.map((node) => node.step)).toEqual([120, 90]);
+  });
+});
+
+describe("thrust duration", () => {
+  const tail: ThrustTail = { base: 1, perDv: 0.5, max: 3 };
+
+  it("grows with |dv| and clamps at the theme maximum", () => {
+    expect(thrustDuration(0, tail)).toBe(1);
+    expect(thrustDuration(1, tail)).toBe(1.5);
+    expect(thrustDuration(2, tail)).toBe(2);
+    expect(thrustDuration(-2, tail)).toBe(thrustDuration(2, tail));
+    expect(thrustDuration(4, tail)).toBe(3);
+    expect(thrustDuration(10, tail)).toBe(3);
+    expect(thrustDuration(-10, tail)).toBe(3);
+
+    let previous = 0;
+    for (const mag of [0, 0.25, 0.5, 1, 2, 3, 4, 8, 22]) {
+      const duration = thrustDuration(mag, tail);
+      expect(duration).toBeGreaterThanOrEqual(previous);
+      expect(duration).toBeLessThanOrEqual(tail.max);
+      previous = duration;
+    }
+  });
+
+  it("gives a small burn a short tail and a large burn a long one, in sim seconds", () => {
+    const burn = 100;
+    const later = burn + 90;
+    const small = sampleBurnAnim(later, dt, [{ step: burn, dvx: 0, dvy: 0.2 }], 0.5, tail);
+    const large = sampleBurnAnim(later, dt, [{ step: burn, dvx: 0, dvy: 10 }], 0.5, tail);
+    expect(thrustDuration(0.2, tail)).toBeLessThan(1.5);
+    expect(thrustDuration(10, tail)).toBe(tail.max);
+    expect(small.thrust).toBe(0);
+    expect(small.cues).toEqual([]);
+    expect(large.thrust).toBeGreaterThan(0);
+    expect(large.thrustStretch).toBe(1);
+    expect(large.cues[0].phase).toBe("tail");
+    const gone = sampleBurnAnim(later, dt, [], 0.5, tail);
+    expect(gone.thrust).toBe(0);
+    expect(sampleBurnAnim(later, dt, [{ step: burn, dvx: 0, dvy: 10 }], 0.5, tail)).toEqual(large);
   });
 });
 
@@ -128,10 +172,17 @@ interface Trace {
   nodes: string;
 }
 
-function themeWith(windup: number, tail: number): Theme {
+function themeWith(windup: number, tail: ThrustTail): Theme {
   return {
     ...theme,
-    burn: { windup, tail, flickerHz: theme.burn.flickerHz, pulseHz: theme.burn.pulseHz },
+    burn: {
+      windup,
+      tailBase: tail.base,
+      tailPerDv: tail.perDv,
+      tailMax: tail.max,
+      flickerHz: theme.burn.flickerHz,
+      pulseHz: theme.burn.pulseHz,
+    },
   } as Theme;
 }
 
@@ -178,22 +229,29 @@ function expectTrace(actual: readonly Trace[], expected: readonly Trace[], label
 interface Draw {
   ship: Visual | null;
   nodes: Visual | null;
+  trail: Visual | null;
   now: number;
 }
 
 function draw(game: Game, view: Draw): void {
-  if (!view.ship || !view.nodes) return;
+  if (!view.ship || !view.nodes || !view.trail) return;
   syncTopDown(game.camera, 1280, 720);
   const frame: VisualFrame = { game, width: 1280, height: 720, now: view.now, dpr: 1 };
   view.ship.update(frame);
   view.nodes.update(frame);
+  view.trail.update(frame);
   view.now += 16;
 }
 
 function viewFor(kind: "none" | "on" | "off"): Draw {
-  if (kind === "none") return { ship: null, nodes: null, now: 0 };
-  const look = kind === "on" ? theme : themeWith(0, 0);
-  return { ship: createShip(look, passage), nodes: createNodes(look, passage), now: 0 };
+  if (kind === "none") return { ship: null, nodes: null, trail: null, now: 0 };
+  const look = kind === "on" ? theme : themeWith(0, { base: 0, perDv: 0, max: 0 });
+  return {
+    ship: createShip(look, passage),
+    nodes: createNodes(look, passage),
+    trail: createTrail(look, passage),
+    now: 0,
+  };
 }
 
 function flySlingshot(kind: "none" | "on" | "off"): Trace[] {
@@ -209,11 +267,11 @@ function flySlingshot(kind: "none" | "on" | "off"): Trace[] {
     if (!paused && game.ship.step === pauseAt) {
       const frozen = snap(game);
       expect(pause(game)).toBe(true);
-      const during = sampleBurnAnim(game.ship.step, game.level.dt, game.nodes, theme.burn.windup, theme.burn.tail);
+      const during = sampleBurnAnim(game.ship.step, game.level.dt, game.nodes, theme.burn.windup, tailFromBurn(theme.burn));
       expect(during.windup).toBeGreaterThan(0);
       for (let i = 0; i < 5; i++) draw(game, view);
       expect(sameTrace(snap(game), frozen)).toBe(true);
-      expect(sampleBurnAnim(game.ship.step, game.level.dt, game.nodes, theme.burn.windup, theme.burn.tail)).toEqual(during);
+      expect(sampleBurnAnim(game.ship.step, game.level.dt, game.nodes, theme.burn.windup, tailFromBurn(theme.burn))).toEqual(during);
       resume(game);
       paused = true;
     }
@@ -223,6 +281,7 @@ function flySlingshot(kind: "none" | "on" | "off"): Trace[] {
   }
   view.ship?.dispose();
   view.nodes?.dispose();
+  view.trail?.dispose();
   expect(paused).toBe(true);
   expect(trace.length).toBeGreaterThan(slingshotCapture.step);
   return trace;
@@ -250,7 +309,7 @@ function flyEdited(kind: "none" | "on" | "off"): Trace[] {
       expect(game.ship.step).toBe(before.step);
       expect(game.ship.x).toBe(before.x);
       expect(game.fuel).toBe(before.fuel);
-      const seen = sampleBurnAnim(game.ship.step, dt, game.nodes, 0.5, 0.75);
+      const seen = sampleBurnAnim(game.ship.step, dt, game.nodes, 0.5, fixedTail);
       expect(seen.cues.some((cue) => cue.index === 1 && cue.phase === "windup")).toBe(false);
       resume(game);
       setSlow(game, false);
@@ -263,6 +322,7 @@ function flyEdited(kind: "none" | "on" | "off"): Trace[] {
   }
   view.ship?.dispose();
   view.nodes?.dispose();
+  view.trail?.dispose();
   expect(edited).toBe(true);
   expect(game.ship.step).toBeGreaterThanOrEqual(280);
   expect(trace[trace.length - 1].nodes).toContain("180:1.5:-0.15");
@@ -281,7 +341,7 @@ describe("burn animation leaves the flight untouched", () => {
     expect(last.status).toBe("won");
     expect(last.step).toBe(slingshotCapture.step);
     expect(last.fuel).toBeLessThan(plain[0].fuel);
-    const atLaunchTail = sampleBurnAnim(plain[0].step, dt, slingshotPlan, theme.burn.windup, theme.burn.tail);
+    const atLaunchTail = sampleBurnAnim(plain[0].step, dt, slingshotPlan, theme.burn.windup, tailFromBurn(theme.burn));
     expect(atLaunchTail.thrust).toBeGreaterThan(0);
   });
 

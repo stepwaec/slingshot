@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { burnHandleOffset, isEditing, nodeIncoming, nodePosition, planFuel } from "../../game/state";
 import type { Vec2 } from "../../sim/physics";
-import { markerPulse, sampleBurnAnim, type BurnSample } from "../burn-anim";
+import { markerPulse, sampleBurnAnim, tailFromBurn, type BurnSample } from "../burn-anim";
 import { projectToScreen } from "../camera";
 import { powerHex } from "../palette";
 import type { Theme } from "../theme";
@@ -49,7 +49,13 @@ class NodesVisual implements Visual {
     const anim =
       game.mode === "planning"
         ? null
-        : sampleBurnAnim(game.ship.step, game.level.dt, game.nodes, this.theme.burn.windup, this.theme.burn.tail);
+        : sampleBurnAnim(
+            game.ship.step,
+            game.level.dt,
+            game.nodes,
+            this.theme.burn.windup,
+            tailFromBurn(this.theme.burn),
+          );
     if (!planning) {
       for (let i = 0; i < game.nodes.length; i++) {
         const visual = this.ensure(i);

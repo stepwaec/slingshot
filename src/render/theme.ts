@@ -82,7 +82,7 @@ export const theme = {
    */
   thrust: {
     nozzle: -9.6,
-    length: 28,
+    length: 40,
     /** Widest half-width. The shader keeps the root narrower than the tail tips. */
     halfWidth: 6.8,
     /** Soft halo drawn behind the plume, scaled from the same nozzle. */
@@ -95,21 +95,43 @@ export const theme = {
   },
   /**
    * Burn animation, in seconds of sim time (`step * dt`).
-   * The wind-up starts this long before each burn node. The thrust tail
-   * lasts this long after it. Speed, slow motion, and pause do not scale
-   * these: they only change how fast the step advances. Set either duration
-   * to 0 to hide that half. The sim does not read this.
+   * Wind-up is the same for every node. The plume stays lit for
+   * `min(tailMax, tailBase + tailPerDv * |dv|)` after the burn.
+   * Speed, slow motion, and pause do not scale these.
+   * The sim does not read this.
    */
   burn: {
     windup: 0.5,
-    tail: 0.75,
+    /** Shortest plume, used for a zero-size burn. */
+    tailBase: 1.15,
+    /** Extra sim seconds of plume per unit of delta-v. */
+    tailPerDv: 0.16,
+    /** Longest plume, for a departure or capture burn. */
+    tailMax: 4.2,
     /** Flicker cycles per sim second while the engine spools up. */
     flickerHz: 9,
     /** Node-marker pulse cycles per sim second during the wind-up. */
     pulseHz: 3.5,
   },
   burst: { frames: 12 },
-  trail: { samples: 240, widthPx: 2 },
+  /**
+   * Flown trail, in the plume's colours. Narrower than the burn plume.
+   * A sample fades out by age (`ageSec` of sim time) and by screen length.
+   * The sim does not read this.
+   */
+  trail: {
+    /** Newest samples considered. Older ones are already faded. */
+    samples: 480,
+    ageSec: 8,
+    lengthPx: 640,
+    /** Bright core half-width in screen pixels. */
+    halfWidthPx: 2.6,
+    /** Soft halo drawn past the core, as a multiple of `halfWidthPx`. */
+    glowScale: 1.85,
+    turbulence: 0.28,
+    core: "#F7FBFF",
+    edge: "#A06BFF",
+  },
   path: {
     spacingPx: 10,
     maxDots: 400,
