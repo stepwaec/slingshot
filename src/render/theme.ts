@@ -108,15 +108,16 @@ export const theme = {
     shaftAlpha: 0.9,
   },
   gravity: {
-    cols: 64,
-    rows: 64,
+    /** Even samples across the framed chart. The flat view draws every `flatStride` line. */
+    cols: 48,
+    rows: 48,
+    flatStride: 1,
     /** Extra framed world beyond the view, so the sheet edge stays off-screen. */
     viewPad: 0.08,
     /** Deepest well, as a fraction of the system's longer side. */
     amplitude: 0.22,
-    heatAlpha: 0.8,
     sheetAlpha: 0.9,
-    /** Rest-frame dτ/dt contours drawn on the flat heatmap. */
+    /** Rest-frame dτ/dt contours drawn over the flat grid. */
     clockLevels: [0.92, 0.75, 0.5, 0.25],
   },
 } as const;

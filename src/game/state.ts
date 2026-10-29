@@ -26,9 +26,9 @@ import { scoreMission, type MissionScore } from "../sim/score";
 export type GameMode = "planning" | "flying" | "paused" | "finished";
 
 /** Gravity map. View only — cycling it must not touch the ship or the plan. */
-export type GravityView = "off" | "heat" | "sheet";
+export type GravityView = "off" | "grid" | "sheet";
 
-const GRAVITY_VIEWS: readonly GravityView[] = ["off", "heat", "sheet"];
+const GRAVITY_VIEWS: readonly GravityView[] = ["off", "grid", "sheet"];
 
 export interface Game {
   level: Level;
@@ -60,7 +60,7 @@ export interface Game {
   spentNodes: number;
   /** Planning gravity map. Does not affect prediction or flight. */
   gravity: GravityView;
-  /** Rest-frame clock-rate contours on the flat heatmap. */
+  /** Rest-frame clock-rate contours drawn over the flat grid. */
   gravityClock: boolean;
 }
 
@@ -106,7 +106,7 @@ export function createGame(level: Level = passage, camera: Camera = { x: 0, y: 0
   };
 }
 
-/** Off → flat heatmap → tilted sheet → off. View state only. */
+/** Off → pinched grid → tilted sheet → off. View state only. */
 export function cycleGravity(game: Game): GravityView {
   const index = GRAVITY_VIEWS.indexOf(game.gravity);
   const next = GRAVITY_VIEWS[(index + 1) % GRAVITY_VIEWS.length];
@@ -114,7 +114,7 @@ export function cycleGravity(game: Game): GravityView {
   return next;
 }
 
-/** Clock-rate overlay for the heatmap. Ignored by the sim. */
+/** Clock-rate overlay for the flat grid. Ignored by the sim. */
 export function setGravityClock(game: Game, on: boolean): void {
   game.gravityClock = on;
 }

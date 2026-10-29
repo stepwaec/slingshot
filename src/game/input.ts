@@ -186,7 +186,7 @@ export function bindInput(
       cycleGravity(game);
     } else if (event.key === "c" || event.key === "C") {
       if (event.repeat || event.metaKey || event.ctrlKey || event.altKey) return;
-      if (game.gravity !== "heat") return;
+      if (game.gravity !== "grid") return;
       setGravityClock(game, !game.gravityClock);
     } else if (event.key === "1" || event.key === "2" || event.key === "4") {
       setSpeed(game, Number(event.key) as SimSpeed);

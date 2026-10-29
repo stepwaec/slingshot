@@ -156,10 +156,10 @@ function loop(now: number): void {
 }
 
 function syncGravity(current: Game): void {
-  const label = current.gravity === "heat" ? "Gravity heat" : current.gravity === "sheet" ? "Gravity sheet" : "Gravity off";
+  const label = current.gravity === "grid" ? "Gravity grid" : current.gravity === "sheet" ? "Gravity sheet" : "Gravity off";
   gravityButton.textContent = label;
   gravityButton.setAttribute("aria-pressed", current.gravity === "off" ? "false" : "true");
-  gravityClockButton.hidden = current.gravity !== "heat";
+  gravityClockButton.hidden = current.gravity !== "grid";
   gravityClockButton.setAttribute("aria-pressed", current.gravityClock ? "true" : "false");
 }
 

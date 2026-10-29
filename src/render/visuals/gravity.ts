@@ -20,11 +20,10 @@ import { disposeObject, type Visual, type VisualFactory, type VisualFrame } from
 /**
  * Gravity map for planning and pause.
  *
- * Heat is a flat sheet coloured by potential depth, with optional rest-frame
- * clock-rate contours (`rateFrom` via the sampled grid). Sheet is the same
- * grid displaced by `wellHeight` and drawn with the perspective camera.
- * The planned path is laid on that displaced surface. Nothing here steps
- * the simulation.
+ * Grid is an even mesh slid toward each mass along the potential gradient,
+ * so the lines pinch around deep wells. Clock-rate contours draw on that
+ * mesh. Sheet is the same samples dropped in Z by `wellHeight` and drawn
+ * with the perspective camera. Nothing here steps the simulation.
  */
 export const createGravity: VisualFactory = (theme) => new GravityVisual(theme);
 
@@ -136,7 +135,7 @@ class GravityVisual implements Visual {
     surfaceGeometry.setAttribute("position", new THREE.BufferAttribute(this.surfacePositions, 3));
     surfaceGeometry.setAttribute("aColor", new THREE.BufferAttribute(this.surfaceColors, 3));
     surfaceGeometry.setIndex(surfaceIndices(cols, rows));
-    this.surfaceAlpha = { value: theme.gravity.heatAlpha };
+    this.surfaceAlpha = { value: theme.gravity.sheetAlpha };
     this.surface = new THREE.Mesh(
       surfaceGeometry,
       new THREE.ShaderMaterial({
@@ -223,17 +222,24 @@ class GravityVisual implements Visual {
     const material = this.surface.material as THREE.ShaderMaterial;
     material.depthTest = sheet;
     material.depthWrite = sheet;
-    this.surfaceAlpha.value = sheet ? this.theme.gravity.sheetAlpha : this.theme.gravity.heatAlpha;
-    this.gridLines.visible = sheet;
+    this.surface.visible = sheet;
+    this.surfaceAlpha.value = this.theme.gravity.sheetAlpha;
+    this.gridLines.visible = true;
+    const lineMaterial = this.gridLines.material as THREE.ShaderMaterial;
+    lineMaterial.depthTest = sheet;
 
     const drawKey = `${this.fieldKey}|${sheet}|${amplitude}`;
     if (drawKey !== this.drawKey) {
-      writeSurface(grid, this.surfacePositions, this.surfaceColors, sheet, amplitude);
-      mark(this.surface.geometry);
       if (sheet) {
+        writeSurface(grid, this.surfacePositions, this.surfaceColors, true, amplitude);
+        mark(this.surface.geometry);
         writeGridLines(grid, this.surfacePositions, this.surfaceColors, this.gridPositions, this.gridColors, amplitude);
-        mark(this.gridLines.geometry);
+        this.gridLines.geometry.setDrawRange(0, this.gridPositions.length / 3);
+      } else {
+        const verts = writePinchedLines(grid, this.gridPositions, this.gridColors, this.theme.gravity.flatStride);
+        this.gridLines.geometry.setDrawRange(0, verts);
       }
+      mark(this.gridLines.geometry);
       this.drawKey = drawKey;
       this.clockKey = "";
     }
@@ -341,6 +347,38 @@ function fieldCacheKey(
     bounds.maxX,
     bounds.maxY,
   ].join("|");
+}
+
+function writePinchedLines(grid: GravityGrid, positions: Float32Array, colors: Float32Array, stride: number): number {
+  const cols = grid.cols;
+  const rows = grid.rows;
+  const step = Math.max(1, stride);
+  const [r, g, b] = srgb01(palette.text);
+  let cursor = 0;
+  const room = positions.length - 5;
+  const push = (a: number, bIndex: number) => {
+    if (cursor > room) return;
+    positions[cursor] = grid.pinchX[a];
+    positions[cursor + 1] = grid.pinchY[a];
+    positions[cursor + 2] = 0.4;
+    positions[cursor + 3] = grid.pinchX[bIndex];
+    positions[cursor + 4] = grid.pinchY[bIndex];
+    positions[cursor + 5] = 0.4;
+    colors[cursor] = r;
+    colors[cursor + 1] = g;
+    colors[cursor + 2] = b;
+    colors[cursor + 3] = r;
+    colors[cursor + 4] = g;
+    colors[cursor + 5] = b;
+    cursor += 6;
+  };
+  for (let row = 0; row < rows; row += step) {
+    for (let col = 0; col < cols - 1; col++) push(row * cols + col, row * cols + col + 1);
+  }
+  for (let col = 0; col < cols; col += step) {
+    for (let row = 0; row < rows - 1; row++) push(row * cols + col, (row + 1) * cols + col);
+  }
+  return cursor / 3;
 }
 
 function writeSurface(
