@@ -146,20 +146,19 @@ Other gameplay ideas raised by Brainstormer and not yet scheduled: realistic vis
 
 Stephan points Claude at this section for the next visual pack.
 
-**v2 designs are on main**, merged 2026-10-29 in [PR #17](https://github.com/stepwaec/slingshot/pull/17). That pack includes the white dwarf, the gas giants, and the moons that were already drawn, plus the three WP8 files below.
+**WP8:** fully designed in [PR #17](https://github.com/stepwaec/slingshot/pull/17).
 
-**WP8 art, complete:** `design/assets/bodies/binary-star.svg`, `red-giant.svg`, and `moon-chain.svg`.
+**WP9:** fully designed in [PR #19](https://github.com/stepwaec/slingshot/pull/19): pulsar, magnetar, magnetism heatmap, quiet neutron star.
 
-**Still missing.**
+**Open requests**, in priority order:
 
-- **WP9:** magnetar; a distinct pulsar; magnetism danger heatmap.
-- **WP10:** comet; solar recharge indicator.
-- **WP11:** sparse, medium and dense asteroid belts; Kuiper belt; rogue planet; radiation heatmap; dose meter.
-- **Ship systems:** hull health bar; tidal-stress warning; upgrade screen.
-- **Ship and planning view:** blue-to-violet plume (no trailing halo); burn node; gravity grid styling.
-- **Late game:** stellar engine; Dyson swarm; ringworld; Shkadov thruster; space elevator; wormhole.
+1. **Ship systems:** hull health bar, tidal-stress warning, upgrade screen. These are being built now with placeholder UI, so the designs should match those UI slots.
+2. **WP10:** comet, solar recharge indicator.
+3. **WP11:** sparse, medium and dense asteroid belts; Kuiper belt; rogue planet; radiation heatmap; dose meter.
+4. **Ship and planning view:** blue-to-violet plume with no trailing halo; burn node; gravity grid styling.
+5. **Late game:** stellar engine, Dyson swarm, ringworld, Shkadov thruster, space elevator, wormhole.
 
-**Guidelines:** a realistic and vibrant style matching v1.5; SVG files under `design/assets/`; easter eggs only as hints, never logos or characters.
+**Guidelines:** a realistic and vibrant style matching v1.5 and v2; SVG files under `design/assets/`; easter eggs only as hints, never logos or characters.
 
 ## How this document is maintained
 
