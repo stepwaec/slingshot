@@ -1,15 +1,26 @@
 import { describe, expect, it } from "vitest";
 import {
+  atmosphereBreathe,
   brightestOffset,
+  comaBreathe,
   cometDustMirror,
   cometTailStretch,
+  dragDashOffset,
   ellipsePeriapsis,
   flareOpacity,
+  haloBreathe,
+  keyedValue,
+  knotOpacity,
+  knotPoint,
   prominenceWindow,
   pulsarBeamScale,
   PULSAR_SVG_REACH,
+  starquake,
+  stripScroll,
+  stripWindow,
   sunBreathe,
   sunFlameAngle,
+  sunGrainAngle,
   sunWispAngle,
 } from "../src/render/art-motion";
 
@@ -43,6 +54,8 @@ describe("sun haze and rings", () => {
     expect(sunWispAngle(150)).toBeCloseTo(-Math.PI, 5);
     expect(sunFlameAngle(0)).toBeCloseTo(0, 5);
     expect(sunFlameAngle(100)).toBeCloseTo(Math.PI, 5);
+    expect(sunGrainAngle(0)).toBeCloseTo(0, 5);
+    expect(sunGrainAngle(45)).toBeCloseTo(Math.PI, 5);
   });
 });
 
@@ -71,6 +84,47 @@ describe("pulsar beam scale", () => {
     const scale = pulsarBeamScale(8, 8, 180);
     expect(scale.sx).toBe(1);
     expect(PULSAR_SVG_REACH * scale.sy).toBeCloseTo(180, 8);
+  });
+});
+
+describe("surface strips", () => {
+  it("rests at t = 0 and walks one period", () => {
+    expect(stripScroll(0, 90, 214)).toBe(0);
+    expect(stripScroll(45, 90, 214)).toBeCloseTo(107, 5);
+    expect(stripScroll(90, 90, 214)).toBeCloseTo(0, 5);
+    const rest = stripWindow(34, -292, -34, 0, 0, 428, 68, 0);
+    expect(rest.offsetX).toBeCloseTo(258 / 428, 5);
+    expect(rest.repeatX).toBeCloseTo(68 / 428, 5);
+    expect(rest.offsetY).toBeCloseTo(0, 5);
+    expect(rest.repeatY).toBeCloseTo(1, 5);
+  });
+});
+
+describe("cosmetic cycles", () => {
+  it("rests the halo, coma and atmosphere at t = 0", () => {
+    expect(haloBreathe(0)).toBeCloseTo(1, 5);
+    expect(haloBreathe(0.6)).toBeCloseTo(1.04, 5);
+    expect(comaBreathe(0)).toBeCloseTo(1, 5);
+    expect(comaBreathe(2.5)).toBeCloseTo(1.04, 5);
+    expect(atmosphereBreathe(0)).toBeCloseTo(1, 5);
+    expect(dragDashOffset(0)).toBe(0);
+    expect(dragDashOffset(2)).toBeCloseTo(0, 5);
+  });
+
+  it("holds the starquake on the surface until late in the cycle", () => {
+    expect(starquake(0).radius).toBe(9);
+    expect(starquake(0).stroke).toBe(0);
+    const late = starquake(18 * 0.88);
+    expect(late.radius).toBeGreaterThan(9);
+    expect(late.stroke).toBeGreaterThan(0);
+  });
+
+  it("sends the comet knot out along the tail and brings it back", () => {
+    expect(knotOpacity(0)).toBe(0);
+    expect(knotPoint(0).x).toBe(40);
+    expect(knotPoint(9).x).toBeCloseTo(40, 4);
+    expect(knotPoint(4.5).x).toBeCloseTo(220, 4);
+    expect(keyedValue(0.08 * 9, 9, [0, 0.08, 0.5, 1], [0, 0.8, 0.5, 0])).toBeCloseTo(0.8, 4);
   });
 });
 

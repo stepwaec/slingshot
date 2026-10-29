@@ -32,9 +32,15 @@ export function mountShipyard(): void {
     panel.hidden = true;
   });
 
-  for (const spec of REAL) list.append(card(spec.name, spec.detail, buyButton(spec.id)));
-  for (const spec of LOOKS) list.append(card(spec.name, spec.detail, lookButton(spec.id)));
+  for (const spec of REAL) {
+    const upgrade = UPGRADES.find((item) => item.id === spec.id);
+    list.append(card(spec.name, spec.detail, buyButton(spec.id), thumbFor(spec.id), massText(upgrade?.mass ?? 0), `★ ${upgrade?.cost ?? 0}`));
+  }
+  for (const spec of LOOKS) list.append(card(spec.name, spec.detail, lookButton(spec.id), thumbFor(spec.id), "appearance", "★ 0"));
   list.append(engineCard());
+  document.querySelector("#yard-launch")?.addEventListener("click", () => {
+    document.querySelector<HTMLButtonElement>("#launch")?.click();
+  });
   mountPreview();
 }
 
@@ -49,6 +55,13 @@ export function syncShipyard(game: Game): { hideToggle: boolean } {
   const solar = document.querySelector("#yard-solar");
   if (points) points.textContent = String(game.points);
   if (mass) mass.textContent = load.mass.toFixed(2);
+  const note = document.querySelector("#yard-mass-note");
+  if (note) {
+    const extra = load.mass - 1;
+    note.textContent = extra > 0 ? `+${extra.toFixed(2)} vs base` : "base hull";
+  }
+  const launch = document.querySelector("#yard-launch");
+  if (launch) launch.textContent = `Launch ${game.level.name}`;
   if (fuel) fuel.textContent = `${Math.round(load.fuelFactor * 100)}%`;
   if (solar) solar.textContent = load.solar > 0 ? "Near stars" : "None";
 
@@ -57,9 +70,11 @@ export function syncShipyard(game: Game): { hideToggle: boolean } {
     if (!button) continue;
     const owned = game.upgrades.includes(spec.id);
     button.disabled = owned || game.points < spec.cost || !planning;
-    button.textContent = owned ? "Fitted" : "Fit";
+    const locked = !owned && game.points < spec.cost;
+    button.textContent = owned ? "Fitted" : locked ? `Need ${spec.cost - game.points} more stars` : "Fit";
     button.classList.toggle("is-fitted", owned);
     button.closest(".yard-card")?.classList.toggle("is-fitted", owned);
+    button.closest(".yard-card")?.classList.toggle("is-locked", locked);
   }
   for (const spec of LOOKS) {
     const button = document.querySelector<HTMLButtonElement>(`button[data-look="${spec.id}"]`);
@@ -81,14 +96,32 @@ export function syncShipyard(game: Game): { hideToggle: boolean } {
 
 export { resetShipLook };
 
-function card(name: string, detail: string, action: HTMLElement): HTMLElement {
+function card(name: string, detail: string, action: HTMLElement, thumb: string, mass: string, cost: string): HTMLElement {
   const row = document.createElement("article");
   row.className = "yard-card";
-  const copy = document.createElement("p");
+  const image = document.createElement("img");
+  image.className = "yard-thumb";
+  image.alt = "";
+  image.src = thumb;
+  const copy = document.createElement("div");
   const title = document.createElement("strong");
   title.textContent = name;
-  copy.append(title, document.createTextNode(detail));
-  row.append(copy, action);
+  const effect = document.createElement("p");
+  effect.textContent = detail;
+  const pips = document.createElement("div");
+  pips.className = "yard-pips";
+  pips.append(document.createElement("i"), document.createElement("i"), document.createElement("i"));
+  const tier = document.createElement("span");
+  tier.textContent = "tier 1 of 3";
+  pips.append(tier);
+  const massLine = document.createElement("p");
+  massLine.className = "yard-mass";
+  massLine.textContent = mass;
+  const costLine = document.createElement("p");
+  costLine.className = "yard-cost";
+  costLine.textContent = cost;
+  copy.append(title, effect, pips, massLine, costLine);
+  row.append(image, copy, action);
   return row;
 }
 
@@ -120,11 +153,31 @@ function lookButton(id: LookModule): HTMLButtonElement {
   return button;
 }
 
+function thumbFor(id: string): string {
+  const assets = theme.assets;
+  if (id === "hull") return assets.plating;
+  if (id === "tanks") return assets.tanks;
+  if (id === "solar") return assets.solar;
+  if (id === "shield") return assets.shield;
+  if (id === "scoop") return assets.scoop;
+  if (id === "sensors") return assets.sensors;
+  if (id === "cryo") return assets.cryo;
+  return assets.engineChemical;
+}
+
+function massText(mass: number): string {
+  return mass > 0 ? `+${mass.toFixed(2)} mass` : "no mass";
+}
+
 function engineCard(): HTMLElement {
+  const engines = UPGRADES.find((item) => item.id === "engines");
   const row = card(
     "Engines",
-    "Chemical, ion or pulse change the plume only. Fit Engines to push 15% harder, with extra mass.",
+    "Chemical, ion or pulse. Fit Engines to push 15% harder, with extra mass.",
     buyButton("engines"),
+    theme.assets.engineChemical,
+    massText(engines?.mass ?? 0),
+    `★ ${engines?.cost ?? 0}`,
   );
   const modes = document.createElement("div");
   modes.className = "engine-modes";
