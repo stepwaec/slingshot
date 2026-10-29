@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
-  <!-- Neutron star (pulsar), v1.3 body library (compact object), v1.5 revised crispness + vibrancy. ONE group #neutronStar at translate(60 60);
+  <!-- Neutron star (quiet; the beamed hazard is bodies/pulsar.svg, WP9), v1.3 body library (compact object), v1.5 revised crispness + vibrancy. ONE group #neutronStar at translate(60 60);
        geometry relative to (0,0). Ids: ns*. r 8 (crashRadius 8). Tokens: core #FFFFFF · body #DCE4FF · glow #B48CFF (= result.lost violet).
        Tiny, white-violet, with two opposite low-alpha beam cones that sweep around the star once per 6 s. No flares, no prominences, no terminator.
        v1.5 changes: glow steeper near the body (0.35 stop rule); beam blur 0.6 -> 0.5 and a crisp bright core spike added inside each cone;

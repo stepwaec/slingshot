@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="480" viewBox="0 0 480 480">
+  <!-- Pulsar (WP9), v1.5 rules. ONE group #pulsar at translate(240 240); geometry relative to (0,0). r 8 (crash radius 8). Ids: pu*.
+       Distinct from the quiet neutron star (bodies/neutron-star.svg, violet, short faint cones): a cyan-white body and two LONG, NARROW lighthouse
+       beams that sweep the system on a rhythm - the gameplay hazard (beams damage what they cross). Read: where the beams are now, which way they
+       turn, and how often a point is hit.
+       Draw order: glow -> sweep group (rotates 360 deg clockwise per 4 s: each point in reach is crossed by a beam every 2.0 s) { afterglow
+       sectors trailing each beam (8 x 5 deg, alpha 0.22 -> 0) -> beam cones (base 4.0 at the surface, tip 18.0 at r 228, white a0.85 ->
+       #7FDBFF a0.40 at 30 % -> 0) -> core lines (1 px #FFFFFF a0.9 -> 0 at 70 %) } -> body -> limb.
+       Tokens (proposed): pulsar.core #FFFFFF · pulsar.body #DCF6FF · pulsar.beam #7FDBFF · pulsar.glow #4FC3F7 · pulsar.limb #A8ECFF.
+       Beam reach 228 = 28.5 r. In the game the reach and period are level data (damage on a rhythm); the visual rotates at the same
+       angular speed so what the player sees is what hurts. -->
+  <defs>
+    <radialGradient id="puGlow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#4FC3F7" stop-opacity="0.70"/><stop offset="0.2" stop-color="#4FC3F7" stop-opacity="0.45"/>
+      <stop offset="0.35" stop-color="#4FC3F7" stop-opacity="0.18"/><stop offset="0.6" stop-color="#4FC3F7" stop-opacity="0.05"/>
+      <stop offset="1" stop-color="#4FC3F7" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="puBody" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#FFFFFF"/><stop offset="0.55" stop-color="#FFFFFF"/><stop offset="0.85" stop-color="#DCF6FF"/><stop offset="1" stop-color="#7FDBFF"/>
+    </radialGradient>
+    <linearGradient id="puBeam" gradientUnits="userSpaceOnUse" x1="0" y1="-8" x2="0" y2="-228">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.85"/><stop offset="0.3" stop-color="#7FDBFF" stop-opacity="0.40"/>
+      <stop offset="0.75" stop-color="#7FDBFF" stop-opacity="0.10"/><stop offset="1" stop-color="#7FDBFF" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="puCore" gradientUnits="userSpaceOnUse" x1="0" y1="-8" x2="0" y2="-228">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.9"/><stop offset="0.7" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="puTrailFade" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="202.4">
+      <stop offset="0" stop-color="#7FDBFF" stop-opacity="1"/><stop offset="0.5" stop-color="#7FDBFF" stop-opacity="0.5"/><stop offset="1" stop-color="#7FDBFF" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="puSoft" x="-20%" y="-5%" width="140%" height="110%"><feGaussianBlur stdDeviation="0.5"/></filter>
+  </defs>
+  <g id="pulsar" transform="translate(240 240)">
+    <circle r="44" fill="url(#puGlow)"/>
+    <g id="puSweep">
+      <animateTransform attributeName="transform" type="rotate" from="25" to="385" dur="4s" repeatCount="indefinite"/>
+      <g id="puBeamN">
+          <polygon points="0,0 -17.64,-201.63 -16.91,-201.69 -16.17,-201.75 -15.44,-201.81 -14.71,-201.87 -13.97,-201.92 -13.24,-201.97 -12.50,-202.01 -11.77,-202.06 -11.03,-202.10 -10.30,-202.14 -9.56,-202.17 -8.83,-202.21 -8.09,-202.24 -7.36,-202.27 -6.62,-202.29 -5.89,-202.31 -5.15,-202.33 -4.42,-202.35 -3.68,-202.37 -2.94,-202.38 -2.21,-202.39 -1.47,-202.39 -0.74,-202.40 0.00,-202.40" fill="url(#puTrailFade)" fill-opacity="0.220"/>
+          <polygon points="0,0 -35.15,-199.33 -34.42,-199.45 -33.70,-199.58 -32.97,-199.70 -32.24,-199.82 -31.52,-199.93 -30.79,-200.04 -30.06,-200.16 -29.33,-200.26 -28.61,-200.37 -27.88,-200.47 -27.15,-200.57 -26.42,-200.67 -25.69,-200.76 -24.96,-200.86 -24.23,-200.94 -23.50,-201.03 -22.77,-201.12 -22.03,-201.20 -21.30,-201.28 -20.57,-201.35 -19.84,-201.43 -19.11,-201.50 -18.37,-201.56 -17.64,-201.63" fill="url(#puTrailFade)" fill-opacity="0.178"/>
+          <polygon points="0,0 -52.38,-195.50 -51.67,-195.69 -50.96,-195.88 -50.25,-196.06 -49.54,-196.24 -48.82,-196.42 -48.11,-196.60 -47.39,-196.77 -46.68,-196.94 -45.96,-197.11 -45.24,-197.28 -44.53,-197.44 -43.81,-197.60 -43.09,-197.76 -42.37,-197.92 -41.65,-198.07 -40.93,-198.22 -40.21,-198.37 -39.49,-198.51 -38.76,-198.65 -38.04,-198.79 -37.32,-198.93 -36.59,-199.06 -35.87,-199.20 -35.15,-199.33" fill="url(#puTrailFade)" fill-opacity="0.139"/>
+          <polygon points="0,0 -69.22,-190.19 -68.53,-190.44 -67.84,-190.69 -67.15,-190.94 -66.45,-191.18 -65.76,-191.42 -65.06,-191.66 -64.36,-191.89 -63.66,-192.13 -62.96,-192.36 -62.27,-192.58 -61.56,-192.81 -60.86,-193.03 -60.16,-193.25 -59.46,-193.47 -58.75,-193.68 -58.05,-193.90 -57.34,-194.11 -56.64,-194.31 -55.93,-194.52 -55.22,-194.72 -54.51,-194.92 -53.81,-195.12 -53.10,-195.31 -52.38,-195.50" fill="url(#puTrailFade)" fill-opacity="0.104"/>
+          <polygon points="0,0 -85.54,-183.44 -84.87,-183.75 -84.20,-184.05 -83.53,-184.36 -82.86,-184.66 -82.19,-184.96 -81.52,-185.26 -80.84,-185.55 -80.17,-185.85 -79.49,-186.14 -78.81,-186.43 -78.13,-186.71 -77.46,-186.99 -76.77,-187.27 -76.09,-187.55 -75.41,-187.83 -74.73,-188.10 -74.04,-188.37 -73.36,-188.64 -72.67,-188.90 -71.98,-189.17 -71.30,-189.43 -70.61,-189.69 -69.92,-189.94 -69.22,-190.19" fill="url(#puTrailFade)" fill-opacity="0.073"/>
+          <polygon points="0,0 -101.20,-175.28 -100.56,-175.65 -99.92,-176.01 -99.28,-176.38 -98.64,-176.74 -98.00,-177.09 -97.35,-177.45 -96.71,-177.80 -96.06,-178.15 -95.41,-178.50 -94.76,-178.85 -94.11,-179.19 -93.46,-179.53 -92.80,-179.87 -92.15,-180.21 -91.49,-180.54 -90.84,-180.87 -90.18,-181.20 -89.52,-181.53 -88.86,-181.85 -88.20,-182.17 -87.53,-182.49 -86.87,-182.81 -86.20,-183.12 -85.54,-183.44" fill="url(#puTrailFade)" fill-opacity="0.046"/>
+          <polygon points="0,0 -116.09,-165.80 -115.49,-166.22 -114.88,-166.64 -114.28,-167.05 -113.67,-167.47 -113.06,-167.88 -112.45,-168.29 -111.83,-168.70 -111.22,-169.10 -110.61,-169.51 -109.99,-169.91 -109.37,-170.31 -108.75,-170.70 -108.13,-171.10 -107.51,-171.49 -106.88,-171.88 -106.26,-172.27 -105.63,-172.65 -105.00,-173.03 -104.37,-173.41 -103.74,-173.79 -103.11,-174.17 -102.47,-174.54 -101.84,-174.91 -101.20,-175.28" fill="url(#puTrailFade)" fill-opacity="0.024"/>
+          <polygon points="0,0 -130.10,-155.05 -129.54,-155.52 -128.97,-155.99 -128.40,-156.46 -127.83,-156.92 -127.26,-157.39 -126.69,-157.85 -126.11,-158.31 -125.54,-158.77 -124.96,-159.22 -124.38,-159.67 -123.80,-160.13 -123.21,-160.57 -122.63,-161.02 -122.04,-161.47 -121.45,-161.91 -120.86,-162.35 -120.27,-162.79 -119.68,-163.22 -119.09,-163.66 -118.49,-164.09 -117.89,-164.52 -117.29,-164.95 -116.69,-165.37 -116.09,-165.80" fill="url(#puTrailFade)" fill-opacity="0.008"/>
+        <polygon points="-2.0,-7 2.0,-7 9.0,-228 -9.0,-228" fill="url(#puBeam)" filter="url(#puSoft)"/>
+        <line x1="0" y1="-8" x2="0" y2="-228" stroke="url(#puCore)" stroke-width="1"/>
+      </g>
+      <use href="#puBeamN" transform="rotate(180)"/>
+    </g>
+    <circle r="8" fill="url(#puBody)"/>
+    <circle r="7.5" fill="none" stroke="#A8ECFF" stroke-opacity="0.9" stroke-width="1"/>
+  </g>
+</svg>
