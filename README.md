@@ -4,6 +4,11 @@ A ship in orbit around Home has a fixed fuel budget and a plan made of burn node
 
 Prediction and flight use the same fixed-step integrator. Editing a node recomputes from that node forward, and the path before it stays put. Passage can be planned before launch. Relay cannot: the predicted line has a horizon, only two burns can be queued, and the capture burn is added on a pause mid-flight. Winning is still a stable orbit around Planet X.
 
+## Planning
+
+- [Roadmap](docs/ROADMAP.md) — work packages and their status.
+- [Design](docs/DESIGN.md) — vision, physics rules, and architecture.
+
 ## Run
 
 ```bash
