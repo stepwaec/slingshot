@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { slingshotLaunch, passage, simConfigFromLevel } from "../src/level/passage";
+import { passage, simConfigFromLevel } from "../src/level/catalog";
+import { slingshotLaunch } from "../src/level/solutions";
 import { createGame, launch, setPlan, tick } from "../src/game/state";
 import {
   SIM_SPEEDS,

@@ -10,8 +10,8 @@ import {
   tick,
   type Game,
 } from "../src/game/state";
-import { passage, simConfigFromLevel, slingshotPlan, type Level } from "../src/level/passage";
-import { relay, relayFull } from "../src/level/relay";
+import { passage, relay, simConfigFromLevel, type Level } from "../src/level/catalog";
+import { relayFull, slingshotPlan } from "../src/level/solutions";
 import { flyPlan, makeState, type BurnNode, type PathSample, type SimSpeed } from "../src/sim/physics";
 
 function samplesOf(game: Game): PathSample[] {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createGame, cycleGravity, launch, setGravityClock, setPlan, tick } from "../src/game/state";
-import { passage, simConfigFromLevel, slingshotPlan } from "../src/level/passage";
-import { rescue, safePlan } from "../src/level/rescue";
+import { passage, rescue, simConfigFromLevel } from "../src/level/catalog";
+import { safePlan, slingshotPlan } from "../src/level/solutions";
 import {
   potentialDepth,
   properTimeRate,

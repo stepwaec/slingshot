@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createGame, launch, setPlan, setSlow, tick } from "../src/game/state";
-import { simConfigFromLevel } from "../src/level/passage";
-import { relay, relayFull } from "../src/level/relay";
+import { relay, simConfigFromLevel } from "../src/level/catalog";
+import { relayFull } from "../src/level/solutions";
 import {
   SIM_SPEEDS,
   bodyPose,

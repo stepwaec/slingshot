@@ -1,13 +1,12 @@
 import { describe, expect, it } from "vitest";
+import { passage, simConfigFromLevel } from "../src/level/catalog";
 import {
   directLaunch,
   directPlan,
-  passage,
-  simConfigFromLevel,
   slingshotCapture,
   slingshotLaunch,
   slingshotPlan,
-} from "../src/level/passage";
+} from "../src/level/solutions";
 import { canLaunch, clearPlan, createGame, launch, planFuel, reset, setPlan, tick } from "../src/game/state";
 import {
   assessPlan,

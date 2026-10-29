@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { isEditing, type Game } from "../game/state";
-import type { Level } from "../level/passage";
+import type { Level } from "../level/catalog";
 import { bindSpaceTimeCamera, setSheetProjection, syncSpaceTime, syncTopDown, topDownCamera } from "./camera";
 import { theme } from "./theme";
 import type { Visual, VisualSpace } from "./visual";

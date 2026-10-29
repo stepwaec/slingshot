@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createGame, launch, missionResult, pause, resume, setPlan, tick } from "../src/game/state";
-import { passage, simConfigFromLevel, slingshotPlan, type Level } from "../src/level/passage";
-import { relay, relayFull } from "../src/level/relay";
-import { deepPlan, rescue, rescueHole, safePlan } from "../src/level/rescue";
+import { passage, relay, rescue, rescueHole, simConfigFromLevel, type Level } from "../src/level/catalog";
+import { deepPlan, relayFull, safePlan, slingshotPlan } from "../src/level/solutions";
 import { scoreMission, type MissionInput } from "../src/sim/score";
 import {
   assessPlan,

@@ -53,7 +53,7 @@ Ship time and outside time are different clocks. Outside time is the coordinate 
 dτ/dt = sqrt(1 - 2 Φ_depth / c² - v² / c²)
 ```
 
-The value under the square root is clamped at 0, so the rate is 0 on a horizon or at `v ≥ c` and never becomes imaginary. Each fixed step adds `dt` to outside time and `(dτ/dt) * dt` to ship time, using the rate at the start of the step. Prediction and flight both do this inside `step`.
+With the default physics knobs the value under the square root is clamped at 0, so the rate is 0 on a horizon or at `v ≥ c` and never becomes imaginary. Each fixed step adds `dt` to outside time and `(dτ/dt) * dt` to ship time, using the rate at the start of the step. Prediction and flight both do this inside `step`. A level can override the knobs; omitted knobs keep this formula and the inverse-square force.
 
 The clock panel shows both clocks, the rate as `1 ship s = N outside s`, the gap (outside minus ship), and a deadline bar in outside time. The bar turns red in the last fifth of the window and when the window is already gone. While you are still planning, the panel shows the predicted arrival. In flight the clocks tick with the ship. The predicted line is tinted by the same rate. Aberration and colour shift appear only while flying; planning and pause stay on the clean chart.
 
@@ -66,6 +66,37 @@ Safe arc and Deep dive load the two reference plans.
 
 The fuel budget is **50**. Pausing spends the score budget and comes off the points if you do make the deadline.
 
+## Level files and physics knobs
+
+Passage, Relay, and Rescue are JSON files in `src/levels/`. `src/level/schema.ts` is the typed schema. `loadLevelJson` / `loadLevelData` reject malformed JSON and unknown or out-of-range fields with a path on each error (`level.physics.p must be greater than 1`). The reference burns stay in `src/level/solutions.ts`.
+
+An optional `physics` object overrides the integrator. Every field has a default that is today's behaviour, so the shipped files omit the block and play the same flights as before.
+
+| Knob | Default | What it does |
+| --- | --- | --- |
+| `c` | the level's `c` | Speed of light. Lower `c` slows ship time. It does not move the ship. |
+| `gravityScale` | `1` | Multiplies `g`. `2` bends a path more than `1`. |
+| `eps` | `0` | Softening length. `0` is a point mass. |
+| `p` | `2` | Falloff exponent. Force magnitude is `G M / (r² + ε²)^(p/2)`. |
+| `dilationStrength` | `1` | Scales both `2Φ/c²` and `v²/c²`. |
+| `dilationCap` | none | Max slowdown. `10` means `dτ/dt` stays above `0.1`, approaching that floor smoothly instead of jumping to 0. |
+| `tidalStrength`, `dragStrength` | `0` | Stored only. The sim does not read them yet. |
+
+The potential is the integral of that force, so the clock rate and the gravity map use the same field as the acceleration. Prediction and flight share `SimConfig`, so a knob cannot change one and not the other.
+
+```json
+"physics": {
+  "c": 80,
+  "gravityScale": 1.5,
+  "eps": 12,
+  "p": 2.2,
+  "dilationStrength": 1,
+  "dilationCap": 10
+}
+```
+
+The clock panel rounds the rate, the time gap, and the deadline margin to three significant figures (and no finer than a centisecond). Each of those three has an arrow: rising, falling, or steady. The arrow holds until the value reverses by more than a small deadband, so it does not flicker.
+
 The fuel budget on Passage is **60**. A slingshot launch plus its capture node costs **38.91** (22.00 + 16.91). The direct route costs **95.18** (76.00 + 19.18), which is over budget, so it cannot launch. A modest burn along the ship's orbital motion is the one that fits.
 
 ![Three burn nodes on the predicted path](docs/nodes-on-path.png)
@@ -74,11 +105,13 @@ The fuel budget on Passage is **60**. A slingshot launch plus its capture node c
 
 ## Layout
 
-- `src/sim/physics.ts` — Newtonian gravity, fixed-step velocity Verlet, burn nodes, analytic orbits, the planning horizon, the two clocks, and the cached prediction. No DOM. Prediction and flight both call `advancePlan`. The horizon stops the predicted line only. `c` does not change the motion.
+- `src/sim/physics.ts` — gravity, fixed-step velocity Verlet, burn nodes, analytic orbits, the planning horizon, the two clocks, the physics knobs, and the cached prediction. No DOM. Prediction and flight both call `advancePlan`. The horizon stops the predicted line only. `c` and the dilation knobs do not change the motion. `gravityScale`, `eps`, and `p` do.
 - `src/sim/score.ts` — arrival, the outside-time deadline, crew and fuel stars, and the WP4 pause charge. No DOM.
-- `src/level/passage.ts` — Passage: fixed bodies, fuel, and the reference slingshot and direct plans. Up to eight burns can be queued, and pausing is free. `c` is high, so the clocks stay close. Crew time is weighted above fuel.
-- `src/level/relay.ts` — Relay: Planet X and its moon on rails, a short horizon, two queued burns, three pauses, and the reference mid-flight capture.
-- `src/level/rescue.ts` — Rescue: a black hole, a 26.4 s outside-time deadline, score-priced pauses, and the safe and deep reference plans.
+- `src/levels/*.json` — Passage, Relay, and Rescue. Passage queues up to eight burns and pauses for free. `c` is high, so the clocks stay close, and crew time is weighted above fuel. Relay puts Planet X and its moon on rails, with a short horizon, two queued burns, and three pauses. Rescue has a black hole, a 26.4 s outside-time deadline, and score-priced pauses.
+- `src/level/schema.ts` — the level type and the validating loader.
+- `src/level/catalog.ts` — loads the three files and builds `SimConfig`.
+- `src/level/solutions.ts` — reference burns for Passage, Relay, and Rescue.
+- `src/hud/readout.ts` — rounded clock text and the trend arrows. No DOM.
 - `src/render/` — orthographic Three.js view (WebGL). The HUD and result cards are HTML over the canvas. A parked perspective camera sits on the same world group for a later tilted view.
 
 ## Swapping a visual

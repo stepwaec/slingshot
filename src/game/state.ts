@@ -1,4 +1,4 @@
-import { burnLimit, passage, pauseRuleOf, simConfigFromLevel, type Level } from "../level/passage";
+import { burnLimit, passage, pauseRuleOf, simConfigFromLevel, type Level } from "../level/catalog";
 import {
   advanceFrame,
   assessPlan,
