@@ -1,10 +1,23 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">
-  <!-- Central star. Centre (200,200). Body radius 46, corona to r 130, glow to r 200 (alpha 0).
-       Three concentric radial gradients, all centred (cx cy 0.5), drawn back to front:
-       1. glow   r 200  #FF5A1F  stops 0.00 a0.50 | 0.23 a0.45 | 0.65 a0.12 | 1.00 a0
-       2. corona r 130  #FF8C2E  stops 0.00 a0.90 | 0.35 a0.70 | 0.62 a0.22 | 1.00 a0   (blur sd 3)
-       3. body  r 46   stops 0.00 #FFF8E1 | 0.55 #FFC857 | 1.00 #FF8C2E
-       Offsets are fractions of each layer's own radius (0.23 = 46/200, 0.35 = 46/130). -->
+  <!-- Central star (v1.1 realism pass). ONE group #star at translate(200 200); all geometry relative to (0,0).
+       Envelope unchanged: body r 46, corona to r 130, glow to r 200. Draw order (back to front):
+       1. glow    circle r 200, #FF5A1F  stops 0.00 a0.50 | 0.23 a0.45 | 0.65 a0.12 | 1.00 a0
+       2. corona  circle r 130, #FF8C2E  stops 0.00 a0.90 | 0.35 a0.70 | 0.62 a0.22 | 1.00 a0   blur sd 3
+       3. streamers  10 wedges, fill #FF8C2E, blur sd 6. Each: base width w centred at r 48, tip at r T,
+          rotated by angle A (SVG degrees, clockwise from +x, y down). From mulberry32(0x5747), draws in order
+          angle, [reject if < 20 deg from an accepted angle, redraw angle], w = 10 + 8u, T = 110 + 65u, alpha = 0.10 + 0.06u:
+            S1  A 158.9  w 11.0  T 134.0  a 0.110      S6  A  51.7  w 16.7  T 168.7  a 0.115
+            S2  A 346.7  w 13.8  T 112.0  a 0.160      S7  A   7.4  w 11.5  T 145.6  a 0.137
+            S3  A 311.3  w 12.8  T 128.9  a 0.113      S8  A 264.0  w 12.7  T 130.9  a 0.150
+            S4  A  89.2  w 16.1  T 129.3  a 0.124      S9  A 181.0  w 10.1  T 157.0  a 0.140
+            S5  A 216.1  w 10.8  T 169.9  a 0.104      S10 A 241.3  w 12.5  T 165.2  a 0.142
+          Canvas: same wedges, no blur, linear gradient along the wedge alpha a -> 0 from base to tip.
+       4. helmet lobes  2 wedges, base 40 at r 48, tip r 150, #FF8C2E a0.06, angles 122 and 292, same blur sd 6.
+       5. chromosphere  ring r 47, stroke 3, #FF8C2E a0.60, blur sd 1.5 (Canvas: 1 px strokes at r 46/47/48, a 0.60/0.35/0.15).
+       6. body  circle r 46, radial (0.5,0.5): 0.00 #FFF8E1 | 0.45 #FFC857 | 0.78 #FFC857 | 0.90 #FF8C2E | 1.00 #FF5A1F (limb)
+       7. granulation  feTurbulence fractalNoise baseFrequency 0.11, numOctaves 2, seed 3, saturate 0,
+          contrast x2 about 0.5 (linear slope 2 intercept -0.5), constant alpha 0.16, blend multiply, clipped to the body.
+          Canvas: 128 px value-noise tile (mulberry32 seed 3, 2 octaves, contrast x2), "multiply" at alpha 0.16, clipped to r 46. -->
   <defs>
     <radialGradient id="starGlow" cx="0.5" cy="0.5" r="0.5">
       <stop offset="0" stop-color="#FF5A1F" stop-opacity="0.50"/>
@@ -20,14 +33,51 @@
     </radialGradient>
     <radialGradient id="starBody" cx="0.5" cy="0.5" r="0.5">
       <stop offset="0" stop-color="#FFF8E1"/>
-      <stop offset="0.55" stop-color="#FFC857"/>
-      <stop offset="1" stop-color="#FF8C2E"/>
+      <stop offset="0.45" stop-color="#FFC857"/>
+      <stop offset="0.78" stop-color="#FFC857"/>
+      <stop offset="0.90" stop-color="#FF8C2E"/>
+      <stop offset="1" stop-color="#FF5A1F"/>
     </radialGradient>
-    <filter id="softCorona" x="-10%" y="-10%" width="120%" height="120%">
+    <filter id="starCoronaBlur" x="-10%" y="-10%" width="120%" height="120%">
       <feGaussianBlur stdDeviation="3"/>
     </filter>
+    <filter id="starStreamerBlur" x="-15%" y="-15%" width="130%" height="130%">
+      <feGaussianBlur stdDeviation="6"/>
+    </filter>
+    <filter id="starChromoBlur" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur stdDeviation="1.5"/>
+    </filter>
+    <filter id="starGranulation" x="-5%" y="-5%" width="110%" height="110%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.11" numOctaves="2" seed="3" result="starNoise"/>
+      <feColorMatrix in="starNoise" type="saturate" values="0" result="starGrey"/>
+      <feComponentTransfer in="starGrey" result="starGrain">
+        <feFuncR type="linear" slope="2" intercept="-0.5"/>
+        <feFuncG type="linear" slope="2" intercept="-0.5"/>
+        <feFuncB type="linear" slope="2" intercept="-0.5"/>
+        <feFuncA type="linear" slope="0" intercept="0.16"/>
+      </feComponentTransfer>
+      <feBlend in="starGrain" in2="SourceGraphic" mode="multiply" result="starShaded"/>
+      <feComposite in="starShaded" in2="SourceGraphic" operator="in"/>
+    </filter>
   </defs>
-  <circle cx="200" cy="200" r="200" fill="url(#starGlow)"/>
-  <circle cx="200" cy="200" r="130" fill="url(#starCorona)" filter="url(#softCorona)"/>
-  <circle cx="200" cy="200" r="46" fill="url(#starBody)"/>
+  <g id="star" transform="translate(200 200)">
+    <circle r="200" fill="url(#starGlow)"/>
+    <circle r="130" fill="url(#starCorona)" filter="url(#starCoronaBlur)"/>
+    <g fill="#FF8C2E" filter="url(#starStreamerBlur)">
+      <path d="M48 -5.5 L134 0 L48 5.5 Z" transform="rotate(158.9)" fill-opacity="0.110"/>
+      <path d="M48 -6.9 L112 0 L48 6.9 Z" transform="rotate(346.7)" fill-opacity="0.160"/>
+      <path d="M48 -6.4 L128.9 0 L48 6.4 Z" transform="rotate(311.3)" fill-opacity="0.113"/>
+      <path d="M48 -8.05 L129.3 0 L48 8.05 Z" transform="rotate(89.2)" fill-opacity="0.124"/>
+      <path d="M48 -5.4 L169.9 0 L48 5.4 Z" transform="rotate(216.1)" fill-opacity="0.104"/>
+      <path d="M48 -8.35 L168.7 0 L48 8.35 Z" transform="rotate(51.7)" fill-opacity="0.115"/>
+      <path d="M48 -5.75 L145.6 0 L48 5.75 Z" transform="rotate(7.4)" fill-opacity="0.137"/>
+      <path d="M48 -6.35 L130.9 0 L48 6.35 Z" transform="rotate(264)" fill-opacity="0.150"/>
+      <path d="M48 -5.05 L157 0 L48 5.05 Z" transform="rotate(181)" fill-opacity="0.140"/>
+      <path d="M48 -6.25 L165.2 0 L48 6.25 Z" transform="rotate(241.3)" fill-opacity="0.142"/>
+      <path d="M48 -20 L150 0 L48 20 Z" transform="rotate(122)" fill-opacity="0.06"/>
+      <path d="M48 -20 L150 0 L48 20 Z" transform="rotate(292)" fill-opacity="0.06"/>
+    </g>
+    <circle r="47" fill="none" stroke="#FF8C2E" stroke-opacity="0.60" stroke-width="3" filter="url(#starChromoBlur)"/>
+    <circle r="46" fill="url(#starBody)" filter="url(#starGranulation)"/>
+  </g>
 </svg>

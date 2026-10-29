@@ -1,16 +1,56 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
-  <!-- Start planet. Centre (60,60), radius 34. Lit side faces the star: upper-right.
-       Gradient centre = planet centre + (+0.36 r, -0.36 r), gradient radius = 1.25 r.
-       In objectBoundingBox terms: cx 0.68, cy 0.32, r 0.625.
-       Stops: 0.00 #9CCBFF (highlight), 0.42 #3D8BFF (base), 1.00 #142B5E (shadow). -->
+  <!-- Start planet (v1.1 realism pass). ONE group #planetStart at translate(60 60); geometry relative to (0,0).
+       r 34. Lit side faces the star: L = (+0.7071, -0.7071) (upper-right). Draw order:
+       1. base   circle r 34, #3D8BFF, with the surface filter:
+       2. noise  feTurbulence fractalNoise baseFrequency 0.045, numOctaves 3, seed 7, saturate 0,
+                 contrast x3 about 0.5 (linear slope 3 intercept -1), constant alpha 0.22, blend soft-light, clipped to the disc.
+                 Canvas: 128 px value-noise tile (mulberry32 seed 7, 3 octaves, contrast x3), "soft-light" at alpha 0.22, clipped.
+       3. shade  radial, userSpace centre 0.36 r L = (8.66, -8.66), radius 1.25 r = 42.5:
+                 0.00 #9CCBFF a0.90 | 0.40 #3D8BFF a0 | 0.70 #142B5E a0.55 | 0.86 #142B5E a0.92 | 1.00 #142B5E a1.0
+                 (0.70-0.86 is the terminator).
+       4. limb   circle r 33.5, stroke 1, #9CCBFF a0.16.
+       5. rim    circle r 1.12 r = 38.08, radial from the planet centre, #7FB8FF:
+                 0.00 a0 | 0.80 a0 | 0.87 a0.55 | 0.92 a0.30 | 1.00 a0,
+                 multiplied (alpha mask) by a linear gradient along L from +1.12 r L (26.93,-26.93) = 1.0 to -1.12 r L = 0.35. -->
   <defs>
-    <radialGradient id="startBody" cx="0.68" cy="0.32" r="0.625" fx="0.68" fy="0.32">
-      <stop offset="0" stop-color="#9CCBFF"/>
-      <stop offset="0.42" stop-color="#3D8BFF"/>
-      <stop offset="1" stop-color="#142B5E"/>
+    <filter id="psSurface" x="-5%" y="-5%" width="110%" height="110%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="3" seed="7" result="psNoise"/>
+      <feColorMatrix in="psNoise" type="saturate" values="0" result="psGrey"/>
+      <feComponentTransfer in="psGrey" result="psGrain">
+        <feFuncR type="linear" slope="3" intercept="-1"/>
+        <feFuncG type="linear" slope="3" intercept="-1"/>
+        <feFuncB type="linear" slope="3" intercept="-1"/>
+        <feFuncA type="linear" slope="0" intercept="0.22"/>
+      </feComponentTransfer>
+      <feBlend in="psGrain" in2="SourceGraphic" mode="soft-light" result="psShaded"/>
+      <feComposite in="psShaded" in2="SourceGraphic" operator="in"/>
+    </filter>
+    <radialGradient id="psShade" gradientUnits="userSpaceOnUse" cx="8.66" cy="-8.66" r="42.5">
+      <stop offset="0" stop-color="#9CCBFF" stop-opacity="0.90"/>
+      <stop offset="0.40" stop-color="#3D8BFF" stop-opacity="0"/>
+      <stop offset="0.70" stop-color="#142B5E" stop-opacity="0.55"/>
+      <stop offset="0.86" stop-color="#142B5E" stop-opacity="0.92"/>
+      <stop offset="1" stop-color="#142B5E" stop-opacity="1"/>
     </radialGradient>
+    <radialGradient id="psRim" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="38.08">
+      <stop offset="0" stop-color="#7FB8FF" stop-opacity="0"/>
+      <stop offset="0.80" stop-color="#7FB8FF" stop-opacity="0"/>
+      <stop offset="0.87" stop-color="#7FB8FF" stop-opacity="0.55"/>
+      <stop offset="0.92" stop-color="#7FB8FF" stop-opacity="0.30"/>
+      <stop offset="1" stop-color="#7FB8FF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="psRimLit" gradientUnits="userSpaceOnUse" x1="26.93" y1="-26.93" x2="-26.93" y2="26.93">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="1"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.35"/>
+    </linearGradient>
+    <mask id="psRimMask" mask-type="alpha" maskUnits="userSpaceOnUse" x="-40" y="-40" width="80" height="80">
+      <rect x="-40" y="-40" width="80" height="80" fill="url(#psRimLit)"/>
+    </mask>
   </defs>
-  <circle cx="60" cy="60" r="34" fill="url(#startBody)"/>
-  <!-- 1 px limb line so the dark side still reads against bg.base -->
-  <circle cx="60" cy="60" r="33.5" fill="none" stroke="#9CCBFF" stroke-opacity="0.16" stroke-width="1"/>
+  <g id="planetStart" transform="translate(60 60)">
+    <circle r="34" fill="#3D8BFF" filter="url(#psSurface)"/>
+    <circle r="34" fill="url(#psShade)"/>
+    <circle r="33.5" fill="none" stroke="#9CCBFF" stroke-opacity="0.16" stroke-width="1"/>
+    <circle r="38.08" fill="url(#psRim)" mask="url(#psRimMask)"/>
+  </g>
 </svg>

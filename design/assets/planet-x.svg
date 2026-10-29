@@ -1,25 +1,65 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240">
-  <!-- Planet X (target). Centre (120,120), radius 30. Lit side faces the star: lower-left.
-       Body gradient centre = planet centre + (-0.36 r, +0.36 r), gradient radius = 1.25 r.
-       objectBoundingBox: cx 0.32, cy 0.68, r 0.625.
-       Stops: 0.00 #B5FFF0 (highlight), 0.42 #3DE0C2 (base), 1.00 #0E4A40 (shadow).
-       Halo: radius 1.8 r = 54, #3DE0C2, alpha 0.35 at the planet edge (offset 0.556) -> 0 at the rim.
-       Capture ring: radius 78, #3DE0C2, stroke 1.5, dash 6/6, alpha 0.55 (pulses 0.35-0.70 in game). -->
+  <!-- Planet X, the target (v1.1 realism pass). ONE group #planetX at translate(120 120); geometry relative to (0,0).
+       r 30. Lit side faces the star: L = (-0.7071, +0.7071) (lower-left). Draw order:
+       0. halo   circle r 1.8 r = 54, #3DE0C2: 0.00 a0.35 | 0.556 a0.35 | 0.78 a0.10 | 1.00 a0   (as v1)
+       1. base   circle r 30, #3DE0C2, with the surface filter:
+       2. noise  feTurbulence fractalNoise baseFrequency 0.055, numOctaves 3, seed 11, saturate 0,
+                 contrast x3 about 0.5 (linear slope 3 intercept -1), constant alpha 0.22, blend soft-light, clipped to the disc.
+                 Canvas: 128 px value-noise tile (mulberry32 seed 11, 3 octaves, contrast x3), "soft-light" at alpha 0.22, clipped.
+       3. shade  radial, userSpace centre 0.36 r L = (-7.64, 7.64), radius 1.25 r = 37.5:
+                 0.00 #B5FFF0 a0.90 | 0.40 #3DE0C2 a0 | 0.70 #0E4A40 a0.55 | 0.86 #0E4A40 a0.92 | 1.00 #0E4A40 a1.0
+       4. limb   circle r 29.5, stroke 1, #B5FFF0 a0.18.
+       5. rim    circle r 1.12 r = 33.6, radial from the planet centre, #8FFFE6:
+                 0.00 a0 | 0.80 a0 | 0.87 a0.55 | 0.92 a0.30 | 1.00 a0,
+                 multiplied (alpha mask) by a linear gradient along L from +1.12 r L (-23.76, 23.76) = 1.0 to -1.12 r L = 0.35.
+       6. ring   capture ring r 78, #3DE0C2, stroke 1.5, dash 6 6, a0.55 (pulses 0.35-0.70 in game)   (as v1) -->
   <defs>
-    <radialGradient id="xHalo" cx="0.5" cy="0.5" r="0.5">
+    <radialGradient id="pxHalo" cx="0.5" cy="0.5" r="0.5">
       <stop offset="0" stop-color="#3DE0C2" stop-opacity="0.35"/>
       <stop offset="0.556" stop-color="#3DE0C2" stop-opacity="0.35"/>
       <stop offset="0.78" stop-color="#3DE0C2" stop-opacity="0.10"/>
       <stop offset="1" stop-color="#3DE0C2" stop-opacity="0"/>
     </radialGradient>
-    <radialGradient id="xBody" cx="0.32" cy="0.68" r="0.625" fx="0.32" fy="0.68">
-      <stop offset="0" stop-color="#B5FFF0"/>
-      <stop offset="0.42" stop-color="#3DE0C2"/>
-      <stop offset="1" stop-color="#0E4A40"/>
+    <filter id="pxSurface" x="-5%" y="-5%" width="110%" height="110%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.055" numOctaves="3" seed="11" result="pxNoise"/>
+      <feColorMatrix in="pxNoise" type="saturate" values="0" result="pxGrey"/>
+      <feComponentTransfer in="pxGrey" result="pxGrain">
+        <feFuncR type="linear" slope="3" intercept="-1"/>
+        <feFuncG type="linear" slope="3" intercept="-1"/>
+        <feFuncB type="linear" slope="3" intercept="-1"/>
+        <feFuncA type="linear" slope="0" intercept="0.22"/>
+      </feComponentTransfer>
+      <feBlend in="pxGrain" in2="SourceGraphic" mode="soft-light" result="pxShaded"/>
+      <feComposite in="pxShaded" in2="SourceGraphic" operator="in"/>
+    </filter>
+    <radialGradient id="pxShade" gradientUnits="userSpaceOnUse" cx="-7.64" cy="7.64" r="37.5">
+      <stop offset="0" stop-color="#B5FFF0" stop-opacity="0.90"/>
+      <stop offset="0.40" stop-color="#3DE0C2" stop-opacity="0"/>
+      <stop offset="0.70" stop-color="#0E4A40" stop-opacity="0.55"/>
+      <stop offset="0.86" stop-color="#0E4A40" stop-opacity="0.92"/>
+      <stop offset="1" stop-color="#0E4A40" stop-opacity="1"/>
     </radialGradient>
+    <radialGradient id="pxRim" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="33.6">
+      <stop offset="0" stop-color="#8FFFE6" stop-opacity="0"/>
+      <stop offset="0.80" stop-color="#8FFFE6" stop-opacity="0"/>
+      <stop offset="0.87" stop-color="#8FFFE6" stop-opacity="0.55"/>
+      <stop offset="0.92" stop-color="#8FFFE6" stop-opacity="0.30"/>
+      <stop offset="1" stop-color="#8FFFE6" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="pxRimLit" gradientUnits="userSpaceOnUse" x1="-23.76" y1="23.76" x2="23.76" y2="-23.76">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="1"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.35"/>
+    </linearGradient>
+    <mask id="pxRimMask" mask-type="alpha" maskUnits="userSpaceOnUse" x="-36" y="-36" width="72" height="72">
+      <rect x="-36" y="-36" width="72" height="72" fill="url(#pxRimLit)"/>
+    </mask>
   </defs>
-  <circle cx="120" cy="120" r="54" fill="url(#xHalo)"/>
-  <circle cx="120" cy="120" r="30" fill="url(#xBody)"/>
-  <circle cx="120" cy="120" r="29.5" fill="none" stroke="#B5FFF0" stroke-opacity="0.18" stroke-width="1"/>
-  <circle cx="120" cy="120" r="78" fill="none" stroke="#3DE0C2" stroke-opacity="0.55" stroke-width="1.5" stroke-dasharray="6 6"/>
+  <g id="planetX" transform="translate(120 120)">
+    <circle r="54" fill="url(#pxHalo)"/>
+    <circle r="30" fill="#3DE0C2" filter="url(#pxSurface)"/>
+    <circle r="30" fill="url(#pxShade)"/>
+    <circle r="29.5" fill="none" stroke="#B5FFF0" stroke-opacity="0.18" stroke-width="1"/>
+    <circle r="33.6" fill="url(#pxRim)" mask="url(#pxRimMask)"/>
+    <circle r="78" fill="none" stroke="#3DE0C2" stroke-opacity="0.55" stroke-width="1.5" stroke-dasharray="6 6"/>
+  </g>
 </svg>
