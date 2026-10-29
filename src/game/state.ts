@@ -42,7 +42,6 @@ export interface Game {
   selected: number | null;
   prediction: PlanForecast;
   predictMs: number;
-  trail: Vec2[];
   speed: SimSpeed;
   /** One fixed step every other rendered frame. `dt` stays put. */
   slow: boolean;
@@ -91,7 +90,6 @@ export function createGame(level: Level = passage, camera: Camera = { x: 0, y: 0
     selected: null,
     prediction,
     predictMs: performance.now() - started,
-    trail: [],
     speed: 1,
     slow: false,
     slowPhase: 0,
@@ -373,7 +371,6 @@ export function launch(game: Game): void {
   game.ship = cloneState(game.initial);
   game.fuel = game.level.fuel;
   game.mode = "flying";
-  game.trail = [{ x: game.initial.x, y: game.initial.y }];
   game.cursor = { index: 0 };
   game.spentNodes = 0;
   game.selected = null;
@@ -387,10 +384,6 @@ export function tick(game: Game): void {
   game.slowPhase = counted.phase;
   const config = simConfigFromLevel(game.level);
   advanceFrame(game.ship, config, counted.steps, game.frameSamples, game.nodes, game.cursor);
-  for (let i = 0; i < game.frameSamples.length; i++) {
-    const sample = game.frameSamples[i];
-    game.trail.push({ x: sample.x, y: sample.y });
-  }
   const perDv = game.level.fuelPerDv;
   while (game.spentNodes < game.cursor.index) {
     const node = game.nodes[game.spentNodes];
@@ -479,7 +472,6 @@ function restoreShip(game: Game): void {
   game.initial = initial;
   game.ship = cloneState(initial);
   game.fuel = game.level.fuel;
-  game.trail = [];
   game.cursor = { index: 0 };
   game.spentNodes = 0;
   game.frameSamples = [];
