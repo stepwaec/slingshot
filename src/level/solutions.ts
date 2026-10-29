@@ -98,3 +98,21 @@ export const deepPlan: readonly BurnNode[] = [
   { step: 0, dvx: 7.866738461734151, dvy: -19.470860945902537 },
   { step: 1620, dvx: -14.384249949606534, dvy: -4.538432715721418 },
 ];
+
+/** Pair: leave Home, bend past the binary, capture at Planet X. */
+export const pairPlan: readonly BurnNode[] = [
+  { step: 0, dvx: 6.000000000000002, dvy: 10.392304845413264 },
+  { step: 1894, dvx: -16.069883211001347, dvy: 11.36749877669331 },
+];
+
+/** Ember: skim the red giant's drag atmosphere, swing the white dwarf, capture. */
+export const emberPlan: readonly BurnNode[] = [
+  { step: 0, dvx: 24, dvy: 0 },
+  { step: 1630, dvx: 21.32815548843824, dvy: 13.260529791369175 },
+];
+
+/** Chain: pass the gas giant's moons and capture at Planet X. */
+export const chainPlan: readonly BurnNode[] = [
+  { step: 0, dvx: 12.855752193730787, dvy: 15.32088886237956 },
+  { step: 1505, dvx: -24.761929237626404, dvy: -0.9891972743133151 },
+];

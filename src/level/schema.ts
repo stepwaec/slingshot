@@ -1,4 +1,13 @@
-import type { Body, BodyKind, BodyOrbit, Bounds, Horizon, PauseRule } from "../sim/physics";
+import {
+  BODY_LOOKS,
+  type Body,
+  type BodyKind,
+  type BodyLook,
+  type BodyOrbit,
+  type Bounds,
+  type Horizon,
+  type PauseRule,
+} from "../sim/physics";
 
 /**
  * How a level turns clocks and fuel into points.
@@ -33,8 +42,9 @@ export interface MissionProfile {
  * - `dilationCap` — maximum slowdown, for example `10` keeps `dτ/dt` at or
  *   above `1/10`. Omitted means no finite cap: the rate may reach 0, which is
  *   the hard clamp used today. A finite cap saturates smoothly.
- * - `tidalStrength` and `dragStrength` — accepted and stored. The integrator
- *   does not read them; later packages wire them in.
+ * - `tidalStrength` — accepted and stored. The integrator does not read it yet.
+ * - `dragStrength` — scales drag inside a body's `atmosphereRadius`. Omitted
+ *   or 0 is no drag. The force only slows the ship relative to that body.
  */
 export interface LevelPhysics {
   c?: number;
@@ -119,7 +129,19 @@ const LEVEL_KEYS = [
   "physics",
 ] as const;
 
-const BODY_KEYS = ["id", "name", "kind", "x", "y", "mass", "radius", "captureRadius", "orbit"] as const;
+const BODY_KEYS = [
+  "id",
+  "name",
+  "kind",
+  "x",
+  "y",
+  "mass",
+  "radius",
+  "captureRadius",
+  "orbit",
+  "look",
+  "atmosphereRadius",
+] as const;
 const BODY_ORBIT_KEYS = ["centerId", "cx", "cy", "radius", "phase", "omega"] as const;
 const SHIP_KEYS = ["x", "y", "vx", "vy"] as const;
 const SHIP_ORBIT_KEYS = ["bodyId", "radius"] as const;
@@ -137,7 +159,7 @@ const PHYSICS_KEYS = [
   "dragStrength",
 ] as const;
 
-const BODY_KINDS: readonly BodyKind[] = ["home", "star", "target", "moon", "blackhole"];
+const BODY_KINDS: readonly BodyKind[] = ["home", "star", "target", "moon", "blackhole", "planet"];
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -273,14 +295,27 @@ function readBody(value: unknown, path: string, issues: string[]): Body | undefi
   const mass = readFinite(value, "mass", path, issues, { min: 0 });
   const radius = readFinite(value, "radius", path, issues, { min: 0, exclusiveMin: true });
   const captureRadius = readOptionalFinite(value, "captureRadius", path, issues, { min: 0, exclusiveMin: true });
+  const atmosphereRadius = readOptionalFinite(value, "atmosphereRadius", path, issues, { min: 0, exclusiveMin: true });
+  let look: BodyLook | undefined;
+  if (Object.prototype.hasOwnProperty.call(value, "look")) {
+    const raw = value.look;
+    if (typeof raw !== "string" || !BODY_LOOKS.includes(raw as BodyLook)) {
+      issues.push(`${path}.look must be one of ${BODY_LOOKS.join(", ")}`);
+    } else look = raw as BodyLook;
+  }
   let orbit: BodyOrbit | undefined;
   if (Object.prototype.hasOwnProperty.call(value, "orbit")) orbit = readBodyOrbit(value.orbit, `${path}.orbit`, issues);
+  if (atmosphereRadius !== undefined && radius !== undefined && !(atmosphereRadius > radius)) {
+    issues.push(`${path}.atmosphereRadius must be greater than radius`);
+  }
   if (id === undefined || name === undefined || x === undefined || y === undefined || mass === undefined || radius === undefined) {
     return undefined;
   }
   if (typeof kindRaw !== "string" || !BODY_KINDS.includes(kindRaw as BodyKind)) return undefined;
   const body: Body = { id, name, kind: kindRaw as BodyKind, x, y, mass, radius };
   if (captureRadius !== undefined) body.captureRadius = captureRadius;
+  if (atmosphereRadius !== undefined) body.atmosphereRadius = atmosphereRadius;
+  if (look) body.look = look;
   if (orbit) body.orbit = orbit;
   return body;
 }

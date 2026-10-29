@@ -31,7 +31,27 @@ export interface Vec2 {
   y: number;
 }
 
-export type BodyKind = "home" | "star" | "target" | "moon" | "blackhole";
+export type BodyKind = "home" | "star" | "target" | "moon" | "blackhole" | "planet";
+
+/**
+ * Visual recipe for a body. Omitted looks use the kind's original disc.
+ * Stars: `sun`, `binary-hot`, `binary-cool`, `white-dwarf`, `red-giant`.
+ * Planets and moons: `gas-giant`, `moon`, `moon-icy`, `moon-volcanic`, `dwarf`.
+ */
+export const BODY_LOOKS = [
+  "sun",
+  "binary-hot",
+  "binary-cool",
+  "white-dwarf",
+  "red-giant",
+  "gas-giant",
+  "moon",
+  "moon-icy",
+  "moon-volcanic",
+  "dwarf",
+] as const;
+
+export type BodyLook = (typeof BODY_LOOKS)[number];
 
 /**
  * Circular orbit. Position at time t is the center plus
@@ -65,6 +85,13 @@ export interface Body {
    */
   captureRadius?: number;
   orbit?: BodyOrbit;
+  /** Which sprite to draw. Omitted bodies keep the original look for their kind. */
+  look?: BodyLook;
+  /**
+   * Soft atmosphere, world units from the centre. Drag from `dragStrength`
+   * acts only inside this radius and outside the surface. Omitted means no drag.
+   */
+  atmosphereRadius?: number;
 }
 
 /** World position and velocity of one body at an instant. */
@@ -137,7 +164,12 @@ export interface SimConfig {
   dilationCap?: number;
   /** Stored for a later package. The integrator does not read this. */
   tidalStrength?: number;
-  /** Stored for a later package. The integrator does not read this. */
+  /**
+   * Scales drag inside a body's `atmosphereRadius`. Omitted or 0 leaves
+   * velocity untouched, so stock levels stay bit-identical. The force is
+   * opposite the ship's velocity relative to the body, so it only slows
+   * that relative motion. Prediction and flight both apply it in `step`.
+   */
   dragStrength?: number;
 }
 
@@ -902,9 +934,41 @@ function targetBody(config: SimConfig): Body | undefined {
 }
 
 /**
+ * Linear drag inside each body's atmosphere, opposite the velocity relative
+ * to that body. Density is 1 at the surface and 0 at `atmosphereRadius`.
+ * A zero `dragStrength`, or no atmosphere, returns without writing `state`.
+ */
+function applyDrag(state: SimState, config: SimConfig, time: number): void {
+  const strength = config.dragStrength ?? 0;
+  if (strength === 0) return;
+  let ax = 0;
+  let ay = 0;
+  const bodies = config.bodies;
+  for (let i = 0; i < bodies.length; i++) {
+    const body = bodies[i];
+    const atmo = body.atmosphereRadius ?? 0;
+    if (!(atmo > body.radius)) continue;
+    const pose = body.orbit ? bodyPose(body, time, bodies) : { x: body.x, y: body.y, vx: 0, vy: 0 };
+    const dx = state.x - pose.x;
+    const dy = state.y - pose.y;
+    const r = Math.hypot(dx, dy);
+    if (!(r > body.radius) || !(r < atmo)) continue;
+    const depth = (atmo - r) / (atmo - body.radius);
+    const density = depth * depth;
+    ax -= strength * density * (state.vx - pose.vx);
+    ay -= strength * density * (state.vy - pose.vy);
+  }
+  if (ax === 0 && ay === 0) return;
+  state.vx += ax * config.dt;
+  state.vy += ay * config.dt;
+}
+
+/**
  * One velocity-Verlet step of size `config.dt`, then crash / capture / lost checks.
  * Burns are not applied here — `advancePlan` applies them before calling `step`.
  * Terminal states are not advanced. `dt` never depends on sim speed.
+ * Drag, when a level sets it, is applied at the end of the step so prediction
+ * and flight share it.
  */
 export function step(state: SimState, config: SimConfig): void {
   if (state.status !== "flying") return;
@@ -926,6 +990,7 @@ export function step(state: SimState, config: SimConfig): void {
   state.x = x1;
   state.y = y1;
   state.step += 1;
+  applyDrag(state, config, t1);
 
   let crashT = Infinity;
   let crashBody: string | null = null;

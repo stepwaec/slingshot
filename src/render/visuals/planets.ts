@@ -23,6 +23,9 @@ uniform float uRadiusPx;
 uniform float uLimbAlpha;
 uniform float uLightOffset;
 uniform float uGradRadius;
+uniform vec2 uLight2;
+uniform float uWeight2;
+uniform float uBands;
 
 void main() {
   float d = length(vLocal);
@@ -32,6 +35,16 @@ void main() {
   vec2 center = uLight * uLightOffset;
   float gr = clamp(length(vLocal - center) / uGradRadius, 0.0, 1.0);
   vec3 col = gr < 0.42 ? mix(uHighlight, uBase, gr / 0.42) : mix(uBase, uShadow, (gr - 0.42) / 0.58);
+  if (uWeight2 > 0.001) {
+    vec2 center2 = uLight2 * uLightOffset;
+    float gr2 = clamp(length(vLocal - center2) / uGradRadius, 0.0, 1.0);
+    vec3 lit2 = gr2 < 0.42 ? mix(uHighlight, uBase, gr2 / 0.42) : mix(uBase, uShadow, (gr2 - 0.42) / 0.58);
+    col = mix(col, lit2, clamp(uWeight2, 0.0, 1.0) * 0.55);
+  }
+  if (uBands > 0.5) {
+    float stripe = sin(vLocal.y * 16.0);
+    col *= 0.78 + 0.22 * stripe;
+  }
   float limbCenter = 1.0 - 0.5 / max(uRadiusPx, 1.0);
   float limbHalf = 0.5 / max(uRadiusPx, 1.0);
   float limb = 1.0 - smoothstep(limbHalf, limbHalf + fw, abs(d - limbCenter));
@@ -105,6 +118,8 @@ interface PlanetView {
   halo: THREE.Mesh | null;
   radiusPx: THREE.IUniform;
   light: THREE.Vector2;
+  light2: THREE.Vector2;
+  weight2: THREE.IUniform;
 }
 
 interface RingView {
@@ -129,7 +144,7 @@ class PlanetsVisual implements Visual {
   constructor(theme: Theme, level: Parameters<VisualFactory>[1]) {
     this.theme = theme;
     this.object.name = "planets";
-    const star = level.bodies.find((body) => body.kind === "star");
+    const star = brightestStar(level.bodies);
     let order = 1;
     for (const body of level.bodies) {
       if (body.kind === "star") continue;
@@ -151,7 +166,8 @@ class PlanetsVisual implements Visual {
         continue;
       }
       const target = body.kind === "target";
-      this.object.userData.asset = target ? theme.assets.planetX : theme.assets.planetStart;
+      const paint = planetPaint(body, theme);
+      this.object.userData.asset = paint.asset;
       let halo: THREE.Mesh | null = null;
       if (target) {
         halo = new THREE.Mesh(
@@ -166,14 +182,18 @@ class PlanetsVisual implements Visual {
       }
       const radiusPx = { value: body.radius };
       const light = lightDir(body, star);
-      const colors = theme.colors;
+      const light2 = new THREE.Vector2(1, 0);
+      const weight2 = { value: 0 };
       const mesh = new THREE.Mesh(
         new THREE.PlaneGeometry(2, 2),
         shader(planetFrag, {
           uLight: { value: light },
-          uHighlight: { value: srgbVec(target ? colors.planetXHighlight : colors.planetStartHighlight) },
-          uBase: { value: srgbVec(target ? colors.planetXBase : colors.planetStartBase) },
-          uShadow: { value: srgbVec(target ? colors.planetXShadow : colors.planetStartShadow) },
+          uLight2: { value: light2 },
+          uWeight2: weight2,
+          uBands: { value: paint.bands ? 1 : 0 },
+          uHighlight: { value: srgbVec(paint.highlight) },
+          uBase: { value: srgbVec(paint.base) },
+          uShadow: { value: srgbVec(paint.shadow) },
           uRadiusPx: radiusPx,
           uLimbAlpha: { value: target ? theme.planet.limbAlphaTarget : theme.planet.limbAlphaHome },
           uLightOffset: { value: theme.planet.lightOffset },
@@ -185,11 +205,11 @@ class PlanetsVisual implements Visual {
       mesh.renderOrder = order++;
       mesh.name = body.id;
       this.object.add(mesh);
-      this.planets.push({ body, mesh, halo, radiusPx, light });
+      this.planets.push({ body, mesh, halo, radiusPx, light, light2, weight2 });
 
       if (body.captureRadius !== undefined) {
         const uniforms = {
-          uColor: { value: srgbVec(colors.planetXBase) },
+          uColor: { value: srgbVec(theme.colors.planetXBase) },
           uQuad: { value: body.captureRadius },
           uRingWorld: { value: body.captureRadius },
           uZoom: { value: 1 },
@@ -222,8 +242,6 @@ class PlanetsVisual implements Visual {
     const spec = this.theme.planet;
     const time = simTime(frame.game);
     const bodies = frame.game.level.bodies;
-    const star = bodies.find((body) => body.kind === "star");
-    const starPose = star ? bodyPose(star, time, bodies) : null;
     for (const hole of this.holes) {
       const pose = bodyPose(hole.body, time, bodies);
       hole.mesh.position.set(pose.x, pose.y, 0);
@@ -233,12 +251,12 @@ class PlanetsVisual implements Visual {
       const pose = bodyPose(planet.body, time, bodies);
       planet.mesh.position.set(pose.x, pose.y, 0);
       if (planet.halo) planet.halo.position.set(pose.x, pose.y, 0);
-      if (starPose) {
-        const dx = starPose.x - pose.x;
-        const dy = starPose.y - pose.y;
-        const d = Math.hypot(dx, dy) || 1;
-        planet.light.set(dx / d, dy / d);
-      }
+      const lights = starLights(pose.x, pose.y, bodies, time);
+      if (lights.primary) planet.light.copy(lights.primary);
+      if (lights.secondary) {
+        planet.light2.copy(lights.secondary);
+        planet.weight2.value = lights.weight2;
+      } else planet.weight2.value = 0;
     }
     const pulse = Math.sin((frame.now / spec.ringPulseMs) * Math.PI * 2) * 0.5 + 0.5;
     const locked = frame.game.mode === "finished" && frame.game.ship.status === "won";
@@ -275,10 +293,91 @@ function simTime(game: Game): number {
   return step * game.level.dt;
 }
 
+function brightestStar(bodies: readonly Body[]): Body | undefined {
+  let best: Body | undefined;
+  let bestMass = -1;
+  for (let i = 0; i < bodies.length; i++) {
+    const body = bodies[i];
+    if (body.kind !== "star" || body.mass <= bestMass) continue;
+    best = body;
+    bestMass = body.mass;
+  }
+  return best;
+}
+
 function lightDir(body: Body, star: Body | undefined): THREE.Vector2 {
   if (!star) return new THREE.Vector2(1, 0);
   const dx = star.x - body.x;
   const dy = star.y - body.y;
   const d = Math.hypot(dx, dy) || 1;
   return new THREE.Vector2(dx / d, dy / d);
+}
+
+/** Up to two star directions, weighted by mass / distance². One star leaves the second weight at 0. */
+function starLights(
+  x: number,
+  y: number,
+  bodies: readonly Body[],
+  time: number,
+): { primary: THREE.Vector2 | null; secondary: THREE.Vector2 | null; weight2: number } {
+  let firstW = 0;
+  let secondW = 0;
+  let primary: THREE.Vector2 | null = null;
+  let secondary: THREE.Vector2 | null = null;
+  for (let i = 0; i < bodies.length; i++) {
+    const body = bodies[i];
+    if (body.kind !== "star") continue;
+    const pose = bodyPose(body, time, bodies);
+    const dx = pose.x - x;
+    const dy = pose.y - y;
+    const r2 = dx * dx + dy * dy;
+    if (!(r2 > 1e-8)) continue;
+    const weight = body.mass / r2;
+    const dir = new THREE.Vector2(dx / Math.sqrt(r2), dy / Math.sqrt(r2));
+    if (weight > firstW) {
+      secondW = firstW;
+      secondary = primary;
+      firstW = weight;
+      primary = dir;
+    } else if (weight > secondW) {
+      secondW = weight;
+      secondary = dir;
+    }
+  }
+  return { primary, secondary, weight2: firstW > 0 ? secondW / firstW : 0 };
+}
+
+function planetPaint(body: Body, theme: Theme): { highlight: string; base: string; shadow: string; bands: boolean; asset: string } {
+  const colors = theme.colors;
+  if (body.kind === "target") {
+    return {
+      highlight: colors.planetXHighlight,
+      base: colors.planetXBase,
+      shadow: colors.planetXShadow,
+      bands: false,
+      asset: theme.assets.planetX,
+    };
+  }
+  if (body.look === "gas-giant") {
+    return { highlight: "#FFF3DE", base: "#EBA75E", shadow: "#7C3C1E", bands: true, asset: theme.assets.gasGiant };
+  }
+  if (body.look === "moon-icy") {
+    return { highlight: "#FFFFFF", base: "#DCE4FF", shadow: "#4E78A8", bands: false, asset: theme.assets.moonChain };
+  }
+  if (body.look === "moon-volcanic") {
+    return { highlight: "#F6EBA8", base: "#E0892E", shadow: "#8C6A2A", bands: false, asset: theme.assets.moonChain };
+  }
+  if (body.look === "dwarf") {
+    return { highlight: "#FFF6E6", base: "#CDA273", shadow: "#6A402A", bands: false, asset: theme.assets.moonChain };
+  }
+  if (body.look === "moon") {
+    return { highlight: "#F4F2FC", base: "#A6A2B6", shadow: "#4B4866", bands: false, asset: theme.assets.moonChain };
+  }
+  return {
+    highlight: colors.planetStartHighlight,
+    base: colors.planetStartBase,
+    shadow: colors.planetStartShadow,
+    bands: false,
+    asset: theme.assets.planetStart,
+  };
 }

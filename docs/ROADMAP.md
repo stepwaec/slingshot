@@ -23,7 +23,7 @@ Note on numbering: Brainstormer's first draft called the flight loop "WP2" and r
 | WP7: burn animation, burn delete and plume | Done, merged 2026-10-29 in [PR #9](https://github.com/stepwaec/slingshot/pull/9) | Wind-up starting 0.5 s of sim time before each burn (engine glow and flicker, pulsing node marker) and a thrust tail after it, timings in `theme.burn`. Delete an unfired planned burn: click its dot, then press Delete or Backspace or the small x; prediction recomputes and fuel comes back; fired burns cannot be deleted. Plume starts at the nozzle and shows only behind the hull; wider and turbulent; blue-white core fading to violet with glow. Purely visual; tests prove flights and fuel are identical with or without the animation, and deleting a burn equals never placing it. 39 tests. |
 | WP7b: plume duration and trail | Done, merged 2026-10-29 in [PR #10](https://github.com/stepwaec/slingshot/pull/10) | Plume lasts longer for bigger burns: `min(tailMax, tailBase + tailPerDv * abs(dv))` with 1.15 s base, 0.16 s per unit delta-v, 4.2 s cap. The flown trail behind the ship becomes a narrower version of the plume (blue-white to violet glow) that fades after a while. Predicted line, physics, fuel and determinism unchanged. 41 tests. |
 | WP7c: levels as JSON and physics knobs | Done, merged 2026-10-29 in [PR #12](https://github.com/stepwaec/slingshot/pull/12) | Passage, Relay and Rescue are JSON files in `src/levels/` with a typed schema and a validating loader. The old TypeScript level definitions are gone, and those three levels play bit-for-bit identically. Optional per-level `physics` block; every knob defaults to the previous behaviour: `c` (speed of light), `gravityScale` (G multiplier), falloff shaping `eps` and `p` near 2 (force `GM / (r²+ε²)^(p/2)`, potential kept consistent with the force), `dilationStrength`, and `dilationCap` with smooth saturation so the rate never drops below `1/cap`. `tidalStrength` and `dragStrength` are in the schema and type only. HUD rounds the clock rate, the time gap and the deadline margin, with rising, falling or steady arrows and hysteresis. Tests: each active knob changes the flight as intended and prediction still matches flight; the cap is continuous, monotonic and never exceeded; the loader rejects invalid JSON; default flights match the pre-move trajectories, clocks and scores. |
-| WP8: stellar variety | On hold until Claude's next design update lands. Brainstormer will then list the missing object designs, Stephan asks Claude for them, and WP8 starts. Scope approved by Stephan. | Binary stars (two stars orbiting their shared centre of mass on deterministic orbits, with a level where slingshot timing around the pair matters). White dwarfs (small, very dense, sharp gravity well, hard crash radius). Red giants (huge, soft outer atmosphere with deterministic drag that is in the prediction and only ever slows the ship). Gas giants with chains of 3 to 5 moons on resonant orbits for cheap course changes. Simple visuals for each via the swappable visual layer, shown on the gravity grid. Two or three new levels, each requiring a stable orbit around Planet X, winnable with a reference solution. One PR. (Levels are JSON files as of WP7c.) |
+| WP8: stellar variety | Done, 2026-10-29 in [PR #18](https://github.com/stepwaec/slingshot/pull/18) | Binary stars (Pair): two stars on rails around a shared centre, each drawn, and planets lit from both. White dwarf: small bright disc, wide glow, diffraction spikes, hard crash radius. Red giant (Ember): deep-red disc plus a soft drag atmosphere; `dragStrength` slows the ship only inside `atmosphereRadius`, in the same `step` the prediction uses. Gas giant (Chain) with four moons on a 1:2:3:4 resonance. Three JSON levels, each with a reference solution that captures Planet X. 62 tests. |
 | Ship systems package (after WP8; number not assigned yet) | Planned | Hull health. Damage from collisions, close passes and tidal stress (the gravity gradient across the ship, strongest near white dwarfs, neutron stars and black holes), with a HUD stress warning and a red zone on the gravity grid. Solar recharge near stars (moved here from WP10). A basic upgrade screen, with upgrades bought with stars or points. Wires up the tidal damage knob from WP7c. |
 | WP9: compact objects plus magnetism layer | Planned | Neutron stars and pulsars (small and very heavy; beams damage on a rhythm), magnetars (fields scramble instruments so the prediction gets fuzzy), black holes with event horizons and lensing. Magnetism layer: a magnetic field model per body (dipole falling off with distance cubed), a danger heatmap from safe to dangerous for magnetars, neutron stars and gas giants, with its own toggle (M key and a HUD button, separate from G); the same field drives the magnetar fuzziness. Tests check field values and that the toggle never changes the sim. |
 | WP10: environment and resources | Planned | Nebulae (scoop fuel; they hide what is inside) and comets (ride them or harvest ice). Solar recharge was originally here and moved to the ship systems package. |
@@ -42,9 +42,10 @@ Note on numbering: Brainstormer's first draft called the flight loop "WP2" and r
 - Stars and planets that bend the path for slingshots.
 - Moons; planets and moons move on orbits (WP4).
 - A black hole with a horizon in the Rescue level (WP5). *Uncertain:* full black hole visuals with lensing are still planned for WP9.
+- Binary stars, a white dwarf, and a red giant with a drag atmosphere (WP8, levels Pair and Ember).
+- A gas giant with a chain of four moons (WP8, level Chain).
 
 **Planned, by package**
-- WP8: binary stars, white dwarfs, red giants (drag), gas giants with moon chains.
 - WP9: neutron stars, pulsars, magnetars, black holes with event horizons and lensing.
 - WP10: nebulae, comets.
 - WP11: asteroid belts and the Kuiper belt (density tiers: sparse, medium, dense), rogue planets, stray asteroids, solar flares, radiation belts.
@@ -133,7 +134,7 @@ Other gameplay ideas raised by Brainstormer and not yet scheduled: realistic vis
 ## Open decisions
 
 - **Game name:** not chosen. Dilation leads; Proper Time is the other favourite (see DESIGN.md). Availability checks not done.
-- **WP8 object designs:** waiting for Claude's next design update; then compare existing designs against WP8 needs and ask Claude for the missing ones.
+- **WP8 object designs:** landed with the v2 pack in PR #17. Pair, Ember and Chain use them.
 - **Ship systems package number** and exact placement relative to WP9 numbering.
 - **Upgrade currency and costs:** "stars or points" is not decided in detail.
 - **Gravity map performance:** 60 fps on a real GPU not yet confirmed (the no-GPU test machine showed 23 to 16 fps with the map on).
@@ -145,13 +146,12 @@ Other gameplay ideas raised by Brainstormer and not yet scheduled: realistic vis
 
 Stephan points Claude at this section for the next visual pack.
 
-**Start here.** Open a new pull request from branch `design/visual-style` into `main`. The newest commits are `6ee6149` and `c27aae0` (v1.3 to v1.5). [PR #2](https://github.com/stepwaec/slingshot/pull/2) was closed without merging, so those designs are not on `main`.
+**v2 designs are on main**, merged 2026-10-29 in [PR #17](https://github.com/stepwaec/slingshot/pull/17). That pack includes the white dwarf, the gas giants, and the moons that were already drawn, plus the three WP8 files below.
 
-**Already on that branch:** white dwarf; gas giants (banded, ringed, Saturn-like, shepherd); moons (icy, volcanic, captured, two-moon system); neutron star with beams; black hole; three nebulae; asteroid field; wreck debris; solar flares; ship.
+**WP8 art, complete:** `design/assets/bodies/binary-star.svg`, `red-giant.svg`, and `moon-chain.svg`.
 
-**Still missing.** WP8 is the top priority.
+**Still missing.**
 
-- **WP8 (top priority):** binary stars; a red giant with a soft drag atmosphere.
 - **WP9:** magnetar; a distinct pulsar; magnetism danger heatmap.
 - **WP10:** comet; solar recharge indicator.
 - **WP11:** sparse, medium and dense asteroid belts; Kuiper belt; rogue planet; radiation heatmap; dose meter.

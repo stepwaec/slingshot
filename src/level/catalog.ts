@@ -2,18 +2,24 @@ import type { Body, PauseRule, SimConfig } from "../sim/physics";
 import passageData from "../levels/passage.json";
 import relayData from "../levels/relay.json";
 import rescueData from "../levels/rescue.json";
+import pairData from "../levels/pair.json";
+import emberData from "../levels/ember.json";
+import chainData from "../levels/chain.json";
 import { loadLevelData, type Level, type LevelPhysics } from "./schema";
 
 /**
- * Passage, Relay, and Rescue, loaded from `src/levels/*.json`.
+ * Shipped levels, loaded from `src/levels/*.json`.
  * The files are the level definitions. This module checks them at startup.
  */
 
 export const passage: Level = loadLevelData(passageData, "src/levels/passage.json");
 export const relay: Level = loadLevelData(relayData, "src/levels/relay.json");
 export const rescue: Level = loadLevelData(rescueData, "src/levels/rescue.json");
+export const pair: Level = loadLevelData(pairData, "src/levels/pair.json");
+export const ember: Level = loadLevelData(emberData, "src/levels/ember.json");
+export const chain: Level = loadLevelData(chainData, "src/levels/chain.json");
 
-export const LEVELS: readonly Level[] = [passage, relay, rescue];
+export const LEVELS: readonly Level[] = [passage, relay, rescue, pair, ember, chain];
 
 function bodyById(level: Level, id: string): Body {
   const body = level.bodies.find((item) => item.id === id);
