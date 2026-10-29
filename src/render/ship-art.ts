@@ -51,6 +51,12 @@ export interface PlumeLook {
   timeScale: number;
   /** Chemical and ion stay lit. Pulse is a flash, not a continuous plume. */
   continuous: boolean;
+  /**
+   * Noseward edge of the plume, in SVG local y (positive is aft).
+   * The ship group origin is the ship centre, and nose is +Y, so the
+   * mesh starts at `-root`. design/assets/ship/engine-*.svg.
+   */
+  root: number;
 }
 
 /** Plume ids stripped out of the nozzle sprite. The shader draws the plume. */
@@ -73,6 +79,7 @@ export const ENGINE_PLUMES: Record<EngineLook, PlumeLook> = {
     edge: "#A06BFF",
     timeScale: 1,
     continuous: true,
+    root: 28.2,
   },
   ion: {
     length: 128,
@@ -82,6 +89,7 @@ export const ENGINE_PLUMES: Record<EngineLook, PlumeLook> = {
     edge: "#A06BFF",
     timeScale: 0.16,
     continuous: true,
+    root: 25.5,
   },
   pulse: {
     length: 36,
@@ -91,6 +99,7 @@ export const ENGINE_PLUMES: Record<EngineLook, PlumeLook> = {
     edge: "#A06BFF",
     timeScale: 1,
     continuous: false,
+    root: 36,
   },
 };
 

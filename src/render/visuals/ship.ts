@@ -75,6 +75,7 @@ class ShipVisual implements Visual {
     this.object.name = "ship";
     this.object.userData.asset = theme.assets.hull;
     const frame = new THREE.PlaneGeometry(theme.ship.frameWidth, theme.ship.frameHeight);
+    frame.translate(0, theme.ship.frameShift, 0);
 
     const add = (key: PartKey, order: number): THREE.Mesh => {
       const mesh = spriteMesh(frame, order);
@@ -134,7 +135,7 @@ class ShipVisual implements Visual {
       }),
     );
     this.pulse.name = "pulse-flash";
-    this.pulse.position.set(0, theme.ship.nozzle - 8, 0);
+    this.pulse.position.set(0, -ENGINE_PLUMES.pulse.root, 0);
     this.pulse.frustumCulled = false;
     this.pulse.renderOrder = 4;
     this.pulse.visible = false;
@@ -499,7 +500,7 @@ interface PlumeUniforms {
   uTurbulence: THREE.IUniform<number>;
 }
 
-function anchorPlume(plume: { length: number; halfWidth: number; turbulence: number; core: string; edge: string }): {
+function anchorPlume(plume: { length: number; halfWidth: number; turbulence: number; core: string; edge: string; root: number }): {
   mesh: THREE.Mesh;
   uniforms: PlumeUniforms;
 } {
@@ -517,7 +518,7 @@ function anchorPlume(plume: { length: number; halfWidth: number; turbulence: num
   material.blending = THREE.AdditiveBlending;
   material.side = THREE.DoubleSide;
   const mesh = new THREE.Mesh(new THREE.PlaneGeometry(plume.halfWidth * 2, plume.length), material);
-  mesh.position.set(0, -23 - plume.length / 2, 0);
+  mesh.position.set(0, -plume.root - plume.length / 2, 0);
   mesh.frustumCulled = false;
   mesh.renderOrder = 4;
   mesh.name = "plume";

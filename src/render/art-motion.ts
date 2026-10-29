@@ -11,6 +11,26 @@ export const SUN_PROMINENCES = [
   { id: "starProm3", angle: 314.8, begin: 9, dur: 14 },
 ] as const;
 
+/** design/assets/star.svg: #starBreathe scale 1 → 1.03 → 1 → 0.97 → 1 over 6 s. t = 0 is rest. */
+export const SUN_BREATHE_PERIOD = 6;
+export const SUN_BREATHE_AMP = 0.03;
+/** #starWispRing rotates 0 → −360° over 300 s. */
+export const SUN_WISP_PERIOD = 300;
+/** #starFlameRing rotates 0 → +360° over 200 s. */
+export const SUN_FLAME_PERIOD = 200;
+
+export function sunBreathe(seconds: number): number {
+  return 1 + SUN_BREATHE_AMP * Math.sin((Math.PI * 2 * seconds) / SUN_BREATHE_PERIOD);
+}
+
+export function sunWispAngle(seconds: number): number {
+  return -((Math.PI * 2 * seconds) / SUN_WISP_PERIOD);
+}
+
+export function sunFlameAngle(seconds: number): number {
+  return (Math.PI * 2 * seconds) / SUN_FLAME_PERIOD;
+}
+
 /** SVG beam tip, in the pulsar viewBox. Pulse's damage reach replaces this. */
 export const PULSAR_SVG_REACH = 228;
 
@@ -42,6 +62,16 @@ export function cometTailStretch(distance: number, periapsis: number): { along: 
   const peri = periapsis > 0 ? periapsis : dist;
   const along = Math.min(1, Math.max(0.35, peri / dist));
   return { along, across: 0.6 + 0.4 * along };
+}
+
+/**
+ * Dust strands curve to SVG +y, which lags a counterclockwise pass.
+ * Flip local y when the comet goes the other way (`comet.svg` header).
+ * `r` is star → comet, `v` is the comet's velocity relative to that star.
+ */
+export function cometDustMirror(rx: number, ry: number, vx: number, vy: number): number {
+  const spin = rx * vy - ry * vx;
+  return spin < 0 ? -1 : 1;
 }
 
 export function ellipsePeriapsis(a: number | undefined, e: number | undefined, radius: number | undefined): number {

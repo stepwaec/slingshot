@@ -1,12 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
   brightestOffset,
+  cometDustMirror,
   cometTailStretch,
   ellipsePeriapsis,
   flareOpacity,
   prominenceWindow,
   pulsarBeamScale,
   PULSAR_SVG_REACH,
+  sunBreathe,
+  sunFlameAngle,
+  sunWispAngle,
 } from "../src/render/art-motion";
 
 describe("sun SVG timelines", () => {
@@ -27,6 +31,26 @@ describe("sun SVG timelines", () => {
     expect(flareOpacity(13.9)).toBeGreaterThan(0.98);
     expect(flareOpacity(16)).toBe(0);
     expect(flareOpacity(22 + 13.9)).toBeCloseTo(1, 2);
+  });
+});
+
+describe("sun haze and rings", () => {
+  it("rests at t = 0 and follows the 6 s / 200 s / 300 s headers", () => {
+    expect(sunBreathe(0)).toBeCloseTo(1, 5);
+    expect(sunBreathe(1.5)).toBeCloseTo(1.03, 5);
+    expect(sunBreathe(4.5)).toBeCloseTo(0.97, 5);
+    expect(sunWispAngle(0)).toBeCloseTo(0, 5);
+    expect(sunWispAngle(150)).toBeCloseTo(-Math.PI, 5);
+    expect(sunFlameAngle(0)).toBeCloseTo(0, 5);
+    expect(sunFlameAngle(100)).toBeCloseTo(Math.PI, 5);
+  });
+});
+
+describe("comet dust mirror", () => {
+  it("keeps SVG +y for a counterclockwise pass and flips the other way", () => {
+    expect(cometDustMirror(1, 0, 0, 1)).toBe(1);
+    expect(cometDustMirror(1, 0, 0, -1)).toBe(-1);
+    expect(cometDustMirror(0, 0, 0, 0)).toBe(1);
   });
 });
 
