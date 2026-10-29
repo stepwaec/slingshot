@@ -1,121 +1,117 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
-  <!-- Toxic cloud world, v1.3 body library (animated). ONE group #toxic at translate(60 60); geometry relative to (0,0).
+  <!-- Toxic cloud world, v1.5.1 (revised: realistic + vibrant + crisp, built to reference/planet-ref.svg variant F). ONE group #toxic at
+       translate(60 60); geometry relative to (0,0). Ids: tx*.
        r 32, disc diameter H = 64. Lit side faces the star: L = (+0.7071, -0.7071) (upper-right). Lighting never rotates.
-       Tokens: base #5E8F3A - dark #2F5A2A - cloud #E6F2C8 (layer a0.6, ~55 % coverage) - atmo #C7E97A (rim, limb, lit-side highlight).
-       Texture strip: period P = round(2*pi*r) = 201 px (one full rotation). Each strip is ONE rect 2P x 2r = 402x64 (never two abutting rects:
-       an anti-aliased join inside the clip would show as a hairline at fractional translate); its filter computes the noise once over a
-       201x64 subregion (stitchTiles stitch -> periodic in exactly P) and feTile repeats it across the 402 px region, so the strip is 2P wide
-       with no geometry edge. Scrolled west->east (texture moves left->right: translate 0 -> +P) through the circular clip #txClip.
-       The visible window stays inside the 402 px strip for every phase (surface [60, 325], clouds [94, 359]), so neither strip edge is ever inside the disc.
-       Start phase: surface tile x 60 (strip x 261) at the disc's left edge (inner translate(-293 -32) = -(r + P + 60), -r);
-       clouds tile x 94 at the left edge (translate(-327 -32) = -(r + P + 94), -r): at tile x 0 the static t = 0 frame showed one broad
-       pale slab; x 94 (the t = 40 s look of the old phase) shows several separate decks. Cloud window: strip x [94, 359] over a full cycle.
+       Palette (v1.5 tokens): toxic.surface #3F8A26 (base disc + strip fill) · toxic.lowland #164A1E · toxic.acid #C8DC3C (sulphur-lime
+         pools) · toxic.ridge #5FA632 · toxic.deck #BFD83C (lower cloud deck) · toxic.cloud #EEF7C2 (upper deck) · toxic.cloudShadow #0B2410 ·
+         toxic.highlight #F4FFD6 · toxic.haze #C7E97A (= v1.3 atmo) / toxic.hazeEdge #E4F7B0 · toxic.rim #DDF59A / toxic.rimOuter #A8D850 ·
+         shared terminator.warm #FF9455 · night #08122E / #050B1E.
+       Texture strips: period P = round(2 pi r) = 201 px. Each strip is ONE rect 2P x 2r = 402x64 whose filter computes its noise once over a 201x64
+       subregion (stitchTiles stitch -> periodic in exactly P) and feTile repeats it over the 2P region (no geometry edge inside the disc).
+       Scrolled west->east (texture moves left->right: translate 0 -> +P). Start phase: surface tile x 60 at the disc's left edge (inner
+       translate(-293 -32)); clouds tile x 94 (inner translate(-327 -32)). Visible windows: surface strip x [60, 325], clouds [94, 359].
 
        Draw order:
-       1. base     circle r 32, #5E8F3A.
-       2. surface  strip, SMIL translate 0 -> 201 over 120 s. Strip = rect 402x64, fill #5E8F3A, filter #txSurface (region 0..402 x 0..64):
-                   feTurbulence fractalNoise baseFrequency 0.035, numOctaves 4, seed 29, stitchTiles stitch on subregion 0..201 x 0..64, feTile to 402x64;
-                   alpha -> linear slope 12, intercept -6.088 (soft threshold at 0.549 = p70 of the field -> ~30 % dark lowlands, ~2 px transition),
-                   then x0.60, colour #2F5A2A. No polar caps (the deck hides the surface anyway).
-       3. clouds   strip, SMIL translate 0 -> 201 over 75 s, group opacity 0.6. Strip = rect 402x64, fill #E6F2C8, filter #txCloud
-                   (region -12..414 x -4..68 so the displacement and the blur see periodic neighbours; feComposite in SourceGraphic crops back to the rect):
-                   cloud field: feTurbulence fractalNoise baseFrequency 0.016 0.070 (anisotropic -> zonal, wind-stretched decks), numOctaves 4, seed 37,
-                   stitch on subregion 0..201 x 0..64, feTile over the region;
-                   swirl: feDisplacementMap scale 14 (x <- R, y <- G) driven by feTurbulence fractalNoise baseFrequency 0.010, numOctaves 2, seed 43,
-                   stitched over the same subregion and tiled (so the warp is periodic too) - bends the decks into slow eddies;
-                   alpha -> linear slope 8, intercept -3.30 (soft threshold at 0.475 = p43 of the field -> ~55 % coverage, billowy ~8 px edge),
-                   feGaussianBlur 0.8;
-                   deck shadow: the blurred cloud mask offset (-1.5, +1.5) (away from L, i.e. cast toward the lower-left), colour #2F5A2A, alpha x0.5,
-                   merged UNDER the clouds (gives the deck thickness; it is part of the same strip, so Canvas bakes it into the cloud strip).
-       4. squash   circle r 32, radial from the centre, #5E8F3A: 0.88 a0 | 1.00 a0.45  (fades the texture to 55 % in the outer 12 % of r).
-       5. shade    radial, userSpace centre 0.36 r L = (8.15, -8.15), radius 1.25 r = 40 (v1.1 numbers):
-                   0.00 #C7E97A a0.70 | 0.40 #5E8F3A a0 | 0.70 #2F5A2A a0.55 | 0.86 #2F5A2A a0.92 | 1.00 #2F5A2A a1.0  (0.70-0.86 is the terminator).
-                   (highlight a0.70 instead of the v1.1 0.90: the pale deck is already bright; 0.90 washed the lit side out to a lime spot.)
-       6. limb     circle r 31.5, stroke 1, #C7E97A a0.18.
-       7. rim      circle r 1.12 r = 35.84, radial from the planet centre, #C7E97A: 0.00 a0 | 0.80 a0 | 0.87 a0.55 | 0.92 a0.30 | 1.00 a0,
-                   multiplied (alpha mask) by a linear gradient along L from +1.12 r L (25.34,-25.34) = 1.0 to -1.12 r L = 0.35 (v1.1).
-       No specular, no halo. Static renders show t = 0. Ids: tx*. -->
+       1. base     circle r 32, #3F8A26.
+       2. surface  strip, SMIL translate 0 -> 201 over 120 s. rect 402x64 fill #3F8A26, filter #txSurface (region 0..402 x 0..64, sRGB):
+                   n = fractalNoise 0.032, 6 octaves, seed 29;  d = fractalNoise 0.055, 3 octaves, seed 31 (both stitched, tiled)
+                   lowland  #164A1E a0.9: n alpha slope -16 (alpha 1 below n 0.4075, 0 at 0.47)
+                   acid     #C8DC3C a0.85: d alpha threshold 0.56 slope 14, composited IN the upland mask (n threshold 0.5 slope 14)
+                   ridge    #5FA632 a0.6: n threshold 0.62 slope 12
+                   merge: base, lowland, acid, ridge. No polar caps (the deck hides them).
+       3. clouds   strip, SMIL translate 0 -> 201 over 75 s, group opacity 0.92. rect 402x64 fill #EEF7C2, filter #txCloud (region -12..414 x -4..68):
+                   swirl w = fractalNoise 0.010, 2 octaves, seed 43, stitched + tiled, alpha forced to 1 (opaque map);
+                   upper deck c = fractalNoise "0.03 0.085" (elongated), 6 octaves, seed 37, displaced by w (scale 20), the displaced FIELD smoothed by blur 0.2
+                     (just enough to remove displacement stair-steps; v1.5.1, was 0.6), colour #EEF7C2, alpha = 26 c - 14.27 (0.549 -> 0.587, reference
+                     slope 26; was 22), blur 0.2;
+                   lower deck = fractalNoise "0.026 0.08", 5 octaves, seed 47, displaced by w (scale 10), field blur 0.2 (was 0.6), colour #BFD83C,
+                     alpha = 20 c - 9.93 (0.497 -> 0.547; was slope 16), x0.85, blur 0.2;
+                   cloud shadow = upper-deck mask offset (-1.2, +1.2) (cast away from L), blur 0.45 (the only softer copy), colour #0B2410 x0.45;
+                   merge: lower deck, shadow, upper deck; cropped to the rect (feComposite in SourceGraphic). ~55 % total cover.
+       4. shade    radial, userSpace centre 0.36 r L = (8.15, -8.15), radius 1.25 r = 40:
+                   0 #F4FFD6 a0.22 (highlight bloom) | 0.32 a0 | 0.64 #FF9455 a0 | 0.705 #FF9455 a0.2 (warm terminator band) | 0.76 #08122E a0.74 | 0.84 #050B1E a0.97 | 1.00 a1.
+       haze     circle r 32, radial: 0.78 #C7E97A a0 | 0.96 #C7E97A a0.4 | 1.00 #E4F7B0 a0.62  - masked to the lit side.
+       rim      circle r 1.0765 r = 34.45, radial: 0.90 #DDF59A a0 | 0.928 #DDF59A a0.95 | 0.955 #A8D850 a0.4 | 1.00 a0 - masked to the lit side.
+       lit mask linear (userSpace) from +r L (22.63,-22.63) to -r L: 1.0 | 0.5 a0.45 | 1.0 a0.06 (lit 1.0 -> dark 0.06). No full-circle limb line.
+       No specular, no halo, no limb-squash (dropped in v1.5: the reference has a clean hard edge). Static renders show t = 0. -->
   <defs>
     <clipPath id="txClip"><circle r="32"/></clipPath>
     <filter id="txSurface" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="0" y="0" width="402" height="64" color-interpolation-filters="sRGB">
-      <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="4" seed="29" stitchTiles="stitch" x="0" y="0" width="201" height="64" result="txN1"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.032" numOctaves="6" seed="29" stitchTiles="stitch" x="0" y="0" width="201" height="64" result="txN1"/>
       <feTile in="txN1" x="0" y="0" width="402" height="64" result="txN"/>
-      <feColorMatrix in="txN" type="matrix" values="0 0 0 0 0.184  0 0 0 0 0.353  0 0 0 0 0.165  0 0 0 1 0" result="txDarkRGB"/>
-      <feComponentTransfer in="txDarkRGB" result="txDarkCut">
-        <feFuncA type="linear" slope="12" intercept="-6.088"/>
-      </feComponentTransfer>
-      <feComponentTransfer in="txDarkCut" result="txDark">
-        <feFuncA type="linear" slope="0.60" intercept="0"/>
-      </feComponentTransfer>
-      <feMerge>
-        <feMergeNode in="SourceGraphic"/>
-        <feMergeNode in="txDark"/>
-      </feMerge>
+      <feTurbulence type="fractalNoise" baseFrequency="0.055" numOctaves="3" seed="31" stitchTiles="stitch" x="0" y="0" width="201" height="64" result="txD1"/>
+      <feTile in="txD1" x="0" y="0" width="402" height="64" result="txD"/>
+      <feColorMatrix in="txN" type="matrix" values="0 0 0 0 0.086  0 0 0 0 0.290  0 0 0 0 0.118  0 0 0 1 0" result="txLowRGB"/>
+      <feComponentTransfer in="txLowRGB" result="txLow"><feFuncA type="linear" slope="-16" intercept="7.52"/></feComponentTransfer>
+      <feColorMatrix in="txN" type="matrix" values="0 0 0 0 1.000  0 0 0 0 1.000  0 0 0 0 1.000  0 0 0 1 0" result="txUpRGB"/>
+      <feComponentTransfer in="txUpRGB" result="txUp"><feFuncA type="linear" slope="14" intercept="-7"/></feComponentTransfer>
+      <feColorMatrix in="txD" type="matrix" values="0 0 0 0 0.784  0 0 0 0 0.863  0 0 0 0 0.235  0 0 0 1 0" result="txAcidRGB"/>
+      <feComponentTransfer in="txAcidRGB" result="txAcidT"><feFuncA type="linear" slope="14" intercept="-7.84"/></feComponentTransfer>
+      <feComponentTransfer in="txAcidT" result="txAcidM"><feFuncA type="linear" slope="0.85"/></feComponentTransfer>
+      <feComposite in="txAcidM" in2="txUp" operator="in" result="txAcid"/>
+      <feColorMatrix in="txN" type="matrix" values="0 0 0 0 0.373  0 0 0 0 0.651  0 0 0 0 0.196  0 0 0 1 0" result="txRidgeRGB"/>
+      <feComponentTransfer in="txRidgeRGB" result="txRidge"><feFuncA type="linear" slope="12" intercept="-7.44" /></feComponentTransfer>
+      <feComponentTransfer in="txRidge" result="txRidgeA"><feFuncA type="linear" slope="0.6"/></feComponentTransfer>
+      <feComponentTransfer in="txLow" result="txLowA"><feFuncA type="linear" slope="0.9"/></feComponentTransfer>
+      <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="txLowA"/><feMergeNode in="txAcid"/><feMergeNode in="txRidgeA"/></feMerge>
     </filter>
     <filter id="txCloud" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-12" y="-4" width="426" height="72" color-interpolation-filters="sRGB">
-      <feTurbulence type="fractalNoise" baseFrequency="0.016 0.070" numOctaves="4" seed="37" stitchTiles="stitch" x="0" y="0" width="201" height="64" result="txC1"/>
-      <feTile in="txC1" x="-12" y="-4" width="426" height="72" result="txC"/>
       <feTurbulence type="fractalNoise" baseFrequency="0.010" numOctaves="2" seed="43" stitchTiles="stitch" x="0" y="0" width="201" height="64" result="txW1"/>
-      <feTile in="txW1" x="-12" y="-4" width="426" height="72" result="txW"/>
-      <feDisplacementMap in="txC" in2="txW" scale="14" xChannelSelector="R" yChannelSelector="G" result="txCS"/>
-      <feColorMatrix in="txCS" type="matrix" values="0 0 0 0 0.902  0 0 0 0 0.949  0 0 0 0 0.784  0 0 0 1 0" result="txCRGB"/>
-      <feComponentTransfer in="txCRGB" result="txCMask">
-        <feFuncA type="linear" slope="8" intercept="-3.30"/>
-      </feComponentTransfer>
-      <feGaussianBlur in="txCMask" stdDeviation="0.8" result="txCSoft"/>
-      <feOffset in="txCSoft" dx="-1.5" dy="1.5" result="txCShOff"/>
-      <feColorMatrix in="txCShOff" type="matrix" values="0 0 0 0 0.184  0 0 0 0 0.353  0 0 0 0 0.165  0 0 0 0.5 0" result="txCShadow"/>
-      <feMerge result="txCDeck">
-        <feMergeNode in="txCShadow"/>
-        <feMergeNode in="txCSoft"/>
-      </feMerge>
-      <feComposite in="txCDeck" in2="SourceGraphic" operator="in"/>
+      <feTile in="txW1" x="-12" y="-4" width="426" height="72" result="txW0"/>
+      <feColorMatrix in="txW0" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0 1" result="txW"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.03 0.085" numOctaves="6" seed="37" stitchTiles="stitch" x="0" y="0" width="201" height="64" result="txC1"/>
+      <feTile in="txC1" x="-12" y="-4" width="426" height="72" result="txC"/>
+      <feDisplacementMap in="txC" in2="txW" scale="20" xChannelSelector="R" yChannelSelector="G" result="txCD"/>
+      <feGaussianBlur in="txCD" stdDeviation="0.2" result="txCS"/>
+      <feColorMatrix in="txCS" type="matrix" values="0 0 0 0 0.933  0 0 0 0 0.969  0 0 0 0 0.761  0 0 0 1 0" result="txUpRGB"/>
+      <feComponentTransfer in="txUpRGB" result="txUpM"><feFuncA type="linear" slope="26" intercept="-14.27"/></feComponentTransfer>
+      <feGaussianBlur in="txUpM" stdDeviation="0.2" result="txUpper"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.026 0.08" numOctaves="5" seed="47" stitchTiles="stitch" x="0" y="0" width="201" height="64" result="txL1"/>
+      <feTile in="txL1" x="-12" y="-4" width="426" height="72" result="txL"/>
+      <feDisplacementMap in="txL" in2="txW" scale="10" xChannelSelector="G" yChannelSelector="R" result="txLD"/>
+      <feGaussianBlur in="txLD" stdDeviation="0.2" result="txLS"/>
+      <feColorMatrix in="txLS" type="matrix" values="0 0 0 0 0.749  0 0 0 0 0.847  0 0 0 0 0.235  0 0 0 1 0" result="txLoRGB"/>
+      <feComponentTransfer in="txLoRGB" result="txLoT"><feFuncA type="linear" slope="20" intercept="-9.93"/></feComponentTransfer>
+      <feComponentTransfer in="txLoT" result="txLoM"><feFuncA type="linear" slope="0.85"/></feComponentTransfer>
+      <feGaussianBlur in="txLoM" stdDeviation="0.2" result="txLower"/>
+      <feOffset in="txUpM" dx="-1.2" dy="1.2" result="txShOff"/>
+      <feGaussianBlur in="txShOff" stdDeviation="0.45" result="txShB"/>
+      <feColorMatrix in="txShB" type="matrix" values="0 0 0 0 0.043  0 0 0 0 0.141  0 0 0 0 0.063  0 0 0 0.45 0" result="txShadow"/>
+      <feMerge result="txDeck"><feMergeNode in="txLower"/><feMergeNode in="txShadow"/><feMergeNode in="txUpper"/></feMerge>
+      <feComposite in="txDeck" in2="SourceGraphic" operator="in"/>
     </filter>
-    <radialGradient id="txSquash" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="32">
-      <stop offset="0.88" stop-color="#5E8F3A" stop-opacity="0"/>
-      <stop offset="1" stop-color="#5E8F3A" stop-opacity="0.45"/>
-    </radialGradient>
     <radialGradient id="txShade" gradientUnits="userSpaceOnUse" cx="8.15" cy="-8.15" r="40">
-      <stop offset="0" stop-color="#C7E97A" stop-opacity="0.70"/>
-      <stop offset="0.40" stop-color="#5E8F3A" stop-opacity="0"/>
-      <stop offset="0.70" stop-color="#2F5A2A" stop-opacity="0.55"/>
-      <stop offset="0.86" stop-color="#2F5A2A" stop-opacity="0.92"/>
-      <stop offset="1" stop-color="#2F5A2A" stop-opacity="1"/>
+      <stop offset="0" stop-color="#F4FFD6" stop-opacity="0.22"/>
+      <stop offset="0.32" stop-color="#F4FFD6" stop-opacity="0"/>
+      <stop offset="0.64" stop-color="#FF9455" stop-opacity="0"/>
+      <stop offset="0.705" stop-color="#FF9455" stop-opacity="0.2"/>
+      <stop offset="0.76" stop-color="#08122E" stop-opacity="0.74"/>
+      <stop offset="0.84" stop-color="#050B1E" stop-opacity="0.97"/>
+      <stop offset="1" stop-color="#050B1E" stop-opacity="1"/>
     </radialGradient>
-    <radialGradient id="txRim" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="35.84">
-      <stop offset="0" stop-color="#C7E97A" stop-opacity="0"/>
-      <stop offset="0.80" stop-color="#C7E97A" stop-opacity="0"/>
-      <stop offset="0.87" stop-color="#C7E97A" stop-opacity="0.55"/>
-      <stop offset="0.92" stop-color="#C7E97A" stop-opacity="0.30"/>
-      <stop offset="1" stop-color="#C7E97A" stop-opacity="0"/>
-    </radialGradient>
-    <linearGradient id="txRimLit" gradientUnits="userSpaceOnUse" x1="25.34" y1="-25.34" x2="-25.34" y2="25.34">
-      <stop offset="0" stop-color="#FFFFFF" stop-opacity="1"/>
-      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.35"/>
-    </linearGradient>
-    <mask id="txRimMask" mask-type="alpha" maskUnits="userSpaceOnUse" x="-38" y="-38" width="76" height="76">
-      <rect x="-38" y="-38" width="76" height="76" fill="url(#txRimLit)"/>
-    </mask>
+    <radialGradient id="txHaze" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="32"><stop offset="0.78" stop-color="#C7E97A" stop-opacity="0"/><stop offset="0.96" stop-color="#C7E97A" stop-opacity="0.4"/><stop offset="1" stop-color="#E4F7B0" stop-opacity="0.62"/></radialGradient>
+    <radialGradient id="txRim" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="34.45"><stop offset="0.90" stop-color="#DDF59A" stop-opacity="0"/><stop offset="0.928" stop-color="#DDF59A" stop-opacity="0.95"/><stop offset="0.955" stop-color="#A8D850" stop-opacity="0.4"/><stop offset="1" stop-color="#A8D850" stop-opacity="0"/></radialGradient>
+    <linearGradient id="txLit" gradientUnits="userSpaceOnUse" x1="22.63" y1="-22.63" x2="-22.63" y2="22.63"><stop offset="0" stop-color="#FFFFFF"/><stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.45"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0.06"/></linearGradient>
+    <mask id="txLitMask" mask-type="alpha" maskUnits="userSpaceOnUse" x="-37.76" y="-37.76" width="75.52" height="75.52"><rect x="-37.76" y="-37.76" width="75.52" height="75.52" fill="url(#txLit)"/></mask>
   </defs>
   <g id="toxic" transform="translate(60 60)">
-    <circle r="32" fill="#5E8F3A"/>
+    <circle r="32" fill="#3F8A26"/>
     <g clip-path="url(#txClip)">
       <g id="txSurfaceAnim">
         <animateTransform attributeName="transform" type="translate" from="0 0" to="201 0" dur="120s" repeatCount="indefinite"/>
         <g id="txSurfaceStrip" transform="translate(-293 -32)">
-          <rect width="402" height="64" fill="#5E8F3A" filter="url(#txSurface)"/>
+          <rect width="402" height="64" fill="#3F8A26" filter="url(#txSurface)"/>
         </g>
       </g>
-      <g id="txCloudAnim" opacity="0.6">
+      <g id="txCloudAnim" opacity="0.92">
         <animateTransform attributeName="transform" type="translate" from="0 0" to="201 0" dur="75s" repeatCount="indefinite"/>
         <g id="txCloudStrip" transform="translate(-327 -32)">
-          <rect width="402" height="64" fill="#E6F2C8" filter="url(#txCloud)"/>
+          <rect width="402" height="64" fill="#EEF7C2" filter="url(#txCloud)"/>
         </g>
       </g>
     </g>
-    <circle r="32" fill="url(#txSquash)"/>
     <circle r="32" fill="url(#txShade)"/>
-    <circle r="31.5" fill="none" stroke="#C7E97A" stroke-opacity="0.18" stroke-width="1"/>
-    <circle r="35.84" fill="url(#txRim)" mask="url(#txRimMask)"/>
+    <circle r="32" fill="url(#txHaze)" mask="url(#txLitMask)"/>
+    <circle r="34.45" fill="url(#txRim)" mask="url(#txLitMask)"/>
   </g>
 </svg>

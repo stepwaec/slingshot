@@ -1,149 +1,167 @@
-# Slingshot — visual style v1.3
+# Slingshot — visual style v1.5
 
-Calm, cinematic space for a Canvas 2D prototype. This file is the look; `canvas-notes.md` is how to draw it at 60 fps; §7 below is the asset index (one row per asset: file, viewBox, anchor, colours, size on the mockup); §8 is the v1.3 **body library** (18 bodies, their tokens, the lighting / rotation rules and the crash radii). Assets live in `design/assets` (the library in `design/assets/bodies`), mockups (1440×900) in `design/mockups`, the animated previews in `design/preview/planets.html` (the original three bodies) and `design/preview/bodies.html` (all 18).
+Calm, cinematic space for a Canvas 2D prototype. This file is the look; `canvas-notes.md` is how to draw it at 60 fps; `assets.md` indexes every file. Sections: §1 mood · §2 palette (background, sky, the sun, the two original planets, the shared lighting tokens, UI) · §3 typography · §4 glow and blur rules, with **§4.1 Realism, vibrancy and crispness rules** · §5 motion · §6 layout · §7 asset index · §8 the **body library** (25 bodies: 12 planets, 6 stars and compact objects, 4 moons, 3 ringed planets) · §9 the **space environment** (nebulae, asteroid field, wreck debris). Assets live in `design/assets` (bodies in `design/assets/bodies`, the environment in `design/assets/space`), mockups (1440×900, PNG = 2× render) in `design/mockups`, animated previews in `design/preview/planets.html`, `bodies.html` and `space.html`.
 
-v1.1 was the **realism pass**: richer bodies (limb-darkened star with streamers and granulation; planets with surface noise, a day/night terminator and an atmosphere rim) and a richer sky (tinted stars of varying magnitude, halos on the brightest, a faint Milky Way, a vignette that reaches true black).
-
-v1.2 is the **planet pass**: the two planets become an **ocean world** (start) and a **cold mineral world** (X), and they **rotate** — one seamless texture strip (land + clouds, basins + wisps) scrolls slowly west→east through a circular clip under a cached lighting overlay that never moves. Terminator, limb line, atmosphere rim, halo and capture ring keep their v1.1 numbers; the ring's pulse and dash crawl and a new halo breathe are now in the SVG too. Star, ship, trail, path, arrow, HUD, overlays, starfield, copy, typography and every v1 duration are untouched.
-
-v1.3 is the **body library**: twelve planets and six stars / compact objects built on the same construction (§8) so levels can be composed from different worlds — rocky deserts, ice, lava, toxic and cracked worlds, two gas giants (one ringed), a barren moon, a dwarf planet, an orbiting double planet, a red dwarf, a blue giant, a white dwarf, a neutron star and a black hole — plus **solar flares** on all three main-sequence stars (three slow prominence loops and one brief spike each, the yellow sun's added to `star.svg` in place). Everything v1.2 defined keeps its numbers; the two original planets are two of the twelve.
+**History in one paragraph.** v1 set the layout, UI and the two-glow rule. v1.1 was the first realism pass (limb-darkened star, planets with a terminator and a rim, a tinted starfield with a Milky Way). v1.2 made the planets rotate: a seamless texture strip slides under a lighting overlay that never moves. v1.3 built the body library (12 planets, 6 stars and compact objects) and gave the stars prominences and a flare. v1.4 adds moons, ringed planets, nebulae and debris fields (§8, §9). **v1.5 (revised) is the realism, vibrancy and crispness pass**, agreed with the client on two approved reference assets — the ocean world "variant F" and the sun "variant J" — and applied to every body: vivid multi-zone surfaces with crisp edges, elongated clouds with cast shadows, a warm terminator band, a lit-side haze and rim, a fiery plasma sun with ragged flame rings and an irregular rim, and no untinted grey anywhere. The earlier v1.5 "crispness pass" numbers (halve blurs, ±12 % lightness, limb line at α 0.30) were rejected as indistinguishable from v1.2 and are **not** used; §4.1 holds the rules that replaced them.
 
 ## 1. Mood
 
-**Observatory at night, not arcade.** The screen is mostly nothing: a near-black field, a thin dust of stars, and three bodies. The player sits in the dark planning one quiet throw. Everything is slow and weightless; nothing shouts. The drama comes from the physics (a predicted path that stops just short), not from the pixels.
+**Observatory at night, not arcade.** The screen is mostly nothing: a near-black field, a thin dust of stars and a few bodies. The player sits in the dark planning one quiet throw. Everything is slow and weightless; nothing shouts. The drama comes from the physics (a predicted path that stops just short), not from the pixels.
 
-**What glows:** exactly two things. The central star is the only warm light in the scene — core to corona to a faint orange haze that reaches out and fades. Planet X is the only cool light — a soft mint halo and a dashed capture ring that breathes. Everything else is flat colour plus one gradient: the start planet is lit by the star but does not emit; the ship is matte off-white with a hard outline; trails, paths and UI are crisp and unblurred.
+**What glows:** exactly two things per scene. The scene's star is the only warm light — a fiery disc inside ragged flame rings and a red haze that fades out to r 200. Planet X is the only cool light — a soft mint halo and a dashed capture ring that breathes. Everything else is lit, not luminous: planets are lit by the star but do not emit; the ship is matte off-white with a hard outline; trails, paths and UI are crisp and unblurred. The lava world's faint static halo is the one documented planetary exception. Nebulae are background gas (§9), drawn into the background pass at α ≤ 0.22 — weather in the sky, not a glowing object.
 
-**Realism inside the glow budget.** v1.1 makes the bodies and the sky look photographed rather than drawn — a limb-darkened stellar disc with faint streamers, planets with a real terminator and a thin atmosphere rim, stars that differ in size, brightness and colour, a band of dust behind the star — without adding a single glowing object or a single per-frame blur. All of it is detail *inside* the shapes we already had: the silhouettes, radii, glow envelopes and the two-glow rule are unchanged, and every new pixel is rendered once into a cached sprite or the cached background. Realistic but calm: nothing twinkles, flickers or lens-flares; the sky is still a quiet dust, only a slightly more convincing one.
+**Realistic and vibrant (v1.5).** The client's words were "realistic and vibrant" and "still a bit blurry". The answer is detail with edges: oceans that are deep blue with turquoise shallows, land that splits into forest, desert and highland, clouds that are white and cast a navy shadow, a thin band of warm light at the terminator before the night goes navy, a bright rim only where the light grazes the atmosphere. The sun is fiery plasma — bright filaments over darker red-brown cells, a glowing limb, ragged flames and a rim that is not perfectly round — "but a bit less dark" than a photograph. Saturated hues sit on deep navy the way Kurzgesagt's colour harmony does; Kurzgesagt is inspiration for harmony and bold silhouettes only, and nothing of theirs is copied.
 
-**Worlds that turn (v1.2).** The one thing v1.2 allows to move on its own is the surface of the two planets: continents, clouds, basins and wisps drift across the disc once every 64–120 s — slow enough that you notice it only when you look, which is the point. The light does not move with them: the day side, the terminator, the rim and the ocean glint stay fixed toward the star, so the planets read as lit spheres turning under a lamp, not as spinning stickers. It is still cached pixels — a strip rendered once and slid under a cached overlay — and still a circle silhouette; there is no sphere mapping at r ≤ 40 px, only a "limb squash" that fades the texture toward the edge.
+**Worlds that turn.** Surfaces drift across their discs once every 60–180 s; clouds drift a little faster; gas bands drift in counter-flow; moons orbit; ring particles circle in Keplerian sub-rings; rocks tumble. The light never moves with them: the day side, terminator, haze, rim and glint stay fixed toward the star, so bodies read as lit spheres turning under a lamp. Everything is cached pixels moved by wall-clock time.
 
-**A library of worlds (v1.3).** The same recipe now describes eighteen bodies (§8). They differ in palette, texture and a few rules — a hard terminator and no rim on airless bodies, a softer and wider one on the gas giants, an emissive surface on the lava world — but not in kind: still noise under a fixed light inside a circle, still cached pixels, still slow. The stars now *do* something: three prominence loops rise and fade over 12–16 s and once every 22 s a thin flare pops for under two seconds, calm enough that a player notices them the way one notices weather. Kurzgesagt's colour harmony and bold silhouettes were the reference for how saturated hues can sit on deep navy and still read quietly; nothing of theirs is reproduced.
-
-**What we avoid:** neon, lens flares, scanlines, chromatic aberration, text shadows, more than two glowing objects, saturated gradients on UI, decorative animation. If a thing is not the star or the target, it does not bloom. Colour is used sparingly so that when a result overlay lands in mint, red or violet, it is the loudest thing on screen.
+**What we avoid:** neon, lens flares, scanlines, chromatic aberration, text shadows, more than two glowing objects, saturated gradients on UI, decorative animation, **untinted grey noise on a coloured body**, soft blur standing in for detail. If a thing is not the star or the target, it does not bloom. Colour is used carefully so that when a result overlay lands in mint, red or violet, it is still the loudest thing on screen.
 
 ## 2. Palette
 
-All values are exact; use these tokens, never ad-hoc hex.
+All values are exact; use these tokens, never ad-hoc hex. §2 lists the background, the sky, the sun, the two original planets, the lighting tokens every body shares, and the UI. The other bodies' tokens are in §8 and the environment's in §9. Every hex used in `design/` is a token in §2, §8 or §9, except the computed ramp value `#FFAE59` (`arrow.power` at 62 %); masks use `#FFFFFF` / `#000000` only as luminance.
 
 ### Background
 | Token | Hex | Used for | Note |
 |---|---|---|---|
-| `bg.base` | `#050710` | Canvas clear colour over most of the field; darkest UI colour; text on `ui.accent` | Not pure black — keeps the starfield from looking like dead pixels |
+| `bg.base` | `#050710` | Canvas clear colour over most of the field; darkest UI colour; text on `ui.accent`; the planet shadow on a ring; dust lanes in the emission nebula | Not pure black — keeps the starfield from looking like dead pixels |
 | `bg.vignette` | `#0B1024` | Centre of a very soft radial vignette (r 900 from the centre): 0.00 `bg.vignette` · 0.55 `bg.base` · 1.00 `bg.edge` | Only lift is at the centre |
-| `bg.edge` | `#000000` | True black at the vignette edge (r ≥ 900); the corners (r ≈ 849) are near-black | v1.1. The frame now goes vignette → base → black. The only place pure black appears; it sits under the faintest stars so the field reads as depth, not as a flat fill |
+| `bg.edge` | `#000000` | True black at the vignette edge (r ≥ 900); the black hole's shadow; the dark cloud's dust | The frame goes vignette → base → black |
 
 ### Starfield (static; three depth layers keep their radius / alpha roles, the colour is per star)
 | Token | Hex | Used for | Note |
 |---|---|---|---|
-| `stars.far` | `#6E7FA6` | far layer: r 0.6 px, α 0.35, ~420 dots at 1440×900; also the 380 Milky-Way dots (r 0.5, α 0.28) | Too faint to show colour — stays one hex |
-| `stars.cool` | `#B8CCFF` | ~25 % of mid + near stars (B/A-type blue-white) | v1.1 tint; replaces `stars.mid`/`stars.near` hexes |
-| `stars.neutral` | `#E9EEF8` | ~50 % of mid + near stars (F/G-type white); every sparkle host | v1.1 tint |
-| `stars.warm` | `#FFD9B0` | ~25 % of mid + near stars (K/M-type amber) | v1.1 tint |
-| `milkyway.dust` | `#AAB8DD` | The faint band behind the star, peak α ≤ 0.08 (measured 0.054 in the asset), plus the extra far dots inside it | v1.1. Dust, not detail — never an outlined shape |
-
-The three layers, as the asset and `canvas-notes.md` §2 build them:
+| `stars.far` | `#6E7FA6` | far layer: r 0.6 px, α 0.35, ~420 dots at 1440×900; also the 380 Milky-Way dots (r 0.5, α 0.28) | Too faint to show colour |
+| `stars.cool` | `#B8CCFF` | ~25 % of mid + near stars (B/A-type blue-white); embedded nebula stars | |
+| `stars.neutral` | `#E9EEF8` | ~50 % of mid + near stars (F/G-type white); every sparkle host | |
+| `stars.warm` | `#FFD9B0` | ~25 % of mid + near stars (K/M-type amber); also the dark cloud's lit rim, `rocky.rim`, the lava bloom and the red dwarf's limb | |
+| `milkyway.dust` | `#AAB8DD` | The faint band behind the star, peak α ≤ 0.08 (measured 0.054); the asteroid belt's dust haze (`rock.haze`, α ≤ 0.05) | Dust, not detail |
 
 | Layer | Colour | Radius | Alpha | Count | Extras |
 |---|---|---|---|---|---|
 | far | `stars.far` | 0.6 px | 0.35 | ~420 | unchanged from v1 |
 | mid | tint | 0.8–1.0 px | 0.55–0.65 | ~160 | tinted 25 / 50 / 25 % |
-| near | tint | 1.2–1.5 px | 0.85–0.95 | ~45 | tinted; the 12 largest get a halo (r 4.5, own tint α 0.18 → 0, under the dot); 4 get the 4-point sparkle (`#FFFFFF`, 0.6 px, α 0.5, 5 px arms) and are forced to maximum magnitude, neutral |
-| Milky Way | `milkyway.dust` + `stars.far` | — / 0.5 px | ≤ 0.08 / 0.28 | 2 gradient ellipses (SVG) or 3 (Canvas) + 380 dots | band at −28° through (720, 450), lower-left → upper-right behind the star; dots spread Gaussian σ 90 px about the axis |
+| near | tint | 1.2–1.5 px | 0.85–0.95 | ~45 | the 12 largest get a halo (r 4.5, own tint α 0.18 → 0); 4 get the 4-point sparkle (`#FFFFFF`, 0.6 px, α 0.5, 5 px arms), forced to maximum magnitude, neutral |
+| Milky Way | `milkyway.dust` + `stars.far` | — / 0.5 px | ≤ 0.08 / 0.28 | 2 gradient ellipses (SVG) or 3 (Canvas) + 380 dots | band at −28° through (720, 450); dots Gaussian σ 90 px about the axis |
 
-**Magnitude rule** (mid and near): one seeded draw `u` per star gives both radius and alpha, `r = rMin + (rMax − rMin)·u³`, `α = aMin + (aMax − aMin)·u³` — many faint, few bright, and the bright ones are also the big ones. **Tint rule:** a second draw `t`: `< 0.25` cool, `< 0.75` neutral, else warm. Positions keep the v1 seed (`0x514E47`), magnitude/tint use `0x514E48`, Milky-Way dots `0x4D57`; exclusion zones around the bodies stay (star r 140, planets r 60 / 80 minimum; the asset keeps 70 / 100). No twinkle, no parallax: the sky is a cached bitmap.
+**Magnitude rule** (mid and near): one seeded draw `u` gives radius and alpha, `r = rMin + (rMax − rMin)·u³`, `α = aMin + (aMax − aMin)·u³`. **Tint rule:** a second draw `t`: `< 0.25` cool, `< 0.75` neutral, else warm. Seeds: positions `0x514E47`, magnitude/tint `0x514E48`, Milky-Way dots `0x4D57`; exclusion zones star r 140, planets r 60 / 80 minimum (the asset keeps 70 / 100). No twinkle, no parallax: the sky is a cached bitmap.
 
-### Central star
+### The sun (`star.svg`, the approved reference variant J)
+The v1.1–v1.3 sun (glow, corona, streamers, helmet lobes, chromosphere, grey granulation) is replaced by the reference construction: a warm **haze**, two ragged **flame rings** that slowly counter-rotate, a fiery tinted **surface** (body gradient + dark red-brown cells + bright plasma filaments), a bright **limb**, a disc whose edge **wobbles**, a thin **ragged rim** stroke, two-tone crisp **prominences** and the **flare**. Every texture is tinted.
+
 | Token | Hex | Used for | Note |
 |---|---|---|---|
-| `star.core` | `#FFF8E1` | Centre of the body gradient | Almost white, slightly warm |
-| `star.body` | `#FFC857` | Body (r 46 on the mockup), flat from 0.45 to 0.78 of the radius | Same hex as `fuel.low` on purpose: one amber |
-| `star.corona` | `#FF8C2E` | Corona (to ~r 130), the 10 streamers + 2 helmet lobes, the chromosphere ring at r 47, and the 0.90 stop of the body | Fades, never a hard edge |
-| `star.glow` | `#FF5A1F` | Outermost glow, reaches α 0 at ~r 200 | The only warm haze in the game |
-| `star.limb` | `#FF5A1F` | Limb-darkened edge of the disc (the 1.00 stop of the body gradient) | v1.1. Same hex as `star.glow`: the disc darkens into the colour of its own haze, so the edge reads as a sphere, not a sticker |
+| `sun.haze` | `#FF7A2A` | Haze r 200: 0.00 α 0.60 · 0.23 α 0.52 | New (v1.5). The warm core of the haze |
+| `sun.hazeRed` | `#E8461A` | Haze 0.33 α 0.30; wisp ring 1.00 stop; black-hole disk ramp 0.87 and lensed-arc tail | New |
+| `sun.hazeDeep` | `#A8240E` | Haze 0.55 α 0.15; red-dwarf wisp edge | New |
+| `sun.hazeEdge` | `#6A1408` | Haze 0.80 α 0.06 → 1.00 α 0 | New |
+| `sun.filament` | `#FFE7A0` | Flame ring fill 0–0.74 (α 0.95); bright plasma filaments; black-hole filaments, ramp 0.6 and arc core | New. The hottest flame colour |
+| `sun.flame` | `#FFB347` | Flame ring 0.82 (α 0.80); wisp ring fill 0–0.62 (α 0.55); `lava.rim` | New |
+| `sun.flameEdge` | `#FF6A1A` | Flame ring 0.91 (α 0.38); wisp ring 0.80 (α 0.22) | New |
+| `star.glow` | `#FF5A1F` | Flame ring 1.00 stop (α 0) | v1 token, now only the flames' outer edge |
+| `sun.bodyCore` | `#FFB43A` | Body gradient 0.00 | New, replaces `star.core #FFF8E1` on the disc |
+| `sun.body` | `#FF8F1F` | Body gradient 0.65 | New, replaces `star.body #FFC857` on the disc |
+| `sun.bodyLimb` | `#FF7A14` | Body gradient 1.00 | New |
+| `sun.plasmaDark` | `#802105` | Darker plasma cells (alpha capped 0.55 = "less dark"); black-hole dark plasma and dark stream arcs | New. Deep red-brown, never black |
+| `sun.limb` | `#FFD27A` | Limb 0.80 (α 0) → 0.93 (α 0.55); the flare's tip (α 0.15) | New |
+| `sun.limbHot` | `#FFF1C2` | Limb 0.97 (α 0.90); the ragged rim stroke (α 0.75); the prominence core (α 0.90); black-hole photon sub-ring; cracked-world crack core; `ringSaturn` bloom | New |
+| `star.corona` | `#FF8C2E` | Prominence outer stroke (2.8 px, α 0.85); black-hole glow and ramp; lava halo / haze; cracked-world crack glow | v1 token, kept |
+| (`#FFFFFF`) | `#FFFFFF` | Limb 1.00 (α 0.95); the flare's base | White |
 
-The disc is **limb-darkened** (core → body → body → corona → limb), ringed by a thin **chromosphere** (r 47, 3 px, `star.corona` α 0.60) and textured with faint **granulation** (desaturated fractal noise, multiply, α 0.16, contrast ×2). The corona is no longer uniform: ten thin **streamers** (base 10–18 px at r 48, tips at r 110–175, α 0.10–0.16) and two wider, fainter **helmet lobes** (base 40, tip r 150, α 0.06) at seeded angles (`0x5747`, none closer than 20°). Everything is part of one cached sprite that breathes ±3 % over 6 s; nothing rotates or flickers.
+`star.core #FFF8E1` (black-hole ramp inner edge) and `star.body #FFC857` (= `fuel.low`; black-hole ramp, lava vein cores, cracked crack line, hazard stripe) stay tokens but no longer colour the sun. `star.limb #FF5A1F` is retired as a separate name (= `star.glow`).
 
-### Start planet (ocean world — cool blue, calm)
+### Start planet = the ocean world (`planet-start.svg` = `bodies/ocean.svg`, the approved reference variant F)
+The start planet **is** the reference. Its v1.2 tokens (`planet.start.base #3D8BFF`, `.highlight #9CCBFF`, `.shadow #142B5E`, `.atmo #7FB8FF`, `.land #8FB07A`, `.cloud #F2F5FF`, `.ice #E9EEF8`, `planet.specular #FFFFFF`) no longer colour it; the hexes that other assets still use keep their other names (§2 UI, §8).
+
 | Token | Hex | Used for | Note |
 |---|---|---|---|
-| `planet.start.base` | `#3D8BFF` | Body disc; the transparent 0.40 stop of the shade lets it (and the surface noise) show on the day side | Lit side faces the star (upper-right) |
-| `planet.start.highlight` | `#9CCBFF` | 0.00 stop of the terminator shade (α 0.90), offset 0.36 r toward the star; also the 1 px limb line at α 0.16 (r − 0.5) | No glow; the limb line keeps the dark side legible on `bg.base` |
-| `planet.start.shadow` | `#142B5E` | Night side: the shade's 0.70 (α 0.55) → 0.86 (α 0.92) → 1.00 (α 1.0) stops — the 0.70–0.86 span **is** the terminator | Deep enough to sink into the field |
-| `planet.start.atmo` | `#7FB8FF` | Atmosphere rim: a thin ring just outside the disc (peak α 0.55 at 0.87 of 1.12 r), masked α × 1.0 lit → 0.35 dark along the star vector (the brief's "~2×"); over the shaded body the composite rim reads ≈ 1.5× brighter on the lit side (measured, `assets.md`) | v1.1. Scatter, not glow: it never leaves the 1.12 r envelope and never animates |
-| `planet.start.ocean` | `#3D8BFF` | The ocean = the base disc and the fill of the surface strip; also the limb-squash overlay (base α 0 at 0.88 r → α 0.45 at r) | v1.2. Same hex as `planet.start.base` — one token, two roles |
-| `planet.start.land` | `#8FB07A` | Continents: fractal noise (baseFrequency 0.030, 4 octaves, seed 7, stitched over one 214 × 68 tile) soft-thresholded at p68 of the field → ≈ 32 % of the tile (33.5 % measured; the t = 0 window shows ≈ 38 %); the coastline ramp is ≈ 1 px | v1.2. Muted green-grey, deliberately not "grass": it has to sit quietly under the blue shade |
-| `planet.start.cloud` | `#F2F5FF` | Cloud strip: second noise field (0.055, 4 octaves, seed 19), thresholded at p60 → ≈ 40 % cover (39.6 % measured), edges softened σ 0.8, drawn at group α 0.5 (peak ≈ 0.5, inside the brief's 0.45–0.6); drifts at its own period (64 s vs 90 s) so clouds move over the land | v1.2. Same hex as `ship.hull`; light soft wisps, never grey blotches |
-| `planet.start.ice` | `#E9EEF8` | Polar caps: bands over the top and bottom 12 % of the disc (8.16 px of 68), α 1 at the pole → 0.9 at 60 % of the band → 0 at its inner edge | v1.2. Same hex as `stars.neutral`; faint by design — they are part of the strip and scroll with it, but as full-width bands they look fixed |
-| `planet.specular` | `#FFFFFF` | Ocean glint, start planet only: ellipse 0.22 r × 0.12 r (7.5 × 4.1 px) at the sub-star point 0.45 r along L = (10.82, −10.82), radial α 0.35 → 0.18 at 50 % → 0; part of the fixed lighting overlay | v1.2. The only white on a body; planet X has no liquid and no glint |
+| `ocean.deep` | `#1E5BD6` | Base disc and strip fill — deep ocean | Vivid, not pastel |
+| `ocean.shallow` | `#36B9D8` | Coastal shallows, ramp n 0.490 → 0.595 (slope 9.5) | |
+| `ocean.land` | `#5FA84A` | Land, n > 0.546 (slope 70: a ≈ 1 px coast) | |
+| `ocean.forest` | `#3B7E3B` | Forest, n 0.58 → 0.636 (slope 18) | The darker land sub-zone |
+| `ocean.desert` | `#D8B26E` | Desert, second field dn 0.564 → 0.636 (slope 14), composited **in** the land; also the asteroid ochre | The contrasting zone |
+| `ocean.highland` | `#5B5A33` | Highlands, n 0.64 → 0.723 (slope 12) | |
+| `ocean.ice` | `#F4F8FF` | Polar caps 12 % (8.16 px): α 1 at the pole · 0.95 at 78 % · 0; also `ice.cap`, the ring-debris caps, the blue-giant flame core and rim | |
+| `cloud` | `#FFFFFF` | Clouds, group α 0.78 | White |
 
-### Planet X (the target — cold mineral/ice world)
+### Planet X (the target, v1.5: mint identity, reference techniques)
 | Token | Hex | Used for | Note |
 |---|---|---|---|
-| `planet.x.base` | `#3DE0C2` | Body disc (transparent 0.40 stop of the shade); also the halo (radial gradient α 0.35 → 0 at ×1.8 r, drawn live) | The only cool glow on screen |
-| `planet.x.highlight` | `#B5FFF0` | 0.00 stop of the terminator shade (α 0.90), offset 0.36 r toward the star (lower-left); also the 1 px limb line at α 0.18 (r − 0.5) | |
-| `planet.x.shadow` | `#0E4A40` | Night side: shade stops 0.70 (α 0.55) → 0.86 (α 0.92) → 1.00 (α 1.0); the 0.70–0.86 span is the terminator | |
-| `planet.x.atmo` | `#8FFFE6` | Atmosphere rim at 1.12 r (peak α 0.55 at 0.87, 0.30 at 0.92), lit-side boost 1.0 → 0.35 | v1.1. Sits under the halo's falloff; the halo is still the only thing that reads as "glow" |
-| `planet.x.ring` | `#3DE0C2` | Capture-radius ring: dashed `[6, 6]`, stroke 1.5 px, α 0.55 at rest (pulses 0.35 ↔ 0.70, radius ±2 px, 2.4 s) | Same hex as base; the dash and the pulse make it read as a boundary, not a halo. The dashes crawl slowly (`lineDashOffset` −12 px/s) *and* the ring pulses; on a win both stop and the ring locks at α 1.0. v1.2 puts both motions in the SVG (SMIL) and adds a halo breathe ±4 % on the same 2.4 s sine |
-| `planet.x.mineral` | `#0E4A40` | Dark mineral basins: fractal noise (0.035, 4 octaves, seed 11, stitched over one 188 × 60 tile) soft-thresholded at p72 → ≈ 28 % of the tile (27.3 % measured), drawn at α 0.60; plus thin veins — a second, ridged noise (turbulence 0.040, 2 octaves, seed 11) bright where the field < 0.07 → ≈ 5 % cover, α 0.35 | v1.2. Same hex as `planet.x.shadow`: the basins are "deeper mint", not a second colour |
-| `planet.x.wisp` | `#B5FFF0` | High-altitude wisps strip: ridged noise (turbulence 0.050, 2 octaves, seed 23) bright where the field < 0.115 → ≈ 15 % cover (15.8 % measured; ≈ 4 % above half alpha), α 0.35, no blur; its own period (80 s vs 120 s) | v1.2. Same hex as `planet.x.highlight`; thin and sparse — filaments, not clouds |
-| `planet.x.ice` | `#B5FFF0` | Polar caps over the top and bottom 18 % of the disc (10.8 px of 60), α 1 → 0.9 at 60 % → 0 | v1.2. Larger than the start planet's (12 %): a cold world; the big lit south cap is what the lower-left light catches first |
+| `planet.x.base` | `#3DE0C2` | Mint plains (n > 0.500, slope 60: crisp, ≈ 50 %); the halo (α 0.35 → 0 at 1.8 r) | The only cool glow on screen |
+| `planet.x.deep` | `#17B39C` | Base disc and strip fill (teal lowland); the thin lineae (×0.85) | New (v1.5) |
+| `planet.x.shadow` | `#0E4A40` | Dark basins (solid below n 0.345, 0 at 0.410) | No longer the night side (that is `night.*`) |
+| `planet.x.highlight` | `#B5FFF0` | Ice fields (n 0.630 → 0.6925); shade bloom (α 0.28); rim peak (α 0.95) | Also `planet.x.ice` |
+| `planet.x.frost` | `#44CFE8` | Cyan frost (field k 0.570 → 0.641) composited **in** the plains | New (v1.5) |
+| `planet.x.cap` | `#E6FFF9` | Polar caps 18 % with a ragged, terrain-driven inner edge (v1.5.1); the wisps (α 0.70 group); the haze edge (α 0.65) | New (v1.5), replaces `planet.x.wisp` |
+| `planet.x.atmo` | `#8FFFE6` | Haze (0.96 α 0.42); rim tail (0.955 α 0.40) | |
+| `planet.x.ring` | `#3DE0C2` | Capture ring: dash `[6, 6]`, 1.5 px, α 0.55 at rest, pulse 0.55 → 0.70 → 0.55 → 0.35 → 0.55 and r ±2 over 2.4 s, crawl −12 px/s; locks at α 1 on a win | Unchanged since v1.2 |
 
-**Start planet — an ocean world.** `planet.start.ocean` base; continents from thresholded fractal noise (≈ 32 % land, soft ≈ 1 px coastlines) with a faint **highlands** overlay inside the larger continents (same field, higher threshold 0.643, `planet.start.shadow` at α 0.22); faint polar caps (12 %); a separate **cloud** layer (≈ 40 % cover, σ 0.8 edges, α 0.5) that drifts faster than the land; the v1.1 terminator and atmosphere rim; and a small **specular glint** at the sub-star point. The surface strip turns once in **90 s**, the clouds in **64 s**.
+Planet X keeps its lower-left lighting (L = (−0.7071, +0.7071)) because it sits up-right of the star in every scene; its wisp shadow is offset (+1, −1), away from that light.
 
-**Planet X — a cold mineral/ice world.** `planet.x.base` mint; darker **basins** (≈ 28 %, α 0.60) and thin **veins** (≈ 5 %, α 0.35) in `planet.x.mineral`; sparse bright **wisps** (≈ 15 %, α 0.35); larger polar caps (18 %); the v1.1 terminator and rim; halo and capture ring exactly as before. **No specular** — there is no liquid. The surface is calmer than the start planet's (muted basins, faint veins) so that the halo and the ring, not the texture, keep it "the special one". Surface **120 s**, wisps **80 s**.
-
-**Shared construction (both planets, the SVG is canon — `canvas-notes.md` §4 reproduces it).** The texture is a strip of period **P = round(2π r)** — 214 px (start) / 188 px (X) — i.e. one full rotation, built as **one** 2P × 2r rect (428 / 376 px wide) whose filter stitches the noise to exactly P over a P-wide subregion and repeats it with `feTile` — one rect, no geometry join inside the clip (two abutting rects show an anti-aliased hairline at every fractional translate) — and scrolled **west→east** (the texture moves left→right: translate 0 → +P over one period) through a circular clip of radius r. Above the clip group, in this order, all **fixed to the star direction and never rotating**: a **limb squash** (radial, base colour α 0 at 0.88 r → α 0.45 at r: the texture fades to 55 % in the outer 12 % of the radius — the only "spherical" cue, no true mapping at r ≤ 40 px) → glint (start only) → terminator shade → 1 px limb line → atmosphere rim (planet X: halo first, ring last). Static renders and all five mockups show t = 0. Draw order: [halo] → base → clip { surface strip, cloud/wisp strip } → squash → [glint] → shade → limb → rim → [ring].
+### Shared lighting tokens (every planet and moon, from the planet reference)
+| Token | Hex | Used for | Note |
+|---|---|---|---|
+| `terminator.warm` | `#FF9455` | The warm terminator band: 0.64 α 0 → **0.705 α 0.14–0.26** (atmosphere bodies) or 0.69 α 0 → 0.73 α 0.18 (airless); rock and moon terminators | New (v1.5). The lit air just before night |
+| `night.navy` | `#08122E` | Night shoulder: 0.76 α 0.74 (airless 0.755 α 0.82) | New (v1.5). Replaces every per-body shadow token as the night side |
+| `night.deep` | `#050B1E` | Night core: 0.84 α 0.97 → 1.00 α 1 (airless 0.80 α 0.97 → 1); eclipse and ring shadows on planets; rock and metal night | New (v1.5) |
+| `cloud.shadow` | `#06122E` | Cast cloud / wisp shadow strips (α 0.32–0.45, blur 0.45, offset away from L) | New (v1.5) |
+| `glint` | `#FFFBEE` | Specular glint, ocean worlds only (ocean, double.big) | New (v1.5), replaces `planet.specular` |
+| `bloom.ocean` | `#E6F2FF` | Shade bloom 0.00 (α 0.18–0.38) on blue worlds (ocean, double.big, ring-debris, ring-shepherd) | New (v1.5) |
+| `haze.ocean` / `haze.oceanEdge` | `#8FD0FF` / `#BFE6FF` | Inner haze 0.96 / 1.00 on the ocean world; `#8FD0FF` also on the ice world | New (v1.5) |
+| `rim.ocean` / `rim.oceanOuter` | `#A8DBFF` / `#7FC4FF` | Outer rim 0.928 / 0.955 on blue worlds | New (v1.5) |
 
 ### Ship
 | Token | Hex | Used for | Note |
 |---|---|---|---|
 | `ship.hull` | `#F2F5FF` | Triangle hull | Matte; no glow |
 | `ship.outline` | `#0A0D1A` | 1 px outline | Keeps the hull legible over the star and planets |
-| `ship.cockpit` | `#5EA0FF` | Tiny accent dot/slit | Same blue as `ui.accent` and `trail` — "this is the player" |
-| `thrust.core` | `#FFE08A` | Inner thrust triangle | Lives one frame per thrust tick |
-| `thrust.outer` | `#FF6A2A` | Outer thrust triangle | Additive (`lighter`) compositing |
+| `ship.cockpit` | `#5EA0FF` | Tiny accent dot/slit | Same blue as `ui.accent` and `trail` |
+| `thrust.core` | `#FFE08A` | Inner thrust triangle; `mv.rim` | Lives one frame per thrust tick |
+| `thrust.outer` | `#FF6A2A` | Outer thrust triangle; `lava.vein`; `mv.hot` | Additive (`lighter`) compositing |
 
 ### Trail, path, arrow
 | Token | Hex | Used for | Note |
 |---|---|---|---|
 | `trail` | `#5EA0FF` | Flight trail, solid 2 px stroke; α fades to 0 over the last ~240 samples | Solid = "what happened" |
-| `path` | `#DCE4FF` | Predicted path, dotted (round dots r 1.5 px every 10 px of arc length): α 0.7 for the first 80 % of the dots, α 0.35 for the last 20 %; ends with a ring r 6, stroke 1.5 px, α 0.5 | Dotted = "what might happen"; the dim tail is uncertainty, the ring is "where the plan runs out"; never the same colour or stroke as the trail |
+| `path` | `#DCE4FF` | Predicted path, dotted (dots r 1.5 every 10 px): α 0.7 for the first 80 %, 0.35 for the last 20 %; end ring r 6, 1.5 px, α 0.5 | Dotted = "what might happen" |
 | `arrow` | `#FFFFFF` | Drag arrow shaft and head | |
-| `arrow.power` | `#3DE0C2` → `#FFC857` → `#FF5A5F` | Tints the arrow head and the power tick, low (0 %) → mid (50 %) → max (100 %), linear in sRGB | Borrows the fuel ramp so one ramp means "how much" everywhere. The 62 % sample in `drag-arrow.svg` is `#FFAE59` (mid → max at t 0.24) — a ramp value, not a new token |
+| `arrow.power` | `#3DE0C2` → `#FFC857` → `#FF5A5F` | Arrow head and power tick, 0 % → 50 % → 100 %, linear in sRGB | The 62 % sample is `#FFAE59` — a ramp value, not a token |
 
 ### UI
 | Token | Value | Used for | Note |
 |---|---|---|---|
-| `ui.text` | `#ECF0FA` | Primary text, mode label, inactive segment text | |
+| `ui.text` | `#ECF0FA` | Primary text, mode label, inactive segment text; orbit lines (α 0.08), shepherd rings (α 0.7) | |
 | `ui.textMuted` | `#8B95B5` | Wordmark, labels, telemetry, subtitles | Still passes AA |
-| `ui.textDim` | `#4B5470` | Decorative/disabled only | Fails body-text contrast on purpose; never for copy the player must read |
+| `ui.textDim` | `#4B5470` | Decorative/disabled only | Fails body-text contrast on purpose |
 | `ui.panel` | `rgba(10,13,26,0.72)` | Translucent panel/button fill | Result card uses it at α 0.92 |
 | `ui.border` | `rgba(255,255,255,0.10)` | 1 px hairline on panels and secondary buttons | |
 | `ui.accent` | `#5EA0FF` | Primary button fill, active segment | Text on it is `bg.base` `#050710` |
-| `ui.shadow` | `rgba(5,7,16,0.50)` | Result card drop shadow: blur 16 px (σ 8), offset y 8 | `bg.base` at α 0.5, not black — pure black is reserved for `bg.edge`. The only `shadowBlur` in the game, drawn once (see §4) |
+| `ui.shadow` | `rgba(5,7,16,0.50)` | Result card drop shadow: blur 16 px (σ 8), offset y 8 | The only `shadowBlur` in the game, drawn once (§4) |
+
+The wreck debris reuses the UI hexes for metal under their own names (`metal.highlight #ECF0FA`, `metal.base #8B95B5`, `metal.dark #4B5470`, §9); the UI tokens themselves are unchanged.
 
 ### Fuel
-| Token | Hex | Used for | Note |
-|---|---|---|---|
-| `fuel.full` | `#3DE0C2` | Fuel bar ≥ 30 % | |
-| `fuel.low` | `#FFC857` | Fuel bar 10–30 % | |
-| `fuel.critical` | `#FF5A5F` | Fuel bar < 10 % | |
+| Token | Hex | Used for |
+|---|---|---|
+| `fuel.full` | `#3DE0C2` | Fuel bar ≥ 30 % |
+| `fuel.low` | `#FFC857` | Fuel bar 10–30 % |
+| `fuel.critical` | `#FF5A5F` | Fuel bar < 10 % |
 
 ### Results
 | Token | Hex | Used for | Note |
 |---|---|---|---|
-| `result.win` | `#3DE0C2` | "Planet X reached" title + accent bar | Same mint as the target: you reached *that* |
+| `result.win` | `#3DE0C2` | "Planet X reached" title + accent bar | Same mint as the target |
 | `result.crash` | `#FF5A5F` | "Crashed" title + accent bar | |
-| `result.lost` | `#B48CFF` | "Lost in space" title + accent bar | Violet is used nowhere else — cold and quiet |
+| `result.lost` | `#B48CFF` | "Lost in space" title + accent bar | The violet also tints the neutron star, the black hole's outer disk and the emission nebula's outer gas, never UI |
 
 ### Contrast (WCAG 2.x, computed from relative luminance)
+UI tokens and the background are unchanged in v1.5, so the table still holds.
+
 | Foreground | Background | Ratio | Verdict |
 |---|---|---|---|
 | `ui.text` `#ECF0FA` | `#050710` | 17.6 : 1 | AAA |
-| `ui.text` `#ECF0FA` | `bg.edge` `#000000` | 18.4 : 1 | AAA (v1.1: the HUD corners sit on near-black; contrast only goes up) |
+| `ui.text` `#ECF0FA` | `bg.edge` `#000000` | 18.4 : 1 | AAA |
 | `ui.textMuted` `#8B95B5` | `#050710` | 6.8 : 1 | AA body, AAA large |
-| `ui.textMuted` `#8B95B5` | `bg.edge` `#000000` | 7.1 : 1 | AAA (just) — wordmark and telemetry live in the corners, on the darkest part of the vignette |
+| `ui.textMuted` `#8B95B5` | `bg.edge` `#000000` | 7.1 : 1 | AAA (just) |
 | `ui.textDim` `#4B5470` | `#050710` | 2.7 : 1 | Fails — decorative only (intended) |
 | `ui.accent` `#5EA0FF` | `#050710` | 7.6 : 1 | AAA |
 | `#050710` | `ui.accent` `#5EA0FF` | 7.6 : 1 | AAA (button label) |
@@ -151,37 +169,45 @@ The disc is **limb-darkened** (core → body → body → corona → limb), ring
 | `result.crash` `#FF5A5F` | `#050710` | 6.6 : 1 | AA body, AAA at 40 px |
 | `result.lost` `#B48CFF` | `#050710` | 7.8 : 1 | AAA |
 
-The result card is `ui.panel` at α 0.92 over the scrim, which composites to ≈ `#0A0D1A`; ratios on that drop by ~0.3 and every verdict above still holds. Nothing else changes with the black edge: the vignette is `bg.base` or lighter everywhere a result card or a button sits.
+The result card composites to ≈ `#0A0D1A`; ratios on it drop by ~0.3 and every verdict holds.
+
+**Over a nebula (v1.4).** Where both colour layers of the emission nebula peak (violet α 0.16 + rose α 0.22 over `bg.base` ≈ `#4B2943`), `ui.text` is still 10.9 : 1 (AAA) but `ui.textMuted` drops to **4.2 : 1** (fails AA body text); over the reflection nebula's peak (≈ `#2A3852`) it is 4.0 : 1. Hence the §9 layout rule: nebula cores stay out of the HUD rectangles (wordmark / mode x < 320, y < 90 · fuel x > 1160, y < 80 · actions and telemetry y > 780). Outside the cores (each layer below half alpha) `ui.textMuted` stays ≥ 5.4 : 1.
+
+### Retired tokens (v1.5)
+No asset uses these any more; they are listed so nobody revives them by accident. `planet.start.base #3D8BFF` · `planet.start.land #8FB07A` · `planet.x.mineral` / `planet.x.wisp` (names; `#0E4A40` / `#B5FFF0` live on as `planet.x.shadow` / `.highlight`) · `planet.specular` (→ `glint`) · `star.limb` (→ `star.glow`) · the v1.3 per-body night tokens `ice.shadow #35567A` (still used, as `iceDebris.shadow`), `lava.shadow #1E1414` (kept: it is now the basalt and terminator colour), `gasBanded.shadow #4A2E1E`, `gasRinged.shadow #1C3A36` · `gasRinged.ring #D8E6E3` · the v1.3 grey-family moon set `#9A9AA6 / #5E5E6B / #D8D8E0` · dwarf `#B8A48E / #6E6052 / #E8DCC8` (`#E8DCC8` survives as `msB.bloom`) · rocky `#C98B5A / #7A4E33 / #F0C9A0` · double `#5E9ED6 / #2C4F7A / #DCEFFF` (`#5E9ED6` / `#DCEFFF` survive as `iceGiant.*`) · ice `#CFE6F5 / #7FA6C9` (survive as `iceDebris.*` and `mi.crack`) · red dwarf body `#FF7A4D` · lava `#3A2A2A` on lava (kept as `mv.spot` and the wreck scorch) and `#5A4040` · toxic `#5E8F3A / #2F5A2A / #E6F2C8` · cracked `#4F5B73 / #2A3245` (`#2A3245` survives as `metal.edge`).
 
 ### Gradient stops (canon, as defined in the asset SVGs)
-The body gradients are built only from the tokens above; these are the exact stops the asset SVGs define (each file's header comment lists them), and `canvas-notes.md` §3–4 and the mockups reproduce them unchanged. Radial gradients are measured from each layer's own radius; "userSpace" means the SVG positions the centre in px relative to the body centre, as the Canvas code does.
+Each file's header comment lists every stop; this table repeats the three reference-grade bodies. "userSpace" means the SVG positions the centre in px relative to the body centre, as the Canvas code does. Linear thresholds are `alpha = s·n + i` on the noise channel (threshold at alpha 0.5 → n = (0.5 − i)/s); `×c` caps the layer's alpha.
 
-| Gradient (asset) | Radius / centre | Stops (offset → token, alpha) |
+| Gradient / layer (asset) | Geometry | Stops / values |
 |---|---|---|
-| Star glow (`star.svg`) | 200 | 0.00 `star.glow` α 0.50 · 0.23 α 0.45 · 0.65 α 0.12 · 1.00 α 0 |
-| Star corona (`star.svg`, σ 3 blur in the SVG only) | 130 | 0.00 `star.corona` α 0.90 · 0.35 α 0.70 · 0.62 α 0.22 · 1.00 α 0 |
-| Star streamers (`star.svg`, σ 6 blur in the SVG; Canvas: linear gradient along the wedge) | 10 wedges, base w 10–18 at r 48, tip at r T 110–175; + 2 lobes base 40, tip r 150 at 122° / 292° | `star.corona` α a (0.10–0.16; lobes 0.06) at the base → 0 at the tip. Seed `0x5747`; the ten (A°, w, T, α) values are tabulated in `canvas-notes.md` §3 |
-| Star chromosphere (`star.svg`, σ 1.5 blur in the SVG; Canvas: three 1 px rings α 0.60 / 0.35 / 0.15 at r 46 / 47 / 48) | ring r 47, stroke 3 | `star.corona` α 0.60 |
-| Star body (`star.svg`) | 46 | 0.00 `star.core` · 0.45 `star.body` · 0.78 `star.body` · 0.90 `star.corona` · 1.00 `star.limb` |
-| Star granulation (`star.svg`) | clipped to r 46 | fractalNoise baseFrequency 0.11, 2 octaves, seed 3, saturate 0, contrast ×2 about 0.5, α 0.16, multiply |
-| Start planet surface strip (`planet-start.svg`, filter `#psLand`) | one rect 428 × 68 (2P; P = round(2π · 34) = 214; noise over a 214 × 68 subregion, `feTile`d across the rect), scrolled 0 → +214 over 90 s through clip r 34; start phase: tile x 44 at the disc's left edge | fill `planet.start.ocean`; land: fractalNoise baseFrequency 0.030, 4 octaves, seed 7, `stitchTiles="stitch"`, alpha → linear slope 24, intercept −12.772 (threshold 0.553 = p68 → ≈ 32 % land), `planet.start.land`; highlands: same field, slope 6, intercept −3.358 (threshold 0.643), × 0.22, `planet.start.shadow`; merged over the ocean. Polar caps: bands y 0–8.16 and 59.84–68 (12 %), `planet.start.ice` α 1 · 0.6 α 0.9 · 1 α 0 toward the inner edge |
-| Start planet cloud strip (`planet-start.svg`, `#psCloud`) | same 428 × 68 rect, scrolled 0 → +214 over 64 s, group α 0.5; start phase: tile x 0 at the left edge | fractalNoise 0.055, 4 octaves, seed 19, stitched, `feTile` over the filter region −4..432 × −4..72 (two periods; the blur sees periodic neighbours), colour `planet.start.cloud`, alpha → slope 14, intercept −6.85 (threshold 0.525 = p60 → ≈ 40 %), `feGaussianBlur` 0.8, composited `in` the tile |
-| Start planet limb squash (`planet-start.svg`) | from the centre, radius r = 34 | 0.88 `planet.start.ocean` α 0 · 1.00 α 0.45 (texture fades to 55 % in the outer 12 % of r) |
-| Start planet glint (`planet-start.svg`) | ellipse rx 7.5 (0.22 r) × ry 4.1 (0.12 r) at 0.45 r · L = (+10.82, −10.82), `rotate(−45)` — the long axis lies along L | 0.00 `planet.specular` α 0.35 · 0.50 α 0.18 · 1.00 α 0 |
-| Start planet shade (`planet-start.svg`) | userSpace centre 0.36 r · L = (+8.66, −8.66), radius 1.25 r = 42.5 | 0.00 `planet.start.highlight` α 0.90 · 0.40 `planet.start.base` α 0 · 0.70 `planet.start.shadow` α 0.55 · 0.86 α 0.92 · 1.00 α 1.0 (v1.1, unchanged) |
-| Start planet rim (`planet-start.svg`) | from the centre, radius 1.12 r = 38.08; × alpha mask linear along L from (+26.93, −26.93) α 1.0 to (−26.93, +26.93) α 0.35 | 0.00 `planet.start.atmo` α 0 · 0.80 α 0 · 0.87 α 0.55 · 0.92 α 0.30 · 1.00 α 0 (v1.1, unchanged) |
-| Planet X surface strip (`planet-x.svg`, `#pxSurface`) | one rect 376 × 60 (2P; P = round(2π · 30) = 188; each noise field over a 188 × 60 subregion, `feTile`d), scrolled 0 → +188 over 120 s through clip r 30; start phase: tile x 40 at the left edge | fill `planet.x.base`; basins: fractalNoise 0.035, 4 octaves, seed 11, stitched, alpha → slope 12, intercept −6.508 (threshold 0.584 = p72 → ≈ 28 %), × 0.60, `planet.x.mineral`; veins: turbulence 0.040, 2 octaves, seed 11, stitched, alpha → slope −14.29, intercept 1 (bright where the field < 0.07 → ≈ 5 %), × 0.35, `planet.x.mineral`; merged over the base. Polar caps: bands y 0–10.8 and 49.2–60 (18 %), `planet.x.ice` α 1 · 0.6 α 0.9 · 1 α 0 |
-| Planet X wisp strip (`planet-x.svg`, `#pxWisp`) | same 376 × 60 rect, scrolled 0 → +188 over 80 s; start phase: tile x 0 at the left edge | turbulence 0.050, 2 octaves, seed 23, stitched, colour `planet.x.wisp`, alpha → slope −8.7, intercept 1 (bright where the field < 0.115 → ≈ 15 %), × 0.35; no blur |
-| Planet X limb squash (`planet-x.svg`) | from the centre, radius r = 30 | 0.88 `planet.x.base` α 0 · 1.00 α 0.45 |
-| Planet X shade (`planet-x.svg`) | userSpace centre 0.36 r · L = (−7.64, +7.64), radius 1.25 r = 37.5 | 0.00 `planet.x.highlight` α 0.90 · 0.40 `planet.x.base` α 0 · 0.70 `planet.x.shadow` α 0.55 · 0.86 α 0.92 · 1.00 α 1.0 (v1.1, unchanged) |
-| Planet X rim (`planet-x.svg`) | from the centre, radius 1.12 r = 33.6; × alpha mask linear along L from (−23.76, +23.76) α 1.0 to (+23.76, −23.76) α 0.35 | 0.00 `planet.x.atmo` α 0 · 0.80 α 0 · 0.87 α 0.55 · 0.92 α 0.30 · 1.00 α 0 (v1.1, unchanged) |
-| Planet X halo (`planet-x.svg`) | 1.8 r = 54, scaled 1 → 1.04 → 1 → 0.96 → 1 over 2.4 s (sine, in phase with the ring) | 0.00 `planet.x.base` α 0.35 · 0.556 α 0.35 · 0.78 α 0.10 · 1.00 α 0 |
-| Planet X capture ring (`planet-x.svg`) | r 78 → 80 → 78 → 76 → 78 over 2.4 s (sine); dash `6 6`, stroke 1.5, `stroke-dashoffset` 0 → −12 over 1 s (−12 px/s) | `planet.x.ring` α 0.55 → 0.70 → 0.55 → 0.35 → 0.55 over 2.4 s (sine, `keySplines 0.42 0 0.58 1`); t = 0 = the v1 static state (α 0.55, r 78) |
-| Vignette (mockups, `canvas-notes.md` §1) | centre (720, 450), r 900, over a `bg.edge` fill | 0.00 `bg.vignette` · 0.55 `bg.base` · 1.00 `bg.edge` |
-| Milky Way (`starfield.svg`) | ellipses at −28° through (720, 450): rx 1100 × ry 150, and rx 900 × ry 70 offset 25 px; masked by fractalNoise 0.0025, 3 octaves, seed 5 (contrast 1.5 n − 0.2 — gentle, so the band stays one continuous lane with mottling, not detached patches) | `milkyway.dust` α 0.06 · 0.55 α 0.03 · 1.00 α 0, and α 0.05 → 0; peak after masking 0.054 (budget ≤ 0.08). Canvas: three unmasked ellipses α 0.05 / 0.04 / 0.03 |
+| Sun haze (`star.svg`) | circle r 200, in `#starBreathe` (±3 % / 6 s) | 0 `#FF7A2A` α 0.60 · 0.23 α 0.52 · 0.33 `#E8461A` α 0.30 · 0.55 `#A8240E` α 0.15 · 0.80 `#6A1408` α 0.06 · 1 α 0 |
+| Sun wisp ring | circle r 78 filled solid to the centre, rotates −360° / 300 s, in `#starBreathe` | 0 `#FFB347` α 0.55 · 0.62 α 0.55 · 0.80 `#FF6A1A` α 0.22 · 1 `#E8461A` α 0; filter: fractalNoise 0.05, 5 oct, seed 33, made opaque (alpha = 1) → displacement scale 34 → blur 0.8. Reaches ≈ r 95 |
+| Sun flame ring | circle r 62 filled solid, rotates +360° / 200 s, in `#starBreathe` | 0 `#FFE7A0` α 0.95 · 0.74 α 0.95 · 0.82 `#FFB347` α 0.80 · 0.91 `#FF6A1A` α 0.38 · 1 `#FF5A1F` α 0; filter: fractalNoise 0.08, 4 oct, seed 21, opaque → displacement 20 → blur 0.4. Reaches ≈ r 72 |
+| Sun body | circle r 46 | 0 `#FFB43A` · 0.65 `#FF8F1F` · 1 `#FF7A14` |
+| Sun surface (`#starSurf`, clipped to the disc) | over the body | dark cells: fractalNoise 0.05, 5 oct, seed 4 → `#802105`, alpha = 3.4 R − 1.6, × 0.55; filaments: turbulence 0.06, 5 oct, seed 9 → `#FFE7A0`, alpha = 1.25 − 6.5 R, × 0.85 |
+| Sun limb | circle r 46, userSpace | 0.80 `#FFD27A` α 0 · 0.93 α 0.55 · 0.97 `#FFF1C2` α 0.90 · 1 `#FFFFFF` α 0.95 |
+| Sun edge wobble (`#starEdge`) | on the body + limb group | fractalNoise 0.11, 3 oct, seed 44, opaque → displacement 6.5, no blur |
+| Sun ragged rim | circle r 46.2, stroke 1.6 | `#FFF1C2` α 0.75; fractalNoise 0.22, 2 oct, seed 57 → displacement 5 → blur 0.35 |
+| Sun prominences | 3 loops, `rotate(A) translate(46 0)` | outer `#FF8C2E` 2.8 px α 0.85 + core `#FFF1C2` 1 px α 0.90, round caps, no blur. P1 147.5° `M-0.9 -9 C21 -7.2 21 7.2 -0.9 9` 12 s / begin 0 · P2 243.6° `M-1.3 -11 C23.5 -9 23.5 9 -1.3 11` 16 s / 5 s · P3 314.8° `M-0.8 -8.5 C29 -6.8 29 6.8 -0.8 8.5` 14 s / 9 s; scale 0.6 → 1 → 0.6 and opacity 0 → 1 → 0 (sine) |
+| Sun flare | wedge `M46 -1.8 L86 0 L46 1.8 Z`, rotate 25° | linear `#FFFFFF` → `#FFD27A` α 0.15; opacity 0 → 1 → 0 at keyTimes 0.5909 / 0.6318 / 0.6727 of 22 s (13.0 / 13.9 / 14.8 s) |
+| Ocean surface strip (`#psLand`) | one rect 428 × 68 (2P, P 214), fill `#1E5BD6`, scrolled 0 → +214 / 90 s | n = fractalNoise 0.030, 6 oct, seed 7; dn = fractalNoise 0.045, 3 oct, seed 23 (both stitched over 214 × 68, `feTile`d). shallow `#36B9D8` 9.5 n − 4.655 · land `#5FA84A` 70 n − 38.21 · forest `#3B7E3B` 18 n − 10.44 · desert `#D8B26E` 14 dn − 7.9 **in** land · highland `#5B5A33` 12 n − 7.68 · caps `#F4F8FF` 12 % |
+| Ocean cloud shadow (`#psCloudShadow`) | same rect, translate (−0.85, 0.85) → (213.15, 0.85) / 64 s, group α 0.45 (down-left, away from the light; v1.5.1) | the cloud noise → `#06122E`, alpha 26 c − 13.93, blur 0.45 |
+| Ocean clouds (`#psCloud`) | same rect, 0 → +214 / 64 s, group α 0.78 | c = fractalNoise `0.042 0.085`, 6 oct, seed 19 → `#FFFFFF`, alpha 26 c − 13.93 (≈ 30 % cover), blur 0.2 |
+| Ocean glint | ellipse 6.4 × 3.6 at 0.45 r·L = (10.82, −10.82), `rotate(−45)` | `#FFFBEE` 0 α 0.60 · 0.45 α 0.25 · 1 α 0 |
+| Ocean shade | userSpace centre 0.36 r·L = (8.66, −8.66), radius 1.25 r = 42.5 | 0 `#E6F2FF` α 0.38 · 0.32 α 0 · 0.64 `#FF9455` α 0 · 0.705 `#FF9455` α 0.24 · 0.76 `#08122E` α 0.74 · 0.84 `#050B1E` α 0.97 · 1 α 1 |
+| Ocean haze | circle r 34, lit mask | 0.78 `#8FD0FF` α 0 · 0.96 α 0.42 · 1 `#BFE6FF` α 0.65 |
+| Ocean rim | circle 1.077 r = 36.6, lit mask | 0.90 `#A8DBFF` α 0 · 0.928 α 0.95 · 0.955 `#7FC4FF` α 0.40 · 1 α 0 |
+| Lit mask (every atmosphere body) | linear from +0.706 r·L to −0.706 r·L (ocean (24, −24) → (−24, 24)) | alpha 1.0 · 0.5 → 0.45 · 1.0 → 0.06 |
+| Planet X halo | r 1.8 r = 54, breathes ±4 % / 2.4 s | `#3DE0C2` 0 α 0.35 · 0.556 α 0.35 · 0.62 α 0.22 · 0.78 α 0.08 · 1 α 0 |
+| Planet X surface strip (`#pxSurface`) | rect 376 × 60 (P 188), fill `#17B39C`, 0 → +188 / 120 s | n = fractalNoise 0.035, 6 oct, seed 11; k = fractalNoise 0.05, 4 oct, seed 17; v = turbulence 0.06, 1 oct, seed 11. plains `#3DE0C2` 60 n − 30 · frost `#44CFE8` 14 k − 7.98 **in** plains · basins `#0E4A40` −15.3 n + 6.273 · ice `#B5FFF0` 16 n − 10.08 · lineae `#17B39C` −50 v + 1.5 × 0.85 · caps `#E6FFF9` 18 % |
+| Planet X wisp shadow / wisps | rect 376 × 60; shadow (1, −1) → (189, −1) / 80 s α 0.32; wisps 0 → +188 / 80 s α 0.70 | c = fractalNoise `0.025 0.12`, 6 oct, seed 23, alpha 26 c − 15.99 (≈ 15 % cover); shadow `#06122E` blur 0.45; wisps `#E6FFF9` blur 0.2 |
+| Planet X shade | centre (−7.64, 7.64), radius 37.5 | 0 `#B5FFF0` α 0.28 · 0.32 α 0 · 0.64 `#FF9455` α 0 · 0.705 α 0.22 · 0.76 `#08122E` α 0.74 · 0.84 `#050B1E` α 0.97 · 1 α 1 |
+| Planet X haze / rim | haze r 30; rim r 32.3; lit mask (−21.2, 21.2) → (21.2, −21.2) | haze 0.78 `#8FFFE6` α 0 · 0.96 α 0.42 · 1 `#E6FFF9` α 0.65; rim 0.90 `#B5FFF0` α 0 · 0.928 α 0.95 · 0.955 `#8FFFE6` α 0.40 · 1 α 0 |
+| Planet X capture ring | r 78 → 80 → 78 → 76 → 78 over 2.4 s; dash 6 6, 1.5 px, dashoffset 0 → −12 / 1 s | `#3DE0C2` α 0.55 → 0.70 → 0.55 → 0.35 → 0.55 (sine, `keySplines 0.42 0 0.58 1`) |
+| Vignette | centre (720, 450), r 900, over `bg.edge` | 0 `bg.vignette` · 0.55 `bg.base` · 1 `bg.edge` |
+| Milky Way (`starfield.svg`) | ellipses at −28°: rx 1100 × ry 150, rx 900 × ry 70 offset 25 px; fractalNoise mask 0.0025, 3 oct, seed 5 | `milkyway.dust` α 0.06 · 0.55 α 0.03 · 1 α 0, and α 0.05 → 0; peak after masking 0.054. Canvas: three unmasked ellipses α 0.05 / 0.04 / 0.03 |
 | Star halos (`starfield.svg`) | r 4.5 on the 12 largest near stars | own tint α 0.18 → 0 |
-
-The only hex in `design/` that is not a token in the tables above or in the §8 body-library tables is the computed ramp value `#FFAE59` (`arrow.power` at 62 %, see the Trail/path/arrow table); the rim masks use `#FFFFFF` only as a luminance for alpha, and the glint's `#FFFFFF` is `planet.specular`. The soft thresholds in the strips are `feComponentTransfer` / `feFuncA type="linear"` with slope s and intercept 0.5 − s · T, T being the threshold on the turbulence alpha channel; the thresholds were set from measured percentiles of each stitched field so the coverages above hold over the whole tile.
 
 ## 3. Typography
 
@@ -207,31 +233,58 @@ Rules: letter-spacing lives on uppercase microcopy only (wordmark, mode label, H
 
 Self-hosting Inter later: drop `Inter-Variable.woff2` (OFL, copy the licence file alongside) into `/public/fonts`, declare one `@font-face { font-family: Inter; font-display: swap; }`, and leave the stack unchanged — Inter is already third in line, so it simply wins on machines without a native UI font. Load it before the first `ctx.fillText` (`document.fonts.load`) so the Canvas does not paint the fallback and then reflow.
 
+
 ## 4. Glow & blur rules
 
 Glow is a budget, not a style. Canvas `shadowBlur` is the single most expensive thing in the 2D API; every blur on a moving object costs a full-size readback per frame. So:
 
-1. **Glow belongs to exactly two things: the star and planet X.** Two glowing bodies give the eye a warm anchor and a cool goal; a third would flatten the hierarchy. Everything else is flat fill plus, at most, one gradient — or, in v1.1, a cached sprite that *contains* its gradients. The atmosphere rims, the star halos in the sky and the Milky Way are not glow: none of them extends past 1.12 r / r 4.5 / α 0.08, none of them animates. v1.3 (§8): the rule is **per scene** — the scene's star (any of the six; a compact object's glow, beams and accretion disk count as the star's) plus planet X. The lava world's faint static halo (1.4 r, `lava.atmo` α 0.18) is the one documented planetary exception; no other library body blooms, and the gas giant's ring, the double planet's companion and the airless bodies have no rim at all.
-2. **Star:** one cached 400×400 sprite, blitted every frame and breathing ±3 % over 6 s. v1.1 made the sprite richer — glow → corona → ten gradient streamers and two lobes → chromosphere rings → limb-darkened body → granulation — but it is still one `drawImage`. The SVG's blurs (corona σ 3, streamers σ 6, chromosphere σ 1.5) are presentation only; Canvas replaces them with gradient falloff, a linear gradient along each wedge and three 1 px rings. Never `shadowBlur`.
-3. **Planet X:** soft outer halo = a **live** radial-gradient fill at ×1.8 r (`planet.x.base` α 0.35 to the planet's edge, 0.10 at 0.78, 0 at the rim): one `createRadialGradient` + one `arc` fill per frame, no blur, ~0.05 ms, and it scales cleanly with zoom because nothing is rasterised. Not part of the sprite (it would be clipped at 1.12 r). The dashed capture ring is a live stroke too (cheap; see §5 for its pulse and dash crawl).
-4. **Planets (both), v1.2: cached strips + a cached lighting overlay.** The surface is a **texture strip** of period P = round(2π r) (214 / 188 px at zoom 1), two tiles wide, rendered once: base colour → thresholded noise layers (land + highlands / basins + veins) → polar-cap bands; a second strip holds the clouds / wisps. Per frame each planet is **one circular clip, two strip `drawImage` with a time-based x offset (surface, then cloud/wisp), and one `drawImage` of the lighting overlay** — a (2 · 1.12 r + 4) px square (81 / 72 px at zoom 1) holding the limb squash (base α 0 at 0.88 r → 0.45 at r), the glint (start only), the terminator shade (centre 0.36 r toward the star, radius 1.25 r, transparent at 0.40, night side from 0.70), the 1 px limb line and the atmosphere rim (1.12 r, `planet.*.atmo`, lit mask 1.0 → 0.35). That is 3 `drawImage` + 1 clip per planet per frame (the brief's "2 drawImage + clip" counts one strip; the cloud/wisp strip is the third), ≈ 0.08 ms each, and **still 0 `shadowBlur`, 0 per-frame noise, 0 per-frame blur**: the rotation is nothing but a changing source offset, wrapped modulo P so it never seams. Strips and overlay are rebuilt only when the zoom bucket changes (buckets at 1.25^k, 25 % apart, flipping ±11.8 % about each centre — `canvas-notes.md` §12). The lighting overlay never rotates.
-5. **Ship:** no glow, ever. The 1 px `ship.outline` does the job of separating it from bright backgrounds. Thrust flash: two additive triangles (`globalCompositeOperation = "lighter"`), `thrust.outer` under `thrust.core`, alive for one frame per thrust tick, **drawn with no blur in Canvas** — `ship-thrust.svg` (and `flight.svg`, which instances it) keeps a small presentation blur (σ 1.2 outer / 0.4 core) on the two triangles, but that is for the SVG asset only (see §7 and `canvas-notes.md` §6).
-6. **Trail:** per-segment alpha, no blur. **Predicted path:** dots, no blur. Both must stay sharp so the player can read them against the star's haze.
-7. **UI:** no text shadows. Panels are `ui.panel` with a `ui.border` hairline and 10 px radius; the translucency over the starfield is all the depth we need.
-8. **Background, v1.1: richer, still cached.** Vignette to black, three Milky-Way gradients, ~1005 dots, 12 halo gradients and 4 sparkles are drawn once into the background canvas (≈ 2.5 ms) and blitted as the per-frame clear. The SVG asset's turbulence mask on the band is replaced by three unmasked gradients in Canvas.
-9. **Exactly one `shadowBlur` in the game, and it never repeats:** the result card's drop shadow, `ui.shadow` `rgba(5,7,16,0.5)`, blur 16 px (σ 8), offset y 8. It is rendered once into the offscreen card (520×232 plus a 64 px margin, so 3σ + offset = 32 px never clips) when a result fires; every frame after that is one blit. Never on anything that moves, never on the HUD, never in play.
+1. **Glow belongs to exactly two things per scene: the scene's star and planet X.** The star is whichever of the six the level names (sun, red dwarf, blue giant, white dwarf, neutron star, black hole); a compact object's glow, beams and accretion disk count as the star's. The lava world's faint static halo (1.4 r, α 0.20) is the one planetary exception. Atmosphere haze and rims are not glow — they never leave 1.077 r and never animate. Nebulae are background-pass gas (§9), not glowing objects: no bloom, α ≤ 0.22 per colour layer, drawn into the background.
+2. **Stars: cached sprites, no runtime blur.** The SVG's flame and wisp rings are displaced noise; Canvas bakes them **with their displacement** into 2–3 sprite frames per ring that are drawn rotating (flames +360° / 200 s, wisps −360° / 300 s on the sun) and cross-faded, inside the ±3 % / 6 s breathe of the haze sprite. The disc — body gradient, tinted plasma, limb, rim wobble and the ragged rim — is one static sprite. Prominences are three unblurred two-tone sprites and the flare one sprite, faded and scaled by the scene clock (`canvas-notes.md` §3, §3b).
+3. **Planet X:** halo = a **live** radial-gradient fill at 1.8 r (0.35 to the disc edge, 0.22 at 0.62, 0.08 at 0.78, 0 at the rim), breathing ±4 % / 2.4 s: one gradient + one arc fill per frame. The dashed capture ring is a live stroke.
+4. **Planets and moons: cached strips + a cached lighting overlay.** The surface is a texture strip of period P = round(2π r), two tiles wide, built once per zoom bucket with every zone baked (thresholded noise tiles, tinted). Clouds / wisps are a second strip **with their cast shadow baked under them**. Per frame: one circular clip, 1–3 strip blits with a time-based x offset, and one blit of the overlay that holds the shade (highlight bloom → warm terminator band → night navy), the lit-side haze and the lit-side rim. Ringed planets add ring sprites before and after; systems add moon sprites. Still 0 `shadowBlur`, 0 per-frame noise, 0 per-frame blur.
+5. **Ship:** no glow, ever. Thrust: two additive triangles, no blur in Canvas (the SVG asset keeps σ 1.2 / 0.4 as presentation only).
+6. **Trail / predicted path:** per-segment alpha / dots, no blur.
+7. **UI:** no text shadows. Panels are `ui.panel` with a `ui.border` hairline and 10 px radius.
+8. **Background: cached.** Vignette, Milky Way, starfield and — when static — the nebula sprites and the asteroid dust are drawn once into the background canvas and blitted as the per-frame clear. Animated nebula layers are two large blits with a `globalAlpha` cross-fade (§9).
+9. **Exactly one `shadowBlur` in the game, and it never repeats:** the result card's drop shadow, `ui.shadow` `rgba(5,7,16,0.5)`, blur 16 px (σ 8), offset y 8, rendered once into the offscreen card.
 
 **Glow budget (per frame):**
-- 1 cached star sprite (gradients + streamers + chromosphere + limb darkening + granulation, breathe scale) — blit
-- 0 blits for the planet X halo — 1 live radial-gradient fill (breathing ±4 % over 2.4 s)
-- 2 planets × (1 clip + 2 cached strip blits with a scrolling offset + 1 cached lighting-overlay blit) — 6 blits, replacing v1.1's two sprite blits; the strips carry land / clouds / basins / wisps / caps, the overlays carry squash / glint / terminator / limb / rim
-- 1 dashed ring stroke — live
-- 1 cached background (vignette to black + Milky Way + tinted starfield + halos) — blit
-- 0 `shadowBlur` in play; 1 on the result card, drawn once (`ui.shadow`)
-- 0 blur, noise or blend modes on ship, trail, path, arrow, HUD — and none anywhere per frame
-- v1.3, per library star (`canvas-notes.md` §3b): 1 envelope blit (breathing) + ≤ 3 pre-blurred loop blits + 1 live gradient triangle + 1 body blit — no runtime blur
-- v1.3, per compact object (§3c): white dwarf 2 blits, neutron star 3 (one rotated), black hole 6 (3 static cells, the disk ring drawn twice under half clips, 1 Doppler overlay)
-- v1.3, per library planet (§4b): as the v1.2 planets — 1 clip + 2–4 strip blits + 1 overlay; the ringed giant adds 2 static ring blits, the double planet is two planets
+- 1 star: haze sprite (breathing) + 2 flame-ring blits and 2 wisp-ring blits (rotating, cross-faded) + ≤ 3 prominence blits + ≤ 1 flare blit + 1 disc blit — or a compact object's stack (white dwarf 2, neutron star 3, black hole ≤ 5 blits)
+- planet X: 1 live breathing halo fill + the planet blits + 1 dashed ring stroke
+- every planet / moon: 1 clip + 1–3 strip blits + 1 overlay blit (+ 1 halo blit on lava; + 2 ring sprites on a ringed planet; + 1 rotated particle-ring sprite per sub-ring half)
+- 1 cached background (vignette + Milky Way + starfield [+ static nebulae and dust]) — blit; animated nebula: + 2 blits
+- 0 `shadowBlur` in play; 1 on the result card, drawn once
+- 0 blur, noise or blend modes on anything per frame
+
+### 4.1 Realism, vibrancy and crispness rules (v1.5 revised)
+
+These replace the rejected v1.5 "crispness" numbers. They come from the two approved references — `planet-start.svg` (variant F) and `star.svg` (variant J) — and every body in the library is built to them. Their header comments and `<defs>` are the spec; when in doubt, copy the reference.
+
+**Colour and texture**
+1. **Vivid bases.** Each body's base is a saturated, clean hue (deep ocean `#1E5BD6`, not a pastel; rocky `#D2803F`, not tan). Night sides are always the shared navy (`night.navy #08122E` → `night.deep #050B1E`), never a darkened copy of the base, so every body sits on the same sky.
+2. **Never untinted grey.** Every noise layer is drawn in a token colour through a colour matrix or a tinted fill. No `saturate 0`, no grey `overlay` or `multiply` passes on a coloured body. Grey-family bodies (moon, asteroids, metal) use tinted greys: lavender `#A6A2B6`, warm stone `#7E7468`, blue steel `#8B95B5`.
+3. **Several zones, not one.** A surface has 3–6 zones from thresholded noise: a base, a darker sub-zone, a contrasting zone from a **second** field composited `in` the first (ocean desert in land, X frost in plains, toxic acid in uplands, volcanic lava in flows), and highlands or ice. Thin features (cracks, lineae, grooves, rivers of lava) are iso-contours (`|n − level| < w`) or turbulence ridges (`a = c − s·R`), always tinted.
+4. **Plasma, not grain (stars).** A star's surface = vivid body gradient + darker cells (fractal noise, deep red-brown `#802105` or the star's own dark tint, alpha capped at 0.42–0.55 — "less dark" than a photograph) + bright filaments (turbulence ridges, alpha = 1.25 − 6.5 R, × 0.8–1.0). The black hole's disk uses the same recipe.
+
+**Edges**
+5. **Crisp thresholds.** 6 noise octaves for fine detail, and steep slopes: coasts ~70, zone edges 12–60 (≈ 1 px), cloud edges 22–26. The soft v1.2 slopes (5–24 everywhere) are gone.
+6. **Blur budget.** No `feGaussianBlur` above **0.5** on any body or effect, except: glows and hazes (gradient falloff, no blur at all where possible), the sun's wisp ring (0.8, as the reference) and flame ring (0.4), a pre-baked lava bloom (0.8) and crack glow (0.9), a toxic cloud field smoothing (0.6, applied **before** the threshold so the edge stays crisp), the dark cloud's tail and inner glow (12 / 3, gas), nebula bodies (gas looks like gas) and the volume field inside the captured moon's lighting (2.4, not visible as blur). Typical values: clouds 0.2, cloud shadows 0.45, band edges 0.25, ring shadows 0.5–0.8 in ring space, rims 0.35, photon ring 0.3, lensed arcs 0.5.
+7. **Clean disc edges.** No full-circle limb line and no "limb squash" ring: the planet disc ends hard, and the inner haze does the limb. Strokes that remain are on whole or half pixels (white dwarf limb r 15.5 / 1 px, Einstein ring r 46.5 / 1 px).
+8. **Natural edges where nature has them.** Main-sequence stars: the disc and limb are displaced by fine opaque noise (scale 5–7, freq 0.11–0.13) so the rim wobbles, plus a ragged rim stroke (scale 4.2–5.5, freq 0.22–0.26). Flame rings are filled **solid to the centre** and displaced by **opaque** noise (alpha forced to 1 before `feDisplacementMap`, `color-interpolation-filters="sRGB"`), so they have ragged outer edges and no gaps. Photon ring and lensed arcs wobble ±0.7 px. Polar caps on the double planet and the debris-ring planet have ragged edges. White dwarf and neutron star stay perfectly round on purpose (their surfaces really are smooth).
+
+**Lighting (planets and moons)**
+9. **The shade.** One radial gradient centred at +0.36 r·L, radius 1.25 r, `L` toward the star (library: upper-right, L = (+0.7071, −0.7071)):
+   - atmosphere bodies: 0 bloom (α 0.18–0.38) · 0.32 α 0 · 0.64 `terminator.warm` α 0 · **0.705 `terminator.warm` α 0.14–0.26** · 0.76 `night.navy` α 0.74 · 0.84 `night.deep` α 0.97 · 1.00 α 1;
+   - airless bodies (hard terminator): 0 bloom (α 0.18–0.30) · 0.30 α 0 · 0.69 warm α 0 · 0.73 warm α 0.18 · 0.755 `night.navy` α 0.82 · 0.80 `night.deep` α 0.97 · 1.00 α 1;
+   - lava (emissive night): 0 `#FFD9B0` α 0.26 · 0.32 α 0 · 0.64 `lava.shadow` α 0 · 0.705 α 0.45 · 0.76 `night.deep` α 0.80 · 0.84 α 0.97 · 1 α 1 — no warm band; the veins own the night.
+10. **Haze and rim, lit side only.** Inner haze: circle r, 0.78 (rocky / lava 0.80) α 0 · 0.96 haze α 0.26–0.42 · 1.00 haze-edge α 0.42–0.65. Outer rim: circle **1.077 r**, 0.90 α 0 · **0.928 rim α 0.70–0.95** · 0.955 rim-outer α 0.28–0.40 · 1.00 α 0. Both multiplied by the lit mask: a linear gradient along L from +0.706 r·L (α 1.0) through the centre (α 0.45) to −0.706 r·L (α 0.06). Airless bodies have neither (the icy and volcanic moons keep a faint rim, peak 0.75 / 0.70).
+11. **Clouds cast shadows.** Clouds / wisps are elongated noise (`baseFrequency` x < y, e.g. `0.042 0.085`), 6 octaves, slope ~26, blur ≤ 0.2, opacity 0.70–0.92, ~8–55 % cover, over a **shadow copy** of the same mask in `cloud.shadow #06122E` (or a body tint), offset ~1.2 px away from the light, blur 0.45, opacity 0.32–0.45.
+12. **Glint on ocean worlds only** (ocean, double.big): `glint #FFFBEE`, α 0.5–0.6, ellipse ≈ 0.19 r × 0.11 r at 0.45 r·L.
+13. **Shape-aware light on non-circular bodies.** The captured moon, the asteroids and the metal debris keep the light fixed while they tumble: the texture rotates, the light layer does not (static light circle, or a filter built from the silhouette offset along L).
+
+**Motion and crispness at runtime**
+14. Lighting never rotates; textures scroll or rotate under it. All motion is wall-clock (`tS`), slow (≥ 3 s cycles; most 20–300 s), seamless, and calm.
+15. Render at `devicePixelRatio` (min 1, max 2); build every sprite at its size × DPR; rebuild rather than upscale a cached sprite beyond **1.25×** its built size; scaled blits use `imageSmoothingQuality = "high"` (`canvas-notes.md` §0, §12). Mockup PNGs are exported at 2× (2880 × 1800).
 
 ## 5. Motion feel
 
@@ -243,31 +296,35 @@ Slow, eased, weightless. Nothing snaps; nothing bounces.
 | Button press | 80 ms | ease-in | fill darkens; no scale |
 | Result overlay in | 320 ms | ease-out cubic | fade 0→1 with a 12 px rise |
 | Capture ring pulse | 2.4 s loop | sine | α 0.35 ↔ 0.70, radius ±2 px |
-| Capture ring dash crawl | continuous | linear | `[6, 6]` dashes drift along the ring at −12 px/s via `lineDashOffset` (one dash period per second); runs together with the pulse |
-| Planet X halo breathe | 2.4 s loop | sine | halo radius scale 1 → 1.04 → 1 → 0.96 → 1 (±4 %), in phase with the ring pulse; t = 0 is the rest size. v1.2 |
-| Start planet surface | 90 s per rotation | linear, continuous | the 214 px strip (land, highlands, caps) scrolls west→east — the texture moves left→right — at 214 / 90 ≈ 2.4 px/s at zoom 1; a feature crosses the disc in ≈ 29 s. v1.2 |
-| Start planet clouds | 64 s per rotation | linear, continuous | the cloud strip at 214 / 64 ≈ 3.3 px/s, so clouds drift over the land at ≈ 1.0 px/s and lap it every ≈ 222 s. v1.2 |
-| Planet X surface | 120 s per rotation | linear, continuous | the 188 px strip (basins, veins, caps) at 188 / 120 ≈ 1.6 px/s; a feature crosses the disc in ≈ 38 s. v1.2 |
-| Planet X wisps | 80 s per rotation | linear, continuous | the wisp strip at 188 / 80 ≈ 2.35 px/s, lapping the surface every 240 s. v1.2 |
-| Star breathe | 6 s loop | sine | cached envelope sprite scale ±3 % (glow, corona, streamers, lobes); v1.3: the body, chromosphere, loops and flare do **not** breathe, so the crash disc never moves; no rotation, no flicker |
-| Prominence loops (v1.3, every star) | 12 / 16 / 14 s loops, begin 0 / 5 / 9 s | sine (ease-in-out both ways) | three cached pre-blurred arcs on the limb, each scaled 0.6 → 1.0 → 0.6 about its base point with α 0 → 0.55 → 0; peaks at 6 + 12n / 13 + 16n / 16 + 14n s, never together; invisible at t = 0 |
-| Flare (v1.3, every star) | 22 s cycle | triangle | one thin core → body wedge from the limb to 1.7 r, α 0 → 0.7 → 0 between 13.0 and 14.8 s (peak 13.9 s), then nothing — a quiet pop |
-| White dwarf glow breathe | 4 s loop | sine | glow sprite ±5 %; the disc does not move |
-| Neutron star beams | 6 s per turn | linear | the magnetosphere (two beam cones + haze) rotates clockwise, 30° at t = 0 |
-| Black hole disk | 24 s per turn | linear | the ring texture rotates clockwise inside the squash; shadow, photon ring, arcs, Einstein ring static |
-| Lava vein pulse | 5 s loop | sine | the vein strip's α 1.0 → 0.7 → 1.0 (full at t = 0); crust, halo and lighting static |
-| Gas giant bands | 150 / 110 / 180 s (banded), 160 / 120 s (ringed) | linear, continuous | band groups drift in counter-flow (+ − + / + −) at 1.5–2.5 px/s; the ring never moves |
-| Double planet orbit | 40 s per revolution | uniform | the pair circles its barycentre clockwise on a tilted ellipse (ry = 0.36 rx), the companion passing in front at the bottom and behind at the top; both also rotate (80 s / 60 s) |
-| Library planet surfaces | 95–180 s per rotation | linear, continuous | rocky 110, ice 140, lava 95, toxic 120 (clouds 75), cracked 100, moon 180, dwarf 160 s — the same strip scroll as the v1.2 planets, 0.4–1.7 px/s at zoom 1 |
+| Capture ring dash crawl | continuous | linear | `[6, 6]` dashes at −12 px/s via `lineDashOffset` |
+| Planet X halo breathe | 2.4 s loop | sine | radius ±4 %, in phase with the ring |
+| Star breathe | 6 s loop | sine | haze + flame + wisp rings scale ±3 %; the disc, rim, prominences and flare never breathe (the crash disc never moves) |
+| Star flame / wisp rings | sun 200 / 300 s · red dwarf 260 / 390 s · blue giant 200 / 300 s per turn | linear | counter-rotating (flames +, wisps −); 0.1–0.2 °/s — reads as slow boiling, not spin |
+| Prominence loops | 12 / 16 / 14 s loops, begin 0 / 5 / 9 s | sine | scale 0.6 → 1.0 → 0.6 about the base point, opacity 0 → **1** → 0 (the two-tone strokes carry their own α 0.85 / 0.90); peaks at 6 + 12n / 13 + 16n / 16 + 14n s; invisible at t = 0 |
+| Flare | 22 s cycle | triangle | opacity 0 → **1** → 0 between 13.0 and 14.8 s (peak 13.9 s); the gradient carries its own α (tip 0.15) |
+| White dwarf glow breathe | 4 s loop | sine | glow ±5 %; the disc does not move |
+| Neutron star beams | 6 s per turn | linear | magnetosphere rotates clockwise, 30° at t = 0 |
+| Black hole disk | 24 s per turn | linear | plasma ring rotates clockwise inside the squash |
+| Lava emissive pulse | 5 s loop | sine | veins + lakes α 1.0 → 0.7 → 1.0 (full at t = 0) |
+| Volcanic hot spots | 6 s loop each | sine | α 0.55 ↔ 1, begins 0 / −2 / −4 / −6 / −8 s — never in step |
+| Planet surfaces | 60–180 s per rotation | linear, continuous | ocean 90 (clouds 64), X 120 (wisps 80), rocky 110, ice 140, lava 95, toxic 120 (clouds 75), cracked 100, moon 180, dwarf 160, double 80 / 60, icy moon 150, volcanic moon 120, debris-ring planet 120, system planet 110 s |
+| Gas bands | 150 / 110 / 180 s (banded), 160 / 120 s (ringed), 150 / 110 s (Saturn), 110 s + clouds 80 s (ice giant) | linear | counter-flow groups |
+| Orbits | double 40 s · system moons 30 / 52 s (tidally locked) · shepherd moons 36 / 40 s | uniform | z-order swaps happen out of sight |
+| Ring particles / rocks | Saturn sub-rings 60 / 90 / 130 s · debris ring 45 / 70 s | uniform | prograde: the near side moves left → right; inner faster (Keplerian) |
+| Captured moon tumble | 70 s per turn | linear | the albedo turns; the light does not |
+| Asteroid tumble | dust 20–50 s · small 35–70 s · large 55–90 s | linear | random direction per rock |
+| Asteroid belt drift | 60 s loop | sine | ±6 px along the belt axis |
+| Wreck tumble | 30–200 s per piece | linear | bigger = slower |
+| Wreck glints | 3.1–6.4 s loops | sine | α 0.2 ↔ 0.6, staggered |
+| Nebula cross-fade | 40 s loop | eased | two noise layers α 1 ↔ 0.6 in opposition |
+| Nebula breathe | 30 s loop | eased | scale 1 → 1.01 → 1 |
 | Ship heading | per frame | lerp 0.18 | eases toward velocity heading |
 | Fuel bar drain | 140 ms | ease-out | width tween + colour step at 30 % / 10 % |
 | Thrust flash | 1 frame | — | on per tick, then gone |
 
-**Pulses / breathes / drifts:** the star corona (breathe), planet X's capture ring (α/radius pulse plus the dash crawl) and halo (breathe), and the four planet strips (two per planet, each at its own period); on the win overlay the ring is frozen at full α with the crawl stopped (the surfaces keep turning — they are weather, not state). That is the complete list. v1.3 adds, body by body (§8): the stars' loops and flares and the white dwarf's glow breathe (the only new scale animations), the neutron star's beams and the black hole's disk texture (the only rotations — of emissive texture, never of lighting), the lava world's vein pulse (the only new opacity pulse), the gas giants' band drift and the library planets' strips (scrolls), and the double planet's orbit (the only body that moves). All of them are wall-clock, all loop seamlessly, none is faster than the 6 s beam sweep, and none of them touches a crash radius.
+**Lighting never rotates.** On every body the day side, terminator, haze, rim and glint are fixed to L; only textures move. Rotation is wall-clock time (`dt`-based phase), the same at 1x, 2x and 4x, and it keeps running under the result overlays (on a win only the capture ring locks). The fastest thing on screen is the neutron star's 6 s beam sweep on an 8 px body; the busiest is the asteroid field's dust tumbling at 20 s per turn.
 
-**Lighting never rotates.** On both planets the day side, the terminator, the limb squash, the atmosphere rim and the ocean glint are fixed to the star direction L; only the texture under them moves. The polar caps are part of the strip and scroll with it, but as full-width bands they look fixed — which is the intended reading. Rotation is wall-clock time (`dt`-based phase), the same at 1x, 2x and 4x; the two strips of a planet run at different periods on purpose (clouds 64 s over land 90 s; wisps 80 s over basins 120 s), and all four periods are long enough that nothing reads as "spinning" — in a 20 s flight the start planet turns 80°.
-
-**Never animates:** the starfield (static, no parallax, no twinkle — including the tinted stars, their halos and the Milky Way), the vignette, the planets' lighting (terminator, rims, glint, squash), the star's interior (no rotation, no flicker), the HUD text, panel borders, the predicted path (it re-computes on drag but does not "flow"), the trail (it fades by age, it does not shimmer). Speed buttons 1x/2x/4x change simulation steps per frame, never the frame rate, the rotation periods or any easing above.
+**Never animates:** the starfield and Milky Way, the vignette, every body's lighting, the gas giants' rings, the HUD text, panel borders, the predicted path (it re-computes on drag but does not "flow"), the trail (it fades by age). Speed buttons 1x/2x/4x change simulation steps per frame, never the frame rate, the periods above or any easing.
 
 ## 6. Layout & HUD
 
@@ -275,233 +332,461 @@ Scene and HUD positions for a 1440×900 frame, origin top-left. Same in every mo
 
 | Element | Position / size | Spec |
 |---|---|---|
-| Background | full frame | `bg.edge` fill, radial vignette from (720, 450) r 900: `bg.vignette` → `bg.base` at 0.55 → `bg.edge` at the rim; then the Milky Way (−28° through the centre) and the starfield |
-| Central star | c (760, 470), r 46 | chromosphere r 47, streamers to r 110–175, corona to ~r 130, glow to r 200 |
-| Start planet | c (250, 690), r 34 | ocean world, lit from the upper-right; surface strip 214 px / 90 s, clouds 64 s; glint at (+10.82, −10.82); 1 px limb line α 0.16; atmosphere rim to r 38.08 (1.12 r); ship sits on its upper-right limb while planning |
-| Planet X | c (1190, 210), r 30 | mineral world, lit from the lower-left; surface strip 188 px / 120 s, wisps 80 s; halo to r 54 (×1.8, breathing ±4 %), 1 px limb line α 0.18, rim to r 33.6, capture ring r 78 (76–80 with the pulse) dashed `[6, 6]` |
+| Background | full frame | `bg.edge` fill, radial vignette from (720, 450) r 900: `bg.vignette` → `bg.base` at 0.55 → `bg.edge` at the rim; then the Milky Way and the starfield; then (scene-nebula) the nebula and the asteroid dust |
+| Central star | c (760, 470), r 46 | haze to r 200, flame ring r 62 (ragged to ≈ 72), wisp ring r 78 (ragged to ≈ 95), prominences to ≈ 1.5 r |
+| Start planet | c (250, 690), r 34 | ocean world lit from the upper-right; strip 214 px / 90 s, clouds 64 s; glint at (+10.82, −10.82); haze to r, rim to r 36.6 (1.077 r); the ship sits on its upper-right limb while planning |
+| Planet X | c (1190, 210), r 30 | mint world lit from the lower-left; strip 188 px / 120 s, wisps 80 s; halo to r 54 (breathing ±4 %), rim to r 32.3, capture ring r 78 (76–80) dashed `[6, 6]` |
 | Ship | 22 px long | planning: on start limb; flight: ≈ (900, 380), thrust on |
-| Predicted path | planning only | dotted, bends around the star's right/lower side toward X; may stop short — last 20 % of dots at α 0.35, r 6 end ring |
+| Predicted path | planning only | dotted, bends around the star's right/lower side toward X; last 20 % at α 0.35, r 6 end ring |
 | Drag arrow | planning only | from the ship, ~140 px, up-right, tick + label "62 %" |
 | Trail | flight only | solid, fading, from start planet around the star |
-| Wordmark | baseline (40, 50) | "SLINGSHOT" 13 px uppercase `ui.textMuted`, weight 500; mode label under it at baseline (40, 70), 11 px uppercase `ui.text`, weight 500 |
-| Fuel | x 1180–1400 | "FUEL" 11 px uppercase muted, weight 500, left at x 1180 baseline 48 · "100 %"/"61 %" 12 px mono `ui.text`, right-aligned at x 1400 baseline 48 · bar 220×8 at (1180, 56), rounded, track `rgba(255,255,255,0.08)`, fill `fuel.*` |
-| Planning action | centred on (720, 820) | "Launch" 160×44 (x 640–800, y 798–842), radius 10, `ui.accent` fill, `#050710` 14 px semibold text at baseline 825 |
-| Flight actions | centred on y = 820 | [1x][2x][4x] 56×36 each at x 580 / 636 / 692, y 802–838 (active `ui.accent`/`#050710`; inactive `ui.panel`/`ui.text`), then 16 px gap, "Reset" 96×36 at x 764–860 `ui.panel` + `ui.border`; labels 14 px semibold at baseline 825 |
+| Wordmark | baseline (40, 50) | "SLINGSHOT" 13 px uppercase `ui.textMuted`, weight 500; mode label at baseline (40, 70), 11 px uppercase `ui.text`, weight 500 |
+| Fuel | x 1180–1400 | "FUEL" 11 px uppercase muted, weight 500, at x 1180 baseline 48 · percentage 12 px mono `ui.text`, right-aligned at x 1400 baseline 48 · bar 220×8 at (1180, 56), track `rgba(255,255,255,0.08)`, fill `fuel.*` |
+| Planning action | centred on (720, 820) | "Launch" 160×44, radius 10, `ui.accent` fill, `#050710` 14 px semibold at baseline 825 |
+| Flight actions | centred on y = 820 | [1x][2x][4x] 56×36 at x 580 / 636 / 692, 16 px gap, "Reset" 96×36 at x 764–860; labels 14 px semibold at baseline 825 |
 | Telemetry | baseline (40, 864) | 12 px mono `ui.textMuted`, "v 1.84  ·  dX 412" (planning: "v —  ·  dX 1030") |
-| Result overlay | card 520×232 centred at (720, 450) | scrim `rgba(5,7,16,0.62)` over the flight scene **and the HUD** (both dimmed, in all three results); card `ui.panel` α 0.92, `ui.border`, radius 16, drop shadow `ui.shadow` blur 16 (σ 8) / offset y 8; 4 px accent bar on top in the result colour; title 40 px weight 600; subtitle 16 px muted; "Fly again" 140×40 primary |
+| Result overlay | card 520×232 centred at (720, 450) | scrim `rgba(5,7,16,0.62)` over the scene and the HUD; card `ui.panel` α 0.92, `ui.border`, radius 16, `ui.shadow` blur 16 / offset y 8; 4 px accent bar; title 40 px weight 600; subtitle 16 px muted; "Fly again" 140×40 primary |
 
 ## 7. Asset index
 
-One row per file in `design/assets`. Every SVG is hand-authored, self-contained (no scripts, no external refs, no raster) and uses only the tokens above. "Anchor" is the point the game positions and rotates; "Mockup" is the size at which it appears in the 1440×900 mockups (zoom 1). The three body assets are structured as `<defs>` (ids prefixed `star*`, `ps*`, `px*`) plus **one group** — `<g id="star" transform="translate(200 200)">`, `<g id="planetStart" transform="translate(60 60)">`, `<g id="planetX" transform="translate(120 120)">` — with all geometry relative to (0, 0), so a mockup copies the group verbatim and only changes the translate. The sixteen v1.3 library files in `design/assets/bodies/` follow the same structure (one group, prefixed ids, header comment, SMIL inside) and are indexed in §8 and in `assets.md`.
+One row per top-level file in `design/assets`; the 23 library bodies in `design/assets/bodies/` are indexed in §8 and the 5 environment files in `design/assets/space/` in §9 (`assets.md` has a row for every file). Every body / environment SVG is `<defs>` with ids prefixed per file + **one** top-level group `<g id="…" transform="translate(cx cy)">` with geometry relative to (0, 0), a header comment listing every parameter, and SMIL inside, so a mockup or gallery copies the defs and the group verbatim and changes only the translate. Ids are unique across all 37 SVGs.
 
 | Asset | File | viewBox | Anchor / centre | Colours | Mockup |
 |---|---|---|---|---|---|
-| Ship | `ship.svg` | `0 0 24 24` | (12, 12), nose up (−y); hull spans y 2 → 21 | `ship.hull` `#F2F5FF`, `ship.outline` `#0A0D1A` 1 px, `ship.cockpit` `#5EA0FF` | 22 px long (scale 22/19 ≈ 1.158 via `<g id="ship">` + `<use>`); min 12 px at any zoom |
-| Ship + thrust | `ship-thrust.svg` | `0 0 32 48` | ship at (16, 14) (same geometry, translated 4, 2); flame from y 19.5 to 41, behind the hull | ship colours + `thrust.outer` `#FF6A2A` α 0.90 (10×21.5), `thrust.core` `#FFE08A` (5.2×14); presentation blur σ 1.2 / 0.4 in the SVG only — Canvas draws the triangles with no blur (§4) | same 22 px ship, flame ≈ ship length; 1 frame per thrust tick |
-| Start planet (ocean world, animated) | `planet-start.svg` | `0 0 120 120` | `#planetStart` at (60, 60), r 34, lit from the upper-right (L = (+0.7071, −0.7071)); strip tile 214 × 68 (P = 214) scrolled through clip `#psClip`; glint at (+10.82, −10.82); shade centre (+8.66, −8.66), radius 42.5; rim r 38.08 | `planet.start.ocean` `#3D8BFF` base + strip fill; `planet.start.land` `#8FB07A` (fractalNoise 0.030 / 4 oct / seed 7, p68 → 32 %) with highlands `#142B5E` × 0.22 (threshold 0.643); caps `planet.start.ice` `#E9EEF8` 12 %; clouds `planet.start.cloud` `#F2F5FF` (0.055 / 4 oct / seed 19, p60 → 40 %, blur 0.8, group α 0.5); squash `#3D8BFF` α 0 → 0.45; glint `planet.specular` `#FFFFFF` α 0.35; shade `planet.start.highlight` `#9CCBFF` α 0.90 → base α 0 (0.40) → `planet.start.shadow` `#142B5E` α 0.55 / 0.92 / 1.0 (0.70 / 0.86 / 1.00); limb line `#9CCBFF` α 0.16; rim `planet.start.atmo` `#7FB8FF` α 0.55 peak, lit 1.0 → dark 0.35 | 1 : 1 at (250, 690), t = 0; SMIL: surface 90 s, clouds 64 s. Canvas: 2 cached strips (428 × 68) + cached 81 px lighting overlay, 3 blits + 1 clip per frame |
-| Planet X (mineral world, animated) | `planet-x.svg` | `0 0 240 240` | `#planetX` at (120, 120), r 30, lit from the lower-left (L = (−0.7071, +0.7071)); strip tile 188 × 60 (P = 188) through clip `#pxClip`; shade centre (−7.64, +7.64), radius 37.5; rim r 33.6; halo r 54; ring r 78 | halo `#3DE0C2` α 0.35 → 0 (breathes ±4 %); `planet.x.base` `#3DE0C2` base + strip fill; basins `planet.x.mineral` `#0E4A40` × 0.60 (fractalNoise 0.035 / 4 oct / seed 11, p72 → 28 %) + veins × 0.35 (turbulence 0.040 / 2 oct / seed 11, < 0.07 → 5 %); caps `planet.x.ice` `#B5FFF0` 18 %; wisps `planet.x.wisp` `#B5FFF0` × 0.35 (turbulence 0.050 / 2 oct / seed 23, < 0.115 → 15 %); squash `#3DE0C2` α 0 → 0.45; shade `planet.x.highlight` `#B5FFF0` α 0.90 → base α 0 → `planet.x.shadow` `#0E4A40` α 0.55 / 0.92 / 1.0; limb line `#B5FFF0` α 0.18; rim `planet.x.atmo` `#8FFFE6`; ring `planet.x.ring` `#3DE0C2` 1.5 px dash 6 6 α 0.55 → 0.70 → 0.55 → 0.35, r 78 ± 2, crawl −12 px/s | 1 : 1 at (1190, 210), t = 0; SMIL: surface 120 s, wisps 80 s, ring 1 s / 2.4 s, halo 2.4 s. Canvas: live breathing halo + 2 cached strips (376 × 60) + cached 72 px overlay + live ring |
-| Star | `star.svg` | `0 0 400 400` | `#star` at (200, 200); body r 46, chromosphere r 47, streamers r 48 → 110–175, corona r 130, glow r 200 (α 0) | `star.glow` `#FF5A1F`, `star.corona` `#FF8C2E` (corona, 10 streamers α 0.10–0.16 + 2 lobes α 0.06 at seeded angles `0x5747`, chromosphere α 0.60), body `star.core` `#FFF8E1` → `star.body` `#FFC857` (0.45–0.78) → `#FF8C2E` (0.90) → `star.limb` `#FF5A1F`; granulation noise (0.11, seed 3, ×2, multiply α 0.16); SVG blurs σ 3 / 6 / 1.5 are presentation only | 1 : 1 at (760, 470); cached sprite, breathes ±3 % |
-| Starfield | `starfield.svg` | `0 0 1440 900` | top-left (0, 0), full frame, static; one group `#starfield` = `#milkyway` → `#far` → `#mid` → `#near` (`#nearHalos` first) → `#sparkles` | Milky Way `milkyway.dust` `#AAB8DD` (2 ellipses at −28°, turbulence-masked, peak α 0.054) + 380 dots `stars.far` r 0.5 α 0.28 · far `stars.far` `#6E7FA6` r 0.6 α 0.35 ×420 · mid r 0.8–1.0 α 0.55–0.65 ×160 · near r 1.2–1.5 α 0.85–0.95 ×45, both tinted `stars.cool` `#B8CCFF` / `stars.neutral` `#E9EEF8` / `stars.warm` `#FFD9B0` (mid 38 / 85 / 37, near 9 / 27 / 9) · 12 halos r 4.5 α 0.18 → 0 · 4 sparkles `#FFFFFF` (1005 dots) | full frame, 1 : 1; part of the cached background. Seeds: positions `0x514E47`, magnitude/tint `0x514E48`, Milky Way `0x4D57` |
-| Flight trail | `trail.svg` | `0 0 600 200` | tail (30, 150) → head (570, 62) with the ship at the head | `trail` `#5EA0FF`, 2 px, round caps, 24 sample segments α 0.04 → 1.0, each standing for 10 game samples (a full 240-sample buffer under `canvas-notes.md` §7's rule); the mockups' trails use the same rule at their real sample counts, so their tails stay ≥ 0.6 | sample only; the mockups draw the real flown path |
-| Predicted path | `predicted-path.svg` | `0 0 600 200` | start ship (30, 150) → end ring (570, 62) | `path` `#DCE4FF`: dots r 1.5 every 10 px, α 0.7 (first 80 %) / 0.35 (last 20 %); end ring r 6, stroke 1.5, α 0.5 | sample only; the planning mockup draws the real look-ahead |
-| Drag arrow | `drag-arrow.svg` | `0 0 300 120` | origin = ship centre (36, 92), launch direction −18°; shaft starts 16 px out; 62 % = 150 of the 242-unit full extent | ghost `#FFFFFF` α 0.16 1 px dash `[1, 5]`; shaft `arrow` `#FFFFFF` α 0.9 2 px; head + tick `arrow.power` at 62 % = `#FFAE59`; label `ui.textMuted` `#8B95B5` 12 px mono | ~140–150 px long from the ship, up-right, tick + "62 %" |
+| Ship | `ship.svg` | `0 0 24 24` | (12, 12), nose up (−y) | `ship.hull` `#F2F5FF`, `ship.outline` `#0A0D1A` 1 px, `ship.cockpit` `#5EA0FF` | 22 px long (× 1.158); min 12 px |
+| Ship + thrust | `ship-thrust.svg` | `0 0 32 48` | ship at (16, 14) | ship colours + `thrust.outer` `#FF6A2A` α 0.90, `thrust.core` `#FFE08A`; σ 1.2 / 0.4 presentation blur in the SVG only | 1 frame per thrust tick |
+| Start planet (ocean world, the planet reference) | `planet-start.svg` | `0 0 120 120` | `#planetStart` at (60, 60), r 34, L upper-right; ids `ps*` | `ocean.*` (§2), clouds `#FFFFFF` over `cloud.shadow #06122E`, glint `#FFFBEE`, shade bloom `#E6F2FF` → `#FF9455` band → `#08122E` / `#050B1E`, haze `#8FD0FF` / `#BFE6FF`, rim `#A8DBFF` / `#7FC4FF` | 1 : 1 at (250, 690); surface 90 s, clouds 64 s |
+| Planet X | `planet-x.svg` | `0 0 240 240` | `#planetX` at (120, 120), r 30, L lower-left; ids `px*` | `planet.x.*` (§2) + shared lighting tokens; ring `#3DE0C2` | 1 : 1 at (1190, 210); surface 120 s, wisps 80 s, ring 1 s / 2.4 s, halo 2.4 s |
+| Star (sun, the star reference) | `star.svg` | `0 0 400 400` | `#star` at (200, 200), r 46; ids `star*` | `sun.*` (§2), prominences `#FF8C2E` + `#FFF1C2`, flare `#FFFFFF` → `#FFD27A` | 1 : 1 at (760, 470); breathe 6 s, flames 200 s, wisps 300 s |
+| Starfield | `starfield.svg` | `0 0 1440 900` | top-left, full frame, static | `milkyway.dust`, `stars.*`, sparkles `#FFFFFF` | full frame; cached background |
+| Flight trail | `trail.svg` | `0 0 600 200` | head (570, 62) | `trail` `#5EA0FF`, 2 px | sample only |
+| Predicted path | `predicted-path.svg` | `0 0 600 200` | start (30, 150) → end ring (570, 62) | `path` `#DCE4FF` | sample only |
+| Drag arrow | `drag-arrow.svg` | `0 0 300 120` | ship centre (36, 92) | `#FFFFFF`, `arrow.power` at 62 % = `#FFAE59`, label `ui.textMuted` | ~140–150 px from the ship |
 
-Mockups (`design/mockups`, all `0 0 1440 900`): `planning.svg`, `flight.svg`, `result-win.svg`, `result-crash.svg`, `result-lost.svg`. They are assembled from the assets above: the `<defs>` of `star.svg`, `planet-start.svg`, `planet-x.svg` and the ship geometry of `ship.svg` (and, in `flight.svg`, the triangles and filters of `ship-thrust.svg`) are copied verbatim, the three body groups `#star` / `#planetStart` / `#planetX` are inlined with only their `translate` changed to (760 470) / (250 690) / (1190 210) (one exception: `result-win.svg` also sets the capture ring to `stroke-opacity="1"`, the win rule), and the `#starfield` group of `starfield.svg` is inlined byte-identically over the v1.1 vignette (`bg.edge` rect + the r 900 gradient), so all five show the same sky and bodies; only the scene content (path, arrow, trail, thrust, burst, ship pose) and the HUD values differ. Colours: every hex in `design/` is a §2 token except the documented ramp value `#FFAE59`. The result cards' drop shadow is `ui.shadow` (`#050710` at α 0.5, `feGaussianBlur stdDeviation="8"`, 8 px offset) — the same colour, σ and offset `canvas-notes.md` §11 passes as `shadowColor = "rgba(5,7,16,0.5)"`, `shadowBlur = 16`, `shadowOffsetY = 8`.
+**Mockups** (`design/mockups`, all `0 0 1440 900`; **PNG = 2× render**, 2880 × 1800, same filenames): `planning`, `flight`, `result-win`, `result-crash`, `result-lost` (the original scene: sun at (760, 470), ocean start at (250, 690), planet X at (1190, 210)), `scene-variant` (red dwarf, ringed gas giant, moon, rocky start), `scene-blackhole` (black hole, ice start, moon) and `scene-nebula` (v1.4: emission nebula behind the left half, an asteroid band crossing the middle, sun with flares, Saturn-ringed planet as the slingshot body, icy moon, ocean start, planet X; the path threads a gap in the belt ≥ 18 px from every large rock and swings around the ringed planet's far side, outside the ring). Every body group is spliced **verbatim** from the v1.5 assets with only its `translate` changed (plus scene-local lighting wrappers where a library body's upper-right light does not face the scene's star). Details per mockup: `assets.md`.
 
-v1.3 adds two level compositions built the same way from library bodies, both PLANNING mode with the planning HUD (fuel 100 %, "Launch", telemetry) over the same vignette and `#starfield`: **`scene-variant.svg` / `.png`** — red dwarf at (700, 480) r 40 with its flares, ringed gas giant at (1000, 640) r 44 as the slingshot body, barren moon at (420, 300) r 14, start = rocky desert at (230, 700) r 30, planet X at (1210, 190) r 30 with its ring; the predicted path runs from the rocky world around the gas giant's far side toward X. **`scene-blackhole.svg` / `.png`** — black hole at (720, 460) with its disk tilted, ice world start at (230, 690) r 28, barren moon at (900, 250) r 14, planet X at (1200, 200) r 30; the path whips around the black hole's lower-right at a closest approach of 2.2 r (49 px = 2.21 r, outside the disk's inner edge and, on that side, outside the drawn disk) toward X. In both, every body group is the asset's `<defs>` + group spliced **verbatim** with only its `translate` changed, except the lighting of three bodies: lit side = toward the scene's star, so the ringed giant's terminator + lit-side rim (wrapper `rotate(−106.9)`, back-ring shadow wedge mirrored 230° → 310° in ring space) and the moons' terminators (`rotate(77.7)` in scene-variant, `rotate(175.6)` in scene-blackhole) sit in scene-local wrapper groups that point L at the star; their strips and the asset files are untouched. The rocky start, the ice start and planet X keep their asset lighting, which already faces the star. The Canvas build does the same per body (`canvas-notes.md` §4). In scene-variant the red dwarf's `rdProm2` (begin −7 s) and flare (begin −13.9 s) are phased so the static PNG shows them. Telemetry reads "v —  ·  dX 1068" / "dX 1052"; the drag arrow is at 62 % as in `planning.svg`.
+**Previews** (self-contained, no JavaScript, inline SVG verbatim, open from `file://` to see SMIL): `planets.html` (sun, ocean world, planet X at 3× and 1×), `bodies.html` (the 18 v1.3 library bodies, one row per family, plus a relative-sizes strip), `space.html` (v1.4: rows "Gas clouds", "Debris fields", "Moons", "Ringed planets" and a composition tile — nebula + asteroid field + ringed planet at 1×).
 
-Preview: `design/preview/planets.html` shows `planet-start.svg`, `planet-x.svg` and the v1.2 `star.svg` inline (verbatim markup, no scripts) on `bg.base` — the planets at 3× and at 1×, the star at 1 : 1 in both rows (its 3× would be 1200 px) —, labelled with the v1.2 rotation periods (start 90 s / 64 s, X 120 s / 80 s, ring pulse 2.4 s) — open it from `file://` to see the SMIL animation that the static mockups freeze at t = 0. planets.html and the five v1 mockups keep the **v1.2 star markup** (no `starBreathe`, loops or flare): it is pixel-identical to the current `star.svg` at t = 0 (loops and flare at α 0, breathe scale 1), so neither was re-inlined; if planets.html is ever re-inlined, remove its own 6 s CSS breathe, or the star breathes twice.
+## 8. Body library (v1.3 set, v1.4 moons and rings, all built to the v1.5 rules)
 
-Gallery: `design/preview/bodies.html` inlines all 18 bodies (the sixteen `bodies/*.svg`, `planet-x.svg` and `star.svg`, verbatim, no scripts) on `bg.base`, one row per family — rocky worlds (3×), gas worlds (banded 3×, ringed 2.5×), small bodies (moon, dwarf and double 3×, planet X 2×), stars & compact objects (sun / red dwarf / blue giant 1.5×, white dwarf 2×, neutron star 3×, black hole 2×) — each tile labelled with the name, radius, rotation periods and what the body is for (the stars and compact objects also state their crash radius), plus a final "relative sizes" strip that re-uses every group through `<use>` inside one 1× SVG (2810 px wide; a ≥ 2890 px window shows it without scrolling; the stars are spaced so their glows meet only in their faint outer tails) so all 18 share a single timeline. Every prominence loop and flare is at α 0 at t = 0, so the first frame shows plain stars; the first loop is visible within about 2 s and the flare first pops at 13.9 s.
+**25 bodies**: 12 planets, 6 stars and compact objects (v1.3), 4 moons and 3 ringed planets (v1.4). Each lives in `design/assets/bodies/<name>.svg` (the ocean world is `bodies/ocean.svg`, a copy of `planet-start.svg` with ids `ps*` → `oc*`; planet X stays `planet-x.svg`; the sun stays `star.svg`). Each = `<defs>` with ids prefixed by the body's short code + **one** top-level group with geometry relative to (0, 0), a header comment listing every parameter (the canon), and its SMIL inside. Prefixes, unique across all assets because galleries inline them together: `rk ic lv tx cr oc gb gr mn dw db rd bg wd ns bh mi mv mc ms rs dr sh` + `star* px*` (`ps*` only in `planet-start.svg`).
 
-## 8. Body library (v1.3)
-
-v1.3 turns the two planets and the one star into a **library of 18 bodies** — 12 planets and 6 stars / compact objects — so levels can be composed from different worlds. Every file follows the v1.1/v1.2 construction and lives in `design/assets/bodies/<name>.svg` (the ocean world is `bodies/ocean.svg`, a byte-for-byte copy of `planet-start.svg` with ids `ps*` → `oc*` and `#planetStart` → `#ocean`; planet X stays `planet-x.svg` and is not duplicated; the yellow sun stays `star.svg` and gains its flares in place). Each asset = `<defs>` with ids prefixed by the body's short code + **one** top-level group `<g id="<camelCaseName>" transform="translate(cx cy)">` with geometry relative to (0, 0), a header comment listing every parameter, and its SMIL animation inside. All 18 are inlined into one gallery page, `design/preview/bodies.html`, so the prefixes are unique across the whole set (`rk ic lv tx cr oc gb gr mn dw db rd bg wd ns bh` + `star* px*`; `ps*` only in `planet-start.svg`, which the gallery shows as `ocean.svg`), and the two new level mockups (`design/mockups/scene-variant.svg`, `scene-blackhole.svg`) compose them exactly as §7's mockups compose the original three.
-
-**Direction (client decision): stay realistic.** Noise surfaces, a day/night terminator, an atmosphere rim, scrolling strips, lighting fixed to the star, cached sprites — all of §2 and §4 still apply. **Kurzgesagt** (the YouTube channel) is *inspiration only*, for three things: colour harmony (saturated but harmonious hues on deep navy), bold silhouettes that read at small sizes (strong rim light, clear shapes), and the framing of stars and flares (prominence loops drawn as clean arcs). Nothing of theirs is copied — no artwork, characters, logos or specific illustrations; every body here is drawn from scratch from the noise rules below. Everything stays calm and cheap: rotations take 40–180 s, the fastest things on screen are a 6 s beam sweep on an 8 px star and a 1.8 s flare once every 22 s, and nothing flickers.
+**Direction (client decision, unchanged): stay realistic**, now also **vibrant and crisp** (§4.1). Kurzgesagt is inspiration only, for colour harmony on deep navy and bold silhouettes; nothing of theirs is copied.
 
 ### The set
 
-r is the radius at zoom 1. **`crashRadius`** is the contact radius the game tests against: for every body it is the solid disc **r** — halos, coronas, glows, atmosphere rims, beams, the capture ring, the gas giant's ring and the black hole's accretion disk are never solid (the brief's rule for the compact objects: the black hole's gravity is *star-class* but it crashes only at its event horizon, r 22; the neutron star at r 8; the white dwarf at r 16). The double planet has two crash discs (18 and 11) that move with the orbit. "What it is for" is the gallery caption.
+r is the radius at zoom 1. **`crashRadius`** is the contact radius: the solid disc for every body. Hazes, rims, halos, flames, wisps, glows, beams, the capture ring, ring material (bands, particles, rocks, shepherd rings) and the accretion disk are never solid. Moons inside a system (double, moon-system, shepherd moons) are crash discs at their **moving** centres.
 
-| Key | Name | File · group id · ids | r | crashRadius | Rotation | Family · what it is for |
+| Key | Name | File · group · ids | r | crashRadius | Motion | Family · what it is for |
 |---|---|---|---|---|---|---|
-| `rocky` | Rocky desert | `bodies/rocky.svg` · `#rocky` · `rk*` | 30 | 30 | surface 110 s | rocky · a warm, dry start world (scene-variant start) |
-| `ocean` | Ocean world | `bodies/ocean.svg` · `#ocean` · `oc*` (= `planet-start.svg`) | 34 | 34 | surface 90 s, clouds 64 s | rocky · the original start planet |
-| `ice` | Ice world | `bodies/ice.svg` · `#ice` · `ic*` | 28 | 28 | surface 140 s | rocky · a cold start world (scene-blackhole start) |
-| `lava` | Lava world | `bodies/lava.svg` · `#lava` · `lv*` | 26 | 26 | surface 95 s, vein pulse 5 s | rocky · a hazard world that glows |
-| `toxic` | Toxic cloud world | `bodies/toxic.svg` · `#toxic` · `tx*` | 32 | 32 | surface 120 s, clouds 75 s | rocky · a thick-atmosphere slingshot body |
-| `cracked` | Cracked world | `bodies/cracked.svg` · `#cracked` · `cr*` | 27 | 27 | surface 100 s | rocky · a tidally stressed world near a heavy body |
-| `gasBanded` | Banded gas giant | `bodies/gas-banded.svg` · `#gasBanded` · `gb*` | 44 | 44 | bands 150 / 110 / 180 s (counter-flow) | gas · the big slingshot mass |
-| `gasRinged` | Ringed gas giant | `bodies/gas-ringed.svg` · `#gasRinged` · `gr*` | 44 | 44 | bands 160 / 120 s; ring static | gas · the big slingshot mass, with a ring to fly through |
-| `moon` | Barren moon | `bodies/moon.svg` · `#moon` · `mn*` | 14 | 14 | surface 180 s | small · a small mass to nudge a path |
-| `dwarf` | Dwarf planet | `bodies/dwarf.svg` · `#dwarf` · `dw*` | 10 | 10 | surface 160 s | small · the smallest planet, a precision target |
-| `double` | Double planet | `bodies/double.svg` · `#double` · `db*` (`dbB*` big, `dbS*` small, `dbSF*`/`dbSB*` front/back copies) | 18 + 11 | 18 and 11 (moving) | orbit 40 s; surfaces 80 s / 60 s | small · a moving obstacle pair |
-| `planetX` | Planet X | `planet-x.svg` · `#planetX` · `px*` | 30 | 30 | surface 120 s, wisps 80 s | target · unchanged, §2 |
-| `sunYellow` | Yellow sun | `star.svg` · `#star` · `star*` | 46 | 46 | breathe 6 s; loops 12 / 16 / 14 s; flare 22 s | star · the default star |
-| `redDwarf` | Red dwarf | `bodies/red-dwarf.svg` · `#redDwarf` · `rd*` | 40 | 40 | same | star · a dim, calm star (scene-variant) |
-| `blueGiant` | Blue giant | `bodies/blue-giant.svg` · `#blueGiant` · `bg*` | 54 | 54 | same | star · a hot, wide-glow star |
-| `whiteDwarf` | White dwarf | `bodies/white-dwarf.svg` · `#whiteDwarf` · `wd*` | 16 | 16 | glow breathe 4 s | compact · small, hot, dangerous |
-| `neutronStar` | Neutron star | `bodies/neutron-star.svg` · `#neutronStar` · `ns*` | 8 | 8 | beams 6 s | compact · a tiny heavy mass with sweeping beams |
-| `blackHole` | Black hole | `bodies/black-hole.svg` · `#blackHole` · `bh*` | 22 (event horizon) | 22 | disk 24 s | compact · star-class gravity, horizon-size crash (scene-blackhole) |
+| `rocky` | Rocky desert | `rocky.svg` · `#rocky` · `rk*` | 30 | 30 | surface 110 s | rocky · a warm, dry start world |
+| `ocean` | Ocean world | `ocean.svg` · `#ocean` · `oc*` (= `planet-start.svg`) | 34 | 34 | surface 90 s, clouds 64 s | rocky · the original start planet |
+| `ice` | Ice world | `ice.svg` · `#ice` · `ic*` | 28 | 28 | surface 140 s | rocky · a cold start world |
+| `lava` | Lava world | `lava.svg` · `#lava` · `lv*` | 26 | 26 | surface 95 s, emissive pulse 5 s | rocky · a hazard world that glows |
+| `toxic` | Toxic cloud world | `toxic.svg` · `#toxic` · `tx*` | 32 | 32 | surface 120 s, clouds 75 s | rocky · a thick-atmosphere slingshot body |
+| `cracked` | Cracked world | `cracked.svg` · `#cracked` · `cr*` | 27 | 27 | surface 100 s | rocky · a tidally stressed world near a heavy body |
+| `gasBanded` | Banded gas giant | `gas-banded.svg` · `#gasBanded` · `gb*` | 44 | 44 | bands 180 / 110 / 150 s (counter-flow) | gas · the big slingshot mass |
+| `gasRinged` | Ringed gas giant | `gas-ringed.svg` · `#gasRinged` · `gr*` | 44 | 44 | bands 160 / 120 s; ring static | gas · a slingshot mass with a ring to fly through |
+| `moon` | Barren moon | `moon.svg` · `#moon` · `mn*` | 14 | 14 | surface 180 s | small · a small mass to nudge a path |
+| `dwarf` | Dwarf planet | `dwarf.svg` · `#dwarf` · `dw*` | 10 | 10 | surface 160 s | small · the smallest planet, a precision target |
+| `double` | Double planet | `double.svg` · `#double` · `db*` | 18 + 11 | 18 and 11, moving | orbit 40 s; surfaces 80 / 60 s | small · a moving obstacle pair |
+| `planetX` | Planet X | `planet-x.svg` · `#planetX` · `px*` | 30 | 30 | surface 120 s, wisps 80 s | target · §2 |
+| `sunYellow` | Yellow sun | `star.svg` · `#star` · `star*` | 46 | 46 | breathe 6 s; flames 200 s, wisps 300 s; loops 12 / 16 / 14 s; flare 22 s | star · the default star (§2) |
+| `redDwarf` | Red dwarf | `red-dwarf.svg` · `#redDwarf` · `rd*` | 40 | 40 | breathe 6 s; flames 260 s, wisps 390 s; loops; flare | star · a dim, calm star |
+| `blueGiant` | Blue giant | `blue-giant.svg` · `#blueGiant` · `bg*` | 54 | 54 | breathe 6 s; flames 200 s, wisps 300 s; loops; flare | star · a hot, wide-glow star |
+| `whiteDwarf` | White dwarf | `white-dwarf.svg` · `#whiteDwarf` · `wd*` | 16 | 16 | glow breathe 4 s | compact · small, hot, dangerous |
+| `neutronStar` | Neutron star | `neutron-star.svg` · `#neutronStar` · `ns*` | 8 | 8 | beams 6 s | compact · a tiny heavy mass with sweeping beams |
+| `blackHole` | Black hole | `black-hole.svg` · `#blackHole` · `bh*` | 22 (horizon) | 22 | disk 24 s | compact · star-class gravity, horizon-size crash |
+| `moonIcy` | Icy moon (v1.4) | `moon-icy.svg` · `#moonIcy` · `mi*` | 12 | 12 | surface 150 s | moon · a bright cracked-ice nudge body |
+| `moonVolcanic` | Volcanic moon (v1.4) | `moon-volcanic.svg` · `#moonVolcanic` · `mv*` | 13 | 13 | surface 120 s; hot spots 6 s | moon · an Io-like sulphur moon |
+| `moonCaptured` | Captured asteroid moon (v1.4) | `moon-captured.svg` · `#moonCaptured` · `mc*` | 9 (equal-area mean; outline 6.7–11.9) | 9 (circle; a polygon test is an optional refinement) | tumble 70 s | moon · the only non-circular body |
+| `moonSystem` | Planet with moons (v1.4) | `moon-system.svg` · `#moonSystem` · `ms*` | planet 26, moons 5 / 7 | 26; 5 and 7 at the moving centres | planet 110 s; moon orbits 30 / 52 s | system · a planet whose moons cross the path |
+| `ringSaturn` | Saturn-like ice ring (v1.4) | `ring-saturn.svg` · `#ringSaturn` · `rs*` | 44 (ring to 2.17 r) | 44 | bands 150 / 110 s; particles 60 / 90 / 130 s | ringed · the big ringed slingshot body |
+| `ringDebris` | Rocky debris ring (v1.4) | `ring-debris.svg` · `#ringDebris` · `dr*` | 24 (ring 1.6–1.9 r) | 24 | surface 120 s; clumps 45 / 70 s | ringed · the remains of a destroyed moon |
+| `ringShepherd` | Shepherded ring (v1.4) | `ring-shepherd.svg` · `#ringShepherd` · `sh*` | 26 (rings 1.75 / 2.2 r) | 26; shepherd moons 2.5 (moving) | bands 110 s, clouds 80 s; moons 36 / 40 s | ringed · an ice giant with two hairline rings |
 
-### Rules that stay, and the three terminators
+### Shared construction
 
-- **Silhouettes stay circles** (plus the ring ellipse and the double pair). Every planet is the v1.2 construction: base disc → clip { one 2P × 2r strip per layer, P = round(2π r), noise stitched over one P-wide subregion and `feTile`d, scrolled 0 → +P (texture moves **left→right**) } → limb squash (base α 0 at 0.88 r → 0.45 at r) → terminator shade → 1 px limb line → [atmosphere rim at 1.12 r]. Each layer's thresholds come from measured percentiles of the actual Chrome `feTurbulence` field, so the coverages below hold over the whole tile.
-- **Lighting never rotates, and in the library it always comes from the upper-right:** L = (+0.7071, −0.7071) for every planet (planet X keeps its lower-left L; in a level the game computes L from the body toward the scene's star, `canvas-notes.md` §4; the scene mockups do the same by wrapping only a body's lighting-overlay layers in `rotate(angle(L_scene) − angle(L_library))`). Stars and compact objects are emissive — no terminator, no rim.
-- **Three terminator recipes** (radial gradient centred at +0.36 r·L):
-  | Recipe | Radius | Stops | Bodies |
-  |---|---|---|---|
-  | soft (v1.1) | 1.25 r | 0.00 highlight α 0.90 · 0.40 base α 0 · 0.70 shadow α 0.55 · 0.86 α 0.92 · 1.00 α 1.0 | ocean, ice, rocky, cracked, double.big, planet X. **Documented exceptions:** toxic highlight α **0.70** (0.90 washed the pale deck into a lime spot), lava highlight α **0.55** (the surface is emissive; a 0.9 wash hid the veins) |
-  | gas (soft, wide) | 1.25 r | 0.00 highlight α 0.55 · 0.40 base α 0 · **0.64** shadow α 0.30 · 0.86 α 0.90 · 1.00 α 1.0 | gasBanded, gasRinged — the shadow starts earlier and lower, so the terminator is wider and softer |
-  | airless (hard) | **1.5 r** | 0.00 highlight α 0.55 · 0.40 base α 0 · 0.62 dark α 0.30 · **0.70 `bg.base` α 0.84** · 1.00 `bg.base` α 0.92 | moon, dwarf, double.small. The 0.62 → 0.70 step is the hard terminator (≈ 1.2–1.7 px at 1×). The radius is 1.5 r, not the brief's 1.25 r: with the step at 0.62–0.70 the larger radius lands the terminator where v1.1's 0.78 mid-stop lands (≈ 0.62 r past the centre), so the night stays a crescent instead of swallowing the disc. The night side is `bg.base` because these bodies have no shadow token; a 1 px limb line (highlight, α 0.14) keeps the dark silhouette readable — it is not an atmosphere |
-- **Atmosphere rim** (1.12 r, `atmo`, 0.80 α 0 · 0.87 peak · 0.92 peak × 0.545 · 1.00 α 0, lit mask 1.0 → 0.35): peak α **0.55** (ocean, ice, toxic, cracked, gas giants, double.big, planet X), **0.40** rocky ("thin"), **0.35** lava; **none** on airless bodies. Limb line α 0.16 / 0.18 (0.14 airless).
-- **Glow budget, per scene:** the scene's star (whichever of the six) and planet X. The one planetary exception is the lava world's faint static halo (r 1.4 r, `lava.atmo` α 0.18 → 0, "the only non-X halo"); the compact objects' glows count as the star's. No other library body has a halo, specular or bloom.
-- **Motion:** strips scroll at their periods; gas bands drift in counter-flow; the lava veins pulse; the double pair orbits; the three stars breathe ±3 % / 6 s (corona layers only — the body, chromosphere, loops and flare do not breathe, so the crash radius never moves), raise three prominence loops and fire one flare per 22 s; the white dwarf's glow breathes ±5 % / 4 s; the neutron star's beams sweep 360° / 6 s; the black hole's disk texture turns 360° / 24 s. Nothing twinkles. Every asset renders correctly at t = 0 (static) and loops seamlessly; the static mockups show t = 0 (prominences and flares are invisible at t = 0 by construction).
+- **Silhouettes are circles**, except the captured moon (a smoothed 16-radius potato), plus ring ellipses and orbit pairs.
+- **Strips** (every rotating surface): period P = round(2π r) = one rotation; **one** rect 2P × 2r per strip whose filter computes each noise field once over a P-wide subregion (`stitchTiles="stitch"`) and repeats it with `feTile` — never two abutting rects. Scrolled `translate 0 → +P` (texture moves left → right) through a circular clip. Discrete features (craters, calderas, storms) are drawn at x and x + P. Inner translates keep the visible window clear of the tile join.
+- **v1.5.1 seamless strips** (planet X, ice, lava, icy moon): Chrome renders a stitched + `feTile` strip differently depending on how it is clipped / culled and on the ancestors' transforms, and at the period boundary drew a straight-edged block (planet X) or straight lineae and plate edges (lava, icy moon). These four now build each strip from a **field group** — four rects with an *unstitched* noise filter: copy A shows N(u), copy B shows N(u − P) through a 0 → 1 alpha ramp across the period, so the blend equals N(0) at both ends; the rects' fill alpha c(u) rescales the noise about 0.5 so the blend keeps full contrast — under a **pointwise zones filter** (colour matrices, component transfers, a 0.25–0.6 px smoothing blur against 8-bit speckle). The noise never starts on its lattice origin (per-asset offset X0 / Y0). The `planet-x.svg` header documents it in full; the other strip assets keep the stitched construction (follow-up).
+- **Ragged polar caps** (v1.5.1, planet X and ice): cap α = 12 (capRamp + (n − 0.5) − τ), capRamp = 1 at the pole → 0 at a reach of 23 % / 36 % of the disc height (carried into the zones filter as the field group's alpha by a latitude mask), so the cap ends in an irregular terrain-driven coastline instead of a ruled line across the disc.
+- **Lighting** follows §4.1 items 9–13: three shade recipes (atmosphere, airless, lava), lit-side haze + 1.077 r rim on atmosphere bodies, cast cloud shadows, glints on ocean worlds only. The library light is upper-right, L = (+0.7071, −0.7071); in a level L points at the scene's star (`canvas-notes.md` §4). Stars and compact objects are emissive.
+- **No limb lines and no squash rings** on any v1.5 body.
 
 ### Rocky worlds
 
-Six worlds on the v1.2 recipe. `ocean` uses the `planet.start.*` tokens of §2 unchanged. New tokens:
+`ocean` uses the §2 `ocean.*` tokens. All six use the atmosphere shade (§4.1 item 9), except lava (emissive recipe).
 
-| Token | Hex | Used for | Note |
-|---|---|---|---|
-| `rocky.base` | `#C98B5A` | Rocky desert disc and strip fill; limb squash | Also `double.small.base` |
-| `rocky.dark` | `#7A4E33` | Dark dune bands (× 0.40), crater pits (× 0.8) and shadowed crater walls (× 0.6); shade night side 0.70 / 0.86 / 1.00 | Also `double.small.dark` |
-| `rocky.highlight` | `#F0C9A0` | Light dune bands (× 0.40), lit crater walls (× 0.6), shade 0.00 stop α 0.90, limb line α 0.16 | Borrowed by `double.small` (lit tint, crater rims, limb) |
-| `rocky.atmo` | `#E8B07A` | Rim at 1.12 r, **thin**: peak α 0.40 (0.92 stop α 0.22), lit mask 1.0 → 0.35 | The brief's "α 0.4" |
-| `ice.base` | `#CFE6F5` | Ice world disc, strip fill, squash | |
-| `ice.dark` | `#7FA6C9` | Darker ice plates (× 0.45) and the crack veins (α 1, ≈ 15 %) | |
-| `ice.highlight` | `#FFFFFF` | Bright plates (× 0.35), polar caps (30 %), lit crack edges (× 0.6), shade 0.00 stop α 0.90, limb α 0.18 | |
-| `ice.atmo` | `#BFE3FF` | Rim peak α 0.55 / 0.30 | |
-| `ice.shadow` | `#35567A` | Night side (shade 0.70 / 0.86 / 1.00) and the crack cores (× 0.6) | **New, beyond the brief:** `ice.dark` is too light to read as night at α 1.0 |
-| `lava.crust` | `#3A2A2A` | Lava world disc, crust strip fill, squash, shade 0.40 stop | |
-| `lava.crustLight` | `#5A4040` | Lighter crust plates (≈ 45 %, × 0.8); shade 0.00 stop at α **0.55** | The emissive-surface exception above |
-| `lava.vein` | `#FF6A2A` | Vein network (≈ 18 %) and its baked bloom (σ 1.2, × 0.45); the vein strip pulses α 1.0 → 0.7 → 1.0 over 5 s | Same hex as `thrust.outer` |
-| `lava.veinHot` | `#FFC857` | Vein cores (≈ 5 %) | Same hex as `star.body` / `fuel.low` |
-| `lava.atmo` | `#FF8C2E` | Rim peak α **0.35** (0.92 stop α 0.19), limb line α 0.16, and the static halo r 1.4 r: 0.00 α 0.18 · 0.714 α 0.18 (disc edge) · 0.86 α 0.07 · 1.00 α 0 | Same hex as `star.corona`. The only non-X halo |
-| `lava.shadow` | `#1E1414` | Night side (shade 0.70 / 0.86 / 1.00) | **New, beyond the brief:** the crust is the base, so the shadow must be darker than it |
-| `toxic.base` | `#5E8F3A` | Toxic world disc, surface strip fill, squash, shade 0.40 stop | |
-| `toxic.dark` | `#2F5A2A` | Dark lowlands (≈ 30 %, × 0.60), the cloud-deck shadow (× 0.5, offset (−1.5, +1.5) away from L, baked under the clouds), night side | |
-| `toxic.cloud` | `#E6F2C8` | Cloud strip (≈ 55 % cover, group α 0.6, σ 0.8 edges, swirled by a periodic displacement map) | |
-| `toxic.atmo` | `#C7E97A` | Rim peak α 0.55 / 0.30, limb α 0.18, **and** the shade 0.00 stop (α 0.70) | No separate highlight token — the atmo doubles as the lit-side tint |
-| `cracked.base` | `#4F5B73` | Cracked world disc, strip fill, squash, shade 0.40 stop | |
-| `cracked.dark` | `#2A3245` | Mottled basins (≈ 30 %, × 0.60), night side | |
-| `cracked.crack` | `#FFC857` | Crack network (the 0.5 iso-contour of a noise field: ≈ 1.5 px lines, ≈ 10 % of the area) at × 0.80 plus a baked σ 1.5 glow at × 0.50; static, no pulse; shows on the night side at group α 0.35 | Same hex as `star.body`. "α 0.8, ≈ 10 %" in the brief |
-| `cracked.atmo` | `#8FA3C9` | Rim peak α 0.55 / 0.30, limb α 0.18, and the shade 0.00 stop (α 0.90) | As toxic: the atmo doubles as the highlight |
+| Token | Hex | Used for |
+|---|---|---|
+| `rocky.base` | `#D2803F` | Disc and strip fill (was `#C98B5A`) |
+| `rocky.sand` | `#E8A85C` | Dune crests: du = fractalNoise `0.016 0.06`, 6 oct, seed 13, 30 du − 18 |
+| `rocky.rust` | `#B04A22` | Iron plains: fractalNoise 0.05, 4 oct, seed 29, 18 ru − 10.08; also the asteroid rust |
+| `rocky.dark` | `#6B3820` | Basalt maria (−50 n + 20.75, n = fractalNoise 0.032, 6 oct, seed 5) and crater floors (40 cr − 26.4 × 0.85, cr = fractalNoise 0.17, 1 oct, seed 31) |
+| `rocky.pit` | `#4A2414` | Shadowed crater walls (pit − pit offset (−1, +1), × 0.75) |
+| `rocky.highlight` | `#F7D8B0` | Pale plateaus (16 n − 10.56); lit crater walls (× 0.55) |
+| `rocky.bloom` | `#FFF0DC` | Shade bloom α 0.20; also the double's companion bloom and the asteroid light |
+| `rocky.atmo` | `#E8B07A` | Haze 0.96 (α 0.30); rim tail |
+| `rocky.rim` | `#FFD9B0` | Haze edge (α 0.48), rim peak (α 0.75) — = `stars.warm` |
+| `rocky.sandPale` | `#F0C47E` | Dune crests of the moon-system planet only (see "Open points") |
+| `ice.base` | `#A8D6F7` | Disc and strip fill (was `#CFE6F5`) |
+| `ice.glacier` | `#5E9BDB` | Blue lowlands, n = fractalNoise 0.034, 6 oct, seed 41: −40 n + 18.6 |
+| `ice.melt` | `#3FC1DE` | Melt lakes in the glacier zone: m = fractalNoise 0.06, 4 oct, seed 47, 16 m − 9.12 |
+| `ice.highlight` | `#FFFFFF` | Snowfields (30 n − 17.4); bloom α 0.22 |
+| `ice.lineae` | `#4A8AD0` | Crack lines: v = \|2s − 1\|, s = fractalNoise 0.09, 1 oct, seed 43 (= turbulence 0.09), alpha −40 v + 1.8 (≈ 1 px, long Europa lines) |
+| `ice.shadow` | `#2A4A70` | Crack cores: 0.55 × (1 − 70 v) (0 at v 0.0143; v1.5.1, was −40 v + 0.9 — junctions pooled into dark X blots) (was `#35567A`) |
+| `ice.hazeEdge` | `#E6F6FF` | Haze edge α 0.62; lit crack edge (× 0.3) |
+| `ice.cap` | `#F4F8FF` | Polar caps ≈ 30 %: solid to a ragged edge, 12 (capRamp + (n − 0.5) − 0.222), capRamp 1 → 0 over 36 % of H, mean edge 28 %, ±4 px (v1.5.1; was a 16.8 px band with a ruled 3.7 px fade) — = `ocean.ice` |
+| `ice.atmo` | `#BFE3FF` | Rim peak α 0.95 (haze `#8FD0FF` = `haze.ocean`) |
+| `lava.crust` | `#3A2622` | Disc and crust fill (was `#3A2A2A`) |
+| `lava.crustLight` | `#664438` | Cooled plates: n = fractalNoise 0.04, 6 oct, seed 53, 18 n − 9 |
+| `lava.shadow` | `#1E1414` | Basalt fields (−18 n + 7.2); the 0.705 shade stop (α 0.45) |
+| `lava.ash` | `#8A6450` | Ash-dusted highlands (14 n − 8.68) |
+| `lava.vein` | `#FF6A2A` | Main veins (v = \|2s − 1\|, s = fractalNoise 0.07, 1 oct, seed 59: −30 v + 1.9), fine glowing cracks along the plate edges (contour n = 0.5, half-width 0.013, × 0.6; v1.5.1, replaces turbulence 0.13 / seed 67), lava lakes in the basalt (m = fractalNoise 0.07, 4 oct, seed 61: 24 m − 16.32), pre-baked bloom (blur 0.8, × 0.5) — = `thrust.outer` |
+| `lava.veinHot` | `#FFC857` | Vein cores (−50 v + 1.1) and lake centres (24 m − 17.28) — = `star.body` |
+| `lava.atmo` | `#FF8C2E` | Halo r 1.4 r (0 α 0.20 · 0.714 α 0.20 · 0.78 α 0.10 · 0.88 α 0.035 · 1 α 0); haze 0.96 α 0.26 — = `star.corona` |
+| `lava.rim` | `#FFB347` | Haze edge (α 0.42), rim peak (α 0.70) — = `sun.flame` |
+| `lava.bloom` | `#FFD9B0` | Shade bloom α 0.26 — = `stars.warm` |
+| `toxic.surface` | `#3F8A26` | Disc and strip fill |
+| `toxic.lowland` | `#164A1E` | Lowlands α 0.9: n = fractalNoise 0.032, 6 oct, seed 29, slope −16 (0 at 0.47) |
+| `toxic.acid` | `#C8DC3C` | Sulphur-lime pools α 0.85: d = fractalNoise 0.055, 3 oct, seed 31 > 0.56 (slope 14) **in** the uplands (n > 0.5) |
+| `toxic.ridge` | `#5FA632` | Ridges α 0.6: n > 0.62, slope 12 |
+| `toxic.deck` | `#BFD83C` | Lower cloud deck: fractalNoise `0.026 0.08`, 5 oct, seed 47, swirled (scale 10), field blur 0.2, 20 c − 9.93 (0.497 → 0.547), × 0.85, edge blur 0.2 |
+| `toxic.cloud` | `#EEF7C2` | Upper deck: fractalNoise `0.03 0.085`, 6 oct, seed 37, swirled by fractalNoise 0.010 / 2 oct / seed 43 (scale 20), field blur 0.2 before the threshold (v1.5.1, was 0.6), 26 c − 14.27 (0.549 → 0.587, the reference's slope 26; was 22), edge blur 0.2; group α 0.92, ≈ 55 % total cover |
+| `toxic.cloudShadow` | `#0B2410` | Upper-deck mask offset (−1.2, +1.2), blur 0.45 (the only softer copy, as the reference), × 0.45 |
+| `toxic.highlight` | `#F4FFD6` | Shade bloom α 0.22 |
+| `toxic.haze` / `.hazeEdge` | `#C7E97A` / `#E4F7B0` | Haze 0.96 α 0.40 / 1.00 α 0.62 |
+| `toxic.rim` / `.rimOuter` | `#DDF59A` / `#A8D850` | Rim 0.928 α 0.95 / 0.955 α 0.40 |
+| `cracked.crust` | `#44577F` | Disc and strip fill |
+| `cracked.basin` | `#1E2742` | Basins α 0.85: n = fractalNoise 0.038, 6 oct, seed 41, slope −22 (0 at 0.45) |
+| `cracked.plate` | `#5D72A2` | Plates α 0.55: d = fractalNoise 0.07, 3 oct, seed 53 > 0.56 (slope 18) |
+| `cracked.frost` | `#A4B8DE` | Bright highlands α 0.55: n > 0.6 (slope 18) |
+| `cracked.crackGlow` | `#FF8C2E` | Crack glow: the 0.5 iso-contour of k = fractalNoise 0.035, 4 oct, seed 61 (band 0.475–0.525), blur 0.9, × 1.2 — = `star.corona` |
+| `cracked.crackLine` | `#FFC857` | Crack line (band 0.4875–0.5125, ≈ 1 px, × 0.95); fine branches (k2 = fractalNoise 0.075, 3 oct, seed 67, × 0.4, kept where k2.R > 0.52) — = `star.body` |
+| `cracked.crackCore` | `#FFF1C2` | Hairline core (band 0.495–0.505, × 0.9) — = `sun.limbHot` |
+| `cracked.highlight` | `#D2DEF6` | Shade bloom α 0.30 |
+| `cracked.haze` / `.rim` | `#8FA3C9` / `#B8CAEE` | Haze 0.96 α 0.30 → edge `#B8CAEE` α 0.50; rim `#B8CAEE` α 0.95 → `#8FA3C9` α 0.40 |
 
-Per-world construction (`canvas-notes.md` §4b has the same data as a table; every number is in the asset header):
-
-| World | r · P · strip | Surface strip | Second strip / extras |
-|---|---|---|---|
-| rocky | 30 · 188 · 376 × 60, 110 s, start tile x 40 | **dunes:** fractalNoise `0.008 0.09` (anisotropic → horizontal wavy bands), 2 oct, seed 5 — light bands slope 8 / intercept −4.084 (threshold 0.573 = p75) × 0.40 `rocky.highlight`, dark bands slope −8 / 3.892 (below 0.424 = p25) × 0.40 `rocky.dark`; **craters:** fractalNoise 0.12, 2 oct, seed 31 — pits slope 40 / −23.5 (0.600 = p80 → ≈ 20 %, ≈ 1 px edge) × 0.8 `rocky.dark`; lit wall = pit − pit offset (+1.2, −1.2) `rocky.highlight` × 0.6; shadowed wall = pit − pit offset (−1.2, +1.2) `rocky.dark` × 0.6 | no caps, no clouds |
-| ice | 28 · 176 · 352 × 56, 140 s, tile x 24 | **sheets:** fractalNoise 0.03, 4 oct, seed 41 — darker plates slope 5 / −2.25 (0.55 = p64) × 0.45 `ice.dark`, bright plates slope −5 / 2.75 (below 0.45 = p38) × 0.35 `ice.highlight`; **cracks:** turbulence 0.06, 2 oct, seed 43 — veins slope −40 / 4.4 (solid below 0.085, 0 at 0.110 = p15 → ≈ 15 %) `ice.dark` α 1; cores slope −40 / 2.36 (below 0.034, 0 at 0.059 = p5) × 0.6 `ice.shadow`; lit edge = vein − vein offset (+0.8, −0.8) `ice.highlight` × 0.6 | polar caps **30 %** (16.8 px bands, α 1 · 0.9 at 60 % · 0) |
-| lava | 26 · 163 · 326 × 52, 95 s, tile x 20 | **crust:** fractalNoise 0.04, 4 oct, seed 53 — lighter plates slope 6 / −2.5 (0.5 = p49 → ≈ 45 %) × 0.8 `lava.crustLight` | **veins** (same animated group, group α pulse 1 → 0.7 → 1 / 5 s sine): turbulence 0.05, 2 oct, seed 59 — vein slope −12.3 / 1.4 (below 0.114 = p18 → ≈ 18 %) `lava.vein`; hot slope −25.5 / 1.4 (below 0.055 = p5) `lava.veinHot`; bloom = vein α blurred σ 1.2 × 0.45 `lava.vein` under the veins. Halo r 36.4 static. No caps |
-| toxic | 32 · 201 · 402 × 64, 120 s, tile x 60 | fractalNoise 0.035, 4 oct, seed 29 — lowlands slope 12 / −6.088 (0.549 = p70 → ≈ 30 %) × 0.60 `toxic.dark` | **clouds** 75 s, tile x 0, group α 0.6: fractalNoise `0.016 0.070` (zonal decks), 4 oct, seed 37, displaced by fractalNoise 0.010 / 2 oct / seed 43 at scale 14 (periodic too), slope 8 / −3.30 (0.475 = p43 → ≈ 55 %), blur 0.8; deck shadow `toxic.dark` × 0.5 offset (−1.5, +1.5) under the clouds. No caps |
-| cracked | 27 · 170 · 340 × 54, 100 s, tile x 30 | **mottling:** fractalNoise 0.040, 4 oct, seed 41 — slope 12 / −6.412 (0.576 = p70 → ≈ 30 %) × 0.60 `cracked.dark`; **cracks:** fractalNoise 0.035, 3 oct, seed 61, alpha → a 51-entry table that is 1 only at field 0.50 (a 0.48–0.52 band = the 0.5 contour, one connected branching network ≈ 1.5 px wide, ≈ 10 %) `cracked.crack`: glow = blur 1.5 × 0.50, lines × 0.80 | **night cracks:** the same crack strip again (glow + lines only), same phase, group α 0.35, masked along −L (0 at +0.5 r·L → 1 at −0.5 r·L) so it shows only beyond the terminator. No caps |
-| ocean | 34 · 214 · 428 × 68, 90 s / clouds 64 s | = `planet-start.svg` (§2) | |
+| World | r · P · strip · period | Shade (bloom α · warm band α) | Haze / rim | Extras |
+|---|---|---|---|---|
+| rocky | 30 · 188 · 376 × 60 · 110 s | `#FFF0DC` 0.20 · 0.26 (dusty air) | 0.30 / 0.48 · rim 0.75 (≈ 0.7× the ocean's: thin air) | merge base, sand, rust, basalt, plateau, pits, dark wall, lit wall; no caps, no clouds |
+| ocean | 34 · 214 · 428 × 68 · 90 / 64 s | `#E6F2FF` 0.38 · 0.24 | 0.42 / 0.65 · 0.95 | glint; caps 12 %; clouds + cast shadow (§2) |
+| ice | 28 · 176 · 352 × 56 · 140 s | `#FFFFFF` 0.22 · 0.20 | 0.40 / 0.62 · 0.95 | ragged caps ≈ 30 %; lineae + narrow cores + lit edge; seamless strip (v1.5.1) |
+| lava | 26 · 163 · 326 × 52 · 95 s | emissive recipe (§4.1) | 0.26 / 0.42 · 0.70 | seamless strips (v1.5.1); two locked strips: crust **below** the shade, emissive veins + lakes **above** it (glow on the night side), limb mask 0.80 r α 1 → r α 0.55, pulse 1 → 0.7 → 1 / 5 s; halo 1.4 r |
+| toxic | 32 · 201 · 402 × 64 · 120 / 75 s | `#F4FFD6` 0.22 · 0.20 | 0.40 / 0.62 · 0.95 | two cloud decks + cast shadow; no caps |
+| cracked | 27 · 170 · 340 × 54 · 100 s | `#D2DEF6` 0.30 · 0.14 | 0.30 / 0.50 · 0.95 | night cracks: the crack layers again at group α 0.6, masked along −L (0 at +0.5 r·L → 1 at −0.5 r·L); static glow, no pulse |
 
 ### Gas worlds
 
-Both r 44, P = 276, each **band group** one 552 × 88 rect set (rects overdrawn to y −8 … 96 so the edge blur never thins the poles) with one filter: wavy edges = fractalNoise `0.012 0.08`, 2 octaves, stitched + tiled, contrast ×2, `feDisplacementMap` scale 6 (edges wave ±3 px, each edge independently — the brief's 0.02 gave blobby waves; 0.012 gives calmer ≈ 80 px ones), blur 0.6; zonal streaks = fractalNoise `0.010 0.28`, 2 octaves, saturate 0, contrast ×2, α 0.30, blend `overlay` (straight, applied after the displacement = zonal flow). Groups drift through one clip in **counter-flow**; 9 visible bands each. The gas terminator above; rim peak 0.55; no halo.
+Both r 44, P 276, band groups of overdrawn rects (y −8 … 96) with one filter per group: wavy edges = fractalNoise `0.014 0.09`, 4 oct, contrast ×2, opaque map, displacement scale 9, blur 0.25 (crisp); zonal streaks = fractalNoise `0.008 0.32`, 3 oct, **tinted** light (> 0.61, slope 14, × 0.30) and dark (< 0.40, slope −14, × 0.32). Atmosphere shade with bloom α 0.20; haze 0.38 / 0.60; rim 0.95.
 
-| Token | Hex | Used for | Note |
-|---|---|---|---|
-| `gasBanded.cream` | `#F2D9B8` | Pale zones (bands 3 and 7); the storm's paler eye (α 0.30) | |
-| `gasBanded.tan` | `#E3B07C` | Base disc, squash, shade 0.40 stop; bands 2, 5 (equatorial zone) and 8 | The "base" of this world |
-| `gasBanded.brown` | `#B9794B` | Belts: bands 1, 6 and 9 (both polar bands) | |
-| `gasBanded.dark` | `#8C5A3C` | The dark northern belt (band 4) | |
-| `gasBanded.storm` | `#D9623E` | Storm spot: ellipse 0.28 r × 0.16 r (rx 6.16, ry 3.52) at latitude −0.35 r (strip y 28.6) in band group B, drawn at strip x 98.6 **and** x + P (every discrete feature once per period); drifts right→left with its belt, on screen ≈ 35 s of every 110 s | |
-| `gasBanded.atmo` | `#F5D7B0` | Rim 1.12 r peak α 0.55, limb α 0.16, shade 0.00 stop α 0.55 | |
-| `gasBanded.shadow` | `#4A2E1E` | Night side / terminator (0.64 α 0.30 · 0.86 α 0.90 · 1.00 α 1) | **New, beyond the brief:** the band set has no tone dark enough for a night side |
-| `gasRinged.cream` | `#D5EFEA` | Bands 3 and 7; shade 0.00 stop α 0.55 | |
-| `gasRinged.light` | `#9FD3C7` | Base disc, squash, shade 0.40 stop; bands 2, 5 (equatorial) and 8 | The "base" |
-| `gasRinged.mid` | `#6FA8A0` | Bands 1, 6 and 9 | |
-| `gasRinged.dark` | `#3F7A74` | The dark northern belt (band 4) | |
-| `gasRinged.atmo` | `#BFE8E0` | Rim peak α 0.55, limb α 0.16 | |
-| `gasRinged.ring` | `#D8E6E3` | The ring, α 0.55 peak fading outward (gradient below) | |
-| `gasRinged.shadow` | `#1C3A36` | Night side / terminator | **New, beyond the brief** |
-| (`bg.base`) | `#050710` | The planet's shadow on the back ring, α 0.80 | A shadowed ring shows the sky through it |
-
-| Giant | Band groups (strip y: 0 = N pole, 88 = S pole; disc y = strip y − 44) | Drift |
+| Token | Hex | Used for |
 |---|---|---|
-| gasBanded | C (back, full height): brown 0–9 · tan 9–18 · [B] · … · cream 57–69 · tan 69–79 · brown 79–88; B (middle): cream 18–31 (+ storm) · dark 31–40; A (front): tan 40–49 · brown 49–57. Overdraw: C brown −8..9, tan 9..54, cream 54..69, tan 69..79, brown 79..96; B cream 18..31, dark 31..46; A tan 40..49, brown 49..58. Wave seeds C/B/A 31 / 37 / 41, streak seeds 5 / 13 / 17 | C 0 → +276 / **180 s**, B 0 → −276 / **110 s** (right→left), A 0 → +276 / **150 s**; +P groups start with the disc's left edge at strip x 320, −P groups at x 44 |
-| gasRinged | A (back, full height): mid 0–10 · light 10–19 · [B] · light 37–51 · [B] · cream 59–69 · light 69–78 · mid 78–88; B (front): cream 19–29 · dark 29–37 · mid 51–59. Overdraw: A mid −8..10, light 10..54, cream 54..69, light 69..78, mid 78..96; B cream 19..29, dark 29..37, mid 51..59. Wave seeds 43 / 47, streak seeds 21 / 29. No storm (calmer) | A 0 → +276 / **160 s**, B 0 → −276 / **120 s** |
+| `gasBanded.cream` | `#F8DDB0` | Pale zones (bands 3, 7); storm eye α 0.45 |
+| `gasBanded.tan` | `#EBA75E` | Base disc; bands 2, 5, 8 |
+| `gasBanded.brown` | `#BE6830` | Belts: bands 1, 6, 9 |
+| `gasBanded.dark` | `#7C3C1E` | The dark northern belt (band 4) |
+| `gasBanded.storm` / `.stormRim` | `#E4512A` / `#8E3518` | Storm ellipse 6.16 × 3.52 at strip (98.6, 28.6) and (374.6, 28.6) in group B; collar 0.8 px α 0.7 |
+| `gasBanded.streakLight` / `.streakDark` | `#FFF0D2` / `#6E331A` | Tinted zonal streaks; storm glint `#FFF0D2` α 0.6 |
+| `gasBanded.highlight` | `#FFF3DE` | Shade bloom α 0.20 (warm band 0.24) |
+| `gasBanded.haze` / `.hazeEdge` | `#F5D7B0` / `#FFE6C4` | Haze; `#F5D7B0` also the Saturn planet's haze |
+| `gasBanded.rim` / `.rimOuter` | `#FFE3BC` / `#F2B877` | Rim |
+| `gasRinged.light` | `#8FD9C9` | Base disc; bands |
+| `gasRinged.mid` | `#58B0A3` | Bands |
+| `gasRinged.cream` | `#DDF8F1` | Pale bands |
+| `gasRinged.dark` | `#2A7A73` | Dark belt |
+| `gasRinged.streakLight` / `.streakDark` | `#EFFFFA` / `#1F5F59` | Tinted streaks |
+| `gasRinged.highlight` | `#E8FFFA` | Shade bloom α 0.20 (warm band 0.22) |
+| `gasRinged.haze` / `.hazeEdge` | `#BFE8E0` / `#DDF7F1` | Haze |
+| `gasRinged.rim` / `.rimOuter` | `#D3FBF2` / `#8EDCCC` | Rim |
+| `gasRinged.ringBright` | `#F6EBCF` | B ring (1.45–1.60 r, α 0.62–0.86) |
+| `gasRinged.ringMain` | `#D9C8A2` | A ring (1.65–1.95 r, α 0.56 → 0.36) |
+| `gasRinged.ringDust` | `#A69A7E` | C ring, gaps and outer dust (α 0.03–0.30) |
+| (`bg.base`) | `#050710` | Planet shadow on the back ring, α 0.85 |
 
-**The ring** (`gas-ringed.svg`): drawn in "ring space" `rotate(−22) scale(1 0.28)` — tilt 22°, major axis rising toward the upper-right, opening ry = 0.28 rx — as a plain circle r 2.2 r = 96.8 filled with a radial gradient of `gasRinged.ring` (offsets = radius / 96.8): 0.600 α 0 · 0.6136 (= 1.35 r, inner edge) α 0.22 · 0.655 α 0.50 · 0.690 α **0.55** (peak) · 0.7159 α 0.50 ‖ gap 1 at 1.60 r (0.7159–0.7386) α 0.08 ‖ 0.7386 α 0.48 · 0.78 α 0.42 · 0.81 α 0.46 · 0.84 α 0.36 · 0.875 α 0.32 ‖ gap 2 at 1.95 r (0.875–0.8978) α 0.06 ‖ 0.8978 α 0.28 · 0.95 α 0.20 · 0.985 α 0.12 · 1.000 (2.2 r) α 0; the gaps are 0.05 r = 2.2 px wide. On screen: ellipse rx 96.8 × ry 27.1. The ring is drawn twice from one gradient: behind the planet through `#grBack` (everything except the front half-disc) and after the planet, rim and limb through `#grFront`, the lower half of the **r 1.12 r = 49.28** disc in ring orientation (the rim radius) — so where the front ring leaves the limb it stays in front of the atmosphere rim instead of dipping behind the halo, and nothing is composited twice. The half-plane line touches no ring material (inner edge 1.35 r); the arc crosses the front ring just outside the limb, where the complementary clips leave at most a sub-pixel 7.6 % seam inside the rim glow (a ring crossing the limb cannot be split without crossing ring material somewhere). **Planet shadow on the back ring:** in ring space a half-ellipse with semi-axes 117 (= r / tan 22°, along the shadow) × 44 (= r), rotated 230°, fill `bg.base` α **0.80** (the brief's 0.6 read as dimming, not shadow), blurred σ 1 × 3.5 in ring space (≈ 1 px on screen), alpha-masked by the ring's own gradient normalised to peak 1.0 — so it darkens ring material only (80 % on the densest ringlet, less in the gaps; measured (28, 30, 42) in shadow vs (115, 123, 126) on the mirror side). The ring never rotates.
+| Giant | Band groups (strip y: 0 = N pole, 88 = S pole) | Drift |
+|---|---|---|
+| gasBanded | C (back): brown −8..9 · tan 9..54 · cream 54..69 · tan 69..79 · brown 79..96; B (middle): cream 18..31 (+ storm) · dark 31..46; A (front): tan 40..49 · brown 49..58. Wave seeds C/B/A 31 / 37 / 41, streak seeds 5 / 13 / 17 | C 0 → +276 / 180 s, B 0 → −276 / 110 s, A 0 → +276 / 150 s |
+| gasRinged | A (back): mid −8..10 · light 10..54 · cream 54..69 · light 69..78 · mid 78..96; B (front): cream 19..29 · dark 29..37 · mid 51..59. Wave seeds 43 / 47, streak seeds 21 / 29 | A 0 → +276 / 160 s, B 0 → −276 / 120 s |
+
+**The ring** (`gas-ringed.svg`, static): ring space `rotate(−22) scale(1 0.28)`, a circle r 2.2 r = 96.8 with a radial gradient of **hard-stepped** ringlets (two stops at each boundary): 1.350–1.400 r `ringDust` α 0.16 → 0.20 · 1.400–1.450 α 0.28 → 0.30 · 1.450–1.500 `ringBright` α 0.62 → 0.66 · 1.500–1.530 α 0.82 · 1.530–1.560 α 0.70 · 1.560–1.600 α 0.86 → 0.80 · gap 1.600–1.650 `ringDust` α 0.04 · 1.650–1.750 `ringMain` α 0.56 → 0.52 · 1.750–1.840 α 0.46 → 0.44 · Encke-like gap 1.840–1.855 `ringDust` α 0.06 · 1.855–1.950 `ringMain` α 0.42 → 0.36 · gap 1.950–2.000 α 0.03 · 2.000–2.200 `ringDust` α 0.22 → 0. Back ring through `#grBack` before the planet, front ring through `#grFront` (the lower half of the r 49.28 disc) after the planet, haze and rim. Planet shadow on the back ring: half-ellipse 117 × 44 rotated 230° in ring space, `bg.base` α 0.85, blur 0.5 × 1.5 in ring space, masked by the ring profile normalised to peak 0.86 so it darkens ring material only.
 
 ### Small bodies
 
-Airless rule (moon, dwarf, double.small): hard terminator (recipe above), no rim, no caps, no clouds, night side `bg.base`. **Craters** are hand-placed geometry on the strip, seeded with `mulberry32` and drawn twice (at x and x + P), because thresholded noise reads as worms, not pits: each crater = an outer circle R in the body's highlight (the rim wall, α 0.55 moon / 0.5 others) + a bowl circle 0.82 R centred (+0.18 R, −0.18 R) toward the star, filled with a linear gradient from its upper-right (dark α 0.95, the shadowed wall) through 0.55 α 0.72 to its lower-left (α 0.55) — the uncovered lower-left crescent is the sun-lit inner wall. Tables of (x, y, R) are in each header.
+Airless rule (moon, dwarf, double.small, and the v1.4 moons): hard terminator (§4.1 item 9, radius **1.25 r** — the v1.3 1.5 r is retired), no haze, no rim (icy and volcanic moons excepted), no clouds, no caps. Craters are hand-placed seeded geometry drawn at x and x + P: outer circle R in the crater-rim colour (α 0.7–0.75) + a bowl 0.82 R centred (+0.18 R, −0.18 R) toward the light, filled with a linear gradient pit α 0.95 (upper-right, the shadowed wall) → 0.55 α 0.75 → α 0.5 (lower-left, the lit wall). The v1.3 tables (moon 37 / `0x4D4F4F`, dwarf 8 / `0x445741`, double.small 9 / `0x534D4C`) are unchanged and listed in the headers.
 
-| Token | Hex | Used for | Note |
-|---|---|---|---|
-| `moon.base` | `#9A9AA6` | Moon disc, strip fill, squash | |
-| `moon.crater` | `#5E5E6B` | Maria mottle (fractalNoise 0.05, 3 oct, seed 7, slope 3 / −1.3, × 0.14), pits (fractalNoise 0.30, 1 oct, seed 9, slope 30 / −19.3 → ≈ 7 % 1–2 px specks, × 0.50), crater bowls; shade 0.62 stop α 0.30 | 37 craters (seed `0x4D4F4F`, radii 4.2 → 0.9) = 15.2 % of the tile, + specks ≈ 22 % dark (brief ≈ 25 %) |
-| `moon.highlight` | `#D8D8E0` | Crater rim walls α 0.55, shade 0.00 stop α 0.55, limb α 0.14 | |
-| `dwarf.base` | `#B8A48E` | Dwarf disc, strip fill, squash | |
-| `dwarf.dark` | `#6E6052` | Dark patches (fractalNoise 0.10, 3 oct, seed 13, slope 8 / −4.48 → ≈ 22 %, × 0.60), specks (0.28, 1 oct, seed 17, ≈ 7 %, × 0.50), the 8 pit bowls (seed `0x445741`, 3.9 %); shade 0.62 stop | |
-| `dwarf.highlight` | `#E8DCC8` | Light patches (same field, slope −8 / 3.2, ≈ 15 %, × 0.45), pit rims α 0.5, shade 0.00 stop, limb α 0.14 | |
-| `double.big.base` | `#5E9ED6` | Big ice-ocean world (r 18) disc, strip fill, squash | |
-| `double.big.dark` | `#2C4F7A` | Deep water (fractalNoise 0.07, 3 oct, seed 29, slope 14 / −8.07 → ≈ 22 %, × 0.40); night side (soft recipe) | |
-| `double.big.highlight` | `#DCEFFF` | Pack ice (fractalNoise 0.035, 4 oct, seed 21, slope 30 / −17.4 → ≈ 30 %, × 0.80), polar caps 22 % (7.92 px), shade 0.00 stop α 0.90, limb α 0.16 | |
-| `double.big.atmo` | `#9CCBFF` | Rim peak α 0.55 / 0.30 | Same hex as `planet.start.highlight` |
-| `double.small.base` | `#C98B5A` | Small rocky companion (r 11) disc, strip fill, squash | = `rocky.base` |
-| `double.small.dark` | `#7A4E33` | Mottle (fractalNoise 0.12, 2 oct, seed 31, slope 14 / −7.84 → ≈ 25 %, × 0.55), specks (0.30, 1 oct, seed 37, ≈ 8 %, × 0.50), the 9 crater bowls (seed `0x534D4C`, 4.2 %); shade 0.62 stop | = `rocky.dark`; lit tint, crater rims and limb borrow `rocky.highlight` |
-| (`bg.base`) | `#050710` | Night side of all three airless bodies (0.70 α 0.84 · 1.00 α 0.92 → a dark grey ≈ `#1A1B22` that still reads on the field) | |
+| Token | Hex | Used for |
+|---|---|---|
+| `moon.base` | `#A6A2B6` | Disc and strip fill (lavender-tinted grey) |
+| `moon.shelf` | `#7A7694` | Shelves α 0.5: n = fractalNoise 0.06, 6 oct, seed 7, slope −36 (0 at 0.50) |
+| `moon.maria` | `#4B4866` | Maria α 0.9: n slope −40 (0 at 0.455) |
+| `moon.highland` | `#DDD9EC` | Bright highlands α 0.5: h = fractalNoise 0.11, 4 oct, seed 11 > 0.58 (slope 28) in the uplands n > 0.49 |
+| `moon.pit` | `#3C3955` | Specks α 0.6 (p = fractalNoise 0.30, 1 oct, seed 9 > 0.643, slope 30); crater bowls |
+| `moon.craterRim` | `#EFECF8` | Crater rim walls α 0.75 |
+| `moon.highlight` | `#F4F2FC` | Shade bloom α 0.24 |
+| `dwarf.base` | `#CDA273` | Disc and strip fill (Pluto-like tholin) |
+| `dwarf.shelf` | `#A8744C` | Shelves α 0.55: n = fractalNoise 0.09, 6 oct, seed 13, slope −36 (0 at 0.49) |
+| `dwarf.dark` | `#6A402A` | Dark terrain α 0.85: slope −40 (0 at 0.445) |
+| `dwarf.plains` | `#F6EBD6` | Nitrogen-ice plains α 0.9: h = fractalNoise 0.07, 3 oct, seed 19 > 0.56 in the uplands n > 0.47; crater rims α 0.7 |
+| `dwarf.pit` | `#573522` | Specks α 0.5 (fractalNoise 0.28, 1 oct, seed 17); bowls |
+| `dwarf.highlight` | `#FFF6E6` | Shade bloom α 0.18; also a Saturn ringlet tint |
+| `double.big.ocean` | `#2F86E0` | Big world (r 18) disc and strip fill |
+| `double.big.deep` | `#1B4FA8` | Deep water α 0.85: n = fractalNoise 0.05, 6 oct, seed 29, slope −18 (0 at 0.475) |
+| `double.big.shallow` | `#4CC0E4` | Shallows ramp from n 0.535 (slope 10) |
+| `double.big.ice` | `#EAF6FF` | Pack ice α 0.95: i = fractalNoise 0.05, 5 oct, seed 21 > 0.61 (slope 60) |
+| `double.big.cap` | `#F2F8FF` | Polar caps 16 % (5.6 px), solid α 0.95, ragged edges (fractalNoise 0.09, 4 oct, seed 5 → displacement 6 → blur 0.2) |
+| `double.big.haze` / `.hazeEdge` | `#9CCBFF` / `#CFE6FF` | Haze 0.42 / 0.65; `#9CCBFF` also the ice giant's haze |
+| `double.big.rim` / `.rimOuter` | `#BFE3FF` / `#8CC4FF` | Rim (bloom `#E6F2FF` α 0.26 = `bloom.ocean`; glint `#FFFBEE` α 0.5, ellipse 3.4 × 1.9 at (5.73, −5.73)) |
+| `double.small.base` | `#D08A4E` | Companion (r 11) disc and strip fill |
+| `double.small.shelf` | `#B06A38` | Shelves α 0.5: n = fractalNoise 0.10, 6 oct, seed 31 |
+| `double.small.dark` | `#6E3A1E` | Dark terrain α 0.85 |
+| `double.small.bright` | `#F2C994` | Bright uplands α 0.7: h = fractalNoise 0.08, 3 oct, seed 37 > 0.565 |
+| `double.small.pit` | `#5A2E16` | Specks α 0.5 (fractalNoise 0.30, 1 oct, seed 33); bowls |
+| `double.small.craterRim` | `#F6D2A2` | Crater rims α 0.7 (bloom `rocky.bloom` α 0.24) |
 
-**Double planet orbit** (`double.svg`, group at the pair's barycentre): period **40 s**, uniform, clockwise on screen (right → bottom/front → left → top/back). Masses ∝ r³ (5832 : 1331), centre separation 38 px → the small body orbits at A = 30.94 from the barycentre, the big one at 7.06, 180° apart; the plane is tilted so the screen ellipse has ry = 0.36 rx (30.94 × 11.14 and 7.06 × 2.54). θ(t) = 360° · t / 40 s; small at (A cos θ, B sin θ), big at (−A cos θ, −B sin θ). At θ = 90° (bottom) the small body passes **in front** of the big one, at θ = 270° (top) **behind** it (≈ 70 % of its disc hidden). The SVG builds the ellipse as an epicycle of three SMIL rotates (`rotate(θ) → translate(e₁) → rotate(−2θ) → translate(e₂) → rotate(θ)`, e₁ = (A + B)/2, e₂ = (A − B)/2) so no anisotropic scale ever touches the bodies — lighting, strokes and filters stay undistorted — and the small body is drawn **twice** (`#dbSmallBack` before the big body, `#dbSmallFront` after) with discrete opacity toggles at θ = 0° / 180°, where the limbs are 9 px apart, so the z-order swap is never visible. Both bodies also rotate (big 80 s, P 113; small 60 s, P 69). t = 0: small at (+30.94, 0), big at (−7.06, 0).
+**Double planet orbit** (unchanged since v1.3): period 40 s, clockwise on screen; masses ∝ r³, separation 38 → small orbits 30.94 × 11.14, big 7.06 × 2.54, opposite phase, ry = 0.36 rx; built as an epicycle of three SMIL rotates (`rotate(θ) translate(e₁) rotate(−2θ) translate(e₂) rotate(θ)`; small e₁ 21.04 / e₂ 9.9, big 4.8 / 2.26), small body drawn twice with discrete opacity toggles at θ 0 / 180° (front visible 0–20 s). Big strip P 113 / 80 s; small P 69 / 60 s.
 
 ### Stars
 
-All three stars share one construction — the v1.1 `star.svg` layers (glow → corona → streamers + 2 helmet lobes, all in the breathing group → chromosphere → body with limb darkening → granulation), scaled by k = r / 46 and re-coloured — **plus the v1.3 prominences and flare** (drawn between the chromosphere and the body, outside the breathing group). The sun keeps every v1.1 number and token (§2); the red dwarf and blue giant get new tokens:
+All three main-sequence stars are the sun reference (§2) scaled by k = r / 46 and recoloured, in this order: haze → wisp ring → flame ring (all three in the breathing group) → 3 two-tone prominences → flare → disc group (body + tinted plasma + limb, displaced by the edge wobble) → ragged rim.
 
-| Token | Hex | Used for | Note |
-|---|---|---|---|
-| `redDwarf.core` | `#FFD9B0` | Body gradient centre; the flare at the limb | Same hex as `stars.warm` |
-| `redDwarf.body` | `#FF7A4D` | Body 0.45–0.78; the flare tip | |
-| `redDwarf.corona` | `#E0432F` | Corona (r 113, σ 2.6), 10 streamers (α × 0.7 = 0.07–0.11: the "calmer corona"), 2 lobes α 0.042, chromosphere (r 40.9, 2.6 px, α 0.60, σ 1.3), prominence loops; body 0.90 stop | |
-| `redDwarf.glow` | `#8C1E2A` | Outer glow r 174 (0.00 α 0.50 · 0.23 α 0.45 · 0.65 α 0.12 · 1 α 0); the limb (body 1.00 stop) | Dark red: the dwarf is dim |
-| `blueGiant.core` | `#FFFFFF` | Body centre; the flare at the limb | |
-| `blueGiant.body` | `#B8CCFF` | Body 0.45–0.78; the flare tip | Same hex as `stars.cool` / `whiteDwarf.corona` |
-| `blueGiant.corona` | `#5EA0FF` | Corona (r 153, σ 3.5), **14** streamers (α 0.10–0.16, seeded ≥ 14° apart — the 20° rule cannot place 14 wedges), 2 lobes α 0.06, chromosphere (r 55.2, 3.5 px), loops; body 0.90 stop | Same hex as `ui.accent` / `trail` |
-| `blueGiant.glow` | `#2C4FBF` | Outer glow **r 240** (the full half viewBox — "wider glow"), same stops; the limb | |
+| Token | Hex | Used for |
+|---|---|---|
+| `redDwarf.haze` | `#F0502A` | Haze 0 α 0.60 · 0.23 α 0.50; body gradient 0.65 |
+| `redDwarf.hazeMid` | `#C8301C` | Haze 0.33 α 0.30 |
+| `redDwarf.glow` | `#8C1E2A` | Haze 0.55 α 0.15 (v1.3 token, kept) |
+| `redDwarf.hazeEdge` | `#4E0C16` | Haze 0.80 α 0.06 → 0 |
+| `redDwarf.flameCore` | `#FFB27A` | Flame ring 0–0.74 α 0.92 |
+| `redDwarf.flame` | `#FF6A3A` | Flame 0.82 α 0.78; wisp fill 0–0.62 α 0.50 |
+| `redDwarf.corona` | `#E0432F` | Flame 0.91 α 0.36; wisp 0.80 α 0.22; prominence outer stroke 2.4 px α 0.85 (v1.3 token, kept) |
+| `redDwarf.flameEdge` | `#B0281A` | Flame 1.00 α 0 (wisp edge `sun.hazeDeep #A8240E`) |
+| `redDwarf.bodyCore` | `#FF8A4A` | Body 0.00 (replaces `redDwarf.body #FF7A4D`) |
+| `redDwarf.bodyLimb` | `#D63A1E` | Body 1.00 |
+| `redDwarf.plasmaDark` | `#4A0A06` | Larger darker cells: fractalNoise 0.032, 5 oct, seed 8, alpha 4 R − 1.6, × 0.55 |
+| `redDwarf.filament` | `#FFB36B` | Filaments: turbulence 0.05, 5 oct, seed 13, alpha 1.25 − 6.5 R, × 0.8 |
+| `redDwarf.limb` | `#FF9A6E` | Limb 0.80 α 0 → 0.93 α 0.55 |
+| `redDwarf.core` | `#FFD9B0` | Limb 0.97 α 0.90; ragged rim 1.4 px α 0.75; prominence core 0.9 px α 0.90; flare tip α 0.15 (= `stars.warm`) |
+| `redDwarf.limbHot` | `#FFEBDA` | Limb 1.00 α 0.95 |
+| `blueGiant.haze` | `#5E9BFF` | Haze 0 α 0.55 · 0.23 α 0.48 |
+| `blueGiant.hazeMid` | `#3A6AF0` | Haze 0.33 α 0.30; wisp edge |
+| `blueGiant.glow` | `#2C4FBF` | Haze 0.55 α 0.14; flame 1.00 (v1.3 token, kept) |
+| `blueGiant.hazeEdge` | `#15287A` | Haze 0.80 α 0.05 → 0 |
+| `blueGiant.flameCore` | `#F4F8FF` | Flame 0–0.74 α 0.95; limb 0.97; rim 1.8 px; prominence core 1.15 px (= `ocean.ice`) |
+| `blueGiant.flame` | `#A9C8FF` | Flame 0.80 α 0.85 |
+| `blueGiant.flameEdge` | `#4F8DFF` | Flame 0.90 α 0.45; wisp 0.80 α 0.24 |
+| `blueGiant.wisp` | `#7FB2FF` | Wisp fill 0–0.62 α 0.55 |
+| `blueGiant.bodyCore` / `.body` / `.bodyLimb` | `#EAF1FF` / `#A6C0FF` / `#7FA3FF` | Body 0 / 0.65 / 1 |
+| `blueGiant.plasmaDark` | `#2F5BD8` | Finer cells: fractalNoise 0.08, 5 oct, seed 6, alpha 3.4 R − 1.6, × 0.45 |
+| (`#FFFFFF`) | `#FFFFFF` | Near-white filaments (turbulence 0.10, 5 oct, seed 15, × 0.9); limb 1.00; flare base |
+| `blueGiant.limb` | `#CFE0FF` | Limb 0.80 α 0 → 0.93 α 0.55 |
+| `blueGiant.corona` | `#5EA0FF` | Prominence outer stroke 3.2 px (v1.3 token, kept; = `ui.accent`) |
+| `blueGiant.flareTip` | `#B8CCFF` | Flare tip α 0.15 (= `stars.cool`) |
 
 | | Yellow sun | Red dwarf | Blue giant |
 |---|---|---|---|
-| r · k · viewBox | 46 · 1 · 400 | 40 · 0.8696 · 360 | 54 · 1.1739 · 480 |
-| glow r · corona r | 200 · 130 | 174 · 113 | **240** · 153 |
-| streamers | 10, seed `0x5747`, base r 48, w 10–18, T 110–175, α 0.10–0.16 | 10, seed `0x5244`, base r 41.7, w · k, T · k, **α × 0.7** | **14**, seed `0x4247`, base r 56.3, min **14°** apart |
-| granulation | 0.11, 2 oct, seed 3, α 0.16 | **0.07**, seed 5, α **0.22** (larger, slower spots) | **0.16**, seed 9, α **0.12** (fine, faint) |
-| prominences | seed `0x5750`, stroke 2.5, σ 1.5 | seed `0x5250`, stroke 2.2, σ 1.3 | seed `0x4250`, stroke 2.9, σ 1.8 |
-| flare angle · path | 25.0° · M46 −1.5 L78.2 0 L46 1.5 | 117.9° · M40 −1.3 L68 0 L40 1.3 | 278.3° · M54 −1.75 L91.8 0 L54 1.75 |
+| r · k · viewBox · group | 46 · 1 · 400 · `#star` (200, 200) | 40 · 0.8696 · 360 · `#redDwarf` (180, 180) | 54 · 1.1739 · 480 · `#blueGiant` (240, 240) |
+| haze r | 200 | 180 | **240** (the wider glow) |
+| flame ring r · noise · displacement · spin | 62 (≈ 72 ragged) · 0.08 / 4 oct / seed 21 · 20 · +360° / 200 s | 53.9 · 0.08 / 4 / 25 · 14 (calmer) · 260 s | 72.8 · 0.10 / 5 / 27 · 24 · 200 s |
+| wisp ring r · noise · displacement · spin | 78 (≈ 95 ragged) · 0.05 / 5 / 33 · 34 · −360° / 300 s | 67.8 · 0.05 / 5 / 37 · 24 · 390 s | 91.6 · 0.065 / 6 / 39 · 40 · 300 s |
+| flame / wisp blur | 0.4 / 0.8 | 0.4 / 0.8 | 0.4 / 0.8 |
+| edge wobble · rim | 0.11 / 3 oct / seed 44, scale 6.5 · r 46.2, 1.6 px, rag 0.22 / seed 57 / scale 5 | 0.11 / seed 46 / 5 · r 40.2, 1.4 px, rag 0.22 / 59 / 4.2 | 0.13 / seed 48 / 7 · r 54.2, 1.8 px, rag 0.26 / 61 / 5.5 |
+| prominences (A°, path in `rotate(A) translate(r 0)`) | 147.5 / 243.6 / 314.8 (§2 table) | 338.8 `M-1.18 -10.13 C25.11 -8.1 25.11 8.1 -1.18 10.13` · 248 `M-0.68 -7.72 C26.06 -6.18 26.06 6.18 -0.68 7.72` · 167.2 `M-0.81 -8.4 C22.45 -6.72 22.45 6.72 -0.81 8.4` | 332.7 `M-1.06 -11.17 C26.44 -8.93 26.44 8.93 -1.06 11.17` · 243.5 `M-1.19 -11.81 C25.25 -9.45 25.25 9.45 -1.19 11.81` · 168.7 `M-1.64 -13.86 C31.21 -11.09 31.21 11.09 -1.64 13.86` |
+| prominence strokes | `#FF8C2E` 2.8 + `#FFF1C2` 1.0 | `#E0432F` 2.4 + `#FFD9B0` 0.9 | `#5EA0FF` 3.2 + `#F4F8FF` 1.15 |
+| flare (angle · wedge · gradient) | 25° · `M46 -1.8 L86 0 L46 1.8 Z` · `#FFFFFF` → `#FFD27A` α 0.15 | 117.9° · `M40 -1.55 L74.8 0 L40 1.55 Z` · `#FFFFFF` → `#FFD9B0` α 0.15 | 278.3° · `M54 -2.1 L101 0 L54 2.1 Z` · `#FFFFFF` → `#B8CCFF` α 0.15 |
 
-**Prominences:** 3 loops per star at seeded angles ≥ 70° apart (`mulberry32(seed)`: angle A = 360u, span s = 18 + 10u °, peak k = 1.25 + 0.20u), each a cubic arc footed on the limb (feet s apart on the circle, peak at k · r), stroke 2.5 · k px, colour = the star's corona token, round caps, blurred σ 1.5 · k, drawn **before** the body so the feet are hidden by the disc at every scale. Each loop animates about its base point: scale 0.6 → 1.0 → 0.6 and α 0 → **0.55** → 0 over **12 / 16 / 14 s**, begin **0 / 5 / 9 s**, sine, indefinite — peaks at 6 + 12n, 13 + 16n, 16 + 14n s, never all three at once; before `begin` and at t = 0 a loop is invisible. **Flare:** one thin wedge from the limb (base 3 · k px, tip at 1.7 r), filled core → body along its length, no blur, at a seeded angle ≥ 30° from every loop; α 0 → **0.7** → 0 over 1.8 s inside a **22 s** cycle (invisible until 13 s, peak 13.9 s, gone 14.8 s) — a brief, quiet pop. The corona breathe (±3 % / 6 s) stays on the glow / corona / streamer layers only; the flares ride on top of it and the crash disc never moves. Angles, spans and paths per star: `canvas-notes.md` §3b.
+Timings for all three: prominences 12 / 16 / 14 s, begin 0 / 5 / 9 s, scale 0.6 → 1 → 0.6 and opacity 0 → 1 → 0; flare 22 s cycle, peak 13.9 s; breathe ±3 % / 6 s on haze + flames + wisps only.
 
 ### Compact objects
 
-Emissive, no terminator, no granulation, no streamers, no prominences, no flares. Each is one or two cached sprites in Canvas (`canvas-notes.md` §3c).
+Emissive, no terminator. Crisp: no blur above 0.5 except glow gradients.
+
+| Token | Hex | Used for |
+|---|---|---|
+| `whiteDwarf.core` | `#FFFFFF` | Body 0–0.55; bloom r 22.4 (0 α 0.50 · 0.71 α 0.50 · 0.80 α 0.16 · 1 α 0); spike base α 0.55; inner limb r 14.6, 0.6 px, α 0.7 |
+| `whiteDwarf.body` | `#E9EEF8` | Body 0.80 |
+| `whiteDwarf.corona` | `#B8CCFF` | Corona r 36 (0 α 0.90 · 0.44 α 0.70 · 0.56 α 0.30 · 0.75 α 0.08 · 1 α 0, no blur); body 0.93; spikes mid α 0.25 → tip α 0 |
+| `whiteDwarf.glow` | `#7FB8FF` | Glow r 96 (0 α 0.60 · 0.10 α 0.46 · 0.20 α 0.22 · 0.35 α 0.09 · 0.60 α 0.025 · 1 α 0), breathes ±5 % / 4 s; body 1.00; outer limb r 15.5, 1 px, α 0.9 |
+| `neutronStar.core` | `#FFFFFF` | Body 0–0.50; core spikes α 0.55 |
+| `neutronStar.body` | `#DCE4FF` | Body 0.80; limb r 7.5 1 px α 0.9; beam base α 0.38 (= `path`) |
+| `neutronStar.beamMid` | `#C9A8FF` | Beam gradient 0.4 (α 0.20); body 0.93 — new (v1.5) |
+| `neutronStar.glow` | `#B48CFF` | Glow r 40 (0 α 0.65 · 0.20 α 0.48 · 0.35 α 0.22 · 0.60 α 0.07 · 1 α 0); body 1.00; beam tip α 0; haze α 0.14 (blur 0.75); outer hairline r 8.3 0.6 px α 0.75 (= `result.lost`) |
+| `blackHole.shadow` | `#000000` | Event-horizon disc r 22 |
+| `blackHole.photon` | `#FFFFFF` | Photon ring core r 24, 1 px, α 0.95 |
+| `blackHole.photonOuter` | `#FFC857` | Photon ring outer r 24, 2 px, α 0.6; disk ramp 0.68 (α 0.92); arc 26.4 (α 0.85) (= `star.body`) |
+| `blackHole.photonSub` | `#FFF1C2` | Sub-ring r 22.9, 0.6 px, α 0.55 (= `sun.limbHot`) |
+| `blackHole.diskHot` | `#FFF8E1` | Ramp 0.538 (inner edge, α 0.95) (= `star.core`) |
+| `blackHole.diskFilament` | `#FFE7A0` | Ramp 0.6 (α 0.92); bright filaments; 5 bright stream arcs α 0.21–0.32; arc inner stop (α 0.95) (= `sun.filament`) |
+| `blackHole.diskMid` | `#FF8C2E` | Ramp 0.78 (α 0.82); arc 27.5 (α 0.7); glow r 66 (0 α 0.22 · 0.35 α 0.08 · 0.60 α 0.03 · 1 α 0) |
+| `blackHole.diskRed` | `#E8461A` | Ramp 0.87 (α 0.6); arc outer stop 28.6 (α 0.3) (= `sun.hazeRed`) |
+| `blackHole.diskOuter` | `#B48CFF` | Ramp 0.94 (α 0.32) → 1.00 (α 0.12) |
+| `blackHole.plasmaDark` | `#802105` | Dark plasma cells (fractalNoise 0.055, 5 oct, seed 12, 3.4 R − 1.5, × 0.42); 3 dark stream arcs α 0.24–0.32 (= `sun.plasmaDark`) |
+| `blackHole.einstein` | `#7FB8FF` | Einstein ring r 46.5, 1 px, α 0.14 |
+
+**White dwarf** (r 16): glow → corona → 4 tapered spikes (`M16 -0.8 L64 0 L16 0.8 Z` × 4, "+" orientation) → bloom → body → two-tone limb. No blur at all; the disc stays perfectly round.
+
+**Neutron star** (r 8): static glow → magnetosphere group rotating 30° → 390° / 6 s (haze ellipse 20 × 4.8; two beam cones `(−3.2, −7) (3.2, −7) (7, −36) (−7, −36)` and mirror, blur 0.5; unblurred core spikes `M∓0.8 ±7 L0 ±34`) → body → limb + hairline.
+
+**Black hole** (r 22, viewBox 320): glow → top lensed arc → back half of the disk → shadow → photon ring (in `#bhRag`: fractalNoise 0.25, 2 oct, seed 71, opaque → displacement 1.4 → blur 0.3, ±0.7 px wobble) → front half of the disk → bottom lensed arc → Einstein ring. Disk: ring 1.4–2.6 r (30.8–57.2) in a circular frame squashed `scale(1 0.2115)` (outer ellipse 57.2 × 12.1), the fiery ramp above with the plasma filter (`#bhPlasma`) and 8 dashed tangential stream circles (r 33.5 / 36 / 39.5 / 41 / 43 / 47 / 50.5 / 53.5, stroke 1.4–2.4), rotating 360° / 24 s clockwise; the squash turns the plasma into orbiting filaments. Doppler: static mask 1.0 (x −57.2) → 0.55 (x +57.2), left brighter. Lensed arcs: sectors 25.3–28.6, top 190° → 350° (group α 0.80), bottom 10° → 170° (α 0.55), vertical fade to 0 at y = 0, `#bhArcRag` displacement 1.4 + blur 0.5.
+
+### Moons (v1.4)
+
+Airless lighting (§4.1 item 9) on all four; the icy and volcanic moons add the faint lit-side rim the brief asks for (r 1.077 r, 0.90 α 0 · 0.928 peak · 0.955 · 1 α 0, lit mask 1 → 0.45 → 0.06). Thin lines are **iso-contours** of fractal noise (an `feFuncA` table peaked at a level with a set half-width) — Canvas bakes them as `|n − level| < w`.
+
+| Token | Hex | Used for |
+|---|---|---|
+| `mi.base` | `#DCE4FF` | Icy moon disc and strip fill; shepherd moons |
+| `mi.blueIce` | `#7FA6E0` | Blue ice: n = fractalNoise 0.11, 6 oct, seed 41 > 0.58 (slope 36), × 0.9 |
+| `mi.highlight` | `#FFFFFF` | Frost (n < 0.40, slope −36); bloom α 0.28 |
+| `mi.chaos` | `#C4987C` | Rust-tinted chaos terrain: the lineae field (fractalNoise 0.05, 4 oct, seed 53) > 0.67 (slope 30), × 0.78 — sits inside the 0.57 lineae (v1.5.1; was fractalNoise 0.06 / seed 43 > 0.63) |
+| `mi.crack` | `#7FA6C9` | Crack halo: contour n = 0.5 (half-width 0.035) of fractalNoise 0.07, 5 oct, seed 47, × 0.7; shepherd-moon crater (= the retired v1.3 `ice.dark`) |
+| `mi.crackDeep` | `#4E78A8` | Crack core: same contour, half-width 0.014, × 0.95; system moon A cracks |
+| `mi.lineae` | `#A5684E` | Lineae: contours n = 0.44 and 0.57 (half-width 0.009) of fractalNoise 0.05, 4 oct, seed 53, × 0.85 |
+| `mi.rim` | `#BFE3FF` | Rim peak α 0.75, then 0.30 |
+| `mv.base` | `#E0C25A` | Volcanic moon disc and strip fill |
+| `mv.frost` | `#F6EBA8` | SO₂ frost: n = fractalNoise 0.075, 6 oct, seed 61 > 0.58 (slope 30), × 0.85 |
+| `mv.orange` | `#E0892E` | Red-orange sulphur: same field < 0.43, × 0.8 |
+| `mv.dark` | `#8C6A2A` | Dark flows: fractalNoise 0.055, 6 oct, seed 67 > 0.60, × 0.9 |
+| `mv.spot` | `#3A2A2A` | Lava fields (> 0.67, × 0.85), 1 px specks (fractalNoise 0.30, 2 oct, seed 71 > 0.68, × 0.75), vents r 1; also the wreck scorch |
+| `mv.pole` | `#A0603A` | Polar bands 4 px, α 0.55 → 0 |
+| `mv.plume` / `mv.plumeRing` | `#D9622B` / `#C9502A` | Plume deposits around 5 calderas (14, 9, R 3.4) (31, 21, 2.2) (43, 14, 2.8) (57, 20.5, 1.8) (68, 6.5, 2.4): 0 `#D9622B` α 0.15 · 0.55 α 0.22 · 0.8 `#C9502A` α 0.62 · 1 α 0 |
+| `mv.hot` / `mv.hotCore` | `#FF6A2A` / `#FFC857` | Emissive hot spots r 1.5 above the shade: 0 `#FFC857` · 0.3 `#FF6A2A` α 0.95 · 1 α 0, pulsing 0.55 ↔ 1 / 6 s, begins 0 / −2 / −4 / −6 / −8 s |
+| `mv.bloom` | `#FFF6D8` | Shade bloom α 0.30 |
+| `mv.rim` | `#FFE08A` | Rim peak α 0.70, then 0.28 (= `thrust.core`) |
+| `mc.base` | `#7E7468` | Captured moon albedo base (= `rock.base`) |
+| `mc.warm` | `#A07E5A` | Warm regolith: fractalNoise 0.16, 6 oct, seed 83 > 0.56, × 0.85; system moon B |
+| `mc.rust` | `#8A5A3C` | Iron-rich patches (ejecta field < 0.39), × 0.6 |
+| `mc.dark` | `#3E3833` | Dark regolith (< 0.42, × 0.6), Phobos grooves (contours 0.46 / 0.56 of fractalNoise `0.035 0.2`, seed 97), specks, crater bowls (= `rock.dark`) |
+| `mc.highlight` | `#C9BBA8` | Ejecta (fractalNoise 0.22, 6 oct, seed 89 > 0.62, × 0.7); crater rims; lit inner walls (= `rock.highlight`) |
+| `mc.edge` | `#E6D8C4` | The 0.9 px lit edge facing the star, α 0.7 |
+| `msB.bloom` | `#E8DCC8` | System moon B shade bloom α 0.3 |
+
+| Moon | Geometry | Notes |
+|---|---|---|
+| Icy (`#moonIcy`, viewBox 48, r 12) | strip P 75, rect 150 × 24, 150 s, inner translate(−107 −12) | shade centre (3.05, −3.05), r 15, bloom `#FFFFFF` α 0.28; rim r 12.92 |
+| Volcanic (`#moonVolcanic`, viewBox 48, r 13) | strip P 82, rect 164 × 26, 120 s, inner translate(−119 −13) | shade centre (3.31, −3.31), r 16.25; rim r 14; emissive hot-spot strip drawn after the shade with the same translate |
+| Captured (`#moonCaptured`, viewBox 36, mean r 9) | 16 radii at 22.5° (raw 11.8 11 9.2 7.8 7.3 7.6 8.4 10.2 11.4 10.6 8.2 6.6 6.9 7.2 8 10.4, × 1.0108), closed Catmull-Rom spline; `#mcTumble` 0 → 360° / 70 s | albedo turns; 10 craters counter-rotate so their lit wall faces the star; lighting filter `#mcLight` on the fixed wrapper: lit mask = SourceAlpha offset (+2.6, −2.6) blurred 0.6; volume = offset (+1.6, −1.6) blurred 2.4, albedo × (0.6 + 0.45 V); warm band `#FF9455` α 0.2; night `#050B1E` α 0.97; lit edge `mc.edge` |
+| System (`#moonSystem`, viewBox 360 × 260) | planet r 26 (rocky tokens, P 163, 110 s); moon A r 5 (icy, P 31, tidally locked 30 s), orbit 50 × 15, inclination −14°, start 60°; moon B r 7 (asteroid, P 44, 52 s), orbit 96 × 21.12, +8°, start 200° | epicycle orbits (A e₁ 32.5 / e₂ 17.5; B 58.56 / 37.44), front/back copies toggled at the ellipse ends; eclipse shadows (disc of the moon's r, offset (−3.5, +3.5), `#050B1E` 0.7 α 0.6 → 0) on the planet while a moon is in front; orbit lines 1 px `ui.text` α 0.08, dash 2 6; planet shade bloom `#FFF0DC` α 0.32 |
+
+### Ringed planets (v1.4)
+
+All three use the reference lighting scaled to their radius, and one ring-material group drawn twice: a **back pass** before the planet through a shadow mask (shadowed material keeps 15 %), a **front pass** after the planet clipped to the lower half of the planet disc in ring orientation. Shadows use the light the reference crescent implies: 54° from the view axis toward the upper-right, L = (0.572, −0.572, 0.588). The planet's shadow on the ring is a half-ellipse r / (n·L) × r in ring space; the ring's shadow on the planet is ray-traced bands in `night.deep`, clipped to the disc, under the terminator. "Tilt" here means the **opening angle** (ry = sin(tilt) · rx); the on-screen roll is given separately. Rings orbit prograde (near side left → right); rocks and moons ride a counter-rotation so their lit side stays upper-right.
+
+| Token | Hex | Used for |
+|---|---|---|
+| `band.cream` / `band.tan` / `band.dull` | `#F2D9B8` / `#E3B07C` / `#C9A27A` | Saturn planet bands (brief tokens); `#F2D9B8` is also its base disc |
+| `ringSaturn.gold` | `#D9954F` | Golden bands 22..27 and 60..64 |
+| `ringSaturn.belt` | `#A86F3E` | Thin dark belts 18..21 and 66..69 (counter-flow group); dark streaks × 0.22 |
+| `ringSaturn.ring` / `ringSaturn.ringPale` | `#F2E6D2` / `#D8C9AE` | B ring core and F ring (brief) / A ring outer (brief); `#F2E6D2` also the light streaks |
+| `ringSaturn.ringB` / `.ringA` / `.ringC` | `#EAD7B4` / `#D9BF92` / `#B49A76` | B ring inner / A ring inner / C ring (warmer, so the ring reads ivory, not grey) |
+| `ringSaturn.grainLight` / `.grainDark` | `#FFF6E6` / `#6E5A40` | 13 hard-edged ringlets over 1.49–2.07 r, α 0.06–0.14 / 0.10–0.22 |
+| `ringSaturn.rim` | `#FFE9C8` | Haze edge α 0.5; rim peak α 0.95 (haze `#F5D7B0`; bloom `#FFF1C2` α 0.24) |
+| `iceDebris.base` | `#CFE6F5` | Debris-ring planet base (the v1.3 ice palette) |
+| `iceDebris.mid` | `#7FA6C9` | Mid plates (16 n − 7.68, × 0.55) |
+| `iceDebris.deep` | `#4F84BF` | Deepest plates (16 n − 9.6) — new |
+| `iceDebris.shadow` | `#35567A` | Crack cores (2.8 − 40 t, × 0.85) |
+| `iceGiant.base` / `.dark` / `.bright` | `#7FB8FF` / `#5E9ED6` / `#DCEFFF` | Ice-giant bands (brief tokens); `#DCEFFF` also its haze edge and light streaks |
+| `iceGiant.deep` | `#3D7FE0` | Main body colour and base disc — new |
+| `iceGiant.belt` | `#2A5BB5` | Dark belts, polar hoods, storm oval, dark streaks — new |
+| `iceGiant.storm` | `#1C3F8A` | Storm core — new |
+| (`ui.text`) | `#ECF0FA` | Shepherd rings, 1 px α 0.7 |
+
+| Ringed planet | Planet | Ring | Shadows |
+|---|---|---|---|
+| `ring-saturn` (viewBox 400 × 240, `#ringSaturn` at (200, 120)) | pale gas giant r 44, P 276; bands = a colour look-up table on a latitude field (one table entry per px → 1 px band edges, ±3 px turbulent borders): group A −8..7 `#C9A27A` · 7..13 `#E3B07C` · 13..22 `#F2D9B8` · 22..27 `#D9954F` · 27..33 `#E3B07C` · 33..55 `#F2D9B8` · 55..60 `#E3B07C` · 60..64 `#D9954F` · 64..71 `#F2D9B8` · 71..77 `#E3B07C` · 77..97 `#C9A27A`, 150 s; group B belts, 110 s counter-flow; waviness fractalNoise `0.008 0.045`, 5 oct, seeds 61 / 67, amplitude 0.12; streaks `0.006 0.16`, 4 oct, seed 71. Bloom α 0.24, haze 0.26 / 0.5 (lowered so the pale bands keep contrast) | opening 18° (ring space `rotate(−22) scale(1 0.31)`); 6 density strokes: C 1.37 r w 0.22 r `#B49A76` α 0.40 · B inner 1.53 / 0.10 `#EAD7B4` 0.68 · B core 1.65 / 0.14 `#F2E6D2` 0.86 · A inner 1.855 / 0.15 `#D9BF92` 0.66 · A outer 2.015 / 0.13 `#D8C9AE` 0.52 · F 2.16 / 0.012 `#F2E6D2` 0.60; Cassini 1.72–1.78 r, Encke 1.93–1.95 r; ringlet grain; 370 particles `#FFFFFF` r 0.4–0.75, α 0.3–0.6 in sub-rings 60 / 90 / 130 s (150 / 120 / 100 particles) | planet on ring: half-ellipse 91.1 × 44, rotated −148.3°, α 0.85, blur 0.8; ring on planet: 1.26–1.48 r α 0.25, 1.48–1.72 r α 0.62, 1.78–2.08 r α 0.45 |
+| `ring-debris` (viewBox 320 × 200, `#ringDebris` at (160, 100)) | ice world r 24 (`iceDebris.*`), P 151, 120 s; plates fractalNoise 0.05, 6 oct, seed 41; cracks turbulence 0.05, 2 oct, seed 43 + lit wall hairline; natural-edge caps `#F4F8FF` ≈ 15 % (ramp + 1.1 × noise, slope 14). Bloom `#E6F2FF` 0.28, haze `#BFE3FF` → `#E6F2FF` 0.34 / 0.55, rim `#A8DBFF` / `#7FC4FF` | opening 25° (`rotate(−32) scale(1 0.42)`); dust band `#C9BBA8` 1.45 r 0 · 1.6 0.10 · 1.75 0.14 · 1.9 0.10 · 2.05 0; 108 rock polygons (7–10 vertices, r 0.8–2.2) in 21 clumps — inner 1.60–1.75 r, 45 s, 11 clumps; outer 1.75–1.90 r, 70 s, 10 clumps — + 70 dust specks per sub-ring; rock shading one gradient 0 `#C9BBA8` · 0.42 `#7E7468` · 0.56 `#7E7468` ‖ `#3E3833` | planet on ring: 58.2 × 24, −149.9°, blur 0.6; ring on planet: 1.6–1.9 r α 0.28 + dust 1.5–2.0 r α 0.10 |
+| `ring-shepherd` (viewBox 320 × 200, `#ringShepherd` at (160, 100)) | ice giant r 26, P 163; look-up-table bands −8..5 `#2A5BB5` · 5..9 `#3D7FE0` · 9..11 `#7FB8FF` · 11..18 `#3D7FE0` · 18..20 `#2A5BB5` · 20..24 `#5E9ED6` · 24..28 `#7FB8FF` · 28..32 `#5E9ED6` · 32..34 `#2A5BB5` · 34..41 `#3D7FE0` · 41..43 `#7FB8FF` · 43..47 `#3D7FE0` · 47..61 `#2A5BB5`, 110 s (seed 81, amplitude 0.10; streaks seed 83); storm oval + core + white streak; cirrus clouds fractalNoise `0.035 0.16`, 6 oct, seed 87, threshold 0.66 (≈ 8 %), α 0.85, over a cloud shadow (0.8, 0.8) α 0.4, 80 s. Bloom 0.18, haze `#9CCBFF` → `#DCEFFF` 0.30 / 0.5 | opening 15° (`rotate(−24) scale(1 0.26)`); two 1 px rings `#ECF0FA` α 0.7 as screen-space ellipses r 45.5 (1.75 r) and 57.2 (2.2 r); shepherd moons r 2.5 (`#DCE4FF`, crater `#7FA6C9`, hard terminator) at r 54 / 36 s / start 35° and r 60.4 / 40 s / start 205° | planet on rings: 60.1 × 26, −146.9°, blur 0.6; ring on planet: two hairlines α 0.55 |
+
+### Deviations and open points (recorded in the asset headers)
+
+- **Kept from v1.3:** craters are seeded geometry; the black hole's Doppler side is the left (with a clockwise disk "left approaching" cannot strictly hold; kept for the read); the black hole's squash is 0.2115 (ry / rx); the blue giant keeps the v1.3 loop angles.
+- **v1.5 numbers beyond the references:** the airless shade radius is 1.25 r (v1.3's 1.5 r retired); the double planet's caps shrank 22 % → 16 % (solid caps read larger) and it gained a glint (ocean world); the Saturn ring is brighter than briefed (α to 0.86, three warmer ring colours — at the briefed 0.25–0.6 it read grey on navy) and its particles are r 0.4–0.75 (not 0.9); the ring rolls (−22° / −32° / −24°) were chosen so the shadows are visible with the upper-right light; the asteroid field has 88 rocks (62 / 20 / 6, inside the briefed 60–90 total); the emission nebula's α ≤ 0.22 holds per colour layer and only its ≈ 1 px ionisation fronts reach α 0.5, and only near the embedded stars.
+- **Open for the owners (not decided here):**
+  1. Planet X keeps its lower-left light toward the star (the retune brief said upper-right; that would light X from the side away from the star in every mockup).
+  2. ~~Cloud-shadow direction~~ — resolved in v1.5.1: `planet-start.svg` and `bodies/ocean.svg` now offset the cloud shadow (−0.85, +0.85), down-left away from the upper-right light, like planet X, toxic and ring-shepherd (the reference's (+1.2, +1.2) pointed down-right).
+  3. `moon-system.svg`'s planet uses `rocky.sandPale #F0C47E` at slope 30 / −16.5, an earlier rocky tuning; `rocky.svg` now uses `rocky.sand #E8A85C`. Align the system planet with rocky or keep the paler sand as a deliberate variant.
+  4. ~~Header drift~~ — resolved in v1.5.1: the `moon-icy.svg` and `nebula-emission.svg` headers now describe their markup (values above and in §9).
+
+## 9. Space environment (v1.4)
+
+Nebulae and debris give a level a place, not a mechanic. They are built to the same rules as the bodies (§4.1: crisp where solid, soft only where they are gas, every texture tinted, lighting from the upper-right for library art, cached, calm) and live in `design/assets/space/`. Each file is `<defs>` with prefixed ids + one top-level group translated to its centre, SMIL inside, header comment with every parameter. Canvas: `canvas-notes.md` §2b (nebulae) and §4e (debris fields).
+
+### Files
+
+| Key | Name | File · group · ids | viewBox | What it is |
+|---|---|---|---|---|
+| `nebulaEmission` | Emission nebula | `nebula-emission.svg` · `#nebulaEmission` at (320, 200) · `ne*` | 640 × 400 | Glowing hydrogen gas: violet outer gas, a rose H-alpha core, faint broken ionisation fronts where the young stars light the gas, dark dust lanes, 8 young stars |
+| `nebulaReflection` | Reflection nebula | `nebula-reflection.svg` · `#nebulaReflection` at (320, 200) · `nr*` | 640 × 400 | Cool blue dust lit by a bright star at the left third, feathery streaks radiating from it, crisp filament edges |
+| `nebulaDark` | Dark cloud | `nebula-dark.svg` · `#nebulaDark` at (240, 160) · `nd*` | 480 × 320 | Black dust that blocks the stars behind it, a crisp warm rim on the lit side, a soft wispy tail on the other |
+| `asteroidField` | Asteroid field | `asteroid-field.svg` · `#asteroidField` at (360, 180) · `af*` | 720 × 360 | A diagonal belt of 88 tumbling rocks in three sizes, crisp lit rims, warm terminators, dust haze |
+| `wreckDebris` | Wreck debris | `wreck-debris.svg` · `#wreckDebris` at (200, 130) · `wr*` | 400 × 260 | 20 tumbling metal fragments (hull panel, solar panel, truss, pipe, shards, flakes) with bevelled edges and twinkling glints |
+
+### Tokens
 
 | Token | Hex | Used for | Note |
 |---|---|---|---|
-| `whiteDwarf.core` | `#FFFFFF` | Body centre (0.00–0.55) and the bloom r 1.4 r = 22.4 (0.00 α 0.45 · 0.70 α 0.45 · 1 α 0 — soft over-exposure just outside the limb) | |
-| `whiteDwarf.body` | `#E9EEF8` | Body 0.85 stop; the four diffraction spikes (1 px, "+" orientation, from r to 4 r = 64, α 0.30 → 0, static) | Same hex as `stars.neutral` |
-| `whiteDwarf.corona` | `#B8CCFF` | Corona r 2.25 r = 36 (0.00 α 0.85 · 0.45 α 0.45 · 0.75 α 0.12 · 1 α 0, σ 3); body 1.00 stop; the hard 1 px limb at r 15.5, α 0.85 | Same hex as `stars.cool` |
-| `whiteDwarf.glow` | `#7FB8FF` | Glow r **6 r** = 96 (0.00 α 0.55 · 0.10 α 0.42 · 0.30 α 0.16 · 0.60 α 0.04 · 1 α 0), breathes **±5 % / 4 s** | Same hex as `planet.start.atmo` |
-| `neutronStar.core` | `#FFFFFF` | Body centre (0.00–0.50) | |
-| `neutronStar.body` | `#DCE4FF` | Body 0.85 stop; limb 1 px at r 7.5 α 0.9; the beam base (α 0.35) | Same hex as `path` |
-| `neutronStar.glow` | `#B48CFF` | Glow r **5 r** = 40 (0.00 α 0.60 · 0.18 α 0.42 · 0.45 α 0.14 · 1 α 0, static); body 1.00 stop; beam tips (α 0); the equatorial haze (rx 2.5 r × ry 0.6 r, α 0.12, σ 1) | **= `result.lost`** violet, as the brief asks |
-| `blackHole.shadow` | `#000000` | The event-horizon disc r 22 | Same hex as `bg.edge` — the second place pure black appears |
-| `blackHole.photon` | `#FFFFFF` | Photon ring: 1.5 px at r 24 (1.09 r), α 0.90, σ 1 | |
-| `blackHole.diskHot` | `#FFF8E1` | Disk ramp inner edge (0.538 = r 30.8, α 0.90); the 40 bright streaks | = `star.core` |
-| `blackHole.diskWarm` | `#FFC857` | Disk ramp 0.62 (α 0.85); lensed arcs inner stop (25.3, α 0.90) | = `star.body` |
-| `blackHole.diskMid` | `#FF8C2E` | Disk ramp 0.78 (α 0.60); arcs 26.6 (α 0.75); the faint warm glow r 3 r = 66 (0.00 α 0.20 · 0.45 α 0.09 · 1 α 0) | = `star.corona` |
-| `blackHole.diskOuter` | `#B48CFF` | Disk ramp 0.92 (α 0.28) → 1.00 (2.6 r, α 0.10); arcs outer stop (28.6, α 0.30) | = `result.lost` |
-| `blackHole.einstein` | `#7FB8FF` | Einstein ring r 2.1 r = 46.2, 1 px, α 0.12, static | = `whiteDwarf.glow` |
+| `neb.emission.edge` | `#B48CFF` | Emission outer gas: α = 0.16 · smoothstep(0.00, 0.40, d) | = `result.lost` hex |
+| `neb.emission.core` | `#E0566F` | H-alpha core: α = 0.22 · smoothstep(0.28, 0.65, d); the soft fill under the fronts | New |
+| `neb.emission.rim` | `#FF9DB0` | Ionisation fronts, α 0.5 on a ≈ 1–2 px band just inside the gas edge (D = smoothstep(0.24, 0.27, d), D out blur(D, 2.2), broken by noise), masked to pools of light around the stars at (−150, −22) r 150, (42, −38) r 170, (168, −82) r 80 over an α 0.12 floor (v1.5.1; was α 0.75 on every blob outline) | New |
+| `neb.lane` | `#050710` | Dust lanes × 0.35 | = `bg.base` |
+| `neb.reflection.dust` | `#5EA0FF` | Reflection dust: α = 0.16 · smoothstep(0.03, 0.45, d) | = `ui.accent` hex |
+| `neb.reflection.lit` | `#B8CCFF` | Star-lit dense filaments: α = 0.14 · smoothstep(0.40, 0.75, d); the bright star's halo; embedded stars | = `stars.cool` |
+| `neb.reflection.edge` | `#DCE4FF` | Crisp filament edges α 0.35 | = `path` hex |
+| `neb.dark.dust` | `#000000` | Dark-cloud body α ≤ 0.85; its tail α 0.55 | = `bg.edge` |
+| `neb.dark.rim` | `#FFD9B0` | Lit rim α 0.25; inner scattered glow α 0.07 | = `stars.warm` |
+| (stars) | `#FFFFFF` / `#B8CCFF` / `#E9EEF8` | Embedded young stars, halos, diffraction spikes | `stars.*` hexes |
+| `rock.base` | `#7E7468` | Asteroid faces (dust flat; textures A/B/C base); captured moon; debris-ring rocks | Warm stone, never neutral grey |
+| `rock.dark` | `#3E3833` | Mottle (× 0.50 / 0.60 / 0.72 in textures A / B / C), crater bowls, the hard terminator stop (α 0.80) | |
+| `rock.highlight` | `#C9BBA8` | Lit rim sliver, crater lit walls, specks (× 0.65), debris-ring dust | |
+| `rock.rust` | `#B04A22` | Iron patches × 0.70 / 0.40 / 0.16 | = `rocky.rust` |
+| `rock.ochre` | `#D8B26E` | Pale dusty highs × 0.42 | = `ocean.desert` |
+| `rock.bloom` | `#FFF0DC` | Sunward limb light α 0.34 → 0.08 | = `rocky.bloom` |
+| `rock.haze` | `#AAB8DD` | Belt dust haze α ≤ 0.05 | = `milkyway.dust` |
+| `metal.base` | `#8B95B5` | Light brushed-metal face; streaks on dark metal (× 0.38) | Same hex as `ui.textMuted`; its own name here |
+| `metal.dark` | `#4B5470` | Dark metal face; dark streaks on light metal (× 0.40) | Same hex as `ui.textDim` |
+| `metal.highlight` | `#ECF0FA` | Lit bevel, light streaks (× 0.30), seam lips α 0.35, the broad light α 0.34 | Same hex as `ui.text` |
+| `metal.edge` | `#2A3245` | Shadow bevel, seams, rivets, streaks on dark metal (× 0.45), hazard hatching | The retired `cracked.dark` hex |
+| `metal.hazard` | `#FFC857` | Hazard stripe | = `star.body` / `fuel.low` |
+| `metal.scorch` | `#3A2A2A` | Scorch and burn gradients | = `mv.spot` |
+| `metal.puncture` | `#050710` | Puncture holes | = `bg.base` |
+| `metal.solar` | `#5EA0FF` → `#142B5E` → `#0A0D1A` | Solar-cell gradient | `ui.accent` → the retired `planet.start.shadow` hex → `ship.outline` |
+| `metal.glint` | `#FFFFFF` | 7 glints, α 0.2 ↔ 0.6 over 3.1–6.4 s | |
+| (lighting) | `#FF9455` / `#050B1E` | Rock warm band and night; metal night | `terminator.warm` / `night.deep` |
 
-**Neutron star** (r 8): the magnetosphere group rotates about the star, SMIL rotate 30° → 390° over **6 s**, linear, clockwise (t = 0: the magnetic axis tilted 30° from vertical, top pole toward the upper-right). Inside it, in its own frame: the equatorial haze ellipse (it turns with the beams — the belt is tied to the magnetic axis, which keeps every phase coherent) and two beam cones, base width 0.8 r = 6.4 at the surface (1 px inside the limb so the σ 0.6 blur never shows a gap), length 3.5 r = 28 (tip at 4.5 r), tip width 14, linear gradient body α 0.35 → glow α 0 along the axis. Tiny and low-alpha, so it stays calm.
+### Construction
 
-**Black hole** (r 22, viewBox 320): draw order glow → top lensed arc → **back half** of the disk → shadow → photon ring → **front half** of the disk → bottom lensed arc → Einstein ring, the halves split along the disk's horizontal axis (front = lower half). The **accretion disk** is a flat ring, inner 1.4 r = 30.8, outer 2.6 r = 57.2, built in a circular frame and squashed with `scale(1 0.2115)` — ry/rx = 0.55 r / 2.6 r, so the outer ellipse is rx 57.2 × ry 12.1 (the brief's "rx 2.6 r, ry 0.55 r"); **note for Canvas:** the brief's `ctx.scale(1, 0.55)` must be read as `scale(1, 0.2115)` — at 0.55 the back half would hide the top arc entirely. Colour ramp (radial, userSpace r 57.2): 0.538 `diskHot` α 0.90 · 0.62 `diskWarm` α 0.85 · 0.78 `diskMid` α 0.60 · 0.92 `diskOuter` α 0.28 · 1.00 α 0.10 — a hard hot inner edge, a soft violet outer edge. Texture: radial **streaks** — 40 bright (`diskHot`, α 0.10–0.24) + 28 dark (`#000000`, α 0.10–0.22) tapered wedges, base width 0.5–1.1 px at r 30.8–38.8, tip 1.0–2.4 px, length 8–34 px (clamped at 57.2), σ 0.7, from `mulberry32(0xB1AC)` (angles i · 9° ± 3 / i · 12.86° + 6.4 ± 4), faded radially (1.0 at r 30.8 · 0.8 at 48.6 · 0.35 at 57.2), plus a dark mottle (fractalNoise 0.08, 2 oct, seed 5 → α 0.30 (R + G + B) − 0.25, black). The brief's "stretched turbulence 0.9 / 0.02" is realised as explicit wedges because an SVG filter cannot wrap a strip into a ring; Canvas bakes either into the one ring sprite. The textured ring **rotates** 360° / **24 s**, linear, clockwise, in its circular frame (the squash sits outside, so the motion is correctly elliptical and both halves share one phase). **Doppler beaming:** a static alpha mask over the disk and arcs, linear x −57.2 (1.0) → +57.2 (0.55) — the approaching left half is brighter. **Lensed arcs:** ring sectors r 1.15–1.3 r (25.3–28.6), top 190° → 350° over the shadow at group α 0.70, bottom 10° → 170° under it at α 0.50 (the secondary image is weaker — the asymmetric silhouette), warm ramp 25.3 `diskWarm` α 0.90 · 26.6 `diskMid` α 0.75 · 28.6 `diskOuter` α 0.30 (the white stop is dropped so they read warm against the white photon ring), each fading to 0 toward the horizontal axis (α 1 at |y| ≥ 20 → 0 at y = 0), σ 1. Static renders show t = 0 (streak phase 0). A multiply-grain filter on the semi-transparent ramp (the `star.svg` granulation technique) nearly erased the ramp during the pass and was replaced by the separate mottle overlay.
+**Emission nebula.** A mask of 4 noise-displaced ellipses (scale 60, smoothed 1): (cx cy rx ry rot) (−95 −5 200 135 −12) · (75 25 175 120 18) · (150 −70 120 85 0) · (−175 65 125 80 0). Density n = 0.6 · big + 0.4 · fine (big fractalNoise 0.006, 4 oct, seed 5, shared; fine 0.012, 4 oct, seed 11 in layer A / 17 in layer B), d = clamp(2.2 n − 0.75) × mask. Each layer draws violet and rose at the alphas above. **Rims:** D = smoothstep(0.235, 0.27, d) anti-aliased by blur 0.5, rim = D out blur(D, 2.2), broken into segments by fractalNoise 0.02 / 3 oct / seed 3, `#FF9DB0` α 0.75. **Lanes:** turbulence `0.006 0.024`, 4 oct, seed 27, alpha = 1 − 5 R, × a radial lane mask, `#050710` × 0.35, in a 520 × 180 rect at (40, 12) rotated 20°. **Stars:** 8 young stars (−150 −22 r 1.6 white, 42 −38 1.5 cool, −62 30 1.1 white, 112 22 1.0 cool, −112 70 0.9 cool, 168 −82 1.1 white, 8 62 0.9 white, −30 −72 1.0 cool), halos r 4.5 (the two brightest r 7 with crisp spikes). **Motion:** layer A opacity 1 → 0.6 → 1, layer B 0.6 → 1 → 0.6, 40 s eased; the whole cloud breathes 1 → 1.01 → 1 over 30 s.
 
-### Deviations from the brief, all deliberate and recorded in the asset headers
+**Reflection nebula.** Bright star at (−110, 10) (the left third): halo r 26 (0 `#FFFFFF` α 0.85 · 0.08 `#B8CCFF` α 0.55 · 0.35 α 0.16 · 1 α 0), core r 2.2, 4 spikes 18 px (α 0.55) + 2 diagonals 8 px (α 0.3). 11 teardrop fan rects rotated about the star (−155° … +155°, lengths 160–380), each sampling its own stretch of noise so the streaks radiate: n = 0.55 big + 0.45 fine (big `0.004 0.02`, 5 oct, seed 7; fine `0.008 0.045`, 4 oct, seed 11 (A) / 19 (B)), d = clamp(2.6 n − 0.9) × mask. Filament edges: D = smoothstep(0.52, 0.58), blur 0.5, edge = D out blur(D, 2), `#DCE4FF` α 0.35. 5 small embedded stars. Motion as the emission nebula (the star does not breathe).
 
-ice.shadow, lava.shadow, gasBanded.shadow and gasRinged.shadow are new tokens (the briefed sets had no night-side tone); toxic and cracked use their atmo as the lit-side highlight (no highlight token was briefed); toxic's highlight α is 0.70 and lava's 0.55 (not 0.90); the gas giants' wave frequency is 0.012 (not 0.02); the ring shadow is α 0.80 (not 0.6); the airless shade radius is 1.5 r (not 1.25 r); craters are seeded geometry (not thresholded noise); the moon's dark coverage is ≈ 22 % (not 25 %); the blue giant's streamers are ≥ 14° apart (not 20°); the black hole's streaks are explicit wedges (not a stretched turbulence) and its squash is 0.2115 (the brief's 0.55 is ry/r, not ry/rx); the lensed arcs drop the white stop, the top lensed arc is α 0.70 (not 0.6) and the bottom arc is α 0.50 (not 0.6); the Doppler side is the left (as briefed) although the clockwise spin makes the left tip recede — the brief's two words cannot both hold and "left approaching" was kept for the read. Everything else is the brief's number.
+**Dark cloud.** 8 black radial-gradient ellipses (main mass, lobes, two globules) displaced by fractalNoise 0.012 / 4 oct / seed 31 (scale 64), smoothed 0.8, × a clumpy texture (fractalNoise 0.035 / 5 oct / seed 37, 0.15 + 1.8 R). Body `#000000` α = 0.85 · smoothstep(0.03, 0.75, m). Silhouette S = smoothstep(0.07, 0.10, m), blur 0.5. **Rim** = S out S offset (−1.6, +1.6): only edges whose upper-right neighbour is empty, `#FFD9B0` α 0.25. Inner glow = (S out S offset (−9, +9)) blur 3, inside S, α 0.07. **Tail** = S offset (−20, +20), blur 12, × texture, `#000000` α 0.55. Drawn **over** the starfield (it occludes stars). Breathes 1 % / 30 s.
+
+**Asteroid field.** Belt axis at −18° through (0, 0); 88 rocks (62 dust r 1.5–3 · 20 small r 4–7 · 6 large r 9–14) placed by `mulberry32(0xA57E01D)`: uniform along the axis, Gaussian across it (σ 42 / 34 / 26), minimum spacing 1.45 (r₁ + r₂) + 3. Each rock: 7–11 vertices with ±0.3-step angular and ±0.18 r radial jitter, then an area-preserving potato elongation (aspect 1.0–1.3). Per rock, all crisp: the rotating silhouette carries the tumble; clipped to it, a lit-rim copy (`rock.highlight`) under the face copy shifted by a **static** (−s, +s) (s = 0.9 / 0.6 / 0.45 large / small / dust) → a sunward lit sliver at every angle; the face is flat `rock.base` (dust) or a tinted texture A (S-type, warm) / B (mixed) / C (C-type, dark) on a 48 px tile that rotates with the rock (rust fractalNoise 0.07, mottle 0.16, ochre on the mottle field, specks 0.70); craters (large 1–2, small > r 5.2 one at 50 %) with the bowl offset statically (+0.3 rc, −0.3 rc) toward the light; then a **static** light circle r 1.5 rmean (objectBoundingBox centre (0.924, 0.076), r 1.067): 0.25 `#FFF0DC` α 0.34 · 0.50 α 0.08 · 0.535 `#FF9455` α 0 · 0.575 α 0.20 · 0.597 `#3E3833` α 0.80 (the hard terminator) · 0.72 `#050B1E` α 0.86 · 1 α 0.92. Dust haze: ellipse 380 × 62 at −18°, `#AAB8DD` 0 α 0.05 · 0.55 α 0.035 · 1 α 0, streaked by fractalNoise `0.006 0.03` / seed 41. Tumble periods dust 20–50 s, small 35–70 s, large 55–90 s, random direction; the belt drifts ±6 px along its axis over 60 s.
+
+**Wreck debris.** 20 pieces (`mulberry32(0x5EC7)` for the flakes): wrK1 hull panel (−80, −12) 150 s, R 36.1 · wrK2 solar panel (66, 38) 120 s, R 29.2 · wrK3 truss (124, −60) 200 s, R 43.9 · wrK4 bent pipe (−36, 78) 110 s, R 27.2 · 6 shards R 7.8–12.6 (58–90 s) · 10 flakes R 1.8–4 (34–58 s); full table in the header. Per piece: shadow bevel `#2A3245`, lit bevel `#ECF0FA` shifted statically (+s, −s), the face shifted (−s, +s) and clipped by the (+s, −s) copy too → a crisp lit sliver upper-right and a dark sliver lower-left (s 0.35–0.8); brushed-metal face patterns (64 px tile, fractalNoise `0.03 0.55`, 3 oct, seeds 13 / 19) that rotate with the piece, plus seams, rivets, hazard stripe, scorch, puncture and 24 solar cells; then a **static** broad light (centre (0.78, 0.22)): 0 `#ECF0FA` α 0.34 · 0.38 α 0 · 0.58 `#050B1E` α 0.30 · 1 α 0.66 — metal has no planet terminator. 7 glints ride their pieces, α 0.2 ↔ 0.6 over 3.1–6.4 s, staggered.
+
+### Draw order
+
+`starfield → nebulae → debris dust → bodies → rocks → trail / path → ship → HUD`, i.e. per frame:
+
+1. **Background** (cached): `bg.edge` → vignette → Milky Way → starfield.
+2. **Nebulae**: emission / reflection (two cross-fading layer sprites, or baked into the background when static), then the dark cloud **over** the stars it hides.
+3. **Debris dust**: the asteroid belt's haze and the 62 dust rocks (batched; may be baked into the background if the drift is dropped).
+4. **Bodies**: the star, planets, moons, ringed planets (back ring → planet → front ring), back to front.
+5. **Rocks**: small and large asteroids, then wreck pieces (the near layer, in front of bodies they overlap).
+6. Capture ring → predicted path / trail → drag arrow → thrust + ship → HUD → result overlay.
+
+**Layout rule:** nebula cores (where both colour layers exceed half their peak alpha) stay out of the HUD rectangles (wordmark / mode x < 320, y < 90 · fuel x > 1160, y < 80 · actions and telemetry y > 780) so `ui.textMuted` keeps ≥ 5.4 : 1 (§2 contrast). Keep the predicted path ≥ 18 px from every large rock (scene-nebula).
+
+### Optional gameplay hooks — **not in scope**
+
+Documented so a later build knows where they would go; the prototype implements none of them, and no art depends on them.
+
+| Hook | Outline | Effect it could have |
+|---|---|---|
+| Emission-nebula drag zone | ellipse rx 250 × ry 150 about the group centre (circle-equivalent r 195) | light drag on the ship inside it |
+| Reflection-nebula drag zone | circle r 190 about (40, 10) | light drag |
+| Dark-cloud drag zone | circle r 150 about the centre | light drag (and hidden stars) |
+| Asteroid crash bodies | the 6 large rocks as circles of their mean radius: afR83 11.3 · afR84 9.6 · afR85 10.7 · afR86 12.1 · afR87 12.0 · afR88 9.8 | contact = crash; dust and small rocks stay visual |
+| Wreck crash bodies | pieces with R ≥ 10 as circles of 0.6 R (wrK1–wrK8, wrK10) | contact = crash; flakes stay visual |
+| Ring material | ring particles, debris-ring rocks, shepherd rings | none planned — they are never solid |

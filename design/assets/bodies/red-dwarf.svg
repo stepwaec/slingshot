@@ -1,135 +1,125 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="360" height="360" viewBox="0 0 360 360">
-  <!-- Red dwarf (v1.3 body library). ONE group #redDwarf at translate(180 180); all geometry relative to (0,0). Ids rd*.
-       = the v1.1 star construction scaled by k = 40/46 = 0.8696 (body r 40, corona to r 113, glow to r 174), re-coloured, calmer corona
-       (streamer/lobe alpha x0.7), larger slow granulation spots, plus the v1.3 prominences and flare. Lighting is self-emitted (no terminator).
-       Tokens: core #FFD9B0 . body #FF7A4D . corona #E0432F . glow #8C1E2A (limb = glow).
+  <!-- Red dwarf (v1.5 revised: the sun reference construction in deep reds).  ONE group #redDwarf at translate(180 180); geometry relative to (0,0). Ids rd*.
+       Scale k = 40/46 = 0.8696 of the sun (flames r 53.9, wisps r 67.8, haze r 180). Calmer: flame/wisp displacement 14/24 (sun 20/34 x k = 17.4/29.6), slower spin 260/390 s,
+       filaments x0.8; LARGER darker regions (noise 0.032 instead of 0.05, alpha 4 R - 1.6 instead of 3.4 R - 1.6 = more cover, cap 0.55). v1.3 loop angles/timings kept, arcs x1.1.
+       Construction = the approved sun reference (star-ref.svg, variant J): warm haze, two ragged flame rings, fiery tinted surface, bright limb, wobbling
+       disc edge, ragged rim stroke, two-tone crisp prominences, flare. No grey anywhere: every noise layer is tinted. Self-emitted light (no terminator).
+       body r 40 (crashRadius 40).
        Draw order (back to front):
-       1. glow    circle r 174, #8C1E2A  stops 0.00 a0.50 | 0.23 a0.45 | 0.65 a0.12 | 1.00 a0
-       2. corona  circle r 113, #E0432F  stops 0.00 a0.90 | 0.35 a0.70 | 0.62 a0.22 | 1.00 a0   blur sd 2.6
-       3. streamers  10 wedges, fill #E0432F, blur sd 5.2. Base width w centred at r 41.7 (= 48 k), tip at r T, rotated by A (SVG degrees).
-          From mulberry32(0x5244), draws in order angle, [reject if < 20 deg from an accepted angle], w = (10 + 8u) k, T = (110 + 65u) k,
-          alpha = (0.10 + 0.06u) x 0.7 (the "calmer corona"):
-            S1  A  97.8  w 14.8  T 106.9  a 0.096      S6  A 119.0  w 13.6  T 140.2  a 0.082
-            S2  A 174.8  w 13.0  T 149.8  a 0.071      S7  A  57.4  w  9.5  T 134.0  a 0.109
-            S3  A 302.6  w  9.7  T 131.8  a 0.103      S8  A  36.2  w 10.4  T 130.0  a 0.084
-            S4  A 148.9  w 14.1  T 136.2  a 0.109      S9  A 360.0  w 15.5  T 133.5  a 0.101
-            S5  A 228.4  w 11.6  T 126.1  a 0.107      S10 A 336.7  w 12.8  T 130.9  a 0.081
-       4. helmet lobes  2 wedges, base 34.8 at r 41.7, tip r 130.4, #E0432F a0.042 (0.06 x 0.7), angles 122 and 292, same blur sd 5.2.
-          Layers 1-4 sit in <g id="rdBreathe">: SMIL scale 1 -> 1.03 -> 1 -> 0.97 -> 1 over 6 s (sine, +-3 %, t = 0 is the rest size).
-       5. chromosphere  ring r 40.9, stroke 2.6, #E0432F a0.60, blur sd 1.3.
-       5b. prominences  3 loops footed on the limb (r 40), stroke 2.2 (2.5 k), #E0432F, round caps, blur sd 1.3, drawn before the body.
-          Loop i in <g transform="rotate(A_i) translate(40 0)">, path relative to its base point (x radial, y tangential), same construction as
-          star.svg (feet at r cos(s/2) - r, -+ r sin(s/2); peak (k_i - 1) r; cubic controls (hc, -+ 0.8 r sin(s/2)), hc = (8 h - 2 x_foot) / 6).
-          From mulberry32(0x5250): A = 360u [reject if < 70 deg from an accepted loop], s = 18 + 10u deg, k = 1.25 + 0.20u:
-            P1  A 338.8  s 26.6  k 1.421   d="M-1.07 -9.21 C22.83 -7.36 22.83 7.36 -1.07 9.21"    dur 12 s  begin 0 s
-            P2  A 248.0  s 20.2  k 1.440   d="M-0.62 -7.02 C23.69 -5.62 23.69 5.62 -0.62 7.02"    dur 16 s  begin 5 s
-            P3  A 167.2  s 22.0  k 1.378   d="M-0.74 -7.64 C20.41 -6.11 20.41 6.11 -0.74 7.64"    dur 14 s  begin 9 s
-          Per loop: scale about the base point 0.6 -> 1.0 -> 0.6 and opacity 0 -> 0.55 -> 0 over dur from begin, repeatCount indefinite, sine splines.
-          Base attributes (before begin, t = 0): scale(0.6), opacity 0. Peaks: P1 6 s + 12 n, P2 13 s + 16 n, P3 16 s + 14 n.
-       5c. flare  wedge M40 -1.3 L68 0 L40 1.3 Z (base 2.6 px on the limb, tip at 1.7 r) rotated to A 117.9 (next mulberry32(0x5250) draw, rejected
-          if < 30 deg from a loop), linear gradient along the wedge #FFD9B0 (limb) -> #FF7A4D (tip), no blur.
-          Opacity over a 22 s cycle: 0 until 13 s, 0.7 at 13.9 s, 0 at 14.8 s (keyTimes 0 | 0.5909 | 0.6318 | 0.6727 | 1), repeatCount indefinite.
-       6. body  circle r 40, radial (0.5,0.5): 0.00 #FFD9B0 | 0.45 #FF7A4D | 0.78 #FF7A4D | 0.90 #E0432F | 1.00 #8C1E2A (limb)
-       7. granulation  feTurbulence fractalNoise baseFrequency 0.07, numOctaves 2, seed 5, saturate 0, contrast x2 about 0.5, constant alpha 0.22,
-          blend multiply, clipped to the body (larger, slower-looking spots than the sun's 0.11 / 0.16).
-       Canvas: as star.svg (cached envelope + body sprites, 3 pre-blurred loop sprites scaled by 40/46 + 1 cached flare sprite; streamers blurred once at build time), colours and the tables above. -->
+       1. haze        circle r 180 (half the viewBox), radial: 0 #F0502A a0.6 | 0.23 #F0502A a0.5 | 0.33 #C8301C a0.3 | 0.55 #8C1E2A a0.15 | 0.8 #4E0C16 a0.06 | 1 #4E0C16 a0
+       2. wisp ring   circle r 67.8 FILLED SOLID TO THE CENTRE (no annulus gaps), userSpace radial: 0 #FF6A3A a0.5 | 0.62 #FF6A3A a0.5 | 0.8 #E0432F a0.22 | 1 #A8240E a0;
+                      filter #rdWisp: fractalNoise baseFrequency 0.05, 5 octaves, seed 37, made OPAQUE (feColorMatrix alpha = 1)
+                      -> feDisplacementMap scale 24 (R/G) -> blur sd 0.8 (flame softness, as the reference). Rotates 0 -> -360 over 390 s.
+       3. flame ring  circle r 53.9 filled solid, userSpace radial: 0 #FFB27A a0.92 | 0.74 #FFB27A a0.92 | 0.82 #FF6A3A a0.78 | 0.91 #E0432F a0.36 | 1 #B0281A a0;
+                      filter #rdFlame: fractalNoise 0.08, 4 octaves, seed 25, opaque -> displacement scale 14 -> blur sd 0.4.
+                      Rotates 0 -> +360 over 260 s (counter to the wisps).
+          Layers 1-3 sit in group #rdBreathe: SMIL scale 1 -> 1.03 -> 1 -> 0.97 -> 1 over 6 s (sine splines, +-3 %, t = 0 = rest size).
+          The disc, rim, prominences and flare never breathe (the crash radius never moves).
+       4. prominences 3 loops footed on the limb, drawn before the disc (feet hidden by it). Loop i in <g transform="rotate(A_i) translate(40 0)">
+          (x radial, y tangential). Two-tone, NO blur: outer stroke #E0432F 2.4 px a0.85 + inner core #FFD9B0 0.9 px a0.9, round caps.
+            P1  A 338.8  d="M-1.18 -10.13 C25.11 -8.1 25.11 8.1 -1.18 10.13"  dur 12 s  begin 0 s
+            P2  A 248  d="M-0.68 -7.72 C26.06 -6.18 26.06 6.18 -0.68 7.72"  dur 16 s  begin 5 s
+            P3  A 167.2  d="M-0.81 -8.4 C22.45 -6.72 22.45 6.72 -0.81 8.4"  dur 14 s  begin 9 s
+          Per loop (SMIL, sine splines, repeatCount indefinite): scale about the base point 0.6 -> 1.0 -> 0.6 and group opacity 0 -> 1 -> 0 over dur from begin.
+          Base attributes (t = 0, static renders): scale(0.6), opacity 0. Peaks at begin + dur/2 + n dur (6 s / 13 s / 16 s first) - never all at once.
+       5. flare       wedge M40 -1.55 L74.8 0 L40 1.55 Z rotated 117.9 deg, linear gradient along it #FFFFFF -> #FFD9B0 a0.15, no blur.
+                      Opacity over a 22 s cycle: 0 until 13 s, 1 at 13.9 s, 0 at 14.8 s (keyTimes 0 | 0.5909 | 0.6318 | 0.6727 | 1), repeatCount indefinite.
+       6. disc group  #rdDisc with filter #rdEdge - fine opaque fractalNoise 0.11, 3 octaves, seed 46, displacement scale 5
+                      (the irregular, not-perfectly-round rim; no blur). Contains:
+          6a. body    circle r 40, radial: 0 #FF8A4A | 0.65 #F0502A | 1 #D63A1E; filter #rdSurf (clipped to the disc):
+                      darker regions = fractalNoise 0.032, 5 oct, seed 8, colour #4A0A06, alpha = 4 R -1.6 then x0.55 (cap);
+                      plasma filaments = turbulence 0.05, 5 oct, seed 13, colour #FFB36B, alpha = 1.25 - 6.5 R then x0.8; merged over the body.
+          6b. limb    circle r 40, userSpace radial: 0.8 #FF9A6E a0 | 0.93 #FF9A6E a0.55 | 0.97 #FFD9B0 a0.9 | 1 #FFEBDA a0.95
+       7. ragged rim  circle r 40.2, stroke #FFD9B0 1.4 px a0.75, displaced by fractalNoise 0.22, 2 oct, seed 59, scale 4.2, blur sd 0.35.
+       v1.3 tokens reused: core #FFD9B0 (limb, rim, prominence core, flare tip), corona #E0432F (flames, prominence), glow #8C1E2A (haze); body #FF7A4D is superseded by the body ramp #FF8A4A / #F0502A / #D63A1E.
+       Canvas: bake as canvas-notes v1.5 says - haze sprite; flame + wisp rings pre-rendered WITH their displacement into 2-3 rotating sprite frames
+       (drawn with rotate at 2*pi*t/260 s and -2*pi*t/390 s, cross-faded), inside the 6 s breathe scale; one body sprite with surface,
+       limb, rim wobble and ragged rim baked in (static); 3 prominence sprites (two-tone, unblurred) + 1 flare sprite with the (angle, dur, begin) table above,
+       s = 0.6 + 0.4 sin^2(pi (t - begin)/dur), a = sin^2(...). Zero shadowBlur. -->
   <defs>
-    <radialGradient id="rdGlow" cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0" stop-color="#8C1E2A" stop-opacity="0.50"/>
-      <stop offset="0.23" stop-color="#8C1E2A" stop-opacity="0.45"/>
-      <stop offset="0.65" stop-color="#8C1E2A" stop-opacity="0.12"/>
-      <stop offset="1" stop-color="#8C1E2A" stop-opacity="0"/>
-    </radialGradient>
-    <radialGradient id="rdCorona" cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0" stop-color="#E0432F" stop-opacity="0.90"/>
-      <stop offset="0.35" stop-color="#E0432F" stop-opacity="0.70"/>
-      <stop offset="0.62" stop-color="#E0432F" stop-opacity="0.22"/>
-      <stop offset="1" stop-color="#E0432F" stop-opacity="0"/>
-    </radialGradient>
-    <radialGradient id="rdBody" cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0" stop-color="#FFD9B0"/>
-      <stop offset="0.45" stop-color="#FF7A4D"/>
-      <stop offset="0.78" stop-color="#FF7A4D"/>
-      <stop offset="0.90" stop-color="#E0432F"/>
-      <stop offset="1" stop-color="#8C1E2A"/>
-    </radialGradient>
-    <linearGradient id="rdFlareFill" gradientUnits="userSpaceOnUse" x1="40" y1="0" x2="68" y2="0">
-      <stop offset="0" stop-color="#FFD9B0"/>
-      <stop offset="1" stop-color="#FF7A4D"/>
-    </linearGradient>
-    <filter id="rdCoronaBlur" x="-10%" y="-10%" width="120%" height="120%">
-      <feGaussianBlur stdDeviation="2.6"/>
+    <radialGradient id="rdHaze" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#F0502A" stop-opacity="0.6"/><stop offset="0.23" stop-color="#F0502A" stop-opacity="0.5"/><stop offset="0.33" stop-color="#C8301C" stop-opacity="0.3"/><stop offset="0.55" stop-color="#8C1E2A" stop-opacity="0.15"/><stop offset="0.8" stop-color="#4E0C16" stop-opacity="0.06"/><stop offset="1" stop-color="#4E0C16" stop-opacity="0"/></radialGradient>
+    <radialGradient id="rdFlameFill" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="53.9"><stop offset="0" stop-color="#FFB27A" stop-opacity="0.92"/><stop offset="0.74" stop-color="#FFB27A" stop-opacity="0.92"/><stop offset="0.82" stop-color="#FF6A3A" stop-opacity="0.78"/><stop offset="0.91" stop-color="#E0432F" stop-opacity="0.36"/><stop offset="1" stop-color="#B0281A" stop-opacity="0"/></radialGradient>
+    <radialGradient id="rdWispFill" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="67.8"><stop offset="0" stop-color="#FF6A3A" stop-opacity="0.5"/><stop offset="0.62" stop-color="#FF6A3A" stop-opacity="0.5"/><stop offset="0.8" stop-color="#E0432F" stop-opacity="0.22"/><stop offset="1" stop-color="#A8240E" stop-opacity="0"/></radialGradient>
+    <radialGradient id="rdBody" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#FF8A4A"/><stop offset="0.65" stop-color="#F0502A"/><stop offset="1" stop-color="#D63A1E"/></radialGradient>
+    <radialGradient id="rdLimb" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="40"><stop offset="0.8" stop-color="#FF9A6E" stop-opacity="0"/><stop offset="0.93" stop-color="#FF9A6E" stop-opacity="0.55"/><stop offset="0.97" stop-color="#FFD9B0" stop-opacity="0.9"/><stop offset="1" stop-color="#FFEBDA" stop-opacity="0.95"/></radialGradient>
+    <linearGradient id="rdFlareFill" gradientUnits="userSpaceOnUse" x1="40" y1="0" x2="74.8" y2="0"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#FFD9B0" stop-opacity="0.15"/></linearGradient>
+    <filter id="rdFlame" filterUnits="userSpaceOnUse" x="-76.9" y="-76.9" width="153.8" height="153.8" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.08" numOctaves="4" seed="25" result="n0"/>
+      <feColorMatrix in="n0" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0 1" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="14" xChannelSelector="R" yChannelSelector="G" result="nd"/>
+      <feGaussianBlur in="nd" stdDeviation="0.4"/>
     </filter>
-    <filter id="rdStreamerBlur" x="-15%" y="-15%" width="130%" height="130%">
-      <feGaussianBlur stdDeviation="5.2"/>
+    <filter id="rdWisp" filterUnits="userSpaceOnUse" x="-91.8" y="-91.8" width="183.6" height="183.6" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="5" seed="37" result="w0"/>
+      <feColorMatrix in="w0" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0 1" result="w"/>
+      <feDisplacementMap in="SourceGraphic" in2="w" scale="24" xChannelSelector="R" yChannelSelector="G" result="wd"/>
+      <feGaussianBlur in="wd" stdDeviation="0.8"/>
     </filter>
-    <filter id="rdChromoBlur" x="-10%" y="-10%" width="120%" height="120%">
-      <feGaussianBlur stdDeviation="1.3"/>
+    <filter id="rdSurf" filterUnits="userSpaceOnUse" x="-42" y="-42" width="84" height="84" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.032" numOctaves="5" seed="8" result="f"/>
+      <feColorMatrix in="f" type="matrix" values="0 0 0 0 0.29  0 0 0 0 0.039  0 0 0 0 0.024  4 0 0 0 -1.6" result="dk"/>
+      <feComponentTransfer in="dk" result="dark"><feFuncA type="linear" slope="0.55"/></feComponentTransfer>
+      <feTurbulence type="turbulence" baseFrequency="0.05" numOctaves="5" seed="13" result="t"/>
+      <feColorMatrix in="t" type="matrix" values="0 0 0 0 1  0 0 0 0 0.702  0 0 0 0 0.42  -6.5 0 0 0 1.25" result="fl"/>
+      <feComponentTransfer in="fl" result="fil"><feFuncA type="linear" slope="0.8"/></feComponentTransfer>
+      <feMerge result="m"><feMergeNode in="SourceGraphic"/><feMergeNode in="dark"/><feMergeNode in="fil"/></feMerge>
+      <feComposite in="m" in2="SourceGraphic" operator="in"/>
     </filter>
-    <filter id="rdPromBlur" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur stdDeviation="1.3"/>
+    <filter id="rdEdge" filterUnits="userSpaceOnUse" x="-52" y="-52" width="104" height="104" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.11" numOctaves="3" seed="46" result="e0"/>
+      <feColorMatrix in="e0" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0 1" result="e"/>
+      <feDisplacementMap in="SourceGraphic" in2="e" scale="5" xChannelSelector="R" yChannelSelector="G"/>
     </filter>
-    <filter id="rdGranulation" x="-5%" y="-5%" width="110%" height="110%" color-interpolation-filters="sRGB">
-      <feTurbulence type="fractalNoise" baseFrequency="0.07" numOctaves="2" seed="5" result="rdNoise"/>
-      <feColorMatrix in="rdNoise" type="saturate" values="0" result="rdGrey"/>
-      <feComponentTransfer in="rdGrey" result="rdGrain">
-        <feFuncR type="linear" slope="2" intercept="-0.5"/>
-        <feFuncG type="linear" slope="2" intercept="-0.5"/>
-        <feFuncB type="linear" slope="2" intercept="-0.5"/>
-        <feFuncA type="linear" slope="0" intercept="0.22"/>
-      </feComponentTransfer>
-      <feBlend in="rdGrain" in2="SourceGraphic" mode="multiply" result="rdShaded"/>
-      <feComposite in="rdShaded" in2="SourceGraphic" operator="in"/>
+    <filter id="rdRimRag" filterUnits="userSpaceOnUse" x="-52" y="-52" width="104" height="104" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.22" numOctaves="2" seed="59" result="g0"/>
+      <feColorMatrix in="g0" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0 1" result="g"/>
+      <feDisplacementMap in="SourceGraphic" in2="g" scale="4.2" xChannelSelector="R" yChannelSelector="G" result="gd"/>
+      <feGaussianBlur in="gd" stdDeviation="0.35"/>
     </filter>
   </defs>
   <g id="redDwarf" transform="translate(180 180)">
     <g id="rdBreathe">
       <animateTransform attributeName="transform" type="scale" values="1;1.03;1;0.97;1" keyTimes="0;0.25;0.5;0.75;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1" dur="6s" repeatCount="indefinite"/>
-      <circle r="174" fill="url(#rdGlow)"/>
-      <circle r="113" fill="url(#rdCorona)" filter="url(#rdCoronaBlur)"/>
-      <g fill="#E0432F" filter="url(#rdStreamerBlur)">
-        <path d="M41.7 -7.39 L106.9 0 L41.7 7.39 Z" transform="rotate(97.8)" fill-opacity="0.096"/>
-        <path d="M41.7 -6.5 L149.8 0 L41.7 6.5 Z" transform="rotate(174.8)" fill-opacity="0.071"/>
-        <path d="M41.7 -4.85 L131.8 0 L41.7 4.85 Z" transform="rotate(302.6)" fill-opacity="0.103"/>
-        <path d="M41.7 -7.05 L136.2 0 L41.7 7.05 Z" transform="rotate(148.9)" fill-opacity="0.109"/>
-        <path d="M41.7 -5.78 L126.1 0 L41.7 5.78 Z" transform="rotate(228.4)" fill-opacity="0.107"/>
-        <path d="M41.7 -6.79 L140.2 0 L41.7 6.79 Z" transform="rotate(119)" fill-opacity="0.082"/>
-        <path d="M41.7 -4.73 L134 0 L41.7 4.73 Z" transform="rotate(57.4)" fill-opacity="0.109"/>
-        <path d="M41.7 -5.19 L130 0 L41.7 5.19 Z" transform="rotate(36.2)" fill-opacity="0.084"/>
-        <path d="M41.7 -7.72 L133.5 0 L41.7 7.72 Z" transform="rotate(360)" fill-opacity="0.101"/>
-        <path d="M41.7 -6.41 L130.9 0 L41.7 6.41 Z" transform="rotate(336.7)" fill-opacity="0.081"/>
-        <path d="M41.7 -17.4 L130.4 0 L41.7 17.4 Z" transform="rotate(122)" fill-opacity="0.042"/>
-        <path d="M41.7 -17.4 L130.4 0 L41.7 17.4 Z" transform="rotate(292)" fill-opacity="0.042"/>
-      </g>
+      <circle r="180" fill="url(#rdHaze)"/>
+      <g><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="390s" repeatCount="indefinite"/>
+        <circle r="67.8" fill="url(#rdWispFill)" filter="url(#rdWisp)"/></g>
+      <g><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="260s" repeatCount="indefinite"/>
+        <circle r="53.9" fill="url(#rdFlameFill)" filter="url(#rdFlame)"/></g>
     </g>
-    <circle r="40.9" fill="none" stroke="#E0432F" stroke-opacity="0.60" stroke-width="2.6" filter="url(#rdChromoBlur)"/>
-    <g id="rdProminences" fill="none" stroke="#E0432F" stroke-width="2.2" stroke-linecap="round">
+    <g id="rdProminences" fill="none" stroke-linecap="round">
       <g transform="rotate(338.8) translate(40 0)">
         <g id="rdProm1" transform="scale(0.6)" opacity="0">
           <animateTransform attributeName="transform" type="scale" values="0.6;1;0.6" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="12s" begin="0s" repeatCount="indefinite"/>
-          <animate attributeName="opacity" values="0;0.55;0" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="12s" begin="0s" repeatCount="indefinite"/>
-          <path d="M-1.07 -9.21 C22.83 -7.36 22.83 7.36 -1.07 9.21" filter="url(#rdPromBlur)"/>
+          <animate attributeName="opacity" values="0;1;0" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="12s" begin="0s" repeatCount="indefinite"/>
+          <path d="M-1.18 -10.13 C25.11 -8.1 25.11 8.1 -1.18 10.13" stroke="#E0432F" stroke-width="2.4" stroke-opacity="0.85"/>
+          <path d="M-1.18 -10.13 C25.11 -8.1 25.11 8.1 -1.18 10.13" stroke="#FFD9B0" stroke-width="0.9" stroke-opacity="0.9"/>
         </g>
       </g>
       <g transform="rotate(248) translate(40 0)">
         <g id="rdProm2" transform="scale(0.6)" opacity="0">
           <animateTransform attributeName="transform" type="scale" values="0.6;1;0.6" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="16s" begin="5s" repeatCount="indefinite"/>
-          <animate attributeName="opacity" values="0;0.55;0" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="16s" begin="5s" repeatCount="indefinite"/>
-          <path d="M-0.62 -7.02 C23.69 -5.62 23.69 5.62 -0.62 7.02" filter="url(#rdPromBlur)"/>
+          <animate attributeName="opacity" values="0;1;0" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="16s" begin="5s" repeatCount="indefinite"/>
+          <path d="M-0.68 -7.72 C26.06 -6.18 26.06 6.18 -0.68 7.72" stroke="#E0432F" stroke-width="2.4" stroke-opacity="0.85"/>
+          <path d="M-0.68 -7.72 C26.06 -6.18 26.06 6.18 -0.68 7.72" stroke="#FFD9B0" stroke-width="0.9" stroke-opacity="0.9"/>
         </g>
       </g>
       <g transform="rotate(167.2) translate(40 0)">
         <g id="rdProm3" transform="scale(0.6)" opacity="0">
           <animateTransform attributeName="transform" type="scale" values="0.6;1;0.6" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="14s" begin="9s" repeatCount="indefinite"/>
-          <animate attributeName="opacity" values="0;0.55;0" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="14s" begin="9s" repeatCount="indefinite"/>
-          <path d="M-0.74 -7.64 C20.41 -6.11 20.41 6.11 -0.74 7.64" filter="url(#rdPromBlur)"/>
+          <animate attributeName="opacity" values="0;1;0" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="14s" begin="9s" repeatCount="indefinite"/>
+          <path d="M-0.81 -8.4 C22.45 -6.72 22.45 6.72 -0.81 8.4" stroke="#E0432F" stroke-width="2.4" stroke-opacity="0.85"/>
+          <path d="M-0.81 -8.4 C22.45 -6.72 22.45 6.72 -0.81 8.4" stroke="#FFD9B0" stroke-width="0.9" stroke-opacity="0.9"/>
         </g>
       </g>
     </g>
     <g id="rdFlare" transform="rotate(117.9)" opacity="0">
-      <animate attributeName="opacity" values="0;0;0.7;0;0" keyTimes="0;0.5909;0.6318;0.6727;1" dur="22s" repeatCount="indefinite"/>
-      <path d="M40 -1.3 L68 0 L40 1.3 Z" fill="url(#rdFlareFill)"/>
+      <animate attributeName="opacity" values="0;0;1;0;0" keyTimes="0;0.5909;0.6318;0.6727;1" dur="22s" repeatCount="indefinite"/>
+      <path d="M40 -1.55 L74.8 0 L40 1.55 Z" fill="url(#rdFlareFill)"/>
     </g>
-    <circle r="40" fill="url(#rdBody)" filter="url(#rdGranulation)"/>
+    <g id="rdDisc" filter="url(#rdEdge)">
+      <circle r="40" fill="url(#rdBody)" filter="url(#rdSurf)"/>
+      <circle r="40" fill="url(#rdLimb)"/>
+    </g>
+    <circle r="40.2" fill="none" stroke="#FFD9B0" stroke-width="1.4" stroke-opacity="0.75" filter="url(#rdRimRag)"/>
   </g>
 </svg>

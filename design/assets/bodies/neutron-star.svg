@@ -1,61 +1,79 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
-  <!-- Neutron star (pulsar), v1.3 body library (compact object). ONE group #neutronStar at translate(60 60); geometry relative to (0,0). Ids: ns*.
-       r 8 (crashRadius 8). Tokens: core #FFFFFF · body #DCE4FF · glow #B48CFF (= result.lost violet).
+  <!-- Neutron star (pulsar), v1.3 body library (compact object), v1.5 revised crispness + vibrancy. ONE group #neutronStar at translate(60 60);
+       geometry relative to (0,0). Ids: ns*. r 8 (crashRadius 8). Tokens: core #FFFFFF · body #DCE4FF · glow #B48CFF (= result.lost violet).
        Tiny, white-violet, with two opposite low-alpha beam cones that sweep around the star once per 6 s. No flares, no prominences, no terminator.
+       v1.5 changes: glow steeper near the body (0.35 stop rule); beam blur 0.6 -> 0.5 and a crisp bright core spike added inside each cone;
+       haze blur 1 -> 0.75 (haze keeps a little softness); body edge more vivid (violet limb stop) and a two-tone limb.
 
        Draw order (bottom to top):
-       0. glow     circle r 5 r = 40, radial, #B48CFF: 0.00 a0.60 | 0.18 a0.42 | 0.45 a0.14 | 1.00 a0 (tight for a star: it ends at 5 r). Static.
+       0. glow     circle r 5 r = 40, radial, #B48CFF: 0.00 a0.65 | 0.20 a0.48 (= the limb) | 0.35 a0.22 | 0.60 a0.07 | 1.00 a0. Static.
        1. magnetosphere group #nsBeams: ROTATES about the star: SMIL rotate 30 -> 390 deg over 6 s, linear, indefinite (clockwise; 30 deg at t = 0 =
                    the magnetic axis tilted 30 deg from vertical, top pole toward the upper right). Contents, in the group's own frame (axis = its y axis):
-          1a. haze  ellipse rx 2.5 r = 20, ry 0.6 r = 4.8, #B48CFF a0.12, blur sd 1 - the magnetic-equatorial haze, perpendicular to the beams,
-                   so it turns with them (treating the belt as tied to the magnetic axis keeps the picture coherent at every phase).
-          1b. beams 2 cones (north: polygon (-3.2,-7) (3.2,-7) (7,-36) (-7,-36); south = the same rotated 180 deg): base width 0.8 r = 6.4 at the
-                   surface (the base sits at y -7, 1 px inside the limb so the blur never shows a gap), length 3.5 r = 28 (tip at r 36 = 4.5 r from the centre),
-                   tip width 1.75 r = 14, fill = linear gradient along the axis: base #DCE4FF a0.35 -> tip #B48CFF a0; blur sd 0.6 (presentation only).
-       2. body     circle r 8, radial (0.5,0.5): 0.00 #FFFFFF | 0.50 #FFFFFF | 0.85 #DCE4FF | 1.00 #B48CFF.
-       3. limb     circle r 7.5, stroke 1, #DCE4FF a0.9 (hard thin limb).
+          1a. haze  ellipse rx 2.5 r = 20, ry 0.6 r = 4.8, #B48CFF a0.14, blur sd 0.75 - the magnetic-equatorial haze, perpendicular to the beams.
+          1b. beams 2 cones (north: polygon (-3.2,-7) (3.2,-7) (7,-36) (-7,-36); south = mirrored): base width 0.8 r = 6.4 at the surface (base 1 px
+                   inside the limb), length 3.5 r = 28 (tip at r 36), tip width 1.75 r = 14, fill = linear gradient along the axis:
+                   #DCE4FF a0.38 (base) | #C9A8FF a0.20 (40 %) | #B48CFF a0 (tip); blur sd 0.5.
+          1c. core spikes  thin wedges along each beam axis, base 1.6 px at y -/+7, point at y -/+34, #FFFFFF a0.55 -> #DCE4FF a0 (unblurred: the crisp read).
+       2. body     circle r 8, radial (0.5,0.5): 0.00 #FFFFFF | 0.50 #FFFFFF | 0.80 #DCE4FF | 0.93 #C9A8FF | 1.00 #B48CFF.
+       3. limb     circle r 7.5, stroke 1, #DCE4FF a0.9 (hard thin limb, on whole pixels at 1x) + outer hairline r 8.3, stroke 0.6, #B48CFF a0.75.
+       New colour: beam.mid #C9A8FF (proposed token ns.beamMid, also the body's limb stop).
        Canvas (canvas-notes §3c): THREE cached sprites, 3 drawImage per frame, in this order - glow sprite (84 px square at zoom 1, static) ->
-       magnetosphere sprite (haze + the two beams, 80 px square) under ctx.rotate(30 deg + 2*pi*t / 6 s) -> body + limb sprite (20 px, static),
+       magnetosphere sprite (haze + beams + core spikes, 80 px square) under ctx.rotate(30 deg + 2*pi*t / 6 s) -> body + limb sprite (20 px, static),
        so the beams sit over the glow and under the body, as here. Zero shadowBlur. -->
   <defs>
     <radialGradient id="nsGlow" cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0" stop-color="#B48CFF" stop-opacity="0.60"/>
-      <stop offset="0.18" stop-color="#B48CFF" stop-opacity="0.42"/>
-      <stop offset="0.45" stop-color="#B48CFF" stop-opacity="0.14"/>
+      <stop offset="0" stop-color="#B48CFF" stop-opacity="0.65"/>
+      <stop offset="0.20" stop-color="#B48CFF" stop-opacity="0.48"/>
+      <stop offset="0.35" stop-color="#B48CFF" stop-opacity="0.22"/>
+      <stop offset="0.60" stop-color="#B48CFF" stop-opacity="0.07"/>
       <stop offset="1" stop-color="#B48CFF" stop-opacity="0"/>
     </radialGradient>
     <radialGradient id="nsBody" cx="0.5" cy="0.5" r="0.5">
       <stop offset="0" stop-color="#FFFFFF"/>
       <stop offset="0.50" stop-color="#FFFFFF"/>
-      <stop offset="0.85" stop-color="#DCE4FF"/>
+      <stop offset="0.80" stop-color="#DCE4FF"/>
+      <stop offset="0.93" stop-color="#C9A8FF"/>
       <stop offset="1" stop-color="#B48CFF"/>
     </radialGradient>
     <linearGradient id="nsBeamN" gradientUnits="userSpaceOnUse" x1="0" y1="-8" x2="0" y2="-36">
-      <stop offset="0" stop-color="#DCE4FF" stop-opacity="0.35"/>
+      <stop offset="0" stop-color="#DCE4FF" stop-opacity="0.38"/>
+      <stop offset="0.4" stop-color="#C9A8FF" stop-opacity="0.20"/>
       <stop offset="1" stop-color="#B48CFF" stop-opacity="0"/>
     </linearGradient>
     <linearGradient id="nsBeamS" gradientUnits="userSpaceOnUse" x1="0" y1="8" x2="0" y2="36">
-      <stop offset="0" stop-color="#DCE4FF" stop-opacity="0.35"/>
+      <stop offset="0" stop-color="#DCE4FF" stop-opacity="0.38"/>
+      <stop offset="0.4" stop-color="#C9A8FF" stop-opacity="0.20"/>
       <stop offset="1" stop-color="#B48CFF" stop-opacity="0"/>
     </linearGradient>
+    <linearGradient id="nsCoreN" gradientUnits="userSpaceOnUse" x1="0" y1="-7" x2="0" y2="-34">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#DCE4FF" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="nsCoreS" gradientUnits="userSpaceOnUse" x1="0" y1="7" x2="0" y2="34">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#DCE4FF" stop-opacity="0"/>
+    </linearGradient>
     <filter id="nsBeamBlur" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="0.6"/>
+      <feGaussianBlur stdDeviation="0.5"/>
     </filter>
     <filter id="nsHazeBlur" x="-20%" y="-40%" width="140%" height="180%">
-      <feGaussianBlur stdDeviation="1"/>
+      <feGaussianBlur stdDeviation="0.75"/>
     </filter>
   </defs>
   <g id="neutronStar" transform="translate(60 60)">
     <circle r="40" fill="url(#nsGlow)"/>
     <g id="nsBeams" transform="rotate(30)">
       <animateTransform attributeName="transform" type="rotate" from="30" to="390" dur="6s" repeatCount="indefinite"/>
-      <ellipse rx="20" ry="4.8" fill="#B48CFF" fill-opacity="0.12" filter="url(#nsHazeBlur)"/>
+      <ellipse rx="20" ry="4.8" fill="#B48CFF" fill-opacity="0.14" filter="url(#nsHazeBlur)"/>
       <g filter="url(#nsBeamBlur)">
         <polygon points="-3.2,-7 3.2,-7 7,-36 -7,-36" fill="url(#nsBeamN)"/>
         <polygon points="-3.2,7 3.2,7 7,36 -7,36" fill="url(#nsBeamS)"/>
       </g>
+      <path d="M-0.8 -7 L0 -34 L0.8 -7 Z" fill="url(#nsCoreN)"/>
+      <path d="M-0.8 7 L0 34 L0.8 7 Z" fill="url(#nsCoreS)"/>
     </g>
     <circle r="8" fill="url(#nsBody)"/>
     <circle r="7.5" fill="none" stroke="#DCE4FF" stroke-opacity="0.9" stroke-width="1"/>
+    <circle r="8.3" fill="none" stroke="#B48CFF" stroke-opacity="0.75" stroke-width="0.6"/>
   </g>
 </svg>

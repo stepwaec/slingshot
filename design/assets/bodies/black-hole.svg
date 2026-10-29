@@ -1,59 +1,65 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 320 320">
-  <!-- Black hole, v1.3 body library (compact object). ONE group #blackHole at translate(160 160); geometry relative to (0,0). Ids: bh*.
-       r 22 = event-horizon / crash radius (gravity is star-class). "Interstellar-style", simplified: a black shadow with a thin bright photon ring,
-       a tilted, nearly edge-on accretion disk whose front half passes IN FRONT of the lower shadow and whose far half re-appears LENSED as thin arcs
-       over the top and under the bottom, a faint Einstein ring and a faint warm glow. Everything emissive; no star-side lighting.
+  <!-- Black hole (v1.3 body library, v1.5 revised crispness + vibrancy). ONE group #blackHole at translate(160 160); geometry relative to (0,0). Ids bh*.
+       r 22 = event-horizon / crash radius (gravity is star-class). "Interstellar-style", simplified: a black shadow with a bright, slightly ragged photon
+       ring, a tilted, nearly edge-on accretion disk of fiery filamentary plasma whose front half passes IN FRONT of the lower shadow and whose far half
+       re-appears LENSED as thin arcs over the top and under the bottom, a faint Einstein ring and a faint warm glow. Everything emissive.
+       v1.5 changes: disk texture = the sun reference's fiery plasma (tinted dark regions + bright filaments, no grey/black streaks); photon ring two-tone
+       and displaced by fine noise (not perfectly round); blurs halved (arcs 1 -> 0.5); glow gets the steeper 0.35 stop; ramp gains a fiery red stop.
 
        Geometry (all relative to r = 22):
          shadow        r 22, #000000.
-         photon ring   stroke 1.5 at r 24 (1.09 r), #FFFFFF a0.90, blur sd 1.
+         photon ring   two-tone strokes at r 24 (1.09 r): outer #FFC857 2 px a0.6 + core #FFFFFF 1 px a0.95, plus an inner sub-ring r 22.9 #FFF1C2 0.6 px a0.55;
+                       all three in <g filter="url(#bhRag)">: fractalNoise baseFrequency 0.25, 2 octaves, seed 71, made opaque -> displacement scale 1.4
+                       -> blur sd 0.3 (the ring wobbles by about +-0.7 px: "less perfectly smooth").
          disk          flat ring inner 1.4 r = 30.8, outer 2.6 r = 57.2, drawn in a circular frame and squashed with scale(1 0.2115)
-                       (= ry 0.55 r = 12.1 for the outer ellipse, 6.5 for the inner edge; the Canvas pipeline's "scale(1, 0.55)" must be read as
-                       ry/rx = 0.55 r / 2.6 r = 0.2115 to match the brief's rx 2.6 r, ry 0.55 r). Front = lower half (y > 0), back = upper half.
-         colour ramp   radial, userSpace r 57.2: 0.538 (=30.8) #FFF8E1 a0.90 | 0.62 #FFC857 a0.85 | 0.78 #FF8C2E a0.60 | 0.92 #B48CFF a0.28 | 1.00 #B48CFF a0.10.
-                       Hard hot inner edge (ISCO), soft violet outer edge.
-         streaks       radial streaks on the ring, generated once (mulberry32 seed 0xB1AC, 40 bright #FFF8E1 a0.10-0.24 + 28 dark #000000
-                       a0.10-0.22 tapered wedges, base width 0.5-1.1 px at r 30.8-38.8, tip width 1.0-2.4 px, length 8-34 px, blur sd 0.7), the
-                       streak group faded radially (mask 1.0 at r 30.8 | 0.8 at 48.6 | 0.35 at 57.2), plus a dark mottle overlay on the ring
-                       (feTurbulence fractalNoise baseFrequency 0.08, 2 octaves, seed 5 -> alpha = 0.30*(R+G+B) - 0.25, i.e. 0..~0.45, black).
-                       (The brief's stretched turbulence 0.9/0.02 describes exactly this "narrow across, long along the radius" look; SVG filters
-                       cannot wrap a strip into a ring, so the streaks are explicit wedges here. Canvas: bake either into the one ring sprite.)
+                       (ry 0.55 r = 12.1 for the outer ellipse, 6.5 for the inner edge). Front = lower half (y > 0), back = upper half.
+         colour ramp   radial, userSpace r 57.2: 0.538 (=30.8) #FFF8E1 a0.95 | 0.6 #FFE7A0 a0.92 | 0.68 #FFC857 a0.92 | 0.78 #FF8C2E a0.82 |
+                       0.87 #E8461A a0.6 | 0.94 #B48CFF a0.32 | 1.00 #B48CFF a0.12. Hard hot inner edge (ISCO), fiery middle, soft violet outer edge.
+         plasma        filter #bhPlasma on the ramp ring (clipped to it), the sun reference's surface recipe re-scaled for the disk:
+                       darker regions = fractalNoise 0.055, 5 oct, seed 12, colour #802105 (plasma dark), alpha = 3.4 R - 1.5, x0.42 (cap);
+                       bright filaments = turbulence 0.07, 5 oct, seed 19, colour #FFE7A0 (filament), alpha = 1.25 - 6.5 R, x1.0.
+                       The vertical squash stretches both into tangential streaks/filaments (orbiting gas streams). Plus 8 tangential stream arcs
+                       (dashed circles, stroke 1.4-2.4 in the circular frame = 0.3-0.5 px at the front, full width at the tips): 5 bright #FFE7A0 a0.21-0.32,
+                       3 dark #802105 a0.25-0.32, radii 33.5 / 36 / 39.5 / 43 / 47 / 50.5 / 53.5 / 41 with irregular dash arrays (see markup).
          rotation      the whole textured ring (#bhDiskTex, used twice) rotates in its circular frame: SMIL rotate 0 -> 360 over 24 s, linear,
-                       clockwise (positive angle), repeat indefinite; the squash is applied outside, so the motion is correctly elliptical.
+                       clockwise, repeat indefinite; the squash is applied outside, so the motion is correctly elliptical.
          Doppler       static mask over the disk and the lensed arcs: linear gradient x -57.2 (1.0) -> +57.2 (0.55): the approaching LEFT half is brighter.
-         lensed arcs   ring sectors between r 1.15 r = 25.3 and 1.3 r = 28.6, warm ramp 25.3 #FFC857 a0.90 | 26.6 #FF8C2E a0.75 | 28.6 #B48CFF a0.30
-                       (the white inner stop is dropped so the arcs read warm against the white photon ring),
+         lensed arcs   ring sectors between r 1.15 r = 25.3 and 1.3 r = 28.6, ramp 25.3 #FFE7A0 a0.95 | 26.4 #FFC857 a0.85 | 27.5 #FF8C2E a0.7 | 28.6 #E8461A a0.3,
                        top arc 190 -> 350 deg (over the shadow), bottom arc 10 -> 170 deg (under it); each fades to 0 toward the horizontal axis
-                       (vertical alpha mask: full at |y| >= 20, 0 at y = 0); blur sd 1; group alpha 0.70 (top) / 0.50 (bottom: the secondary image is
-                       weaker, which is what gives the asymmetric Interstellar silhouette).
-         Einstein ring circle r 2.1 r = 46.2, stroke 1, #7FB8FF a0.12, static.
-         glow          circle r 3 r = 66, radial, #FF8C2E: 0.00 a0.20 | 0.45 a0.09 | 1.00 a0.
+                       (vertical alpha mask: full at |y| >= 20, 0 at y = 0); filter #bhArcRag = the same fine displacement as the photon ring (scale 1.4)
+                       + blur sd 0.5; group alpha 0.80 (top) / 0.55 (bottom: the weaker secondary image).
+         Einstein ring circle r 46.5 (2.1 r, nudged +0.3 so the 1 px stroke lands on whole pixels), stroke 1, #7FB8FF a0.14, static.
+         glow          circle r 3 r = 66, radial, #FF8C2E: 0.00 a0.22 | 0.35 a0.08 | 0.60 a0.03 | 1.00 a0 (steeper near the body).
 
        Draw order: glow -> top lensed arc (back) -> back half of the disk (clip y < 0) -> shadow -> photon ring -> front half of the disk (clip y > 0)
                    -> bottom lensed arc -> Einstein ring.
-       Static renders show t = 0 (streak phase 0). Canvas (canvas-notes §3c): a 2-cell static atlas + one ring-texture sprite drawn twice with
-       translate -> scale(1, 0.2115) -> rotate(phase), clipped to the upper half before the shadow and to the lower half after it, + the front-half
-       Doppler overlay: cell A (glow + top arc) -> back half -> cell B (back-half Doppler darkening + shadow + photon ring + bottom arc + Einstein
-       ring) -> front half -> Doppler overlay = 5 drawImage per frame (<= 5), zero shadowBlur.
-       Doppler side: the brief asks for both "clockwise" and "left approaching"; with the lower half as the near side a clockwise disk's left tip
-       recedes, so the two cannot both hold - the left half is kept as the bright side (as briefed) for the read; recorded in style.md §8. -->
+       Static renders show t = 0. Canvas (canvas-notes §3c): a 2-cell static atlas + one ring-texture sprite (ramp + plasma + stream arcs baked at 2x DPR)
+       drawn twice with translate -> scale(1, 0.2115) -> rotate(phase), clipped to the upper half before the shadow and to the lower half after it,
+       + the front-half Doppler overlay: cell A (glow + top arc) -> back half -> cell B (back-half Doppler darkening + shadow + ragged photon ring + bottom arc
+       + Einstein ring) -> front half -> Doppler overlay = 5 drawImage per frame (<= 5), zero shadowBlur, ring wobble baked into cell B.
+       Doppler side: with the lower half as the near side a clockwise disk's left tip recedes, so "clockwise" and "left approaching" cannot both hold;
+       the left half is kept as the bright side (as briefed) for the read; recorded in style.md §8. -->
   <defs>
     <radialGradient id="bhGlow" cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0" stop-color="#FF8C2E" stop-opacity="0.20"/>
-      <stop offset="0.45" stop-color="#FF8C2E" stop-opacity="0.09"/>
+      <stop offset="0" stop-color="#FF8C2E" stop-opacity="0.22"/>
+      <stop offset="0.35" stop-color="#FF8C2E" stop-opacity="0.08"/>
+      <stop offset="0.6" stop-color="#FF8C2E" stop-opacity="0.03"/>
       <stop offset="1" stop-color="#FF8C2E" stop-opacity="0"/>
     </radialGradient>
     <radialGradient id="bhRamp" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="57.2">
-      <stop offset="0.538" stop-color="#FFF8E1" stop-opacity="0.90"/>
-      <stop offset="0.62" stop-color="#FFC857" stop-opacity="0.85"/>
-      <stop offset="0.78" stop-color="#FF8C2E" stop-opacity="0.60"/>
-      <stop offset="0.92" stop-color="#B48CFF" stop-opacity="0.28"/>
-      <stop offset="1" stop-color="#B48CFF" stop-opacity="0.10"/>
+      <stop offset="0.538" stop-color="#FFF8E1" stop-opacity="0.95"/>
+      <stop offset="0.6" stop-color="#FFE7A0" stop-opacity="0.92"/>
+      <stop offset="0.68" stop-color="#FFC857" stop-opacity="0.92"/>
+      <stop offset="0.78" stop-color="#FF8C2E" stop-opacity="0.82"/>
+      <stop offset="0.87" stop-color="#E8461A" stop-opacity="0.6"/>
+      <stop offset="0.94" stop-color="#B48CFF" stop-opacity="0.32"/>
+      <stop offset="1" stop-color="#B48CFF" stop-opacity="0.12"/>
     </radialGradient>
     <radialGradient id="bhArcRamp" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="28.6">
-      <stop offset="0.885" stop-color="#FFC857" stop-opacity="0.90"/>
-      <stop offset="0.93" stop-color="#FF8C2E" stop-opacity="0.75"/>
-      <stop offset="1" stop-color="#B48CFF" stop-opacity="0.30"/>
+      <stop offset="0.885" stop-color="#FFE7A0" stop-opacity="0.95"/>
+      <stop offset="0.923" stop-color="#FFC857" stop-opacity="0.85"/>
+      <stop offset="0.962" stop-color="#FF8C2E" stop-opacity="0.7"/>
+      <stop offset="1" stop-color="#E8461A" stop-opacity="0.3"/>
     </radialGradient>
     <linearGradient id="bhDopplerGrad" gradientUnits="userSpaceOnUse" x1="-57.2" y1="0" x2="57.2" y2="0">
       <stop offset="0" stop-color="#FFFFFF" stop-opacity="1"/>
@@ -78,114 +84,49 @@
     </mask>
     <clipPath id="bhBackClip"><rect x="-160" y="-160" width="320" height="160"/></clipPath>
     <clipPath id="bhFrontClip"><rect x="-160" y="0" width="320" height="160"/></clipPath>
-    <filter id="bhPhotonBlur" x="-10%" y="-10%" width="120%" height="120%">
-      <feGaussianBlur stdDeviation="1"/>
+    <filter id="bhRag" filterUnits="userSpaceOnUse" x="-30" y="-30" width="60" height="60" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.25" numOctaves="2" seed="71" result="bhRag0"/>
+      <feColorMatrix in="bhRag0" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0 1" result="bhRagN"/>
+      <feDisplacementMap in="SourceGraphic" in2="bhRagN" scale="1.4" xChannelSelector="R" yChannelSelector="G" result="bhRagD"/>
+      <feGaussianBlur in="bhRagD" stdDeviation="0.3"/>
     </filter>
-    <filter id="bhArcBlur" x="-10%" y="-20%" width="120%" height="140%">
-      <feGaussianBlur stdDeviation="1"/>
+    <filter id="bhArcRag" filterUnits="userSpaceOnUse" x="-34" y="-34" width="68" height="68" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.3" numOctaves="2" seed="73" result="bhArc0"/>
+      <feColorMatrix in="bhArc0" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0 1" result="bhArcN"/>
+      <feDisplacementMap in="SourceGraphic" in2="bhArcN" scale="1.4" xChannelSelector="R" yChannelSelector="G" result="bhArcD"/>
+      <feGaussianBlur in="bhArcD" stdDeviation="0.5"/>
     </filter>
-    <filter id="bhStreakBlur" x="-5%" y="-5%" width="110%" height="110%">
-      <feGaussianBlur stdDeviation="0.7"/>
+    <filter id="bhPlasma" filterUnits="userSpaceOnUse" x="-58" y="-58" width="116" height="116" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.055" numOctaves="5" seed="12" result="bhF"/>
+      <feColorMatrix in="bhF" type="matrix" values="0 0 0 0 0.502  0 0 0 0 0.129  0 0 0 0 0.02  3.4 0 0 0 -1.5" result="bhDk"/>
+      <feComponentTransfer in="bhDk" result="bhDark"><feFuncA type="linear" slope="0.42"/></feComponentTransfer>
+      <feTurbulence type="turbulence" baseFrequency="0.07" numOctaves="5" seed="19" result="bhT"/>
+      <feColorMatrix in="bhT" type="matrix" values="0 0 0 0 1  0 0 0 0 0.906  0 0 0 0 0.627  -6.5 0 0 0 1.25" result="bhFl"/>
+      <feComponentTransfer in="bhFl" result="bhFil"><feFuncA type="linear" slope="1"/></feComponentTransfer>
+      <feMerge result="bhM"><feMergeNode in="SourceGraphic"/><feMergeNode in="bhDark"/><feMergeNode in="bhFil"/></feMerge>
+      <feComposite in="bhM" in2="SourceGraphic" operator="in"/>
     </filter>
-    <filter id="bhMottle" x="-5%" y="-5%" width="110%" height="110%" color-interpolation-filters="sRGB">
-      <feTurbulence type="fractalNoise" baseFrequency="0.08" numOctaves="2" seed="5" result="bhNoise"/>
-      <feColorMatrix in="bhNoise" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0.30 0.30 0.30 0 -0.25" result="bhNoiseA"/>
-      <feComposite in="bhNoiseA" in2="SourceGraphic" operator="in"/>
-    </filter>
-    <radialGradient id="bhStreakFadeGrad" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="57.2">
-      <stop offset="0.538" stop-color="#FFFFFF" stop-opacity="1"/>
-      <stop offset="0.85" stop-color="#FFFFFF" stop-opacity="0.8"/>
-      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.35"/>
-    </radialGradient>
-    <mask id="bhStreakFade" mask-type="alpha" maskUnits="userSpaceOnUse" x="-60" y="-60" width="120" height="120">
-      <rect x="-60" y="-60" width="120" height="120" fill="url(#bhStreakFadeGrad)"/>
-    </mask>
     <!-- The textured ring in its circular frame (r 30.8..57.2); instantiated twice (back / front halves). The rotation lives here so both
          instances share one phase. -->
     <g id="bhDiskTex">
       <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="24s" repeatCount="indefinite"/>
-      <path d="M57.2 0 A57.2 57.2 0 1 0 -57.2 0 A57.2 57.2 0 1 0 57.2 0 Z M30.8 0 A30.8 30.8 0 1 1 -30.8 0 A30.8 30.8 0 1 1 30.8 0 Z" fill-rule="evenodd" fill="url(#bhRamp)"/>
-      <path d="M57.2 0 A57.2 57.2 0 1 0 -57.2 0 A57.2 57.2 0 1 0 57.2 0 Z M30.8 0 A30.8 30.8 0 1 1 -30.8 0 A30.8 30.8 0 1 1 30.8 0 Z" fill-rule="evenodd" fill="#000000" filter="url(#bhMottle)"/>
-      <g mask="url(#bhStreakFade)">
-      <g fill="#FFF8E1" filter="url(#bhStreakBlur)">
-      <path d="M34.0 -0.82 L55.0 -1.63 L55.0 1.63 L34.0 0.82 Z" transform="rotate(-1.7)" fill-opacity="0.226"/>
-      <path d="M33.4 -0.81 L54.7 -1.20 L54.7 1.20 L33.4 0.81 Z" transform="rotate(10.9)" fill-opacity="0.196"/>
-      <path d="M32.5 -1.01 L45.3 -1.68 L45.3 1.68 L32.5 1.01 Z" transform="rotate(21.0)" fill-opacity="0.201"/>
-      <path d="M32.3 -0.92 L57.0 -1.30 L57.0 1.30 L32.3 0.92 Z" transform="rotate(27.1)" fill-opacity="0.199"/>
-      <path d="M32.8 -0.73 L56.0 -1.69 L56.0 1.69 L32.8 0.73 Z" transform="rotate(33.0)" fill-opacity="0.195"/>
-      <path d="M31.8 -0.80 L42.7 -1.51 L42.7 1.51 L31.8 0.80 Z" transform="rotate(43.4)" fill-opacity="0.119"/>
-      <path d="M30.9 -0.75 L41.1 -1.67 L41.1 1.67 L30.9 0.75 Z" transform="rotate(53.9)" fill-opacity="0.203"/>
-      <path d="M31.3 -0.96 L49.5 -1.32 L49.5 1.32 L31.3 0.96 Z" transform="rotate(60.9)" fill-opacity="0.140"/>
-      <path d="M32.4 -0.63 L46.2 -2.12 L46.2 2.12 L32.4 0.63 Z" transform="rotate(74.3)" fill-opacity="0.156"/>
-      <path d="M30.8 -1.03 L42.9 -1.73 L42.9 1.73 L30.8 1.03 Z" transform="rotate(78.5)" fill-opacity="0.203"/>
-      <path d="M34.4 -0.82 L54.3 -1.42 L54.3 1.42 L34.4 0.82 Z" transform="rotate(89.3)" fill-opacity="0.134"/>
-      <path d="M34.7 -0.81 L55.7 -2.17 L55.7 2.17 L34.7 0.81 Z" transform="rotate(96.3)" fill-opacity="0.103"/>
-      <path d="M33.3 -0.92 L43.6 -2.12 L43.6 2.12 L33.3 0.92 Z" transform="rotate(109.6)" fill-opacity="0.104"/>
-      <path d="M31.0 -1.04 L42.6 -1.60 L42.6 1.60 L31.0 1.04 Z" transform="rotate(119.7)" fill-opacity="0.167"/>
-      <path d="M31.4 -1.00 L41.6 -2.10 L41.6 2.10 L31.4 1.00 Z" transform="rotate(123.4)" fill-opacity="0.108"/>
-      <path d="M33.4 -0.83 L53.7 -1.76 L53.7 1.76 L33.4 0.83 Z" transform="rotate(135.8)" fill-opacity="0.177"/>
-      <path d="M34.5 -0.95 L51.8 -1.99 L51.8 1.99 L34.5 0.95 Z" transform="rotate(145.3)" fill-opacity="0.220"/>
-      <path d="M32.8 -1.05 L50.3 -1.74 L50.3 1.74 L32.8 1.05 Z" transform="rotate(153.5)" fill-opacity="0.117"/>
-      <path d="M34.8 -0.91 L55.9 -1.87 L55.9 1.87 L34.8 0.91 Z" transform="rotate(162.4)" fill-opacity="0.223"/>
-      <path d="M34.7 -0.80 L57.2 -1.87 L57.2 1.87 L34.7 0.80 Z" transform="rotate(170.5)" fill-opacity="0.144"/>
-      <path d="M32.0 -0.93 L56.9 -1.86 L56.9 1.86 L32.0 0.93 Z" transform="rotate(181.7)" fill-opacity="0.108"/>
-      <path d="M31.4 -0.80 L45.8 -1.66 L45.8 1.66 L31.4 0.80 Z" transform="rotate(187.6)" fill-opacity="0.227"/>
-      <path d="M31.0 -0.63 L48.9 -2.06 L48.9 2.06 L31.0 0.63 Z" transform="rotate(199.5)" fill-opacity="0.125"/>
-      <path d="M32.7 -1.07 L56.2 -2.08 L56.2 2.08 L32.7 1.07 Z" transform="rotate(206.9)" fill-opacity="0.208"/>
-      <path d="M32.3 -0.97 L50.4 -1.31 L50.4 1.31 L32.3 0.97 Z" transform="rotate(219.0)" fill-opacity="0.219"/>
-      <path d="M32.9 -0.87 L45.5 -1.96 L45.5 1.96 L32.9 0.87 Z" transform="rotate(225.3)" fill-opacity="0.170"/>
-      <path d="M33.9 -0.78 L46.7 -1.87 L46.7 1.87 L33.9 0.78 Z" transform="rotate(234.9)" fill-opacity="0.224"/>
-      <path d="M34.8 -0.85 L47.4 -1.79 L47.4 1.79 L34.8 0.85 Z" transform="rotate(241.6)" fill-opacity="0.132"/>
-      <path d="M34.8 -0.60 L45.6 -1.32 L45.6 1.32 L34.8 0.60 Z" transform="rotate(254.9)" fill-opacity="0.100"/>
-      <path d="M32.9 -1.02 L48.6 -1.33 L48.6 1.33 L32.9 1.02 Z" transform="rotate(261.7)" fill-opacity="0.112"/>
-      <path d="M32.8 -0.71 L53.0 -1.82 L53.0 1.82 L32.8 0.71 Z" transform="rotate(272.0)" fill-opacity="0.200"/>
-      <path d="M32.0 -0.74 L49.0 -1.73 L49.0 1.73 L32.0 0.74 Z" transform="rotate(279.4)" fill-opacity="0.181"/>
-      <path d="M33.3 -0.79 L49.6 -1.73 L49.6 1.73 L33.3 0.79 Z" transform="rotate(285.1)" fill-opacity="0.221"/>
-      <path d="M34.3 -1.05 L49.6 -2.18 L49.6 2.18 L34.3 1.05 Z" transform="rotate(296.8)" fill-opacity="0.143"/>
-      <path d="M32.3 -1.01 L56.7 -1.76 L56.7 1.76 L32.3 1.01 Z" transform="rotate(304.4)" fill-opacity="0.207"/>
-      <path d="M32.4 -0.85 L43.3 -1.46 L43.3 1.46 L32.4 0.85 Z" transform="rotate(315.9)" fill-opacity="0.198"/>
-      <path d="M31.1 -1.04 L50.7 -1.78 L50.7 1.78 L31.1 1.04 Z" transform="rotate(321.7)" fill-opacity="0.116"/>
-      <path d="M33.9 -1.06 L56.1 -1.93 L56.1 1.93 L33.9 1.06 Z" transform="rotate(330.9)" fill-opacity="0.112"/>
-      <path d="M32.4 -0.63 L42.4 -1.57 L42.4 1.57 L32.4 0.63 Z" transform="rotate(343.0)" fill-opacity="0.104"/>
-      <path d="M33.3 -0.72 L45.6 -1.85 L45.6 1.85 L33.3 0.72 Z" transform="rotate(349.9)" fill-opacity="0.104"/>
-      </g>
-      <g fill="#000000" filter="url(#bhStreakBlur)">
-      <path d="M38.2 -0.57 L51.1 -1.29 L51.1 1.29 L38.2 0.57 Z" transform="rotate(3.6)" fill-opacity="0.131"/>
-      <path d="M33.7 -0.57 L52.0 -1.72 L52.0 1.72 L33.7 0.57 Z" transform="rotate(17.9)" fill-opacity="0.162"/>
-      <path d="M37.7 -0.59 L57.2 -1.76 L57.2 1.76 L37.7 0.59 Z" transform="rotate(34.6)" fill-opacity="0.180"/>
-      <path d="M38.6 -0.59 L50.9 -1.02 L50.9 1.02 L38.6 0.59 Z" transform="rotate(45.7)" fill-opacity="0.220"/>
-      <path d="M36.7 -0.73 L45.3 -1.16 L45.3 1.16 L36.7 0.73 Z" transform="rotate(61.1)" fill-opacity="0.171"/>
-      <path d="M35.4 -0.59 L53.2 -1.52 L53.2 1.52 L35.4 0.59 Z" transform="rotate(69.4)" fill-opacity="0.173"/>
-      <path d="M36.7 -0.54 L51.2 -1.70 L51.2 1.70 L36.7 0.54 Z" transform="rotate(80.3)" fill-opacity="0.199"/>
-      <path d="M33.6 -0.67 L50.4 -1.58 L50.4 1.58 L33.6 0.67 Z" transform="rotate(93.6)" fill-opacity="0.178"/>
-      <path d="M35.5 -0.98 L45.7 -1.53 L45.7 1.53 L35.5 0.98 Z" transform="rotate(106.7)" fill-opacity="0.105"/>
-      <path d="M37.4 -0.90 L57.2 -1.01 L57.2 1.01 L37.4 0.90 Z" transform="rotate(125.4)" fill-opacity="0.112"/>
-      <path d="M36.2 -0.68 L57.2 -1.10 L57.2 1.10 L36.2 0.68 Z" transform="rotate(131.2)" fill-opacity="0.161"/>
-      <path d="M38.7 -0.70 L52.0 -1.76 L52.0 1.76 L38.7 0.70 Z" transform="rotate(151.2)" fill-opacity="0.136"/>
-      <path d="M37.1 -0.99 L50.0 -2.11 L50.0 2.11 L37.1 0.99 Z" transform="rotate(158.1)" fill-opacity="0.137"/>
-      <path d="M37.2 -0.95 L55.6 -1.24 L55.6 1.24 L37.2 0.95 Z" transform="rotate(171.4)" fill-opacity="0.109"/>
-      <path d="M38.2 -0.88 L49.0 -1.20 L49.0 1.20 L38.2 0.88 Z" transform="rotate(184.6)" fill-opacity="0.145"/>
-      <path d="M33.2 -0.54 L52.7 -1.60 L52.7 1.60 L33.2 0.54 Z" transform="rotate(195.7)" fill-opacity="0.105"/>
-      <path d="M37.1 -0.55 L57.2 -1.76 L57.2 1.76 L37.1 0.55 Z" transform="rotate(209.5)" fill-opacity="0.185"/>
-      <path d="M36.2 -0.75 L44.3 -1.98 L44.3 1.98 L36.2 0.75 Z" transform="rotate(223.7)" fill-opacity="0.195"/>
-      <path d="M36.8 -0.89 L47.8 -1.68 L47.8 1.68 L36.8 0.89 Z" transform="rotate(241.5)" fill-opacity="0.161"/>
-      <path d="M37.9 -0.63 L53.7 -1.41 L53.7 1.41 L37.9 0.63 Z" transform="rotate(253.9)" fill-opacity="0.174"/>
-      <path d="M33.6 -0.89 L48.2 -1.72 L48.2 1.72 L33.6 0.89 Z" transform="rotate(264.2)" fill-opacity="0.140"/>
-      <path d="M36.5 -0.80 L48.0 -1.29 L48.0 1.29 L36.5 0.80 Z" transform="rotate(279.0)" fill-opacity="0.195"/>
-      <path d="M36.5 -0.84 L46.7 -1.50 L46.7 1.50 L36.5 0.84 Z" transform="rotate(291.6)" fill-opacity="0.172"/>
-      <path d="M35.9 -0.56 L49.1 -1.72 L49.1 1.72 L35.9 0.56 Z" transform="rotate(302.9)" fill-opacity="0.117"/>
-      <path d="M37.2 -0.77 L45.7 -1.64 L45.7 1.64 L37.2 0.77 Z" transform="rotate(316.6)" fill-opacity="0.216"/>
-      <path d="M38.1 -0.77 L57.2 -1.04 L57.2 1.04 L38.1 0.77 Z" transform="rotate(325.5)" fill-opacity="0.185"/>
-      <path d="M33.4 -0.54 L43.7 -1.62 L43.7 1.62 L33.4 0.54 Z" transform="rotate(344.2)" fill-opacity="0.207"/>
-      <path d="M34.8 -0.64 L46.7 -2.00 L46.7 2.00 L34.8 0.64 Z" transform="rotate(356.4)" fill-opacity="0.200"/>
-      </g>
+      <path d="M57.2 0 A57.2 57.2 0 1 0 -57.2 0 A57.2 57.2 0 1 0 57.2 0 Z M30.8 0 A30.8 30.8 0 1 1 -30.8 0 A30.8 30.8 0 1 1 30.8 0 Z" fill-rule="evenodd" fill="url(#bhRamp)" filter="url(#bhPlasma)"/>
+      <g fill="none" stroke-linecap="round">
+        <circle r="33.5" stroke="#FFE7A0" stroke-opacity="0.32" stroke-width="1.4" stroke-dasharray="38 9 14 22 61 12 27 28"/>
+        <circle r="36" stroke="#802105" stroke-opacity="0.32" stroke-width="2.2" stroke-dasharray="22 31 48 17 9 26"/>
+        <circle r="39.5" stroke="#FFE7A0" stroke-opacity="0.27" stroke-width="1.6" stroke-dasharray="54 18 23 40 31 22 12 48"/>
+        <circle r="41" stroke="#802105" stroke-opacity="0.27" stroke-width="2.4" stroke-dasharray="17 44 36 21 58 30"/>
+        <circle r="43" stroke="#FFE7A0" stroke-opacity="0.24" stroke-width="1.8" stroke-dasharray="29 36 70 14 18 45 33 25"/>
+        <circle r="47" stroke="#802105" stroke-opacity="0.24" stroke-width="2.4" stroke-dasharray="46 27 19 52 34 38"/>
+        <circle r="50.5" stroke="#FFE7A0" stroke-opacity="0.21" stroke-width="2" stroke-dasharray="63 30 25 47 40 28 19 66"/>
+        <circle r="53.5" stroke="#FFE7A0" stroke-opacity="0.21" stroke-width="2.2" stroke-dasharray="35 58 48 33 72 40"/>
       </g>
     </g>
   </defs>
   <g id="blackHole" transform="translate(160 160)">
     <circle r="66" fill="url(#bhGlow)"/>
     <g mask="url(#bhDoppler)">
-      <g mask="url(#bhArcFadeTop)" opacity="0.70" filter="url(#bhArcBlur)">
+      <g mask="url(#bhArcFadeTop)" opacity="0.80" filter="url(#bhArcRag)">
         <path d="M-28.17 -4.97 A28.6 28.6 0 0 1 28.17 -4.97 L24.92 -4.39 A25.3 25.3 0 0 0 -24.92 -4.39 Z" fill="url(#bhArcRamp)"/>
       </g>
       <g clip-path="url(#bhBackClip)">
@@ -193,15 +134,19 @@
       </g>
     </g>
     <circle r="22" fill="#000000"/>
-    <circle r="24" fill="none" stroke="#FFFFFF" stroke-opacity="0.90" stroke-width="1.5" filter="url(#bhPhotonBlur)"/>
+    <g id="bhPhotonRing" fill="none" filter="url(#bhRag)">
+      <circle r="24" stroke="#FFC857" stroke-opacity="0.6" stroke-width="2"/>
+      <circle r="24" stroke="#FFFFFF" stroke-opacity="0.95" stroke-width="1"/>
+      <circle r="22.9" stroke="#FFF1C2" stroke-opacity="0.55" stroke-width="0.6"/>
+    </g>
     <g mask="url(#bhDoppler)">
       <g clip-path="url(#bhFrontClip)">
         <g transform="scale(1 0.2115)"><use href="#bhDiskTex"/></g>
       </g>
-      <g mask="url(#bhArcFadeBot)" opacity="0.50" filter="url(#bhArcBlur)">
+      <g mask="url(#bhArcFadeBot)" opacity="0.55" filter="url(#bhArcRag)">
         <path d="M28.17 4.97 A28.6 28.6 0 0 1 -28.17 4.97 L-24.92 4.39 A25.3 25.3 0 0 0 24.92 4.39 Z" fill="url(#bhArcRamp)"/>
       </g>
     </g>
-    <circle r="46.2" fill="none" stroke="#7FB8FF" stroke-opacity="0.12" stroke-width="1"/>
+    <circle r="46.5" fill="none" stroke="#7FB8FF" stroke-opacity="0.14" stroke-width="1"/>
   </g>
 </svg>

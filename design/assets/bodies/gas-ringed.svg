@@ -1,205 +1,206 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="320" height="200" viewBox="0 0 320 200">
-  <!-- Ringed gas giant, v1.3 body library ("gasRinged"). ONE group #gasRinged at translate(160 100); geometry relative to (0,0). Ids: gr*.
+  <!-- Ringed gas giant, v1.5 (revised: realistic + vibrant + crisp, built to reference/planet-ref.svg variant F). ONE group #gasRinged at
+       translate(160 100); geometry relative to (0,0). Ids: gr*.
        r 44, disc diameter H = 88; the ring reaches 2.2 r = 96.8 px, hence the wide viewBox. Lit side faces the star: L = (+0.7071, -0.7071)
        (upper-right). Lighting never rotates. The ring never rotates (nothing to see); only the bands drift.
-       Palette: band.cream #D5EFEA · band.light #9FD3C7 · band.mid #6FA8A0 · band.dark #3F7A74 · atmo #BFE8E0 · ring #D8E6E3 ·
-                shadow #1C3A36 (NEW token gasRinged.shadow: night side / terminator colour) · ring shadow uses bg.base #050710.
+       Palette (v1.5 tokens): band.light #8FD9C9 (base disc) · band.mid #58B0A3 · band.cream #DDF8F1 · band.dark #2A7A73 · streak.light #EFFFFA ·
+         streak.dark #1F5F59 · highlight #E8FFFA · haze #BFE8E0 (= v1.3 atmo) / #DDF7F1 · rim #D3FBF2 / #8EDCCC ·
+         ring.bright #F6EBCF (B ring) · ring.main #D9C8A2 (A ring) · ring.dust #A69A7E (C ring, gaps, outer ring; v1.3 ring #D8E6E3 retired) ·
+         shared terminator.warm #FF9455 · night #08122E / #050B1E (v1.3 gasRinged.shadow #1C3A36 retired) · ring shadow uses bg.base #050710.
 
-       Texture strips (v1.2 technique, as gas-banded.svg): period P = round(2*pi*r) = 276 px. Each band group is ONE rect set 2P x H
-       (552 x 88, overdrawn to y -8..96) with ONE filter on the group (stitched 276 x 88 noise, feTile over the 2P region -> seamless, no
-       geometry edge). Two band groups drift through the circular clip #grClip with counter-flow:
-         group A (back, full height)   SMIL translate 0 -> +276 over 160 s  (texture left -> right)   phase: disc left edge at strip x 320
-         group B (front, two belts)    SMIL translate 0 -> -276 over 120 s  (right -> left)           phase: disc left edge at strip x 44
-       (+P group: inner translate(-(r+P+44), -r) = (-364 -44); -P group: inner translate(-(r+44), -r) = (-88 -44); the 88 px window stays
-        inside 8..544 at every phase.)
+       Texture strips: period P = round(2 pi r) = 276 px. Each band group is ONE rect set 2P x H (552 x 88, overdrawn to y -8..96) with ONE filter
+       on the group (stitched 276 x 88 noise, feTile over the 2P region -> seamless, no geometry edge). Two band groups, counter-flow:
+         group A (back, full height)   SMIL translate 0 -> +276 over 160 s  (left -> right)   phase: inner translate(-364 -44)
+         group B (front, two belts)    SMIL translate 0 -> -276 over 120 s  (right -> left)   phase: inner translate(-88 -44)
        Group filter (#grWaveA / #grWaveB, region -8..560 x -8..96, sRGB):
-         wavy edges  feTurbulence fractalNoise baseFrequency "0.012 0.08", numOctaves 2, seeds 43 / 47, stitch on 0..276 x 0..88, feTile,
-                     contrast x2 about 0.5 on R and G, alpha forced to 1, feDisplacementMap scale 6 (y <- R, x <- G): edges wave +-3 px,
-                     then feGaussianBlur 0.6.
-         zonal streaks  feTurbulence fractalNoise baseFrequency "0.010 0.28", numOctaves 2, seeds 21 / 29, stitched + tiled, saturate 0,
-                     contrast x2 about 0.5, constant alpha 0.30, feBlend overlay, feComposite in.
-       Band layout (strip y; 0 = north pole, 88 = south pole; disc y = strip y - 44). 9 visible bands, calmer than the banded giant:
-         1  0-10   mid    A (polar N)       6  51-59  mid    B (belt S)
-         2  10-19  light  A                 7  59-69  cream  A
-         3  19-29  cream  B                 8  69-78  light  A
-         4  29-37  dark   B (dark belt N)   9  78-88  mid    A (polar S)
-         5  37-51  light  A (equatorial)
-       Overdraw: A = mid -8..10 | light 10..54 | cream 54..69 | light 69..78 | mid 78..96;  B = cream 19..29 | dark 29..37 | mid 51..59.
+         wavy edges  feTurbulence fractalNoise baseFrequency "0.014 0.09", numOctaves 4, seeds 43 / 47, stitch on 0..276 x 0..88, feTile,
+                     contrast x2 about 0.5 on R and G, alpha forced to 1 (opaque map), feDisplacementMap scale 9 (y <- R, x <- G),
+                     then feGaussianBlur 0.25 (anti-aliasing only: CRISP band edges, v1.5; was 0.6).
+         zonal streaks  feTurbulence fractalNoise baseFrequency "0.008 0.32", numOctaves 3, seeds 21 / 29, stitched + tiled, TINTED (no grey overlay):
+                     light streaks #EFFFFA: alpha threshold 0.61 slope 14, x0.3;
+                     dark streaks #1F5F59: alpha slope -14 (1 below 0.3286, 0 at 0.4), x0.32;
+                     merged over the displaced bands, then feComposite in (cropped to the bands).
+       Band layout (strip y; 0 = north pole, 88 = south pole):  A = mid -8..10 | light 10..54 | cream 54..69 | light 69..78 | mid 78..96;
+         B = cream 19..29 | dark 29..37 | mid 51..59.
 
-       Ring: drawn inside <g transform="rotate(-22) scale(1 0.28)"> ("ring space": u along the major axis, v = depth, v > 0 is the front /
-       lower-on-screen half). Tilt 22 deg (major axis rises toward the upper-right), opening ry = 0.28 rx. In ring space the ring is a plain
-       circle r 2.2 r = 96.8 filled with the radial gradient #grRing, #D8E6E3, offsets = radius / 96.8:
-         0.600 a0 | 0.6136 (= 1.35 r, inner edge) a0.22 | 0.655 a0.50 | 0.690 a0.55 (peak) | 0.7159 a0.50 || gap 1 at 1.60 r: 0.7159-0.7386 a0.08 ||
-         0.7386 a0.48 | 0.78 a0.42 | 0.81 a0.46 | 0.84 a0.36 | 0.875 a0.32 || gap 2 at 1.95 r: 0.875-0.8978 a0.06 || 0.8978 a0.28 | 0.95 a0.20 |
-         0.985 a0.12 | 1.000 (= 2.2 r) a0.   (gaps 0.05 r = 2.2 px wide; alpha 0.55 fading outward)
-       Front/back split: the front half-disc of the RIM radius, #grFront = lower half of the r 1.12 r = 49.28 disc in ring orientation
-       (path M-49.28 0 A49.28 49.28 0 0 0 49.28 0 Z rotated -22), is drawn by the FRONT ring only, after the planet, rim and limb; the back
-       ring is drawn behind the planet through #grBack = everything EXCEPT that half-disc (a 220 px square minus it, clip-rule evenodd).
-       So the front ring stays in front of the atmosphere rim where it leaves the limb (r 44 -> 49.28) instead of dipping behind the halo,
-       and no ring pixel is composited twice. The half-plane line touches no ring material (the inner edge is at 1.35 r > 1.12 r); the arc
-       r 49.28 crosses the front ring at two points just outside the limb, where the two complementary anti-aliased clips can leave a
-       sub-pixel seam of at most a^2/4 = 7.6 % ring alpha - inside the rim glow, invisible at 1-3x, barely at 16x. (A ring crossing the
-       limb cannot be split front/back without crossing ring material somewhere; this is the least visible place.)
-       Planet shadow on the back ring: in ring space, a sphere of radius r sitting on its own equatorial plane with light ~22 deg above the plane
-       casts a half-ellipse: semi-axes 117 (= r / tan 22 deg, along the shadow) x 44 (= r, across). Path "M0 -44 A117 44 0 0 1 0 44 Z" rotated
-       230 deg in ring space (pointing toward -u and mostly -v = the back half, so the shadow cuts the back arc radially right where it emerges
-       from behind the planet's left limb and the ring brightens again toward the left tip - the classic look; the in-plane star direction
-       alone (~210 deg) would run the shadow along the ring and read as a dim patch). Fill #050710 (bg.base: a shadowed ring shows the sky
-       through it), fill-opacity 0.80 (the brief's 0.6 read as dimming rather than shadow), blurred sd 1 x 3.5 in ring space (~1 px on screen),
-       alpha-masked by #grRingAlpha = the ring gradient with every stop-opacity divided by 0.55 (#grRingMaskGrad, peak 1.0) so the wedge
-       darkens ring material only, by 80 % on the densest ringlet and proportionally less in the gaps. Drawn between the back ring and the planet.
+       Ring: drawn inside <g transform="rotate(-22) scale(1 0.28)"> ("ring space": u along the major axis, v = depth, v > 0 is the front half).
+       Tilt 22 deg (major axis rises toward the upper-right), opening ry = 0.28 rx. In ring space the ring is a circle r 2.2 r = 96.8 filled with the
+       radial gradient #grRing (offset = radius / 96.8). CRISP ringlets: every segment boundary is a HARD step (two stops at the same offset):
+         1.350-1.400 r  #A69A7E  a0.16 -> a0.2
+         1.400-1.450 r  #A69A7E  a0.28 -> a0.3
+         1.450-1.500 r  #F6EBCF  a0.62 -> a0.66
+         1.500-1.530 r  #F6EBCF  a0.82
+         1.530-1.560 r  #F6EBCF  a0.7
+         1.560-1.600 r  #F6EBCF  a0.86 -> a0.8
+         1.600-1.650 r  #A69A7E  a0.04
+         1.650-1.750 r  #D9C8A2  a0.56 -> a0.52
+         1.750-1.840 r  #D9C8A2  a0.46 -> a0.44
+         1.840-1.855 r  #A69A7E  a0.06
+         1.855-1.950 r  #D9C8A2  a0.42 -> a0.36
+         1.950-2.000 r  #A69A7E  a0.03
+         2.000-2.200 r  #A69A7E  a0.22 -> a0
+       (peak a0.86 on the B ring; gaps 1 and 2 at 1.60 r and 1.95 r, 0.05 r = 2.2 px wide, as v1.3; plus a 0.015 r Encke-like gap at 1.84 r.)
+       Front/back split (unchanged): #grFront = lower half of the r 49.28 disc in ring orientation (path M-49.28 0 A49.28 49.28 0 0 0 49.28 0 Z
+       rotated -22) holds the FRONT ring, drawn after the planet, haze and rim; the back ring is drawn behind the planet through #grBack = a 220 px
+       square minus that half-disc (clip-rule evenodd). No ring pixel is composited twice.
+       Planet shadow on the back ring (unchanged geometry): ring-space half-ellipse "M0 -44 A117 44 0 0 1 0 44 Z" rotated 230 deg, fill #050710
+       fill-opacity 0.85, blurred sd 0.5 x 1.5 in ring space (~0.4 px on screen: crisp, v1.5; was 1 x 3.5), alpha-masked by #grRingAlpha = the ring
+       profile with every alpha divided by the peak a0.86 (#grRingMaskGrad) so the wedge darkens ring material only. Drawn between the back ring and the planet.
        Draw order:
-       1. ring + shadow wedge   (ring space), clipped to #grBack
-       2. base     circle r 44, #9FD3C7.
+       1. ring (back) + shadow wedge (ring space), clipped to #grBack
+       2. base     circle r 44, #8FD9C9.
        3. bands    inside clip #grClip: group A, group B.
-       4. squash   circle r 44, radial from the centre, #9FD3C7: 0.88 a0 | 1.00 a0.45.
-       5. shade    soft terminator: radial, centre 0.36 r L = (15.84, -15.84), radius 1.25 r = 55:
-                   0.00 #D5EFEA a0.55 | 0.40 #9FD3C7 a0 | 0.64 #1C3A36 a0.30 | 0.86 #1C3A36 a0.90 | 1.00 #1C3A36 a1.0
-       6. limb     circle r 43.5, stroke 1, #BFE8E0 a0.16.
-       7. rim      circle r 1.12 r = 49.28, radial, #BFE8E0: 0.00 a0 | 0.80 a0 | 0.87 a0.55 | 0.92 a0.30 | 1.00 a0,
-                   alpha-masked by a linear gradient along L from +1.12 r L (34.85,-34.85) = 1.0 to -1.12 r L = 0.35 (v1.1).
-       8. ring (front) = ring space circle again, clipped to #grFront (the back ring in step 1 is clipped to #grBack).
-       Static renders show t = 0. No halo. -->
+       4. shade    radial, userSpace centre 0.36 r L = (11.2, -11.2), radius 1.25 r = 55:
+                   0 #E8FFFA a0.2 (highlight bloom) | 0.32 a0 | 0.64 #FF9455 a0 | 0.705 #FF9455 a0.22 (warm terminator band) | 0.76 #08122E a0.74 | 0.84 #050B1E a0.97 | 1.00 a1.
+       haze     circle r 44, radial: 0.78 #BFE8E0 a0 | 0.96 #BFE8E0 a0.38 | 1.00 #DDF7F1 a0.6  - masked to the lit side.
+       rim      circle r 1.0765 r = 47.37, radial: 0.90 #D3FBF2 a0 | 0.928 #D3FBF2 a0.95 | 0.955 #8EDCCC a0.4 | 1.00 a0 - masked to the lit side.
+       lit mask linear (userSpace) from +r L (31.11,-31.11) to -r L: 1.0 | 0.5 a0.45 | 1.0 a0.06 (lit 1.0 -> dark 0.06). No full-circle limb line.
+       5. ring (front) = ring-space circle again, clipped to #grFront.
+       No squash, no limb line, no halo. Static renders show t = 0. -->
   <defs>
     <clipPath id="grClip"><circle r="44"/></clipPath>
     <clipPath id="grFront"><path d="M-49.28 0A49.28 49.28 0 0 0 49.28 0Z" transform="rotate(-22)"/></clipPath>
     <clipPath id="grBack"><path d="M-110 -110H110V110H-110ZM-49.28 0A49.28 49.28 0 0 0 49.28 0Z" clip-rule="evenodd" transform="rotate(-22)"/></clipPath>
     <radialGradient id="grRing" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="96.8">
-      <stop offset="0.600" stop-color="#D8E6E3" stop-opacity="0"/>
-      <stop offset="0.6136" stop-color="#D8E6E3" stop-opacity="0.22"/>
-      <stop offset="0.655" stop-color="#D8E6E3" stop-opacity="0.50"/>
-      <stop offset="0.690" stop-color="#D8E6E3" stop-opacity="0.55"/>
-      <stop offset="0.7159" stop-color="#D8E6E3" stop-opacity="0.50"/>
-      <stop offset="0.7159" stop-color="#D8E6E3" stop-opacity="0.08"/>
-      <stop offset="0.7386" stop-color="#D8E6E3" stop-opacity="0.08"/>
-      <stop offset="0.7386" stop-color="#D8E6E3" stop-opacity="0.48"/>
-      <stop offset="0.78" stop-color="#D8E6E3" stop-opacity="0.42"/>
-      <stop offset="0.81" stop-color="#D8E6E3" stop-opacity="0.46"/>
-      <stop offset="0.84" stop-color="#D8E6E3" stop-opacity="0.36"/>
-      <stop offset="0.875" stop-color="#D8E6E3" stop-opacity="0.32"/>
-      <stop offset="0.875" stop-color="#D8E6E3" stop-opacity="0.06"/>
-      <stop offset="0.8978" stop-color="#D8E6E3" stop-opacity="0.06"/>
-      <stop offset="0.8978" stop-color="#D8E6E3" stop-opacity="0.28"/>
-      <stop offset="0.95" stop-color="#D8E6E3" stop-opacity="0.20"/>
-      <stop offset="0.985" stop-color="#D8E6E3" stop-opacity="0.12"/>
-      <stop offset="1" stop-color="#D8E6E3" stop-opacity="0"/>
+      <stop offset="0.6131" stop-color="#A69A7E" stop-opacity="0"/>
+      <stop offset="0.6136" stop-color="#A69A7E" stop-opacity="0.16"/>
+      <stop offset="0.6364" stop-color="#A69A7E" stop-opacity="0.2"/>
+      <stop offset="0.6364" stop-color="#A69A7E" stop-opacity="0.28"/>
+      <stop offset="0.6591" stop-color="#A69A7E" stop-opacity="0.3"/>
+      <stop offset="0.6591" stop-color="#F6EBCF" stop-opacity="0.62"/>
+      <stop offset="0.6818" stop-color="#F6EBCF" stop-opacity="0.66"/>
+      <stop offset="0.6818" stop-color="#F6EBCF" stop-opacity="0.82"/>
+      <stop offset="0.6955" stop-color="#F6EBCF" stop-opacity="0.82"/>
+      <stop offset="0.6955" stop-color="#F6EBCF" stop-opacity="0.7"/>
+      <stop offset="0.7091" stop-color="#F6EBCF" stop-opacity="0.7"/>
+      <stop offset="0.7091" stop-color="#F6EBCF" stop-opacity="0.86"/>
+      <stop offset="0.7273" stop-color="#F6EBCF" stop-opacity="0.8"/>
+      <stop offset="0.7273" stop-color="#A69A7E" stop-opacity="0.04"/>
+      <stop offset="0.75" stop-color="#A69A7E" stop-opacity="0.04"/>
+      <stop offset="0.75" stop-color="#D9C8A2" stop-opacity="0.56"/>
+      <stop offset="0.7955" stop-color="#D9C8A2" stop-opacity="0.52"/>
+      <stop offset="0.7955" stop-color="#D9C8A2" stop-opacity="0.46"/>
+      <stop offset="0.8364" stop-color="#D9C8A2" stop-opacity="0.44"/>
+      <stop offset="0.8364" stop-color="#A69A7E" stop-opacity="0.06"/>
+      <stop offset="0.8432" stop-color="#A69A7E" stop-opacity="0.06"/>
+      <stop offset="0.8432" stop-color="#D9C8A2" stop-opacity="0.42"/>
+      <stop offset="0.8864" stop-color="#D9C8A2" stop-opacity="0.36"/>
+      <stop offset="0.8864" stop-color="#A69A7E" stop-opacity="0.03"/>
+      <stop offset="0.9091" stop-color="#A69A7E" stop-opacity="0.03"/>
+      <stop offset="0.9091" stop-color="#A69A7E" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#A69A7E" stop-opacity="0"/>
     </radialGradient>
     <radialGradient id="grRingMaskGrad" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="96.8">
-      <stop offset="0.600" stop-color="#FFFFFF" stop-opacity="0"/>
-      <stop offset="0.6136" stop-color="#FFFFFF" stop-opacity="0.40"/>
-      <stop offset="0.655" stop-color="#FFFFFF" stop-opacity="0.91"/>
-      <stop offset="0.690" stop-color="#FFFFFF" stop-opacity="1"/>
-      <stop offset="0.7159" stop-color="#FFFFFF" stop-opacity="0.91"/>
-      <stop offset="0.7159" stop-color="#FFFFFF" stop-opacity="0.15"/>
-      <stop offset="0.7386" stop-color="#FFFFFF" stop-opacity="0.15"/>
-      <stop offset="0.7386" stop-color="#FFFFFF" stop-opacity="0.87"/>
-      <stop offset="0.78" stop-color="#FFFFFF" stop-opacity="0.76"/>
-      <stop offset="0.81" stop-color="#FFFFFF" stop-opacity="0.84"/>
-      <stop offset="0.84" stop-color="#FFFFFF" stop-opacity="0.65"/>
-      <stop offset="0.875" stop-color="#FFFFFF" stop-opacity="0.58"/>
-      <stop offset="0.875" stop-color="#FFFFFF" stop-opacity="0.11"/>
-      <stop offset="0.8978" stop-color="#FFFFFF" stop-opacity="0.11"/>
-      <stop offset="0.8978" stop-color="#FFFFFF" stop-opacity="0.51"/>
-      <stop offset="0.95" stop-color="#FFFFFF" stop-opacity="0.36"/>
-      <stop offset="0.985" stop-color="#FFFFFF" stop-opacity="0.22"/>
+      <stop offset="0.6131" stop-color="#FFFFFF" stop-opacity="0"/>
+      <stop offset="0.6136" stop-color="#FFFFFF" stop-opacity="0.19"/>
+      <stop offset="0.6364" stop-color="#FFFFFF" stop-opacity="0.23"/>
+      <stop offset="0.6364" stop-color="#FFFFFF" stop-opacity="0.33"/>
+      <stop offset="0.6591" stop-color="#FFFFFF" stop-opacity="0.35"/>
+      <stop offset="0.6591" stop-color="#FFFFFF" stop-opacity="0.72"/>
+      <stop offset="0.6818" stop-color="#FFFFFF" stop-opacity="0.77"/>
+      <stop offset="0.6818" stop-color="#FFFFFF" stop-opacity="0.95"/>
+      <stop offset="0.6955" stop-color="#FFFFFF" stop-opacity="0.95"/>
+      <stop offset="0.6955" stop-color="#FFFFFF" stop-opacity="0.81"/>
+      <stop offset="0.7091" stop-color="#FFFFFF" stop-opacity="0.81"/>
+      <stop offset="0.7091" stop-color="#FFFFFF" stop-opacity="1"/>
+      <stop offset="0.7273" stop-color="#FFFFFF" stop-opacity="0.93"/>
+      <stop offset="0.7273" stop-color="#FFFFFF" stop-opacity="0.05"/>
+      <stop offset="0.75" stop-color="#FFFFFF" stop-opacity="0.05"/>
+      <stop offset="0.75" stop-color="#FFFFFF" stop-opacity="0.65"/>
+      <stop offset="0.7955" stop-color="#FFFFFF" stop-opacity="0.6"/>
+      <stop offset="0.7955" stop-color="#FFFFFF" stop-opacity="0.53"/>
+      <stop offset="0.8364" stop-color="#FFFFFF" stop-opacity="0.51"/>
+      <stop offset="0.8364" stop-color="#FFFFFF" stop-opacity="0.07"/>
+      <stop offset="0.8432" stop-color="#FFFFFF" stop-opacity="0.07"/>
+      <stop offset="0.8432" stop-color="#FFFFFF" stop-opacity="0.49"/>
+      <stop offset="0.8864" stop-color="#FFFFFF" stop-opacity="0.42"/>
+      <stop offset="0.8864" stop-color="#FFFFFF" stop-opacity="0.03"/>
+      <stop offset="0.9091" stop-color="#FFFFFF" stop-opacity="0.03"/>
+      <stop offset="0.9091" stop-color="#FFFFFF" stop-opacity="0.26"/>
       <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
     </radialGradient>
     <mask id="grRingAlpha" mask-type="alpha" maskUnits="userSpaceOnUse" x="-100" y="-100" width="200" height="200">
       <circle r="96.8" fill="url(#grRingMaskGrad)"/>
     </mask>
     <filter id="grShadowBlur" filterUnits="userSpaceOnUse" x="-140" y="-140" width="280" height="280">
-      <feGaussianBlur stdDeviation="1 3.5"/>
+      <feGaussianBlur stdDeviation="0.5 1.5"/>
     </filter>
     <filter id="grWaveA" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-8" y="-8" width="568" height="104" color-interpolation-filters="sRGB">
-      <feTurbulence type="fractalNoise" baseFrequency="0.012 0.08" numOctaves="2" seed="43" stitchTiles="stitch" x="0" y="0" width="276" height="88" result="grAd1"/>
-      <feTile in="grAd1" x="-8" y="-8" width="568" height="104" result="grAd2"/>
-      <feComponentTransfer in="grAd2" result="grAd">
+      <feTurbulence type="fractalNoise" baseFrequency="0.014 0.09" numOctaves="4" seed="43" stitchTiles="stitch" x="0" y="0" width="276" height="88" result="grWaveAd1"/>
+      <feTile in="grWaveAd1" x="-8" y="-8" width="568" height="104" result="grWaveAd2"/>
+      <feComponentTransfer in="grWaveAd2" result="grWaveAd">
         <feFuncR type="linear" slope="2" intercept="-0.5"/>
         <feFuncG type="linear" slope="2" intercept="-0.5"/>
         <feFuncA type="linear" slope="0" intercept="1"/>
       </feComponentTransfer>
-      <feDisplacementMap in="SourceGraphic" in2="grAd" scale="6" xChannelSelector="G" yChannelSelector="R" result="grAw"/>
-      <feGaussianBlur in="grAw" stdDeviation="0.6" result="grAs"/>
-      <feTurbulence type="fractalNoise" baseFrequency="0.010 0.28" numOctaves="2" seed="21" stitchTiles="stitch" x="0" y="0" width="276" height="88" result="grAt1"/>
-      <feTile in="grAt1" x="-8" y="-8" width="568" height="104" result="grAt2"/>
-      <feColorMatrix in="grAt2" type="saturate" values="0" result="grAt3"/>
-      <feComponentTransfer in="grAt3" result="grAt">
-        <feFuncR type="linear" slope="2" intercept="-0.5"/>
-        <feFuncG type="linear" slope="2" intercept="-0.5"/>
-        <feFuncB type="linear" slope="2" intercept="-0.5"/>
-        <feFuncA type="linear" slope="0" intercept="0.30"/>
-      </feComponentTransfer>
-      <feBlend in="grAt" in2="grAs" mode="overlay" result="grAb"/>
-      <feComposite in="grAb" in2="grAs" operator="in"/>
+      <feDisplacementMap in="SourceGraphic" in2="grWaveAd" scale="9" xChannelSelector="G" yChannelSelector="R" result="grWaveAw"/>
+      <feGaussianBlur in="grWaveAw" stdDeviation="0.25" result="grWaveAs"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.008 0.32" numOctaves="3" seed="21" stitchTiles="stitch" x="0" y="0" width="276" height="88" result="grWaveAt1"/>
+      <feTile in="grWaveAt1" x="-8" y="-8" width="568" height="104" result="grWaveAt"/>
+      <feColorMatrix in="grWaveAt" type="matrix" values="0 0 0 0 0.937  0 0 0 0 1.000  0 0 0 0 0.980  0 0 0 1 0" result="grWaveAlRGB"/>
+      <feComponentTransfer in="grWaveAlRGB" result="grWaveAlT"><feFuncA type="linear" slope="14" intercept="-8.54"/></feComponentTransfer>
+      <feComponentTransfer in="grWaveAlT" result="grWaveAlA"><feFuncA type="linear" slope="0.3"/></feComponentTransfer>
+      <feColorMatrix in="grWaveAt" type="matrix" values="0 0 0 0 0.122  0 0 0 0 0.373  0 0 0 0 0.349  0 0 0 1 0" result="grWaveAkRGB"/>
+      <feComponentTransfer in="grWaveAkRGB" result="grWaveAkT"><feFuncA type="linear" slope="-14" intercept="5.6"/></feComponentTransfer>
+      <feComponentTransfer in="grWaveAkT" result="grWaveAkA"><feFuncA type="linear" slope="0.32"/></feComponentTransfer>
+      <feMerge result="grWaveAm"><feMergeNode in="grWaveAs"/><feMergeNode in="grWaveAlA"/><feMergeNode in="grWaveAkA"/></feMerge>
+      <feComposite in="grWaveAm" in2="grWaveAs" operator="in"/>
     </filter>
     <filter id="grWaveB" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-8" y="-8" width="568" height="104" color-interpolation-filters="sRGB">
-      <feTurbulence type="fractalNoise" baseFrequency="0.012 0.08" numOctaves="2" seed="47" stitchTiles="stitch" x="0" y="0" width="276" height="88" result="grBd1"/>
-      <feTile in="grBd1" x="-8" y="-8" width="568" height="104" result="grBd2"/>
-      <feComponentTransfer in="grBd2" result="grBd">
+      <feTurbulence type="fractalNoise" baseFrequency="0.014 0.09" numOctaves="4" seed="47" stitchTiles="stitch" x="0" y="0" width="276" height="88" result="grWaveBd1"/>
+      <feTile in="grWaveBd1" x="-8" y="-8" width="568" height="104" result="grWaveBd2"/>
+      <feComponentTransfer in="grWaveBd2" result="grWaveBd">
         <feFuncR type="linear" slope="2" intercept="-0.5"/>
         <feFuncG type="linear" slope="2" intercept="-0.5"/>
         <feFuncA type="linear" slope="0" intercept="1"/>
       </feComponentTransfer>
-      <feDisplacementMap in="SourceGraphic" in2="grBd" scale="6" xChannelSelector="G" yChannelSelector="R" result="grBw"/>
-      <feGaussianBlur in="grBw" stdDeviation="0.6" result="grBs"/>
-      <feTurbulence type="fractalNoise" baseFrequency="0.010 0.28" numOctaves="2" seed="29" stitchTiles="stitch" x="0" y="0" width="276" height="88" result="grBt1"/>
-      <feTile in="grBt1" x="-8" y="-8" width="568" height="104" result="grBt2"/>
-      <feColorMatrix in="grBt2" type="saturate" values="0" result="grBt3"/>
-      <feComponentTransfer in="grBt3" result="grBt">
-        <feFuncR type="linear" slope="2" intercept="-0.5"/>
-        <feFuncG type="linear" slope="2" intercept="-0.5"/>
-        <feFuncB type="linear" slope="2" intercept="-0.5"/>
-        <feFuncA type="linear" slope="0" intercept="0.30"/>
-      </feComponentTransfer>
-      <feBlend in="grBt" in2="grBs" mode="overlay" result="grBb"/>
-      <feComposite in="grBb" in2="grBs" operator="in"/>
+      <feDisplacementMap in="SourceGraphic" in2="grWaveBd" scale="9" xChannelSelector="G" yChannelSelector="R" result="grWaveBw"/>
+      <feGaussianBlur in="grWaveBw" stdDeviation="0.25" result="grWaveBs"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.008 0.32" numOctaves="3" seed="29" stitchTiles="stitch" x="0" y="0" width="276" height="88" result="grWaveBt1"/>
+      <feTile in="grWaveBt1" x="-8" y="-8" width="568" height="104" result="grWaveBt"/>
+      <feColorMatrix in="grWaveBt" type="matrix" values="0 0 0 0 0.937  0 0 0 0 1.000  0 0 0 0 0.980  0 0 0 1 0" result="grWaveBlRGB"/>
+      <feComponentTransfer in="grWaveBlRGB" result="grWaveBlT"><feFuncA type="linear" slope="14" intercept="-8.54"/></feComponentTransfer>
+      <feComponentTransfer in="grWaveBlT" result="grWaveBlA"><feFuncA type="linear" slope="0.3"/></feComponentTransfer>
+      <feColorMatrix in="grWaveBt" type="matrix" values="0 0 0 0 0.122  0 0 0 0 0.373  0 0 0 0 0.349  0 0 0 1 0" result="grWaveBkRGB"/>
+      <feComponentTransfer in="grWaveBkRGB" result="grWaveBkT"><feFuncA type="linear" slope="-14" intercept="5.6"/></feComponentTransfer>
+      <feComponentTransfer in="grWaveBkT" result="grWaveBkA"><feFuncA type="linear" slope="0.32"/></feComponentTransfer>
+      <feMerge result="grWaveBm"><feMergeNode in="grWaveBs"/><feMergeNode in="grWaveBlA"/><feMergeNode in="grWaveBkA"/></feMerge>
+      <feComposite in="grWaveBm" in2="grWaveBs" operator="in"/>
     </filter>
-    <radialGradient id="grSquash" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="44">
-      <stop offset="0.88" stop-color="#9FD3C7" stop-opacity="0"/>
-      <stop offset="1" stop-color="#9FD3C7" stop-opacity="0.45"/>
+    <radialGradient id="grShade" gradientUnits="userSpaceOnUse" cx="11.2" cy="-11.2" r="55">
+      <stop offset="0" stop-color="#E8FFFA" stop-opacity="0.2"/>
+      <stop offset="0.32" stop-color="#E8FFFA" stop-opacity="0"/>
+      <stop offset="0.64" stop-color="#FF9455" stop-opacity="0"/>
+      <stop offset="0.705" stop-color="#FF9455" stop-opacity="0.22"/>
+      <stop offset="0.76" stop-color="#08122E" stop-opacity="0.74"/>
+      <stop offset="0.84" stop-color="#050B1E" stop-opacity="0.97"/>
+      <stop offset="1" stop-color="#050B1E" stop-opacity="1"/>
     </radialGradient>
-    <radialGradient id="grShade" gradientUnits="userSpaceOnUse" cx="15.84" cy="-15.84" r="55">
-      <stop offset="0" stop-color="#D5EFEA" stop-opacity="0.55"/>
-      <stop offset="0.40" stop-color="#9FD3C7" stop-opacity="0"/>
-      <stop offset="0.64" stop-color="#1C3A36" stop-opacity="0.30"/>
-      <stop offset="0.86" stop-color="#1C3A36" stop-opacity="0.90"/>
-      <stop offset="1" stop-color="#1C3A36" stop-opacity="1"/>
-    </radialGradient>
-    <radialGradient id="grRim" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="49.28">
-      <stop offset="0" stop-color="#BFE8E0" stop-opacity="0"/>
-      <stop offset="0.80" stop-color="#BFE8E0" stop-opacity="0"/>
-      <stop offset="0.87" stop-color="#BFE8E0" stop-opacity="0.55"/>
-      <stop offset="0.92" stop-color="#BFE8E0" stop-opacity="0.30"/>
-      <stop offset="1" stop-color="#BFE8E0" stop-opacity="0"/>
-    </radialGradient>
-    <linearGradient id="grRimLit" gradientUnits="userSpaceOnUse" x1="34.85" y1="-34.85" x2="-34.85" y2="34.85">
-      <stop offset="0" stop-color="#FFFFFF" stop-opacity="1"/>
-      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.35"/>
-    </linearGradient>
-    <mask id="grRimMask" mask-type="alpha" maskUnits="userSpaceOnUse" x="-52" y="-52" width="104" height="104">
-      <rect x="-52" y="-52" width="104" height="104" fill="url(#grRimLit)"/>
-    </mask>
+    <radialGradient id="grHaze" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="44"><stop offset="0.78" stop-color="#BFE8E0" stop-opacity="0"/><stop offset="0.96" stop-color="#BFE8E0" stop-opacity="0.38"/><stop offset="1" stop-color="#DDF7F1" stop-opacity="0.6"/></radialGradient>
+    <radialGradient id="grRim" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="47.37"><stop offset="0.90" stop-color="#D3FBF2" stop-opacity="0"/><stop offset="0.928" stop-color="#D3FBF2" stop-opacity="0.95"/><stop offset="0.955" stop-color="#8EDCCC" stop-opacity="0.4"/><stop offset="1" stop-color="#8EDCCC" stop-opacity="0"/></radialGradient>
+    <linearGradient id="grLit" gradientUnits="userSpaceOnUse" x1="31.11" y1="-31.11" x2="-31.11" y2="31.11"><stop offset="0" stop-color="#FFFFFF"/><stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.45"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0.06"/></linearGradient>
+    <mask id="grLitMask" mask-type="alpha" maskUnits="userSpaceOnUse" x="-51.92" y="-51.92" width="103.84" height="103.84"><rect x="-51.92" y="-51.92" width="103.84" height="103.84" fill="url(#grLit)"/></mask>
   </defs>
   <g id="gasRinged" transform="translate(160 100)">
     <g clip-path="url(#grBack)">
       <g id="grRingBack" transform="rotate(-22) scale(1 0.28)">
         <circle r="96.8" fill="url(#grRing)"/>
         <g mask="url(#grRingAlpha)">
-          <path d="M0 -44A117 44 0 0 1 0 44Z" transform="rotate(230)" fill="#050710" fill-opacity="0.8" filter="url(#grShadowBlur)"/>
+          <path d="M0 -44A117 44 0 0 1 0 44Z" transform="rotate(230)" fill="#050710" fill-opacity="0.85" filter="url(#grShadowBlur)"/>
         </g>
       </g>
     </g>
-    <circle r="44" fill="#9FD3C7"/>
+    <circle r="44" fill="#8FD9C9"/>
     <g clip-path="url(#grClip)">
       <g id="grAnimA">
         <animateTransform attributeName="transform" type="translate" from="0 0" to="276 0" dur="160s" repeatCount="indefinite"/>
         <g id="grStripA" transform="translate(-364 -44)">
           <g filter="url(#grWaveA)">
-            <rect y="-8" width="552" height="18" fill="#6FA8A0"/>
-            <rect y="10" width="552" height="44" fill="#9FD3C7"/>
-            <rect y="54" width="552" height="15" fill="#D5EFEA"/>
-            <rect y="69" width="552" height="9" fill="#9FD3C7"/>
-            <rect y="78" width="552" height="18" fill="#6FA8A0"/>
+            <rect y="-8" width="552" height="18" fill="#58B0A3"/>
+            <rect y="10" width="552" height="44" fill="#8FD9C9"/>
+            <rect y="54" width="552" height="15" fill="#DDF8F1"/>
+            <rect y="69" width="552" height="9" fill="#8FD9C9"/>
+            <rect y="78" width="552" height="18" fill="#58B0A3"/>
           </g>
         </g>
       </g>
@@ -207,17 +208,16 @@
         <animateTransform attributeName="transform" type="translate" from="0 0" to="-276 0" dur="120s" repeatCount="indefinite"/>
         <g id="grStripB" transform="translate(-88 -44)">
           <g filter="url(#grWaveB)">
-            <rect y="19" width="552" height="10" fill="#D5EFEA"/>
-            <rect y="29" width="552" height="8" fill="#3F7A74"/>
-            <rect y="51" width="552" height="8" fill="#6FA8A0"/>
+            <rect y="19" width="552" height="10" fill="#DDF8F1"/>
+            <rect y="29" width="552" height="8" fill="#2A7A73"/>
+            <rect y="51" width="552" height="8" fill="#58B0A3"/>
           </g>
         </g>
       </g>
     </g>
-    <circle r="44" fill="url(#grSquash)"/>
     <circle r="44" fill="url(#grShade)"/>
-    <circle r="43.5" fill="none" stroke="#BFE8E0" stroke-opacity="0.16" stroke-width="1"/>
-    <circle r="49.28" fill="url(#grRim)" mask="url(#grRimMask)"/>
+    <circle r="44" fill="url(#grHaze)" mask="url(#grLitMask)"/>
+    <circle r="47.37" fill="url(#grRim)" mask="url(#grLitMask)"/>
     <g id="grRingFront" clip-path="url(#grFront)">
       <g transform="rotate(-22) scale(1 0.28)">
         <circle r="96.8" fill="url(#grRing)"/>

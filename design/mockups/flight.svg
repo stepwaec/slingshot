@@ -11,7 +11,13 @@
        its translate changed. v1.2 planets pass: the two planets are the animated v1.2 assets (ocean world / cold mineral world) — a seamless
        texture strip scrolling west→east through a circular clip (start planet surface 90 s, clouds 64 s; planet X surface 120 s, wisps 80 s),
        under static lighting (limb squash, terminator, rim; the start planet adds a specular glint); planet X's halo breathes ±4 % over 2.4 s and its
-       capture ring crawls (−12 px/s) and pulses (α 0.35–0.70, r ±2 px, 2.4 s). All SMIL is phased so that t = 0 (what the PNGs show, to within one headless-Chrome frame) is the rest state: ring α 0.55 / r 78 and halo scale 1 exactly as in v1.1, the planets at their documented v1.2 start phases (tile x 44 / 40 at the left edge). -->
+       capture ring crawls (−12 px/s) and pulses (α 0.35–0.70, r ±2 px, 2.4 s). All SMIL is phased so that t = 0 (what the PNGs show, to within one headless-Chrome frame) is the rest state: ring α 0.55 / r 78 and halo scale 1 exactly as in v1.1, the planets at their documented v1.2 start phases (tile x 44 / 40 at the left edge).
+       v1.5 (revised) re-inline: the three bodies are now the v1.5 assets built to the client-approved references (sun = star-ref J: haze, ragged
+       flame/wisp rings, plasma surface, bright limb, ragged rim, two-tone prominences + flare; planets = planet-ref F construction: crisp multi-zone
+       surfaces, warm terminator band, night navy, lit-side haze + rim). Each body's <defs> and top-level <g> are spliced verbatim from design/assets
+       (scratchpad v15/mockups/rebuild.mjs) with only the translate changed; the body details given above for v1.1/v1.2 (corona, streamers, granulation,
+       limb squash, limb line, v1.2 surface tokens) are superseded by those asset headers. The star now carries its v1.3 flares; t = 0 is still the rest
+       state (prominences and flare at α 0). PNG = 2× render (2880×1800). -->
   <defs>
     <!-- background vignette (v1.1): bg.vignette #0B1024 at the centre → bg.base #050710 at 0.55 → bg.edge #000000 at r 900 -->
     <radialGradient id="vignette" gradientUnits="userSpaceOnUse" cx="720" cy="450" r="900">
@@ -32,198 +38,179 @@
     <radialGradient id="sfHaloCool"><stop offset="0" stop-color="#B8CCFF" stop-opacity="0.18"/><stop offset="1" stop-color="#B8CCFF" stop-opacity="0"/></radialGradient>
     <radialGradient id="sfHaloNeutral"><stop offset="0" stop-color="#E9EEF8" stop-opacity="0.18"/><stop offset="1" stop-color="#E9EEF8" stop-opacity="0"/></radialGradient>
     <radialGradient id="sfHaloWarm"><stop offset="0" stop-color="#FFD9B0" stop-opacity="0.18"/><stop offset="1" stop-color="#FFD9B0" stop-opacity="0"/></radialGradient>
-    <!-- central star: assets/star.svg defs (glow / corona / body gradients, corona / streamer / chromosphere blurs, granulation filter), verbatim -->
-    <radialGradient id="starGlow" cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0" stop-color="#FF5A1F" stop-opacity="0.50"/>
-      <stop offset="0.23" stop-color="#FF5A1F" stop-opacity="0.45"/>
-      <stop offset="0.65" stop-color="#FF5A1F" stop-opacity="0.12"/>
-      <stop offset="1" stop-color="#FF5A1F" stop-opacity="0"/>
-    </radialGradient>
-    <radialGradient id="starCorona" cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0" stop-color="#FF8C2E" stop-opacity="0.90"/>
-      <stop offset="0.35" stop-color="#FF8C2E" stop-opacity="0.70"/>
-      <stop offset="0.62" stop-color="#FF8C2E" stop-opacity="0.22"/>
-      <stop offset="1" stop-color="#FF8C2E" stop-opacity="0"/>
-    </radialGradient>
-    <radialGradient id="starBody" cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0" stop-color="#FFF8E1"/>
-      <stop offset="0.45" stop-color="#FFC857"/>
-      <stop offset="0.78" stop-color="#FFC857"/>
-      <stop offset="0.90" stop-color="#FF8C2E"/>
-      <stop offset="1" stop-color="#FF5A1F"/>
-    </radialGradient>
-    <filter id="starCoronaBlur" x="-10%" y="-10%" width="120%" height="120%">
-      <feGaussianBlur stdDeviation="3"/>
+    <!-- central star (v1.5 = approved star-ref J): assets/star.svg defs (haze, flame + wisp ring fills and displacement filters, body + limb gradients, plasma surface filter, edge wobble, ragged rim, flare gradient), verbatim -->
+    <radialGradient id="starHaze" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#FF7A2A" stop-opacity="0.6"/><stop offset="0.23" stop-color="#FF7A2A" stop-opacity="0.52"/><stop offset="0.33" stop-color="#E8461A" stop-opacity="0.3"/><stop offset="0.55" stop-color="#A8240E" stop-opacity="0.15"/><stop offset="0.8" stop-color="#6A1408" stop-opacity="0.06"/><stop offset="1" stop-color="#6A1408" stop-opacity="0"/></radialGradient>
+    <radialGradient id="starFlameFill" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="62"><stop offset="0" stop-color="#FFE7A0" stop-opacity="0.95"/><stop offset="0.74" stop-color="#FFE7A0" stop-opacity="0.95"/><stop offset="0.82" stop-color="#FFB347" stop-opacity="0.8"/><stop offset="0.91" stop-color="#FF6A1A" stop-opacity="0.38"/><stop offset="1" stop-color="#FF5A1F" stop-opacity="0"/></radialGradient>
+    <radialGradient id="starWispFill" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="78"><stop offset="0" stop-color="#FFB347" stop-opacity="0.55"/><stop offset="0.62" stop-color="#FFB347" stop-opacity="0.55"/><stop offset="0.8" stop-color="#FF6A1A" stop-opacity="0.22"/><stop offset="1" stop-color="#E8461A" stop-opacity="0"/></radialGradient>
+    <radialGradient id="starBody" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#FFB43A"/><stop offset="0.65" stop-color="#FF8F1F"/><stop offset="1" stop-color="#FF7A14"/></radialGradient>
+    <radialGradient id="starLimb" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="46"><stop offset="0.8" stop-color="#FFD27A" stop-opacity="0"/><stop offset="0.93" stop-color="#FFD27A" stop-opacity="0.55"/><stop offset="0.97" stop-color="#FFF1C2" stop-opacity="0.9"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0.95"/></radialGradient>
+    <linearGradient id="starFlareFill" gradientUnits="userSpaceOnUse" x1="46" y1="0" x2="86" y2="0"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#FFD27A" stop-opacity="0.15"/></linearGradient>
+    <filter id="starFlame" filterUnits="userSpaceOnUse" x="-88" y="-88" width="176" height="176" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.08" numOctaves="4" seed="21" result="n0"/>
+      <feColorMatrix in="n0" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0 1" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="20" xChannelSelector="R" yChannelSelector="G" result="nd"/>
+      <feGaussianBlur in="nd" stdDeviation="0.4"/>
     </filter>
-    <filter id="starStreamerBlur" x="-15%" y="-15%" width="130%" height="130%">
-      <feGaussianBlur stdDeviation="6"/>
+    <filter id="starWisp" filterUnits="userSpaceOnUse" x="-107" y="-107" width="214" height="214" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="5" seed="33" result="w0"/>
+      <feColorMatrix in="w0" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0 1" result="w"/>
+      <feDisplacementMap in="SourceGraphic" in2="w" scale="34" xChannelSelector="R" yChannelSelector="G" result="wd"/>
+      <feGaussianBlur in="wd" stdDeviation="0.8"/>
     </filter>
-    <filter id="starChromoBlur" x="-10%" y="-10%" width="120%" height="120%">
-      <feGaussianBlur stdDeviation="1.5"/>
+    <filter id="starSurf" filterUnits="userSpaceOnUse" x="-48" y="-48" width="96" height="96" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="5" seed="4" result="f"/>
+      <feColorMatrix in="f" type="matrix" values="0 0 0 0 0.502  0 0 0 0 0.129  0 0 0 0 0.02  3.4 0 0 0 -1.6" result="dk"/>
+      <feComponentTransfer in="dk" result="dark"><feFuncA type="linear" slope="0.55"/></feComponentTransfer>
+      <feTurbulence type="turbulence" baseFrequency="0.06" numOctaves="5" seed="9" result="t"/>
+      <feColorMatrix in="t" type="matrix" values="0 0 0 0 1  0 0 0 0 0.906  0 0 0 0 0.627  -6.5 0 0 0 1.25" result="fl"/>
+      <feComponentTransfer in="fl" result="fil"><feFuncA type="linear" slope="0.85"/></feComponentTransfer>
+      <feMerge result="m"><feMergeNode in="SourceGraphic"/><feMergeNode in="dark"/><feMergeNode in="fil"/></feMerge>
+      <feComposite in="m" in2="SourceGraphic" operator="in"/>
     </filter>
-    <filter id="starGranulation" x="-5%" y="-5%" width="110%" height="110%" color-interpolation-filters="sRGB">
-      <feTurbulence type="fractalNoise" baseFrequency="0.11" numOctaves="2" seed="3" result="starNoise"/>
-      <feColorMatrix in="starNoise" type="saturate" values="0" result="starGrey"/>
-      <feComponentTransfer in="starGrey" result="starGrain">
-        <feFuncR type="linear" slope="2" intercept="-0.5"/>
-        <feFuncG type="linear" slope="2" intercept="-0.5"/>
-        <feFuncB type="linear" slope="2" intercept="-0.5"/>
-        <feFuncA type="linear" slope="0" intercept="0.16"/>
-      </feComponentTransfer>
-      <feBlend in="starGrain" in2="SourceGraphic" mode="multiply" result="starShaded"/>
-      <feComposite in="starShaded" in2="SourceGraphic" operator="in"/>
+    <filter id="starEdge" filterUnits="userSpaceOnUse" x="-60" y="-60" width="120" height="120" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.11" numOctaves="3" seed="44" result="e0"/>
+      <feColorMatrix in="e0" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0 1" result="e"/>
+      <feDisplacementMap in="SourceGraphic" in2="e" scale="6.5" xChannelSelector="R" yChannelSelector="G"/>
     </filter>
-    <!-- start planet (v1.2): assets/planet-start.svg defs (disc clip, land + cloud strip filters, polar-cap gradients, limb squash, glint, terminator shade, atmosphere rim + lit-side mask), verbatim -->
+    <filter id="starRimRag" filterUnits="userSpaceOnUse" x="-60" y="-60" width="120" height="120" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.22" numOctaves="2" seed="57" result="g0"/>
+      <feColorMatrix in="g0" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0 1" result="g"/>
+      <feDisplacementMap in="SourceGraphic" in2="g" scale="5" xChannelSelector="R" yChannelSelector="G" result="gd"/>
+      <feGaussianBlur in="gd" stdDeviation="0.35"/>
+    </filter>
+    <!-- start planet (v1.5 = approved planet-ref F): assets/planet-start.svg defs (disc clip, land / cloud / cloud-shadow strip filters, polar caps, glint, shade, haze, rim + lit-side mask), verbatim -->
     <clipPath id="psClip"><circle r="34"/></clipPath>
     <filter id="psLand" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="0" y="0" width="428" height="68" color-interpolation-filters="sRGB">
-      <feTurbulence type="fractalNoise" baseFrequency="0.030" numOctaves="4" seed="7" stitchTiles="stitch" x="0" y="0" width="214" height="68" result="psN1"/>
-      <feTile in="psN1" x="0" y="0" width="428" height="68" result="psN"/>
-      <feColorMatrix in="psN" type="matrix" values="0 0 0 0 0.561  0 0 0 0 0.690  0 0 0 0 0.478  0 0 0 1 0" result="psLandRGB"/>
-      <feComponentTransfer in="psLandRGB" result="psLandMask">
-        <feFuncA type="linear" slope="24" intercept="-12.772"/>
-      </feComponentTransfer>
-      <feColorMatrix in="psN" type="matrix" values="0 0 0 0 0.078  0 0 0 0 0.169  0 0 0 0 0.369  0 0 0 1 0" result="psHighRGB"/>
-      <feComponentTransfer in="psHighRGB" result="psHighCut">
-        <feFuncA type="linear" slope="6" intercept="-3.358"/>
-      </feComponentTransfer>
-      <feComponentTransfer in="psHighCut" result="psHighMask">
-        <feFuncA type="linear" slope="0.22" intercept="0"/>
-      </feComponentTransfer>
-      <feMerge>
-        <feMergeNode in="SourceGraphic"/>
-        <feMergeNode in="psLandMask"/>
-        <feMergeNode in="psHighMask"/>
-      </feMerge>
+      <feTurbulence type="fractalNoise" baseFrequency="0.030" numOctaves="6" seed="7" stitchTiles="stitch" x="0" y="0" width="214" height="68" result="n1"/>
+      <feTile in="n1" x="0" y="0" width="428" height="68" result="n"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="3" seed="23" stitchTiles="stitch" x="0" y="0" width="214" height="68" result="d1"/>
+      <feTile in="d1" x="0" y="0" width="428" height="68" result="dn"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0.212  0 0 0 0 0.725  0 0 0 0 0.847  0 0 0 1 0" result="shRGB"/>
+      <feComponentTransfer in="shRGB" result="shallow"><feFuncA type="linear" slope="9.5" intercept="-4.655"/></feComponentTransfer>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0.373  0 0 0 0 0.659  0 0 0 0 0.290  0 0 0 1 0" result="lRGB"/>
+      <feComponentTransfer in="lRGB" result="land"><feFuncA type="linear" slope="70" intercept="-38.21"/></feComponentTransfer>
+      <feColorMatrix in="dn" type="matrix" values="0 0 0 0 0.847  0 0 0 0 0.698  0 0 0 0 0.431  0 0 0 1 0" result="dRGB"/>
+      <feComponentTransfer in="dRGB" result="dmask"><feFuncA type="linear" slope="14" intercept="-7.9"/></feComponentTransfer>
+      <feComposite in="dmask" in2="land" operator="in" result="desert"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0.231  0 0 0 0 0.494  0 0 0 0 0.231  0 0 0 1 0" result="fRGB"/>
+      <feComponentTransfer in="fRGB" result="forest"><feFuncA type="linear" slope="18" intercept="-10.44"/></feComponentTransfer>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0.357  0 0 0 0 0.353  0 0 0 0 0.200  0 0 0 1 0" result="hRGB"/>
+      <feComponentTransfer in="hRGB" result="high"><feFuncA type="linear" slope="12" intercept="-7.68"/></feComponentTransfer>
+      <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="shallow"/><feMergeNode in="land"/><feMergeNode in="forest"/><feMergeNode in="desert"/><feMergeNode in="high"/></feMerge>
     </filter>
     <filter id="psCloud" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-4" y="-4" width="436" height="76" color-interpolation-filters="sRGB">
-      <feTurbulence type="fractalNoise" baseFrequency="0.055" numOctaves="4" seed="19" stitchTiles="stitch" x="0" y="0" width="214" height="68" result="psCN"/>
-      <feTile in="psCN" x="-4" y="-4" width="436" height="76" result="psCT"/>
-      <feColorMatrix in="psCT" type="matrix" values="0 0 0 0 0.949  0 0 0 0 0.961  0 0 0 0 1  0 0 0 1 0" result="psCRGB"/>
-      <feComponentTransfer in="psCRGB" result="psCMask">
-        <feFuncA type="linear" slope="14" intercept="-6.85"/>
-      </feComponentTransfer>
-      <feGaussianBlur in="psCMask" stdDeviation="0.8" result="psCSoft"/>
-      <feComposite in="psCSoft" in2="SourceGraphic" operator="in"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.042 0.085" numOctaves="6" seed="19" stitchTiles="stitch" x="0" y="0" width="214" height="68" result="c1"/>
+      <feTile in="c1" x="-4" y="-4" width="436" height="76" result="c"/>
+      <feColorMatrix in="c" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1 0" result="cRGB"/>
+      <feComponentTransfer in="cRGB" result="cm"><feFuncA type="linear" slope="26" intercept="-13.93"/></feComponentTransfer>
+      <feGaussianBlur in="cm" stdDeviation="0.2" result="cs"/>
+      <feComposite in="cs" in2="SourceGraphic" operator="in"/>
     </filter>
-    <linearGradient id="psCapN" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#E9EEF8" stop-opacity="1"/>
-      <stop offset="0.6" stop-color="#E9EEF8" stop-opacity="0.9"/>
-      <stop offset="1" stop-color="#E9EEF8" stop-opacity="0"/>
-    </linearGradient>
-    <linearGradient id="psCapS" x1="0" y1="1" x2="0" y2="0">
-      <stop offset="0" stop-color="#E9EEF8" stop-opacity="1"/>
-      <stop offset="0.6" stop-color="#E9EEF8" stop-opacity="0.9"/>
-      <stop offset="1" stop-color="#E9EEF8" stop-opacity="0"/>
-    </linearGradient>
-    <radialGradient id="psSquash" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="34">
-      <stop offset="0.88" stop-color="#3D8BFF" stop-opacity="0"/>
-      <stop offset="1" stop-color="#3D8BFF" stop-opacity="0.45"/>
-    </radialGradient>
-    <radialGradient id="psGlint" cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.35"/>
-      <stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.18"/>
-      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
-    </radialGradient>
+    <filter id="psCloudShadow" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-4" y="-4" width="436" height="76" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.042 0.085" numOctaves="6" seed="19" stitchTiles="stitch" x="0" y="0" width="214" height="68" result="c1"/>
+      <feTile in="c1" x="-4" y="-4" width="436" height="76" result="c"/>
+      <feColorMatrix in="c" type="matrix" values="0 0 0 0 0.024  0 0 0 0 0.071  0 0 0 0 0.180  0 0 0 1 0" result="cRGB"/>
+      <feComponentTransfer in="cRGB" result="cm"><feFuncA type="linear" slope="26" intercept="-13.93"/></feComponentTransfer>
+      <feGaussianBlur in="cm" stdDeviation="0.45" result="cs"/>
+      <feComposite in="cs" in2="SourceGraphic" operator="in"/>
+    </filter>
+    <linearGradient id="psCapN" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F4F8FF"/><stop offset="0.78" stop-color="#F4F8FF" stop-opacity="0.95"/><stop offset="1" stop-color="#F4F8FF" stop-opacity="0"/></linearGradient>
+    <linearGradient id="psCapS" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#F4F8FF"/><stop offset="0.78" stop-color="#F4F8FF" stop-opacity="0.95"/><stop offset="1" stop-color="#F4F8FF" stop-opacity="0"/></linearGradient>
+    <radialGradient id="psGlint" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#FFFBEE" stop-opacity="0.6"/><stop offset="0.45" stop-color="#FFFBEE" stop-opacity="0.25"/><stop offset="1" stop-color="#FFFBEE" stop-opacity="0"/></radialGradient>
     <radialGradient id="psShade" gradientUnits="userSpaceOnUse" cx="8.66" cy="-8.66" r="42.5">
-      <stop offset="0" stop-color="#9CCBFF" stop-opacity="0.90"/>
-      <stop offset="0.40" stop-color="#3D8BFF" stop-opacity="0"/>
-      <stop offset="0.70" stop-color="#142B5E" stop-opacity="0.55"/>
-      <stop offset="0.86" stop-color="#142B5E" stop-opacity="0.92"/>
-      <stop offset="1" stop-color="#142B5E" stop-opacity="1"/>
+      <stop offset="0" stop-color="#E6F2FF" stop-opacity="0.38"/>
+      <stop offset="0.32" stop-color="#E6F2FF" stop-opacity="0"/>
+      <stop offset="0.64" stop-color="#FF9455" stop-opacity="0"/>
+      <stop offset="0.705" stop-color="#FF9455" stop-opacity="0.24"/>
+      <stop offset="0.76" stop-color="#08122E" stop-opacity="0.74"/>
+      <stop offset="0.84" stop-color="#050B1E" stop-opacity="0.97"/>
+      <stop offset="1" stop-color="#050B1E" stop-opacity="1"/>
     </radialGradient>
-    <radialGradient id="psRim" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="38.08">
-      <stop offset="0" stop-color="#7FB8FF" stop-opacity="0"/>
-      <stop offset="0.80" stop-color="#7FB8FF" stop-opacity="0"/>
-      <stop offset="0.87" stop-color="#7FB8FF" stop-opacity="0.55"/>
-      <stop offset="0.92" stop-color="#7FB8FF" stop-opacity="0.30"/>
-      <stop offset="1" stop-color="#7FB8FF" stop-opacity="0"/>
-    </radialGradient>
-    <linearGradient id="psRimLit" gradientUnits="userSpaceOnUse" x1="26.93" y1="-26.93" x2="-26.93" y2="26.93">
-      <stop offset="0" stop-color="#FFFFFF" stop-opacity="1"/>
-      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.35"/>
-    </linearGradient>
-    <mask id="psRimMask" mask-type="alpha" maskUnits="userSpaceOnUse" x="-40" y="-40" width="80" height="80">
-      <rect x="-40" y="-40" width="80" height="80" fill="url(#psRimLit)"/>
-    </mask>
-    <!-- planet X (v1.2): assets/planet-x.svg defs (halo, disc clip, surface + wisp strip filters, polar-cap gradients, limb squash, terminator shade, atmosphere rim + lit-side mask), verbatim -->
+    <radialGradient id="psHaze" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="34"><stop offset="0.78" stop-color="#8FD0FF" stop-opacity="0"/><stop offset="0.96" stop-color="#8FD0FF" stop-opacity="0.42"/><stop offset="1" stop-color="#BFE6FF" stop-opacity="0.65"/></radialGradient>
+    <radialGradient id="psRim" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="36.6"><stop offset="0.90" stop-color="#A8DBFF" stop-opacity="0"/><stop offset="0.928" stop-color="#A8DBFF" stop-opacity="0.95"/><stop offset="0.955" stop-color="#7FC4FF" stop-opacity="0.4"/><stop offset="1" stop-color="#7FC4FF" stop-opacity="0"/></radialGradient>
+    <linearGradient id="psLit" gradientUnits="userSpaceOnUse" x1="24" y1="-24" x2="-24" y2="24"><stop offset="0" stop-color="#FFFFFF"/><stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.45"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0.06"/></linearGradient>
+    <mask id="psLitMask" mask-type="alpha" maskUnits="userSpaceOnUse" x="-40" y="-40" width="80" height="80"><rect x="-40" y="-40" width="80" height="80" fill="url(#psLit)"/></mask>
+    <!-- planet X (v1.5): assets/planet-x.svg defs (halo, disc clip, surface / wisp / wisp-shadow strip filters, polar caps, shade, haze, rim + lit-side mask), verbatim -->
     <clipPath id="pxClip"><circle r="30"/></clipPath>
     <radialGradient id="pxHalo" cx="0.5" cy="0.5" r="0.5">
       <stop offset="0" stop-color="#3DE0C2" stop-opacity="0.35"/>
       <stop offset="0.556" stop-color="#3DE0C2" stop-opacity="0.35"/>
-      <stop offset="0.78" stop-color="#3DE0C2" stop-opacity="0.10"/>
+      <stop offset="0.62" stop-color="#3DE0C2" stop-opacity="0.22"/>
+      <stop offset="0.78" stop-color="#3DE0C2" stop-opacity="0.08"/>
       <stop offset="1" stop-color="#3DE0C2" stop-opacity="0"/>
     </radialGradient>
+    <linearGradient id="pxSSeamA" gradientUnits="userSpaceOnUse" x1="251.3" y1="0" x2="439.3" y2="0"><stop offset="0" stop-color="#FFFFFF" stop-opacity="0"/><stop offset="0.125" stop-color="#FFFFFF" stop-opacity="0.263"/><stop offset="0.25" stop-color="#FFFFFF" stop-opacity="0.53"/><stop offset="0.375" stop-color="#FFFFFF" stop-opacity="0.744"/><stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.828"/><stop offset="0.625" stop-color="#FFFFFF" stop-opacity="0.744"/><stop offset="0.75" stop-color="#FFFFFF" stop-opacity="0.53"/><stop offset="0.875" stop-color="#FFFFFF" stop-opacity="0.263"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/></linearGradient>
+    <linearGradient id="pxSSeamB" gradientUnits="userSpaceOnUse" x1="63.3" y1="0" x2="251.3" y2="0"><stop offset="0" stop-color="#FFFFFF" stop-opacity="0"/><stop offset="0.125" stop-color="#FFFFFF" stop-opacity="0.263"/><stop offset="0.25" stop-color="#FFFFFF" stop-opacity="0.53"/><stop offset="0.375" stop-color="#FFFFFF" stop-opacity="0.744"/><stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.828"/><stop offset="0.625" stop-color="#FFFFFF" stop-opacity="0.744"/><stop offset="0.75" stop-color="#FFFFFF" stop-opacity="0.53"/><stop offset="0.875" stop-color="#FFFFFF" stop-opacity="0.263"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/></linearGradient>
+    <linearGradient id="pxSSeamR" gradientUnits="userSpaceOnUse" x1="63.3" y1="0" x2="251.3" y2="0"><stop offset="0" stop-color="#FFFFFF" stop-opacity="0"/><stop offset="1" stop-color="#FFFFFF"/></linearGradient>
+    <mask id="pxSSeamMask" mask-type="alpha" maskUnits="userSpaceOnUse" x="61.3" y="5.7" width="193" height="64"><rect x="61.3" y="5.7" width="193" height="64" fill="url(#pxSSeamR)"/></mask>
+    <linearGradient id="pxSLat" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="60"><stop offset="0" stop-color="#FFFFFF" stop-opacity="0.5"/><stop offset="0.23" stop-color="#FFFFFF"/><stop offset="0.77" stop-color="#FFFFFF"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0.5"/></linearGradient>
+    <mask id="pxSLatMask" mask-type="alpha" maskUnits="userSpaceOnUse" x="-2" y="0" width="380" height="60"><rect x="-2" y="0" width="380" height="60" fill="url(#pxSLat)"/></mask>
+    <filter id="pxSField" primitiveUnits="userSpaceOnUse" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="6" seed="11" result="t0"/>
+      <feColorMatrix in="t0" type="matrix" values="0 0 0 1 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0 1" result="c0"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="4" seed="17" result="t1"/>
+      <feColorMatrix in="t1" type="matrix" values="0 0 0 0 0  0 0 0 1 0  0 0 0 0 0  0 0 0 0 1" result="c1"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.06" numOctaves="1" seed="11" result="t2"/>
+      <feColorMatrix in="t2" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 1 0  0 0 0 0 1" result="c2"/>
+      <feComposite in="c0" in2="c1" operator="arithmetic" k2="1" k3="1" result="m1"/>
+      <feComposite in="m1" in2="c2" operator="arithmetic" k2="1" k3="1" result="m2"/>
+      <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 1 0  0 0 0 1 0  0 0 0 1 0  0 0 0 0 1" result="g"/>
+      <feComposite in="g" in2="m2" operator="arithmetic" k1="0.5" k2="-0.25" k3="1"/>
+    </filter>
     <filter id="pxSurface" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="0" y="0" width="376" height="60" color-interpolation-filters="sRGB">
-      <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="4" seed="11" stitchTiles="stitch" x="0" y="0" width="188" height="60" result="pxN1"/>
-      <feTile in="pxN1" x="0" y="0" width="376" height="60" result="pxN"/>
-      <feColorMatrix in="pxN" type="matrix" values="0 0 0 0 0.055  0 0 0 0 0.290  0 0 0 0 0.251  0 0 0 1 0" result="pxBasinRGB"/>
-      <feComponentTransfer in="pxBasinRGB" result="pxBasinCut">
-        <feFuncA type="linear" slope="12" intercept="-6.508"/>
-      </feComponentTransfer>
-      <feComponentTransfer in="pxBasinCut" result="pxBasin">
-        <feFuncA type="linear" slope="0.60" intercept="0"/>
-      </feComponentTransfer>
-      <feTurbulence type="turbulence" baseFrequency="0.040" numOctaves="2" seed="11" stitchTiles="stitch" x="0" y="0" width="188" height="60" result="pxV1"/>
-      <feTile in="pxV1" x="0" y="0" width="376" height="60" result="pxV"/>
-      <feColorMatrix in="pxV" type="matrix" values="0 0 0 0 0.055  0 0 0 0 0.290  0 0 0 0 0.251  0 0 0 1 0" result="pxVeinRGB"/>
-      <feComponentTransfer in="pxVeinRGB" result="pxVeinCut">
-        <feFuncA type="linear" slope="-14.29" intercept="1"/>
-      </feComponentTransfer>
-      <feComponentTransfer in="pxVeinCut" result="pxVein">
-        <feFuncA type="linear" slope="0.35" intercept="0"/>
-      </feComponentTransfer>
-      <feMerge>
-        <feMergeNode in="SourceGraphic"/>
-        <feMergeNode in="pxBasin"/>
-        <feMergeNode in="pxVein"/>
-      </feMerge>
+      <feFlood flood-color="#17B39C" result="deep"/>
+      <feGaussianBlur in="SourceGraphic" stdDeviation="0.3" result="f"/>
+      <feColorMatrix in="f" type="matrix" values="0 0 0 0 0.239  0 0 0 0 0.878  0 0 0 0 0.761  1 0 0 0 0" result="plRGB"/>
+      <feComponentTransfer in="plRGB" result="plains"><feFuncA type="linear" slope="60" intercept="-30"/></feComponentTransfer>
+      <feColorMatrix in="f" type="matrix" values="0 0 0 0 0.267  0 0 0 0 0.812  0 0 0 0 0.910  0 1 0 0 0" result="frRGB"/>
+      <feComponentTransfer in="frRGB" result="frmask"><feFuncA type="linear" slope="14" intercept="-7.98"/></feComponentTransfer>
+      <feComposite in="frmask" in2="plains" operator="in" result="frost"/>
+      <feColorMatrix in="f" type="matrix" values="0 0 0 0 0.055  0 0 0 0 0.290  0 0 0 0 0.251  1 0 0 0 0" result="baRGB"/>
+      <feComponentTransfer in="baRGB" result="basins"><feFuncA type="linear" slope="-15.3" intercept="6.273"/></feComponentTransfer>
+      <feColorMatrix in="f" type="matrix" values="0 0 0 0 0.710  0 0 0 0 1  0 0 0 0 0.941  1 0 0 0 0" result="icRGB"/>
+      <feComponentTransfer in="icRGB" result="ice"><feFuncA type="linear" slope="16" intercept="-10.08"/></feComponentTransfer>
+      <feColorMatrix in="f" type="matrix" values="0 0 0 0 0.090  0 0 0 0 0.702  0 0 0 0 0.612  0 0 -85 0 43.775" result="lnA"/>
+      <feColorMatrix in="f" type="matrix" values="0 0 0 0 0.090  0 0 0 0 0.702  0 0 0 0 0.612  0 0 85 0 -41.225" result="lnB"/>
+      <feComposite in="lnA" in2="lnB" operator="in" result="lnC"/>
+      <feComponentTransfer in="lnC" result="lineae"><feFuncA type="linear" slope="0.85"/></feComponentTransfer>
+      <feColorMatrix in="f" type="matrix" values="0 0 0 0 0.902  0 0 0 0 1  0 0 0 0 0.976  12 0 0 -24 15.396" result="cap"/>
+      <feMerge result="all"><feMergeNode in="deep"/><feMergeNode in="plains"/><feMergeNode in="frost"/><feMergeNode in="basins"/><feMergeNode in="ice"/><feMergeNode in="lineae"/><feMergeNode in="cap"/></feMerge>
+      <feComponentTransfer in="SourceAlpha" result="solid"><feFuncA type="linear" slope="50"/></feComponentTransfer>
+      <feComposite in="all" in2="solid" operator="in"/>
     </filter>
-    <filter id="pxWisp" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="0" y="0" width="376" height="60" color-interpolation-filters="sRGB">
-      <feTurbulence type="turbulence" baseFrequency="0.050" numOctaves="2" seed="23" stitchTiles="stitch" x="0" y="0" width="188" height="60" result="pxW1"/>
-      <feTile in="pxW1" x="0" y="0" width="376" height="60" result="pxW"/>
-      <feColorMatrix in="pxW" type="matrix" values="0 0 0 0 0.710  0 0 0 0 1  0 0 0 0 0.941  0 0 0 1 0" result="pxWispRGB"/>
-      <feComponentTransfer in="pxWispRGB" result="pxWispCut">
-        <feFuncA type="linear" slope="-8.7" intercept="1"/>
-      </feComponentTransfer>
-      <feComponentTransfer in="pxWispCut">
-        <feFuncA type="linear" slope="0.35" intercept="0"/>
-      </feComponentTransfer>
+    <linearGradient id="pxWSeamA" gradientUnits="userSpaceOnUse" x1="29.1" y1="0" x2="217.1" y2="0"><stop offset="0" stop-color="#FFFFFF" stop-opacity="0"/><stop offset="0.125" stop-color="#FFFFFF" stop-opacity="0.263"/><stop offset="0.25" stop-color="#FFFFFF" stop-opacity="0.53"/><stop offset="0.375" stop-color="#FFFFFF" stop-opacity="0.744"/><stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.828"/><stop offset="0.625" stop-color="#FFFFFF" stop-opacity="0.744"/><stop offset="0.75" stop-color="#FFFFFF" stop-opacity="0.53"/><stop offset="0.875" stop-color="#FFFFFF" stop-opacity="0.263"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/></linearGradient>
+    <linearGradient id="pxWSeamB" gradientUnits="userSpaceOnUse" x1="-158.9" y1="0" x2="29.1" y2="0"><stop offset="0" stop-color="#FFFFFF" stop-opacity="0"/><stop offset="0.125" stop-color="#FFFFFF" stop-opacity="0.263"/><stop offset="0.25" stop-color="#FFFFFF" stop-opacity="0.53"/><stop offset="0.375" stop-color="#FFFFFF" stop-opacity="0.744"/><stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.828"/><stop offset="0.625" stop-color="#FFFFFF" stop-opacity="0.744"/><stop offset="0.75" stop-color="#FFFFFF" stop-opacity="0.53"/><stop offset="0.875" stop-color="#FFFFFF" stop-opacity="0.263"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/></linearGradient>
+    <linearGradient id="pxWSeamR" gradientUnits="userSpaceOnUse" x1="-158.9" y1="0" x2="29.1" y2="0"><stop offset="0" stop-color="#FFFFFF" stop-opacity="0"/><stop offset="1" stop-color="#FFFFFF"/></linearGradient>
+    <mask id="pxWSeamMask" mask-type="alpha" maskUnits="userSpaceOnUse" x="-160.9" y="3.3" width="193" height="64"><rect x="-160.9" y="3.3" width="193" height="64" fill="url(#pxWSeamR)"/></mask>
+    <filter id="pxWField" primitiveUnits="userSpaceOnUse" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025 0.12" numOctaves="6" seed="23" result="t0"/>
+      <feColorMatrix in="t0" type="matrix" values="0 0 0 1 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0 1" result="c0"/>
+      <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 1 0  0 0 0 1 0  0 0 0 1 0  0 0 0 0 1" result="g"/>
+      <feComposite in="g" in2="c0" operator="arithmetic" k1="0.5" k2="-0.25" k3="1"/>
     </filter>
-    <linearGradient id="pxCapN" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#B5FFF0" stop-opacity="1"/>
-      <stop offset="0.6" stop-color="#B5FFF0" stop-opacity="0.9"/>
-      <stop offset="1" stop-color="#B5FFF0" stop-opacity="0"/>
-    </linearGradient>
-    <linearGradient id="pxCapS" x1="0" y1="1" x2="0" y2="0">
-      <stop offset="0" stop-color="#B5FFF0" stop-opacity="1"/>
-      <stop offset="0.6" stop-color="#B5FFF0" stop-opacity="0.9"/>
-      <stop offset="1" stop-color="#B5FFF0" stop-opacity="0"/>
-    </linearGradient>
-    <radialGradient id="pxSquash" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="30">
-      <stop offset="0.88" stop-color="#3DE0C2" stop-opacity="0"/>
-      <stop offset="1" stop-color="#3DE0C2" stop-opacity="0.45"/>
-    </radialGradient>
+    <filter id="pxWisp" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-4" y="-4" width="384" height="68" color-interpolation-filters="sRGB">
+      <feColorMatrix in="SourceGraphic" type="matrix" values="0 0 0 0 0.902  0 0 0 0 1  0 0 0 0 0.976  26 0 0 0 -15.99" result="cm"/>
+      <feGaussianBlur in="cm" stdDeviation="0.2" result="cs"/>
+      <feComposite in="cs" in2="SourceAlpha" operator="in"/>
+    </filter>
+    <filter id="pxWispShadow" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-4" y="-4" width="384" height="68" color-interpolation-filters="sRGB">
+      <feColorMatrix in="SourceGraphic" type="matrix" values="0 0 0 0 0.024  0 0 0 0 0.071  0 0 0 0 0.180  26 0 0 0 -15.99" result="cm"/>
+      <feGaussianBlur in="cm" stdDeviation="0.45" result="cs"/>
+      <feComposite in="cs" in2="SourceAlpha" operator="in"/>
+    </filter>
     <radialGradient id="pxShade" gradientUnits="userSpaceOnUse" cx="-7.64" cy="7.64" r="37.5">
-      <stop offset="0" stop-color="#B5FFF0" stop-opacity="0.90"/>
-      <stop offset="0.40" stop-color="#3DE0C2" stop-opacity="0"/>
-      <stop offset="0.70" stop-color="#0E4A40" stop-opacity="0.55"/>
-      <stop offset="0.86" stop-color="#0E4A40" stop-opacity="0.92"/>
-      <stop offset="1" stop-color="#0E4A40" stop-opacity="1"/>
+      <stop offset="0" stop-color="#B5FFF0" stop-opacity="0.28"/>
+      <stop offset="0.32" stop-color="#B5FFF0" stop-opacity="0"/>
+      <stop offset="0.64" stop-color="#FF9455" stop-opacity="0"/>
+      <stop offset="0.705" stop-color="#FF9455" stop-opacity="0.22"/>
+      <stop offset="0.76" stop-color="#08122E" stop-opacity="0.74"/>
+      <stop offset="0.84" stop-color="#050B1E" stop-opacity="0.97"/>
+      <stop offset="1" stop-color="#050B1E" stop-opacity="1"/>
     </radialGradient>
-    <radialGradient id="pxRim" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="33.6">
-      <stop offset="0" stop-color="#8FFFE6" stop-opacity="0"/>
-      <stop offset="0.80" stop-color="#8FFFE6" stop-opacity="0"/>
-      <stop offset="0.87" stop-color="#8FFFE6" stop-opacity="0.55"/>
-      <stop offset="0.92" stop-color="#8FFFE6" stop-opacity="0.30"/>
-      <stop offset="1" stop-color="#8FFFE6" stop-opacity="0"/>
-    </radialGradient>
-    <linearGradient id="pxRimLit" gradientUnits="userSpaceOnUse" x1="-23.76" y1="23.76" x2="23.76" y2="-23.76">
-      <stop offset="0" stop-color="#FFFFFF" stop-opacity="1"/>
-      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.35"/>
-    </linearGradient>
-    <mask id="pxRimMask" mask-type="alpha" maskUnits="userSpaceOnUse" x="-36" y="-36" width="72" height="72">
-      <rect x="-36" y="-36" width="72" height="72" fill="url(#pxRimLit)"/>
-    </mask>
+    <radialGradient id="pxHaze" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="30"><stop offset="0.78" stop-color="#8FFFE6" stop-opacity="0"/><stop offset="0.96" stop-color="#8FFFE6" stop-opacity="0.42"/><stop offset="1" stop-color="#E6FFF9" stop-opacity="0.65"/></radialGradient>
+    <radialGradient id="pxRim" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="32.3"><stop offset="0.90" stop-color="#B5FFF0" stop-opacity="0"/><stop offset="0.928" stop-color="#B5FFF0" stop-opacity="0.95"/><stop offset="0.955" stop-color="#8FFFE6" stop-opacity="0.4"/><stop offset="1" stop-color="#8FFFE6" stop-opacity="0"/></radialGradient>
+    <linearGradient id="pxLit" gradientUnits="userSpaceOnUse" x1="-21.2" y1="21.2" x2="21.2" y2="-21.2"><stop offset="0" stop-color="#FFFFFF"/><stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.45"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0.06"/></linearGradient>
+    <mask id="pxLitMask" mask-type="alpha" maskUnits="userSpaceOnUse" x="-36" y="-36" width="72" height="72"><rect x="-36" y="-36" width="72" height="72" fill="url(#pxLit)"/></mask>
     <!-- ship: assets/ship.svg geometry (24-unit space, nose at −y), anchored on its centre (12,12); placed with <use> at scale 22/19 = 1.158 → 22 px hull -->
     <g id="ship" transform="translate(-12 -12)">
     <g stroke="#0A0D1A" stroke-width="1" stroke-linejoin="round">
@@ -1315,78 +1302,130 @@
   </g>
 
   <!-- ============ bodies: the assets' own top-level groups, verbatim, translated to the scene positions ============ -->
-  <!-- central star (760,470): assets/star.svg <g id="star"> — glow r 200, corona r 130 (σ 3) + 10 streamers & 2 lobes (σ 6), chromosphere r 47 (σ 1.5), limb-darkened body r 46 with granulation -->
+  <!-- central star (760,470) r 46: assets/star.svg <g id="star"> (v1.5 = approved star-ref J) — breathing haze r 200 (6 s, ±3 %), wisp ring r 78 (−360°/300 s) + flame ring r 62 (+360°/200 s) ragged by opaque noise, 3 two-tone prominences (12/16/14 s, begin 0/5/9 s) + flare (22 s), plasma surface (dark cells #802105 + filaments #FFE7A0), bright limb, wobbling edge, ragged rim r 46.2; t = 0 = rest (prominences and flare at α 0) -->
   <g id="star" transform="translate(760 470)">
-    <circle r="200" fill="url(#starGlow)"/>
-    <circle r="130" fill="url(#starCorona)" filter="url(#starCoronaBlur)"/>
-    <g fill="#FF8C2E" filter="url(#starStreamerBlur)">
-      <path d="M48 -5.5 L134 0 L48 5.5 Z" transform="rotate(158.9)" fill-opacity="0.110"/>
-      <path d="M48 -6.9 L112 0 L48 6.9 Z" transform="rotate(346.7)" fill-opacity="0.160"/>
-      <path d="M48 -6.4 L128.9 0 L48 6.4 Z" transform="rotate(311.3)" fill-opacity="0.113"/>
-      <path d="M48 -8.05 L129.3 0 L48 8.05 Z" transform="rotate(89.2)" fill-opacity="0.124"/>
-      <path d="M48 -5.4 L169.9 0 L48 5.4 Z" transform="rotate(216.1)" fill-opacity="0.104"/>
-      <path d="M48 -8.35 L168.7 0 L48 8.35 Z" transform="rotate(51.7)" fill-opacity="0.115"/>
-      <path d="M48 -5.75 L145.6 0 L48 5.75 Z" transform="rotate(7.4)" fill-opacity="0.137"/>
-      <path d="M48 -6.35 L130.9 0 L48 6.35 Z" transform="rotate(264)" fill-opacity="0.150"/>
-      <path d="M48 -5.05 L157 0 L48 5.05 Z" transform="rotate(181)" fill-opacity="0.140"/>
-      <path d="M48 -6.25 L165.2 0 L48 6.25 Z" transform="rotate(241.3)" fill-opacity="0.142"/>
-      <path d="M48 -20 L150 0 L48 20 Z" transform="rotate(122)" fill-opacity="0.06"/>
-      <path d="M48 -20 L150 0 L48 20 Z" transform="rotate(292)" fill-opacity="0.06"/>
+    <g id="starBreathe">
+      <animateTransform attributeName="transform" type="scale" values="1;1.03;1;0.97;1" keyTimes="0;0.25;0.5;0.75;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1" dur="6s" repeatCount="indefinite"/>
+      <circle r="200" fill="url(#starHaze)"/>
+      <g><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="300s" repeatCount="indefinite"/>
+        <circle r="78" fill="url(#starWispFill)" filter="url(#starWisp)"/></g>
+      <g><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="200s" repeatCount="indefinite"/>
+        <circle r="62" fill="url(#starFlameFill)" filter="url(#starFlame)"/></g>
     </g>
-    <circle r="47" fill="none" stroke="#FF8C2E" stroke-opacity="0.60" stroke-width="3" filter="url(#starChromoBlur)"/>
-    <circle r="46" fill="url(#starBody)" filter="url(#starGranulation)"/>
+    <g id="starProminences" fill="none" stroke-linecap="round">
+      <g transform="rotate(147.5) translate(46 0)">
+        <g id="starProm1" transform="scale(0.6)" opacity="0">
+          <animateTransform attributeName="transform" type="scale" values="0.6;1;0.6" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="12s" begin="0s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0;1;0" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="12s" begin="0s" repeatCount="indefinite"/>
+          <path d="M-0.9 -9 C21 -7.2 21 7.2 -0.9 9" stroke="#FF8C2E" stroke-width="2.8" stroke-opacity="0.85"/>
+          <path d="M-0.9 -9 C21 -7.2 21 7.2 -0.9 9" stroke="#FFF1C2" stroke-width="1" stroke-opacity="0.9"/>
+        </g>
+      </g>
+      <g transform="rotate(243.6) translate(46 0)">
+        <g id="starProm2" transform="scale(0.6)" opacity="0">
+          <animateTransform attributeName="transform" type="scale" values="0.6;1;0.6" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="16s" begin="5s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0;1;0" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="16s" begin="5s" repeatCount="indefinite"/>
+          <path d="M-1.3 -11 C23.5 -9 23.5 9 -1.3 11" stroke="#FF8C2E" stroke-width="2.8" stroke-opacity="0.85"/>
+          <path d="M-1.3 -11 C23.5 -9 23.5 9 -1.3 11" stroke="#FFF1C2" stroke-width="1" stroke-opacity="0.9"/>
+        </g>
+      </g>
+      <g transform="rotate(314.8) translate(46 0)">
+        <g id="starProm3" transform="scale(0.6)" opacity="0">
+          <animateTransform attributeName="transform" type="scale" values="0.6;1;0.6" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="14s" begin="9s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0;1;0" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="14s" begin="9s" repeatCount="indefinite"/>
+          <path d="M-0.8 -8.5 C29 -6.8 29 6.8 -0.8 8.5" stroke="#FF8C2E" stroke-width="2.8" stroke-opacity="0.85"/>
+          <path d="M-0.8 -8.5 C29 -6.8 29 6.8 -0.8 8.5" stroke="#FFF1C2" stroke-width="1" stroke-opacity="0.9"/>
+        </g>
+      </g>
+    </g>
+    <g id="starFlare" transform="rotate(25)" opacity="0">
+      <animate attributeName="opacity" values="0;0;1;0;0" keyTimes="0;0.5909;0.6318;0.6727;1" dur="22s" repeatCount="indefinite"/>
+      <path d="M46 -1.8 L86 0 L46 1.8 Z" fill="url(#starFlareFill)"/>
+    </g>
+    <g id="starDisc" filter="url(#starEdge)">
+      <circle r="46" fill="url(#starBody)" filter="url(#starSurf)"/>
+      <circle r="46" fill="url(#starLimb)"/>
+    </g>
+    <circle r="46.2" fill="none" stroke="#FFF1C2" stroke-width="1.6" stroke-opacity="0.75" filter="url(#starRimRag)"/>
   </g>
-  <!-- start planet (250,690) r 34: assets/planet-start.svg <g id="planetStart"> (v1.2 ocean world) — ocean base, clipped surface strip (214×68 tile, ~32 % land, polar caps, 90 s) + cloud strip (α 0.5, 64 s), limb squash, glint, terminator shade (lit upper-right), limb line, atmosphere rim r 38.08 -->
+  <!-- start planet (250,690) r 34: assets/planet-start.svg <g id="planetStart"> (v1.5 = approved planet-ref F, ocean world) — deep ocean, shallows / land / forest / desert / highland zones + polar caps (214 px strip, 90 s), clouds + cloud shadow (64 s), glint, shade with warm terminator band and night navy, lit-side haze + rim (upper-right, toward the star) -->
   <g id="planetStart" transform="translate(250 690)">
-    <circle r="34" fill="#3D8BFF"/>
+    <circle r="34" fill="#1E5BD6"/>
     <g clip-path="url(#psClip)">
-      <g id="psSurfaceAnim">
-        <animateTransform attributeName="transform" type="translate" from="0 0" to="214 0" dur="90s" repeatCount="indefinite"/>
-        <g id="psSurfaceStrip" transform="translate(-292 -34)">
-          <rect width="428" height="68" fill="#3D8BFF" filter="url(#psLand)"/>
+      <g><animateTransform attributeName="transform" type="translate" from="0 0" to="214 0" dur="90s" repeatCount="indefinite"/>
+        <g transform="translate(-292 -34)">
+          <rect width="428" height="68" fill="#1E5BD6" filter="url(#psLand)"/>
           <rect width="428" height="8.16" fill="url(#psCapN)"/>
           <rect y="59.84" width="428" height="8.16" fill="url(#psCapS)"/>
         </g>
       </g>
-      <g id="psCloudAnim" opacity="0.5">
-        <animateTransform attributeName="transform" type="translate" from="0 0" to="214 0" dur="64s" repeatCount="indefinite"/>
-        <g id="psCloudStrip" transform="translate(-248 -34)">
-          <rect width="428" height="68" fill="#F2F5FF" filter="url(#psCloud)"/>
-        </g>
+      <g opacity="0.45"><animateTransform attributeName="transform" type="translate" from="-0.85 0.85" to="213.15 0.85" dur="64s" repeatCount="indefinite"/>
+        <g transform="translate(-248 -34)"><rect width="428" height="68" fill="#000000" filter="url(#psCloudShadow)"/></g>
+      </g>
+      <g opacity="0.78"><animateTransform attributeName="transform" type="translate" from="0 0" to="214 0" dur="64s" repeatCount="indefinite"/>
+        <g transform="translate(-248 -34)"><rect width="428" height="68" fill="#FFFFFF" filter="url(#psCloud)"/></g>
       </g>
     </g>
-    <circle r="34" fill="url(#psSquash)"/>
-    <ellipse cx="10.82" cy="-10.82" rx="7.5" ry="4.1" transform="rotate(-45 10.82 -10.82)" fill="url(#psGlint)"/>
+    <ellipse cx="10.82" cy="-10.82" rx="6.4" ry="3.6" transform="rotate(-45 10.82 -10.82)" fill="url(#psGlint)"/>
     <circle r="34" fill="url(#psShade)"/>
-    <circle r="33.5" fill="none" stroke="#9CCBFF" stroke-opacity="0.16" stroke-width="1"/>
-    <circle r="38.08" fill="url(#psRim)" mask="url(#psRimMask)"/>
+    <circle r="34" fill="url(#psHaze)" mask="url(#psLitMask)"/>
+    <circle r="36.6" fill="url(#psRim)" mask="url(#psLitMask)"/>
   </g>
-  <!-- planet X (1190,210) r 30: assets/planet-x.svg <g id="planetX"> (v1.2 cold mineral world) — breathing halo r 54, mint base, clipped surface strip (188×60 tile, ~28 % basins + veins, polar caps, 120 s) + wisp strip (80 s), limb squash, terminator shade (lit lower-left), limb line, atmosphere rim r 33.6, dashed capture ring r 78 (dash 6 6, 1.5 px, α 0.55 / r 78 at t = 0 — crawl + pulse animated) -->
+  <!-- planet X (1190,210) r 30: assets/planet-x.svg <g id="planetX"> (v1.5 mint ice world) — breathing halo r 54 (2.4 s, ±4 %), plains / frost / basins / ice-field zones + caps (188 px strip, 120 s), wisps + wisp shadow (80 s), shade with warm terminator band, lit-side haze + rim (lit lower-left, toward the star), capture ring r 78 -->
   <g id="planetX" transform="translate(1190 210)">
     <circle r="54" fill="url(#pxHalo)">
       <animateTransform attributeName="transform" type="scale" values="1;1.04;1;0.96;1" keyTimes="0;0.25;0.5;0.75;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1" dur="2.4s" repeatCount="indefinite"/>
     </circle>
-    <circle r="30" fill="#3DE0C2"/>
+    <circle r="30" fill="#17B39C"/>
     <g clip-path="url(#pxClip)">
-      <g id="pxSurfaceAnim">
-        <animateTransform attributeName="transform" type="translate" from="0 0" to="188 0" dur="120s" repeatCount="indefinite"/>
-        <g id="pxSurfaceStrip" transform="translate(-258 -30)">
-          <rect width="376" height="60" fill="#3DE0C2" filter="url(#pxSurface)"/>
-          <rect width="376" height="10.8" fill="url(#pxCapN)"/>
-          <rect y="49.2" width="376" height="10.8" fill="url(#pxCapS)"/>
+      <g id="pxSurfaceAnim"><animateTransform attributeName="transform" type="translate" from="0 0" to="188 0" dur="120s" repeatCount="indefinite"/>
+        <g transform="translate(-258 -30)">
+          <g filter="url(#pxSurface)">
+            <g mask="url(#pxSLatMask)">
+              <g transform="translate(-251.3 -7.7)">
+                <rect x="251.3" y="7.7" width="189" height="60" fill="url(#pxSSeamA)" filter="url(#pxSField)"/>
+                <g transform="translate(188 0)"><rect x="63.3" y="7.7" width="189" height="60" fill="url(#pxSSeamB)" filter="url(#pxSField)" mask="url(#pxSSeamMask)"/></g>
+                <g transform="translate(188 0)">
+                  <rect x="251.3" y="7.7" width="188" height="60" fill="url(#pxSSeamA)" filter="url(#pxSField)"/>
+                  <g transform="translate(188 0)"><rect x="63.3" y="7.7" width="188" height="60" fill="url(#pxSSeamB)" filter="url(#pxSField)" mask="url(#pxSSeamMask)"/></g>
+                </g>
+              </g>
+            </g>
+          </g>
         </g>
       </g>
-      <g id="pxWispAnim">
-        <animateTransform attributeName="transform" type="translate" from="0 0" to="188 0" dur="80s" repeatCount="indefinite"/>
-        <g id="pxWispStrip" transform="translate(-218 -30)">
-          <rect width="376" height="60" fill="#B5FFF0" filter="url(#pxWisp)"/>
+      <g id="pxWispShadowAnim" opacity="0.32"><animateTransform attributeName="transform" type="translate" from="1 -1" to="189 -1" dur="80s" repeatCount="indefinite"/>
+        <g transform="translate(-218 -30)">
+          <g filter="url(#pxWispShadow)">
+            <g transform="translate(-29.1 -5.3)">
+              <rect x="29.1" y="5.3" width="189" height="60" fill="url(#pxWSeamA)" filter="url(#pxWField)"/>
+              <g transform="translate(188 0)"><rect x="-158.9" y="5.3" width="189" height="60" fill="url(#pxWSeamB)" filter="url(#pxWField)" mask="url(#pxWSeamMask)"/></g>
+              <g transform="translate(188 0)">
+                <rect x="29.1" y="5.3" width="188" height="60" fill="url(#pxWSeamA)" filter="url(#pxWField)"/>
+                <g transform="translate(188 0)"><rect x="-158.9" y="5.3" width="188" height="60" fill="url(#pxWSeamB)" filter="url(#pxWField)" mask="url(#pxWSeamMask)"/></g>
+              </g>
+            </g>
+          </g>
+        </g>
+      </g>
+      <g id="pxWispAnim" opacity="0.7"><animateTransform attributeName="transform" type="translate" from="0 0" to="188 0" dur="80s" repeatCount="indefinite"/>
+        <g transform="translate(-218 -30)">
+          <g filter="url(#pxWisp)">
+            <g transform="translate(-29.1 -5.3)">
+              <rect x="29.1" y="5.3" width="189" height="60" fill="url(#pxWSeamA)" filter="url(#pxWField)"/>
+              <g transform="translate(188 0)"><rect x="-158.9" y="5.3" width="189" height="60" fill="url(#pxWSeamB)" filter="url(#pxWField)" mask="url(#pxWSeamMask)"/></g>
+              <g transform="translate(188 0)">
+                <rect x="29.1" y="5.3" width="188" height="60" fill="url(#pxWSeamA)" filter="url(#pxWField)"/>
+                <g transform="translate(188 0)"><rect x="-158.9" y="5.3" width="188" height="60" fill="url(#pxWSeamB)" filter="url(#pxWField)" mask="url(#pxWSeamMask)"/></g>
+              </g>
+            </g>
+          </g>
         </g>
       </g>
     </g>
-    <circle r="30" fill="url(#pxSquash)"/>
     <circle r="30" fill="url(#pxShade)"/>
-    <circle r="29.5" fill="none" stroke="#B5FFF0" stroke-opacity="0.18" stroke-width="1"/>
-    <circle r="33.6" fill="url(#pxRim)" mask="url(#pxRimMask)"/>
+    <circle r="30" fill="url(#pxHaze)" mask="url(#pxLitMask)"/>
+    <circle r="32.3" fill="url(#pxRim)" mask="url(#pxLitMask)"/>
     <circle r="78" fill="none" stroke="#3DE0C2" stroke-opacity="0.55" stroke-width="1.5" stroke-dasharray="6 6">
       <animate attributeName="stroke-dashoffset" from="0" to="-12" dur="1s" repeatCount="indefinite"/>
       <animate attributeName="stroke-opacity" values="0.55;0.70;0.55;0.35;0.55" keyTimes="0;0.25;0.5;0.75;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1" dur="2.4s" repeatCount="indefinite"/>

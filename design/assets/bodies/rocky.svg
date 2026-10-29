@@ -1,116 +1,93 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
-  <!-- Rocky desert world, v1.3 body library (animated). ONE group #rocky at translate(60 60); geometry relative to (0,0).
-       r 30, disc diameter H = 60. Lit side faces the star: L = (+0.7071, -0.7071) (upper-right; library convention). Lighting never rotates.
-       Texture strip: period P = round(2*pi*r) = 188 px (one full rotation, 110 s). The strip is ONE rect 2P x 2r = 376x60 (v1.2 rule: never two
-       abutting rects); the filter computes each noise field once over a 188x60 subregion (stitchTiles stitch -> periodic in exactly P) and feTile
-       repeats it across the padded filter region, so the strip is 2P wide with no geometry edge and the offset/blur primitives see periodic neighbours.
-       Scrolled west->east (texture moves left->right: translate 0 -> +P) through the circular clip #rkClip.
-       Start phase: tile x 40 (strip x 228) at the disc's left edge (inner translate(-258 -30) = -(r + P + 40), -r). No polar caps (desert world).
+  <!-- Rocky desert world, v1.5 (realistic + vibrant + crisp; built with the approved planet reference's techniques). ONE group #rocky at
+       translate(60 60); geometry relative to (0,0). r 30, disc diameter H = 60. Lit from the upper-right: L = (+0.7071, -0.7071). Lighting never rotates.
+       Texture strip: period P = round(2*pi*r) = 188 px (one rotation, 110 s). ONE rect 2P x 2r = 376x60; each noise field is computed once over a
+       188x60 subregion (stitchTiles stitch -> periodic in exactly P) and feTile repeats it across the padded filter region (-4..380 x -4..64, so the
+       crater offsets see periodic neighbours), cropped back to the rect by feComposite in SourceGraphic. Scrolled west->east (translate 0 -> +P)
+       through the circular clip #rkClip. Start phase: tile x 40 at the disc's left edge (inner translate(-258 -30)). No polar caps, no clouds.
 
-       Tokens: rocky.base #C98B5A · rocky.dark #7A4E33 · rocky.highlight #F0C9A0 · rocky.atmo #E8B07A (thin, rim a 0.4).
+       Tokens (v1.5): rocky.base #D2803F (was #C98B5A, more saturated) · rocky.sand #E8A85C (NEW, dune crests) · rocky.rust #B04A22 (NEW, iron
+       plains) · rocky.dark #6B3820 (was #7A4E33, deeper; basalt maria + crater floors) · rocky.pit #4A2414 (NEW, shadowed crater walls) ·
+       rocky.highlight #F7D8B0 (was #F0C9A0; pale plateaus + lit crater walls) · rocky.atmo #E8B07A (unchanged; haze, rim tail) · rocky.rim #FFD9B0
+       (= stars.warm; haze edge, rim peak) · rocky.bloom #FFF0DC (NEW) · shared from the reference: terminator.warm #FF9455, night #08122E / #050B1E.
 
        Draw order:
-       1. base     circle r 30, #C98B5A.
-       2. surface  strip, SMIL translate 0 -> 188 over 110 s. Strip = rect 376x60, fill #C98B5A, filter #rkSurface (region -4..380 x -4..64, cropped
-                   back to the rect by feComposite in SourceGraphic). Fields (each: subregion 0..188 x 0..60 stitched, feTile over the region):
-                   dunes:   feTurbulence fractalNoise baseFrequency "0.008 0.09" (anisotropic -> horizontal wavy bands), numOctaves 2, seed 5.
-                            light bands: alpha -> linear slope 8, intercept -4.084 (soft threshold 0.573 = p75) then x0.40, colour #F0C9A0;
-                            dark bands:  alpha -> linear slope -8, intercept 3.892 (bright where field < 0.424 = p25) then x0.40, colour #7A4E33.
-                   craters: feTurbulence fractalNoise baseFrequency 0.12, numOctaves 2, seed 31.
-                            pits: alpha -> linear slope 40, intercept -23.5 (threshold 0.600 = p80 -> ~20 % dark, ~1 px transition), x0.8, #7A4E33;
-                            lit inner wall: pit minus pit offset (+1.2,-1.2) toward L = the lower-left inner edge, #F0C9A0 x0.6;
-                            shadowed inner wall: pit minus pit offset (-1.2,+1.2) = the upper-right inner edge, #7A4E33 x0.6 (stacks on the pit).
-       3. squash   circle r 30, radial from the centre, #C98B5A: 0.88 a0 | 1.00 a0.45 (fades the texture to 55 % in the outer 12 % of r).
-       4. shade    radial, userSpace centre 0.36 r L = (7.64, -7.64), radius 1.25 r = 37.5 (v1.1 numbers):
-                   0.00 #F0C9A0 a0.90 | 0.40 #C98B5A a0 | 0.70 #7A4E33 a0.55 | 0.86 #7A4E33 a0.92 | 1.00 #7A4E33 a1.0 (0.70-0.86 is the terminator).
-       5. limb     circle r 29.5, stroke 1, #F0C9A0 a0.16.
-       6. rim      circle r 1.12 r = 33.6, radial from the planet centre, #E8B07A: 0.00 a0 | 0.80 a0 | 0.87 a0.40 | 0.92 a0.22 | 1.00 a0
-                   (v1.1 rim x 0.4/0.55 = thin atmosphere), multiplied (alpha mask) by a linear gradient along L from +1.12 r L (23.76,-23.76) = 1.0
-                   to -1.12 r L = 0.35.
-       No specular (no liquid), no halo. Static renders show t = 0. Ids: rk*. -->
+       1. base     circle r 30, #D2803F.
+       2. surface  strip, SMIL translate 0 -> 188 over 110 s. Rect 376x60 fill #D2803F, filter #rkSurface. Fields (all stitched 188x60 + feTile):
+                   n  = fractalNoise baseFrequency 0.032, numOctaves 6, seed 5          (terrain)
+                   du = fractalNoise baseFrequency "0.016 0.06", numOctaves 6, seed 13  (anisotropic -> wavy E-W dune belts)
+                   ru = fractalNoise baseFrequency 0.05, numOctaves 4, seed 29          (iron-oxide patches)
+                   cr = fractalNoise baseFrequency 0.17, numOctaves 1, seed 31          (craters: one octave -> round pits)
+                   sand      #E8A85C  alpha = 30*du - 18.0   (0.600 -> 0.633)
+                   rust      #B04A22  alpha = 18*ru - 10.08  (0.560 -> 0.616)
+                   basalt    #6B3820  alpha = -50*n + 20.75  (solid below 0.395, 0 at 0.415: crisp dark maria)
+                   plateau   #F7D8B0  alpha = 16*n - 10.56   (0.660 -> 0.7225: pale highlands)
+                   pits      #6B3820  alpha = (40*cr - 26.4) x0.85 (threshold 0.660, ~1 px edge)
+                   dark wall #4A2414  pit minus pit offset (-1,+1) = the inner wall facing the light (in shadow), x0.75
+                   lit wall  #F7D8B0  pit minus pit offset (+1,-1) = the far inner wall (catches the light), x0.55
+                   merge order: base, sand, rust, basalt, plateau, pits, dark wall, lit wall.
+       3. shade    circle r 30, radial userSpace centre 0.36 r L = (7.64, -7.64), radius 1.25 r = 37.5:
+                   0.00 #FFF0DC a0.20 | 0.32 #FFF0DC a0 | 0.64 #FF9455 a0 | 0.705 #FF9455 a0.26 (warm terminator band, dusty air) |
+                   0.76 #08122E a0.74 | 0.84 #050B1E a0.97 | 1.00 #050B1E a1.
+       4. haze     circle r 30, radial from the centre: 0.80 #E8B07A a0 | 0.96 #E8B07A a0.30 | 1.00 #FFD9B0 a0.48 (thin air: ~0.7x the ocean haze);
+                   masked by #rkLitMask.
+       5. rim      circle r 32.3 (1.077 r): 0.90 #FFD9B0 a0 | 0.928 #FFD9B0 a0.75 | 0.955 #E8B07A a0.3 | 1.00 #E8B07A a0; masked by #rkLitMask.
+       Lit mask    alpha = linear gradient (21.2,-21.2) -> (-21.2,21.2): a1.0 | 0.5 a0.45 | 1.0 a0.06.
+       No limb line, no squash ring, no specular, no halo. Static renders show t = 0. Ids: rk*. -->
   <defs>
     <clipPath id="rkClip"><circle r="30"/></clipPath>
     <filter id="rkSurface" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-4" y="-4" width="384" height="68" color-interpolation-filters="sRGB">
-      <feTurbulence type="fractalNoise" baseFrequency="0.008 0.09" numOctaves="2" seed="5" stitchTiles="stitch" x="0" y="0" width="188" height="60" result="rkD1"/>
-      <feTile in="rkD1" x="-4" y="-4" width="384" height="68" result="rkD"/>
-      <feColorMatrix in="rkD" type="matrix" values="0 0 0 0 0.941  0 0 0 0 0.788  0 0 0 0 0.627  0 0 0 1 0" result="rkDuneLRGB"/>
-      <feComponentTransfer in="rkDuneLRGB" result="rkDuneLCut">
-        <feFuncA type="linear" slope="8" intercept="-4.084"/>
-      </feComponentTransfer>
-      <feComponentTransfer in="rkDuneLCut" result="rkDuneL">
-        <feFuncA type="linear" slope="0.40" intercept="0"/>
-      </feComponentTransfer>
-      <feColorMatrix in="rkD" type="matrix" values="0 0 0 0 0.478  0 0 0 0 0.306  0 0 0 0 0.200  0 0 0 1 0" result="rkDuneDRGB"/>
-      <feComponentTransfer in="rkDuneDRGB" result="rkDuneDCut">
-        <feFuncA type="linear" slope="-8" intercept="3.892"/>
-      </feComponentTransfer>
-      <feComponentTransfer in="rkDuneDCut" result="rkDuneD">
-        <feFuncA type="linear" slope="0.40" intercept="0"/>
-      </feComponentTransfer>
-      <feTurbulence type="fractalNoise" baseFrequency="0.12" numOctaves="2" seed="31" stitchTiles="stitch" x="0" y="0" width="188" height="60" result="rkC1"/>
-      <feTile in="rkC1" x="-4" y="-4" width="384" height="68" result="rkC"/>
-      <feColorMatrix in="rkC" type="matrix" values="0 0 0 0 0.478  0 0 0 0 0.306  0 0 0 0 0.200  0 0 0 1 0" result="rkPitRGB"/>
-      <feComponentTransfer in="rkPitRGB" result="rkPitCut">
-        <feFuncA type="linear" slope="40" intercept="-23.5"/>
-      </feComponentTransfer>
-      <feComponentTransfer in="rkPitCut" result="rkPit">
-        <feFuncA type="linear" slope="0.8" intercept="0"/>
-      </feComponentTransfer>
-      <feOffset in="rkPitCut" dx="1.2" dy="-1.2" result="rkPitNE"/>
-      <feComposite in="rkPitCut" in2="rkPitNE" operator="arithmetic" k1="0" k2="1" k3="-1" k4="0" result="rkLitA"/>
-      <feColorMatrix in="rkLitA" type="matrix" values="0 0 0 0 0.941  0 0 0 0 0.788  0 0 0 0 0.627  0 0 0 0.6 0" result="rkLit"/>
-      <feOffset in="rkPitCut" dx="-1.2" dy="1.2" result="rkPitSW"/>
-      <feComposite in="rkPitCut" in2="rkPitSW" operator="arithmetic" k1="0" k2="1" k3="-1" k4="0" result="rkDarkA"/>
-      <feColorMatrix in="rkDarkA" type="matrix" values="0 0 0 0 0.478  0 0 0 0 0.306  0 0 0 0 0.200  0 0 0 0.6 0" result="rkDark"/>
-      <feMerge result="rkAll">
-        <feMergeNode in="SourceGraphic"/>
-        <feMergeNode in="rkDuneL"/>
-        <feMergeNode in="rkDuneD"/>
-        <feMergeNode in="rkPit"/>
-        <feMergeNode in="rkDark"/>
-        <feMergeNode in="rkLit"/>
-      </feMerge>
-      <feComposite in="rkAll" in2="SourceGraphic" operator="in"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.032" numOctaves="6" seed="5" stitchTiles="stitch" x="0" y="0" width="188" height="60" result="n1"/>
+      <feTile in="n1" x="-4" y="-4" width="384" height="68" result="n"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.016 0.06" numOctaves="6" seed="13" stitchTiles="stitch" x="0" y="0" width="188" height="60" result="du1"/>
+      <feTile in="du1" x="-4" y="-4" width="384" height="68" result="du"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="4" seed="29" stitchTiles="stitch" x="0" y="0" width="188" height="60" result="ru1"/>
+      <feTile in="ru1" x="-4" y="-4" width="384" height="68" result="ru"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.17" numOctaves="1" seed="31" stitchTiles="stitch" x="0" y="0" width="188" height="60" result="cr1"/>
+      <feTile in="cr1" x="-4" y="-4" width="384" height="68" result="cr"/>
+      <feColorMatrix in="du" type="matrix" values="0 0 0 0 0.910  0 0 0 0 0.659  0 0 0 0 0.361  0 0 0 1 0" result="sRGB"/>
+      <feComponentTransfer in="sRGB" result="sand"><feFuncA type="linear" slope="30" intercept="-18.0"/></feComponentTransfer>
+      <feColorMatrix in="ru" type="matrix" values="0 0 0 0 0.690  0 0 0 0 0.290  0 0 0 0 0.133  0 0 0 1 0" result="rRGB"/>
+      <feComponentTransfer in="rRGB" result="rust"><feFuncA type="linear" slope="18" intercept="-10.08"/></feComponentTransfer>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0.420  0 0 0 0 0.220  0 0 0 0 0.125  0 0 0 1 0" result="bRGB"/>
+      <feComponentTransfer in="bRGB" result="basalt"><feFuncA type="linear" slope="-50" intercept="20.75"/></feComponentTransfer>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0.969  0 0 0 0 0.847  0 0 0 0 0.690  0 0 0 1 0" result="pRGB"/>
+      <feComponentTransfer in="pRGB" result="plateau"><feFuncA type="linear" slope="16" intercept="-10.56"/></feComponentTransfer>
+      <feColorMatrix in="cr" type="matrix" values="0 0 0 0 0.420  0 0 0 0 0.220  0 0 0 0 0.125  0 0 0 1 0" result="cRGB"/>
+      <feComponentTransfer in="cRGB" result="pitCut"><feFuncA type="linear" slope="40" intercept="-26.4"/></feComponentTransfer>
+      <feComponentTransfer in="pitCut" result="pit"><feFuncA type="linear" slope="0.85"/></feComponentTransfer>
+      <feOffset in="pitCut" dx="1" dy="-1" result="pitNE"/>
+      <feComposite in="pitCut" in2="pitNE" operator="arithmetic" k2="1" k3="-1" result="litA"/>
+      <feColorMatrix in="litA" type="matrix" values="0 0 0 0 0.969  0 0 0 0 0.847  0 0 0 0 0.690  0 0 0 0.55 0" result="lit"/>
+      <feOffset in="pitCut" dx="-1" dy="1" result="pitSW"/>
+      <feComposite in="pitCut" in2="pitSW" operator="arithmetic" k2="1" k3="-1" result="drkA"/>
+      <feColorMatrix in="drkA" type="matrix" values="0 0 0 0 0.290  0 0 0 0 0.141  0 0 0 0 0.078  0 0 0 0.75 0" result="drk"/>
+      <feMerge result="all"><feMergeNode in="SourceGraphic"/><feMergeNode in="sand"/><feMergeNode in="rust"/><feMergeNode in="basalt"/><feMergeNode in="plateau"/><feMergeNode in="pit"/><feMergeNode in="drk"/><feMergeNode in="lit"/></feMerge>
+      <feComposite in="all" in2="SourceGraphic" operator="in"/>
     </filter>
-    <radialGradient id="rkSquash" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="30">
-      <stop offset="0.88" stop-color="#C98B5A" stop-opacity="0"/>
-      <stop offset="1" stop-color="#C98B5A" stop-opacity="0.45"/>
-    </radialGradient>
     <radialGradient id="rkShade" gradientUnits="userSpaceOnUse" cx="7.64" cy="-7.64" r="37.5">
-      <stop offset="0" stop-color="#F0C9A0" stop-opacity="0.90"/>
-      <stop offset="0.40" stop-color="#C98B5A" stop-opacity="0"/>
-      <stop offset="0.70" stop-color="#7A4E33" stop-opacity="0.55"/>
-      <stop offset="0.86" stop-color="#7A4E33" stop-opacity="0.92"/>
-      <stop offset="1" stop-color="#7A4E33" stop-opacity="1"/>
+      <stop offset="0" stop-color="#FFF0DC" stop-opacity="0.2"/>
+      <stop offset="0.32" stop-color="#FFF0DC" stop-opacity="0"/>
+      <stop offset="0.64" stop-color="#FF9455" stop-opacity="0"/>
+      <stop offset="0.705" stop-color="#FF9455" stop-opacity="0.26"/>
+      <stop offset="0.76" stop-color="#08122E" stop-opacity="0.74"/>
+      <stop offset="0.84" stop-color="#050B1E" stop-opacity="0.97"/>
+      <stop offset="1" stop-color="#050B1E" stop-opacity="1"/>
     </radialGradient>
-    <radialGradient id="rkRim" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="33.6">
-      <stop offset="0" stop-color="#E8B07A" stop-opacity="0"/>
-      <stop offset="0.80" stop-color="#E8B07A" stop-opacity="0"/>
-      <stop offset="0.87" stop-color="#E8B07A" stop-opacity="0.40"/>
-      <stop offset="0.92" stop-color="#E8B07A" stop-opacity="0.22"/>
-      <stop offset="1" stop-color="#E8B07A" stop-opacity="0"/>
-    </radialGradient>
-    <linearGradient id="rkRimLit" gradientUnits="userSpaceOnUse" x1="23.76" y1="-23.76" x2="-23.76" y2="23.76">
-      <stop offset="0" stop-color="#FFFFFF" stop-opacity="1"/>
-      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.35"/>
-    </linearGradient>
-    <mask id="rkRimMask" mask-type="alpha" maskUnits="userSpaceOnUse" x="-36" y="-36" width="72" height="72">
-      <rect x="-36" y="-36" width="72" height="72" fill="url(#rkRimLit)"/>
-    </mask>
+    <radialGradient id="rkHaze" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="30"><stop offset="0.80" stop-color="#E8B07A" stop-opacity="0"/><stop offset="0.96" stop-color="#E8B07A" stop-opacity="0.30"/><stop offset="1" stop-color="#FFD9B0" stop-opacity="0.48"/></radialGradient>
+    <radialGradient id="rkRim" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="32.3"><stop offset="0.90" stop-color="#FFD9B0" stop-opacity="0"/><stop offset="0.928" stop-color="#FFD9B0" stop-opacity="0.75"/><stop offset="0.955" stop-color="#E8B07A" stop-opacity="0.3"/><stop offset="1" stop-color="#E8B07A" stop-opacity="0"/></radialGradient>
+    <linearGradient id="rkLit" gradientUnits="userSpaceOnUse" x1="21.2" y1="-21.2" x2="-21.2" y2="21.2"><stop offset="0" stop-color="#FFFFFF"/><stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.45"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0.06"/></linearGradient>
+    <mask id="rkLitMask" mask-type="alpha" maskUnits="userSpaceOnUse" x="-36" y="-36" width="72" height="72"><rect x="-36" y="-36" width="72" height="72" fill="url(#rkLit)"/></mask>
   </defs>
   <g id="rocky" transform="translate(60 60)">
-    <circle r="30" fill="#C98B5A"/>
+    <circle r="30" fill="#D2803F"/>
     <g clip-path="url(#rkClip)">
-      <g id="rkSurfaceAnim">
-        <animateTransform attributeName="transform" type="translate" from="0 0" to="188 0" dur="110s" repeatCount="indefinite"/>
-        <g id="rkSurfaceStrip" transform="translate(-258 -30)">
-          <rect width="376" height="60" fill="#C98B5A" filter="url(#rkSurface)"/>
-        </g>
+      <g id="rkSurfaceAnim"><animateTransform attributeName="transform" type="translate" from="0 0" to="188 0" dur="110s" repeatCount="indefinite"/>
+        <g transform="translate(-258 -30)"><rect width="376" height="60" fill="#D2803F" filter="url(#rkSurface)"/></g>
       </g>
     </g>
-    <circle r="30" fill="url(#rkSquash)"/>
     <circle r="30" fill="url(#rkShade)"/>
-    <circle r="29.5" fill="none" stroke="#F0C9A0" stroke-opacity="0.16" stroke-width="1"/>
-    <circle r="33.6" fill="url(#rkRim)" mask="url(#rkRimMask)"/>
+    <circle r="30" fill="url(#rkHaze)" mask="url(#rkLitMask)"/>
+    <circle r="32.3" fill="url(#rkRim)" mask="url(#rkLitMask)"/>
   </g>
 </svg>

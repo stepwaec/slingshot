@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <!-- Icy moon, v1.4 moons, built to the v1.5 (revised) planet reference (planet-ref.svg, variant F); v1.5.1 strip. ONE group #moonIcy at
+       translate(24 24); geometry relative to (0,0). r 12 (disc diameter 24). Lit from the upper-right L = (+0.7071, -0.7071); lighting never rotates.
+       Airless-type body with a faint lit-side rim (brief: "faint rim #BFE3FF"); NO haze, NO clouds, hard terminator (airless stops of the v1.5 moon.svg).
+
+       Texture strip: period P = round(2 pi r) = 75 px = one rotation, 150 s, scrolled 0 -> +P (texture moves left -> right), 2P x 2r = 150x24 in strip
+       coordinates, inner translate(-107 -12). v1.5.1 seamless construction (documented in full in planet-x.svg): a FIELD group of four rects with the
+       unstitched field filter #miSField (rect A = N(u), rect B = N(u - P) through the 0 -> 1 period ramp #miSSeamMask; fills carry the
+       contrast-keeping ramp), noise offset X0 47.9, Y0 6.7, under the pointwise ZONES filter #miSurface (field blur 0.25). Replaces the stitched noise
+       + feTile strip, whose period boundary (strip x 75, centred in the disc at t = 64 s) showed straight vertical lineae and a straight chaos edge.
+
+       Field channels: R n = fractalNoise 0.11, 6 oct, seed 41 · G k = fractalNoise 0.07, 5 oct, seed 47 · B l = fractalNoise 0.05, 4 oct, seed 53.
+       Surface zones (filter #miSurface). Each zone = field channel -> linear threshold or iso-contour table -> tinted colour x cap; every layer is
+       TINTED (no grey):
+         base         #DCE4FF (mi.base, brief token) flood.
+         blue ice     n: alpha = 36 n - 20.88 (0 at 0.58, 1 at 0.608), #7FA6E0 (mi.blueIce), x0.9.
+         frost        n: alpha = -36 n + 14.4 (solid below 0.372, 0 at 0.40), #FFFFFF (mi.highlight, brief token), x1.
+         chaos        l: alpha = 30 l - 20.1 (0 at 0.67, 1 at 0.703), #C4987C (mi.chaos, rust-tinted ice), x0.78. (v1.5.1: driven by the lineae field
+                      instead of the former separate fractalNoise 0.06 / seed 43, so the chaos patches sit inside the l = 0.57 lineae, Europa-like.)
+         crack halo   k: iso-contour k = 0.50, 101-entry feFuncA table (0.143 / 0.429 / 0.714 / 1 / ... at k = 0.47 ... 0.53, half-width ~0.035),
+                      #7FA6C9 (mi.crack, brief token), x0.7.
+         crack core   k: iso-contour k = 0.50, half-width ~0.014 (table 0.286 / 1 / 0.286 at 0.49 / 0.50 / 0.51), #4E78A8 (mi.crackDeep), x0.95.
+         lineae       l: two iso-contours l = 0.44 and l = 0.57, half-width ~0.009 (single table peak each), #A5684E (mi.lineae, brown double-ridge
+                      tint), x0.85.
+         merge order: base, blue ice, frost, chaos, crack halo, crack core, lineae (0.44), lineae (0.57); cropped to the field.
+       Lighting (fixed, from the reference; airless variant):
+         shade  radial, userSpace centre +0.36 r L = (3.05, -3.05), radius 1.25 r = 15:
+                0.00 #FFFFFF a0.28 (bloom) | 0.30 a0 | 0.69 #FF9455 a0 | 0.73 #FF9455 a0.18 (thin warm terminator band, as v1.5 moon.svg) | 0.755 #08122E a0.82 | 0.80 #050B1E a0.97 | 1.00 a1
+                (night.navy #08122E, night.deep #050B1E; 0.73 -> 0.755 = hard airless terminator).
+         rim    circle r 1.077 r = 12.92, radial from the centre, #BFE3FF (mi.rim, brief token): 0.90 a0 | 0.928 a0.75 | 0.955 a0.30 | 1.00 a0,
+                alpha-masked to the lit side by a linear gradient along L: (+9,-9) a1.0 | mid a0.45 | (-9,+9) a0.06.
+       Draw order: base disc -> clipped strip -> shade -> rim. No limb line, no specular, no halo. Static renders show t = 0. Ids: mi*. -->
+  <defs>
+    <clipPath id="miClip"><circle r="12"/></clipPath>
+    <linearGradient id="miSSeamA" gradientUnits="userSpaceOnUse" x1="47.9" y1="0" x2="122.9" y2="0"><stop offset="0" stop-color="#FFFFFF" stop-opacity="0"/><stop offset="0.125" stop-color="#FFFFFF" stop-opacity="0.263"/><stop offset="0.25" stop-color="#FFFFFF" stop-opacity="0.53"/><stop offset="0.375" stop-color="#FFFFFF" stop-opacity="0.744"/><stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.828"/><stop offset="0.625" stop-color="#FFFFFF" stop-opacity="0.744"/><stop offset="0.75" stop-color="#FFFFFF" stop-opacity="0.53"/><stop offset="0.875" stop-color="#FFFFFF" stop-opacity="0.263"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/></linearGradient>
+    <linearGradient id="miSSeamB" gradientUnits="userSpaceOnUse" x1="-27.1" y1="0" x2="47.9" y2="0"><stop offset="0" stop-color="#FFFFFF" stop-opacity="0"/><stop offset="0.125" stop-color="#FFFFFF" stop-opacity="0.263"/><stop offset="0.25" stop-color="#FFFFFF" stop-opacity="0.53"/><stop offset="0.375" stop-color="#FFFFFF" stop-opacity="0.744"/><stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.828"/><stop offset="0.625" stop-color="#FFFFFF" stop-opacity="0.744"/><stop offset="0.75" stop-color="#FFFFFF" stop-opacity="0.53"/><stop offset="0.875" stop-color="#FFFFFF" stop-opacity="0.263"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/></linearGradient>
+    <linearGradient id="miSSeamR" gradientUnits="userSpaceOnUse" x1="-27.1" y1="0" x2="47.9" y2="0"><stop offset="0" stop-color="#FFFFFF" stop-opacity="0"/><stop offset="1" stop-color="#FFFFFF"/></linearGradient>
+    <mask id="miSSeamMask" mask-type="alpha" maskUnits="userSpaceOnUse" x="-29.1" y="4.7" width="80" height="28"><rect x="-29.1" y="4.7" width="80" height="28" fill="url(#miSSeamR)"/></mask>
+    <filter id="miSField" primitiveUnits="userSpaceOnUse" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.11" numOctaves="6" seed="41" result="t0"/>
+      <feColorMatrix in="t0" type="matrix" values="0 0 0 1 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0 1" result="c0"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.07" numOctaves="5" seed="47" result="t1"/>
+      <feColorMatrix in="t1" type="matrix" values="0 0 0 0 0  0 0 0 1 0  0 0 0 0 0  0 0 0 0 1" result="c1"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="4" seed="53" result="t2"/>
+      <feColorMatrix in="t2" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 1 0  0 0 0 0 1" result="c2"/>
+      <feComposite in="c0" in2="c1" operator="arithmetic" k2="1" k3="1" result="m1"/>
+      <feComposite in="m1" in2="c2" operator="arithmetic" k2="1" k3="1" result="m2"/>
+      <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 1 0  0 0 0 1 0  0 0 0 1 0  0 0 0 0 1" result="g"/>
+      <feComposite in="g" in2="m2" operator="arithmetic" k1="0.5" k2="-0.25" k3="1"/>
+    </filter>
+    <filter id="miSurface" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-2" y="-2" width="154" height="28" color-interpolation-filters="sRGB">
+      <feFlood flood-color="#DCE4FF" result="base"/>
+      <feGaussianBlur in="SourceGraphic" stdDeviation="0.25" result="f"/>
+      <feColorMatrix in="f" type="matrix" values="0 0 0 0 0.498  0 0 0 0 0.651  0 0 0 0 0.878  36 0 0 0 -20.88" result="miBlueC"/>
+      <feComponentTransfer in="miBlueC" result="miBlue"><feFuncA type="linear" slope="0.9"/></feComponentTransfer>
+      <feColorMatrix in="f" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  -36 0 0 0 14.4" result="miFrost"/>
+      <feColorMatrix in="f" type="matrix" values="0 0 0 0 0.769  0 0 0 0 0.596  0 0 0 0 0.486  0 0 30 0 -20.1" result="miChaosC"/>
+      <feComponentTransfer in="miChaosC" result="miChaos"><feFuncA type="linear" slope="0.78"/></feComponentTransfer>
+      <feColorMatrix in="f" type="matrix" values="0 0 0 0 0.498  0 0 0 0 0.651  0 0 0 0 0.788  0 1 0 0 0" result="miHaloT"/>
+      <feComponentTransfer in="miHaloT" result="miHaloC"><feFuncA type="table" tableValues="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.143 0.429 0.714 1 0.714 0.429 0.143 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"/></feComponentTransfer>
+      <feComponentTransfer in="miHaloC" result="miHalo"><feFuncA type="linear" slope="0.7"/></feComponentTransfer>
+      <feColorMatrix in="f" type="matrix" values="0 0 0 0 0.306  0 0 0 0 0.471  0 0 0 0 0.659  0 1 0 0 0" result="miCoreT"/>
+      <feComponentTransfer in="miCoreT" result="miCoreC"><feFuncA type="table" tableValues="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.286 1 0.286 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"/></feComponentTransfer>
+      <feComponentTransfer in="miCoreC" result="miCore"><feFuncA type="linear" slope="0.95"/></feComponentTransfer>
+      <feColorMatrix in="f" type="matrix" values="0 0 0 0 0.647  0 0 0 0 0.408  0 0 0 0 0.306  0 0 1 0 0" result="miLinT"/>
+      <feComponentTransfer in="miLinT" result="miLinC"><feFuncA type="table" tableValues="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"/></feComponentTransfer>
+      <feComponentTransfer in="miLinC" result="miLin"><feFuncA type="linear" slope="0.85"/></feComponentTransfer>
+      <feColorMatrix in="f" type="matrix" values="0 0 0 0 0.647  0 0 0 0 0.408  0 0 0 0 0.306  0 0 1 0 0" result="miLin2T"/>
+      <feComponentTransfer in="miLin2T" result="miLin2C"><feFuncA type="table" tableValues="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"/></feComponentTransfer>
+      <feComponentTransfer in="miLin2C" result="miLin2"><feFuncA type="linear" slope="0.85"/></feComponentTransfer>
+      <feMerge result="miSurfaceAll"><feMergeNode in="base"/><feMergeNode in="miBlue"/><feMergeNode in="miFrost"/><feMergeNode in="miChaos"/><feMergeNode in="miHalo"/><feMergeNode in="miCore"/><feMergeNode in="miLin"/><feMergeNode in="miLin2"/></feMerge>
+      <feComponentTransfer in="SourceAlpha" result="solid"><feFuncA type="linear" slope="50"/></feComponentTransfer>
+      <feComposite in="miSurfaceAll" in2="solid" operator="in"/>
+    </filter>
+    <radialGradient id="miShade" gradientUnits="userSpaceOnUse" cx="3.05" cy="-3.05" r="15">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.28"/>
+      <stop offset="0.30" stop-color="#FFFFFF" stop-opacity="0"/>
+      <stop offset="0.69" stop-color="#FF9455" stop-opacity="0"/>
+      <stop offset="0.73" stop-color="#FF9455" stop-opacity="0.18"/>
+      <stop offset="0.755" stop-color="#08122E" stop-opacity="0.82"/>
+      <stop offset="0.80" stop-color="#050B1E" stop-opacity="0.97"/>
+      <stop offset="1" stop-color="#050B1E" stop-opacity="1"/>
+    </radialGradient>
+    <radialGradient id="miRim" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="12.92">
+      <stop offset="0.90" stop-color="#BFE3FF" stop-opacity="0"/>
+      <stop offset="0.928" stop-color="#BFE3FF" stop-opacity="0.75"/>
+      <stop offset="0.955" stop-color="#BFE3FF" stop-opacity="0.30"/>
+      <stop offset="1" stop-color="#BFE3FF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="miLit" gradientUnits="userSpaceOnUse" x1="9" y1="-9" x2="-9" y2="9">
+      <stop offset="0" stop-color="#FFFFFF"/><stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.45"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0.06"/>
+    </linearGradient>
+    <mask id="miLitMask" mask-type="alpha" maskUnits="userSpaceOnUse" x="-15" y="-15" width="30" height="30"><rect x="-15" y="-15" width="30" height="30" fill="url(#miLit)"/></mask>
+  </defs>
+  <g id="moonIcy" transform="translate(24 24)">
+    <circle r="12" fill="#DCE4FF"/>
+    <g clip-path="url(#miClip)">
+      <g id="miSurfaceAnim"><animateTransform attributeName="transform" type="translate" from="0 0" to="75 0" dur="150s" repeatCount="indefinite"/>
+        <g transform="translate(-107 -12)">
+          <g filter="url(#miSurface)">
+            <g transform="translate(-47.9 -6.7)">
+              <rect x="47.9" y="6.7" width="76" height="24" fill="url(#miSSeamA)" filter="url(#miSField)"/>
+              <g transform="translate(75 0)"><rect x="-27.1" y="6.7" width="76" height="24" fill="url(#miSSeamB)" filter="url(#miSField)" mask="url(#miSSeamMask)"/></g>
+              <g transform="translate(75 0)">
+                <rect x="47.9" y="6.7" width="75" height="24" fill="url(#miSSeamA)" filter="url(#miSField)"/>
+                <g transform="translate(75 0)"><rect x="-27.1" y="6.7" width="75" height="24" fill="url(#miSSeamB)" filter="url(#miSField)" mask="url(#miSSeamMask)"/></g>
+              </g>
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+    <circle r="12" fill="url(#miShade)"/>
+    <circle r="12.92" fill="url(#miRim)" mask="url(#miLitMask)"/>
+  </g>
+</svg>

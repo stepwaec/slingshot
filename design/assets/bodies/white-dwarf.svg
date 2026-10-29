@@ -1,67 +1,73 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240">
-  <!-- White dwarf, v1.3 body library (compact object). ONE group #whiteDwarf at translate(120 120); geometry relative to (0,0). Ids: wd*.
-       r 16 (crashRadius 16). Tokens: core #FFFFFF · body #E9EEF8 · corona #B8CCFF · glow #7FB8FF.
+  <!-- White dwarf, v1.3 body library (compact object), v1.5 revised crispness + vibrancy. ONE group #whiteDwarf at translate(120 120); geometry relative
+       to (0,0). Ids: wd*. r 16 (crashRadius 16). Tokens: core #FFFFFF · body #E9EEF8 · corona #B8CCFF · glow #7FB8FF.
        "Small, hot, dangerous": a smooth, intensely bright disc with a hard thin limb, a glow that is very wide for its size, and four stylised
-       diffraction spikes. No granulation, no streamers, no prominences, no flares. Lighting is emissive (no terminator).
+       diffraction spikes. No granulation, no streamers, no prominences, no flares (a white dwarf's surface is genuinely smooth, so the disc stays
+       perfectly round - unlike the main-sequence stars' ragged rims). Lighting is emissive (no terminator). No blur anywhere.
+       v1.5 changes: corona blur (sd 3) removed - its gradient now carries the softness; glow + corona + bloom get steeper falloff near the limb
+       (the 0.35 stop rule) so the disc edge reads sharply; spikes are tapered wedges (crisp at any zoom) instead of 1 px lines; limb is two-tone.
 
        Draw order (bottom to top):
-       0. glow     circle r 6 r = 96, radial from the centre, #7FB8FF: 0.00 a0.55 | 0.10 a0.42 | 0.30 a0.16 | 0.60 a0.04 | 1.00 a0.
+       0. glow     circle r 6 r = 96, radial from the centre, #7FB8FF: 0.00 a0.60 | 0.10 a0.46 | 0.20 a0.22 | 0.35 a0.09 | 0.60 a0.025 | 1.00 a0.
                    Breathes +-5 % / 4 s: scale 1 -> 1.05 -> 1 -> 0.95 -> 1 (sine via splines, keyTimes 0 .25 .5 .75 1). t = 0 is the rest size.
-       1. corona   circle r 2.25 r = 36, radial, #B8CCFF: 0.00 a0.85 | 0.45 a0.45 | 0.75 a0.12 | 1.00 a0, blur sd 3 (presentation only; Canvas: bake it).
-       2. spikes   4 lines (0, 90, 180, 270 deg: a "+" cross, like the starfield sparkles), stroke 1 px, from r 1.0 (16) to r 4.0 (64),
-                   #E9EEF8, alpha 0.30 at the base fading linearly to 0 at the tip (gradient #wdSpike). Static.
-       3. bloom    circle r 1.4 r = 22.4, radial, #FFFFFF: 0.00 a0.45 | 0.70 a0.45 | 1.00 a0 (soft over-exposure just outside the limb, no blur).
-       4. body     circle r 16, radial (0.5,0.5): 0.00 #FFFFFF | 0.55 #FFFFFF | 0.85 #E9EEF8 | 1.00 #B8CCFF. Smooth, no texture.
-       5. limb     circle r 15.5, stroke 1, #B8CCFF a0.85 (the hard thin limb).
+       1. corona   circle r 2.25 r = 36, radial, #B8CCFF: 0.00 a0.90 | 0.44 a0.70 (= the limb) | 0.56 a0.30 | 0.75 a0.08 | 1.00 a0. No blur.
+       2. spikes   4 tapered wedges at 0, 90, 180, 270 deg ("+" cross): base 1.6 px wide at r 1.0 (16), point at r 4.0 (64);
+                   fill = linear gradient along the spike #FFFFFF a0.55 (base) -> #B8CCFF a0.25 (mid, r 32) -> #B8CCFF a0 (tip). Static.
+       3. bloom    circle r 1.4 r = 22.4, radial, #FFFFFF: 0.00 a0.50 | 0.71 a0.50 (= the limb) | 0.80 a0.16 | 1.00 a0 (tight over-exposure, no blur).
+       4. body     circle r 16, radial (0.5,0.5): 0.00 #FFFFFF | 0.55 #FFFFFF | 0.80 #E9EEF8 | 0.93 #B8CCFF | 1.00 #7FB8FF. Smooth, no texture.
+       5. limb     two-tone hairlines: outer circle r 15.5, stroke 1, #7FB8FF a0.9 (on whole pixels at 1x) + inner circle r 14.6, stroke 0.6, #FFFFFF a0.7.
        Canvas (canvas-notes §3c): TWO cached sprites, 2 drawImage per frame - sprite A = the glow (200 px square at zoom 1), scaled 1 +- 0.05
        over 4 s (the breathe); sprite B = corona + spikes + bloom + body + limb (136 px square), static, so the solid disc never animates.
        Zero shadowBlur. -->
   <defs>
     <radialGradient id="wdGlow" cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0" stop-color="#7FB8FF" stop-opacity="0.55"/>
-      <stop offset="0.10" stop-color="#7FB8FF" stop-opacity="0.42"/>
-      <stop offset="0.30" stop-color="#7FB8FF" stop-opacity="0.16"/>
-      <stop offset="0.60" stop-color="#7FB8FF" stop-opacity="0.04"/>
+      <stop offset="0" stop-color="#7FB8FF" stop-opacity="0.60"/>
+      <stop offset="0.10" stop-color="#7FB8FF" stop-opacity="0.46"/>
+      <stop offset="0.20" stop-color="#7FB8FF" stop-opacity="0.22"/>
+      <stop offset="0.35" stop-color="#7FB8FF" stop-opacity="0.09"/>
+      <stop offset="0.60" stop-color="#7FB8FF" stop-opacity="0.025"/>
       <stop offset="1" stop-color="#7FB8FF" stop-opacity="0"/>
     </radialGradient>
     <radialGradient id="wdCorona" cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0" stop-color="#B8CCFF" stop-opacity="0.85"/>
-      <stop offset="0.45" stop-color="#B8CCFF" stop-opacity="0.45"/>
-      <stop offset="0.75" stop-color="#B8CCFF" stop-opacity="0.12"/>
+      <stop offset="0" stop-color="#B8CCFF" stop-opacity="0.90"/>
+      <stop offset="0.44" stop-color="#B8CCFF" stop-opacity="0.70"/>
+      <stop offset="0.56" stop-color="#B8CCFF" stop-opacity="0.30"/>
+      <stop offset="0.75" stop-color="#B8CCFF" stop-opacity="0.08"/>
       <stop offset="1" stop-color="#B8CCFF" stop-opacity="0"/>
     </radialGradient>
     <radialGradient id="wdBloom" cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.45"/>
-      <stop offset="0.70" stop-color="#FFFFFF" stop-opacity="0.45"/>
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.50"/>
+      <stop offset="0.71" stop-color="#FFFFFF" stop-opacity="0.50"/>
+      <stop offset="0.80" stop-color="#FFFFFF" stop-opacity="0.16"/>
       <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
     </radialGradient>
     <radialGradient id="wdBody" cx="0.5" cy="0.5" r="0.5">
       <stop offset="0" stop-color="#FFFFFF"/>
       <stop offset="0.55" stop-color="#FFFFFF"/>
-      <stop offset="0.85" stop-color="#E9EEF8"/>
-      <stop offset="1" stop-color="#B8CCFF"/>
+      <stop offset="0.80" stop-color="#E9EEF8"/>
+      <stop offset="0.93" stop-color="#B8CCFF"/>
+      <stop offset="1" stop-color="#7FB8FF"/>
     </radialGradient>
     <linearGradient id="wdSpike" gradientUnits="userSpaceOnUse" x1="16" y1="0" x2="64" y2="0">
-      <stop offset="0" stop-color="#E9EEF8" stop-opacity="0.30"/>
-      <stop offset="1" stop-color="#E9EEF8" stop-opacity="0"/>
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.55"/>
+      <stop offset="0.33" stop-color="#B8CCFF" stop-opacity="0.25"/>
+      <stop offset="1" stop-color="#B8CCFF" stop-opacity="0"/>
     </linearGradient>
-    <filter id="wdCoronaBlur" x="-15%" y="-15%" width="130%" height="130%">
-      <feGaussianBlur stdDeviation="3"/>
-    </filter>
   </defs>
   <g id="whiteDwarf" transform="translate(120 120)">
     <circle r="96" fill="url(#wdGlow)">
       <animateTransform attributeName="transform" type="scale" values="1;1.05;1;0.95;1" keyTimes="0;0.25;0.5;0.75;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1" dur="4s" repeatCount="indefinite"/>
     </circle>
-    <circle r="36" fill="url(#wdCorona)" filter="url(#wdCoronaBlur)"/>
-    <g id="wdSpikes" stroke="url(#wdSpike)" stroke-width="1">
-      <line x1="16" y1="0" x2="64" y2="0"/>
-      <line x1="16" y1="0" x2="64" y2="0" transform="rotate(90)"/>
-      <line x1="16" y1="0" x2="64" y2="0" transform="rotate(180)"/>
-      <line x1="16" y1="0" x2="64" y2="0" transform="rotate(270)"/>
+    <circle r="36" fill="url(#wdCorona)"/>
+    <g id="wdSpikes" fill="url(#wdSpike)">
+      <path d="M16 -0.8 L64 0 L16 0.8 Z"/>
+      <path d="M16 -0.8 L64 0 L16 0.8 Z" transform="rotate(90)"/>
+      <path d="M16 -0.8 L64 0 L16 0.8 Z" transform="rotate(180)"/>
+      <path d="M16 -0.8 L64 0 L16 0.8 Z" transform="rotate(270)"/>
     </g>
     <circle r="22.4" fill="url(#wdBloom)"/>
     <circle r="16" fill="url(#wdBody)"/>
-    <circle r="15.5" fill="none" stroke="#B8CCFF" stroke-opacity="0.85" stroke-width="1"/>
+    <circle r="15.5" fill="none" stroke="#7FB8FF" stroke-opacity="0.9" stroke-width="1"/>
+    <circle r="14.6" fill="none" stroke="#FFFFFF" stroke-opacity="0.7" stroke-width="0.6"/>
   </g>
 </svg>
