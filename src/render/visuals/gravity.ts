@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { isEditing, type Game } from "../../game/state";
 import { simConfigFromLevel } from "../../level/catalog";
-import { potentialDepth, type SimConfig } from "../../sim/physics";
+import { bodyPose, gravityConstant, isCompactBody, potentialDepth, tidalDangerRadius, type SimConfig } from "../../sim/physics";
 import {
   fieldSpan,
   framedBounds,
@@ -120,6 +120,15 @@ class GravityVisual implements Visual {
   private pathTime = Number.NaN;
   private pathKnee = Number.NaN;
   private pathAmp = Number.NaN;
+  private readonly zones: THREE.Mesh[] = [];
+  private readonly zoneMaterial = new THREE.MeshBasicMaterial({
+    color: 0xff5a5f,
+    transparent: true,
+    opacity: 0.33,
+    depthTest: false,
+    depthWrite: false,
+    toneMapped: false,
+  });
 
   constructor(theme: Theme) {
     this.theme = theme;
@@ -218,6 +227,7 @@ class GravityVisual implements Visual {
     }
     const grid = this.grid;
     if (!grid) return;
+    this.syncDanger(config, time);
 
     const material = this.surface.material as THREE.ShaderMaterial;
     material.depthTest = sheet;
@@ -318,7 +328,37 @@ class GravityVisual implements Visual {
   }
 
   dispose(): void {
+    this.zoneMaterial.dispose();
     disposeObject(this.object);
+  }
+
+  /** Red discs where tidal stress reaches the warning line. Hidden when the knob is off. */
+  private syncDanger(config: SimConfig, time: number): void {
+    const strength = config.tidalStrength ?? 0;
+    const g = gravityConstant(config);
+    let count = 0;
+    if (strength > 0) {
+      for (let i = 0; i < config.bodies.length; i++) {
+        const body = config.bodies[i];
+        if (!isCompactBody(body)) continue;
+        const radius = tidalDangerRadius(body, g, strength);
+        if (!(radius > 0)) continue;
+        let mesh = this.zones[count];
+        if (!mesh) {
+          mesh = new THREE.Mesh(new THREE.CircleGeometry(1, 48), this.zoneMaterial);
+          mesh.name = "tidal-zone";
+          mesh.renderOrder = 2;
+          this.object.add(mesh);
+          this.zones.push(mesh);
+        }
+        const pose = bodyPose(body, time, config.bodies);
+        mesh.visible = true;
+        mesh.position.set(pose.x, pose.y, 0);
+        mesh.scale.set(radius, radius, 1);
+        count += 1;
+      }
+    }
+    for (let i = count; i < this.zones.length; i++) this.zones[i].visible = false;
   }
 }
 

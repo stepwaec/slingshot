@@ -4,7 +4,6 @@ import {
   assessPlan,
   cloneState,
   frameStepCount,
-  fuelCost,
   horizonSteps,
   makeState,
   predictPlan,
@@ -22,6 +21,7 @@ import {
 } from "../sim/physics";
 import type { Camera } from "../render/camera";
 import { scoreMission, type MissionScore } from "../sim/score";
+import { UPGRADE_POINTS, UPGRADES, isUpgradeId, type UpgradeId } from "./upgrades";
 
 export type GameMode = "planning" | "flying" | "paused" | "finished";
 
@@ -37,6 +37,10 @@ export interface Game {
   ship: SimState;
   /** Fuel still in the tank. Planning starts from the full budget. */
   fuel: number;
+  /** Points left for the upgrade screen. */
+  points: number;
+  /** Upgrades bought for this attempt. */
+  upgrades: UpgradeId[];
   nodes: BurnNode[];
   /** Index of the selected node, or null. */
   selected: number | null;
@@ -85,7 +89,9 @@ export function createGame(level: Level = passage, camera: Camera = { x: 0, y: 0
     mode: "planning",
     initial,
     ship: cloneState(initial),
-    fuel: level.fuel,
+    fuel: initial.tank,
+    points: UPGRADE_POINTS,
+    upgrades: [],
     nodes: [],
     selected: null,
     prediction,
@@ -125,6 +131,8 @@ export function loadLevel(game: Game, level: Level): void {
   game.nodes = [];
   game.selected = null;
   game.mode = "planning";
+  game.points = UPGRADE_POINTS;
+  game.upgrades = [];
   restoreShip(game);
   recompute(game, 0, "coast");
 }
@@ -158,8 +166,23 @@ export function missionResult(game: Game): MissionScore {
   });
 }
 
+/** Spend points on one upgrade. Planning only. Mass changes the prediction. */
+export function buyUpgrade(game: Game, id: string): boolean {
+  if (game.mode !== "planning") return false;
+  if (!isUpgradeId(id)) return false;
+  if (game.upgrades.includes(id)) return false;
+  const spec = UPGRADES.find((item) => item.id === id);
+  if (!spec || game.points < spec.cost) return false;
+  game.points -= spec.cost;
+  game.upgrades.push(id);
+  restoreShip(game);
+  recompute(game, 0, "coast");
+  return true;
+}
+
 export function planFuel(game: Game): PlanFuel {
-  return assessPlan(game.nodes, game.level.fuel, game.level.fuelPerDv);
+  const config = simConfigFromLevel(game.level, game.upgrades);
+  return assessPlan(game.nodes, config.fuelMax ?? game.level.fuel, config.fuelPerDv ?? game.level.fuelPerDv);
 }
 
 export function canLaunch(game: Game): boolean {
@@ -202,7 +225,7 @@ export function queuedBurns(game: Game): number {
 export function stepInHorizon(game: Game, step: number): boolean {
   const origin = planOrigin(game);
   if (!Number.isInteger(step) || step < origin.step) return false;
-  return step <= origin.step + horizonSteps(origin, simConfigFromLevel(game.level));
+  return step <= origin.step + horizonSteps(origin, simConfigFromLevel(game.level, game.upgrades));
 }
 
 /** Click on the predicted path. An existing node at that step is selected instead. */
@@ -275,7 +298,7 @@ export function setNodeBurn(game: Game, index: number, dvx: number, dvy: number)
  */
 export function buildMoveRail(game: Game, index: number): RailSample[] {
   const node = game.nodes[index];
-  const config = simConfigFromLevel(game.level);
+  const config = simConfigFromLevel(game.level, game.upgrades);
   if (!node || !isEditing(game) || index < game.cursor.index) return [];
   let prev: SimState;
   if (index === 0) {
@@ -369,7 +392,7 @@ export function burnHandleOffset(
 export function launch(game: Game): void {
   if (!canLaunch(game)) return;
   game.ship = cloneState(game.initial);
-  game.fuel = game.level.fuel;
+  game.fuel = game.ship.tank;
   game.mode = "flying";
   game.cursor = { index: 0 };
   game.spentNodes = 0;
@@ -382,15 +405,9 @@ export function tick(game: Game): void {
   if (game.mode !== "flying") return;
   const counted = frameStepCount(game.speed, game.slow, game.slowPhase);
   game.slowPhase = counted.phase;
-  const config = simConfigFromLevel(game.level);
+  const config = simConfigFromLevel(game.level, game.upgrades);
   advanceFrame(game.ship, config, counted.steps, game.frameSamples, game.nodes, game.cursor);
-  const perDv = game.level.fuelPerDv;
-  while (game.spentNodes < game.cursor.index) {
-    const node = game.nodes[game.spentNodes];
-    game.fuel -= fuelCost(node.dvx, node.dvy, perDv);
-    game.spentNodes += 1;
-  }
-  if (game.fuel < 0) game.fuel = 0;
+  game.fuel = game.ship.tank;
   if (game.ship.status !== "flying") game.mode = "finished";
 }
 
@@ -457,7 +474,9 @@ export function outcomeCopy(game: Game): { title: string; detail: string } | nul
       ? "Time ran out."
       : game.ship.lostReason === "flyby"
         ? "The ship flew past Planet X without being captured."
-        : "The ship left the charted system.";
+    : game.ship.lostReason === "hull"
+      ? "The hull failed."
+      : "The ship left the charted system.";
   return { title: "Lost in space", detail: why };
 }
 
@@ -467,11 +486,11 @@ function restoreShip(game: Game): void {
     game.level.ship.y,
     game.level.ship.vx,
     game.level.ship.vy,
-    simConfigFromLevel(game.level),
+    simConfigFromLevel(game.level, game.upgrades),
   );
   game.initial = initial;
   game.ship = cloneState(initial);
-  game.fuel = game.level.fuel;
+  game.fuel = initial.tank;
   game.cursor = { index: 0 };
   game.spentNodes = 0;
   game.frameSamples = [];
@@ -506,6 +525,6 @@ function recompute(
     if (kind === "coast" && from > 0 && !prior?.[from - 1]?.reached) reuse = undefined;
     if (kind === "burn" && !prior?.[from]?.reached) reuse = undefined;
   }
-  game.prediction = predictPlan(planOrigin(game), simConfigFromLevel(game.level), game.nodes, reuse);
+  game.prediction = predictPlan(planOrigin(game), simConfigFromLevel(game.level, game.upgrades), game.nodes, reuse);
   game.predictMs = performance.now() - started;
 }

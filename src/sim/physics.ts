@@ -49,6 +49,7 @@ export const BODY_LOOKS = [
   "moon-icy",
   "moon-volcanic",
   "dwarf",
+  "neutron",
 ] as const;
 
 export type BodyLook = (typeof BODY_LOOKS)[number];
@@ -162,7 +163,7 @@ export interface SimConfig {
    * A finite value `>= 1` smoothly keeps `dτ/dt` above `1 / dilationCap`.
    */
   dilationCap?: number;
-  /** Stored for a later package. The integrator does not read this. */
+  /** Hull damage per second near a white dwarf, neutron star or black hole. Omitted or 0 deals none. */
   tidalStrength?: number;
   /**
    * Scales drag inside a body's `atmosphereRadius`. Omitted or 0 leaves
@@ -171,6 +172,20 @@ export interface SimConfig {
    * that relative motion. Prediction and flight both apply it in `step`.
    */
   dragStrength?: number;
+  /** 1 is today's ship. Above 1, the same burn changes velocity less. */
+  shipMass?: number;
+  /** Multiplies burn delta-v before mass. Omitted or 1 is today's burn. */
+  engineScale?: number;
+  /** Starting hull. Omitted is 100. */
+  hullMax?: number;
+  /** Fuel per second at a star's surface. Omitted or 0 is no recharge. */
+  solarStrength?: number;
+  /** Tank the ship launches with. */
+  fuelStart?: number;
+  /** Tank ceiling after upgrades. */
+  fuelMax?: number;
+  /** Fuel spent per unit of commanded delta-v. Already includes ship mass. */
+  fuelPerDv?: number;
 }
 
 /** How many times a flight may freeze so the player can edit burns. */
@@ -186,7 +201,7 @@ export interface PauseBudget {
 
 export type FlightStatus = "flying" | "won" | "crashed" | "lost";
 
-export type LostReason = "bounds" | "timeout" | "flyby";
+export type LostReason = "bounds" | "timeout" | "flyby" | "hull";
 
 export interface SimState {
   x: number;
@@ -207,6 +222,18 @@ export interface SimState {
   tau: number;
   /** dτ/dt at the current pose. 1 is flat space at rest. 0 is a horizon. */
   rate: number;
+  /** Hull points left. 0 ends the flight. */
+  hull: number;
+  /** Hull the ship started with. */
+  hullMax: number;
+  /** Hull damage per second from tides and close passes, this step. */
+  stress: number;
+  /** Highest stress so far. Planning uses this for the warning. */
+  peakStress: number;
+  /** Fuel in the tank, after burns and solar recharge. */
+  tank: number;
+  /** Fuel added by solar recharge. */
+  recharged: number;
 }
 
 /** One impulsive burn at an exact sim step. Nodes are ordered by `step`. */
@@ -685,6 +712,12 @@ export function makeState(
     t: 0,
     tau: 0,
     rate: properTimeRate(x, y, vx, vy, config, 0),
+    hull: config.hullMax ?? 100,
+    hullMax: config.hullMax ?? 100,
+    stress: 0,
+    peakStress: 0,
+    tank: config.fuelStart ?? 0,
+    recharged: 0,
   };
 }
 
@@ -964,6 +997,120 @@ function applyDrag(state: SimState, config: SimConfig, time: number): void {
 }
 
 /**
+ * Burn multiplier. 1 when the ship is stock, so `dv * 1` stays the authored delta-v.
+ * Engines raise it. Mass lowers it.
+ */
+export function burnScale(config: SimConfig): number {
+  const mass = config.shipMass ?? 1;
+  const engine = config.engineScale ?? 1;
+  if (mass === 1 && engine === 1) return 1;
+  return engine / mass;
+}
+
+/** White dwarfs, neutron stars and black holes. Tides are strongest here. */
+export function isCompactBody(body: Body): boolean {
+  return body.kind === "blackhole" || body.look === "white-dwarf" || body.look === "neutron";
+}
+
+const SHIP_LENGTH = 6;
+const CLOSE_FACTOR = 1.12;
+const CLOSE_RATE = 18;
+/** Hull damage per second that draws the red zone and the warning. */
+export const STRESS_WARN = 4;
+
+/** Hull per second from the gravity gradient across the ship. */
+export function tidalStressAt(x: number, y: number, config: SimConfig, time: number): number {
+  const strength = config.tidalStrength ?? 0;
+  if (!(strength > 0)) return 0;
+  const g = gravityConstant(config);
+  let stress = 0;
+  const bodies = config.bodies;
+  for (let i = 0; i < bodies.length; i++) {
+    const body = bodies[i];
+    if (!isCompactBody(body) || !(body.mass > 0)) continue;
+    const pose = body.orbit ? bodyPose(body, time, bodies) : { x: body.x, y: body.y, vx: 0, vy: 0 };
+    const dx = x - pose.x;
+    const dy = y - pose.y;
+    const r2 = dx * dx + dy * dy;
+    const r = Math.sqrt(r2);
+    if (!(r > body.radius)) continue;
+    const gradient = (2 * g * body.mass * SHIP_LENGTH) / (r2 * r);
+    stress += strength * gradient;
+  }
+  return stress;
+}
+
+/** Radius where tidal stress reaches `STRESS_WARN`, or 0 when the knob is off. */
+export function tidalDangerRadius(body: Body, g: number, tidalStrength: number): number {
+  if (!isCompactBody(body) || !(tidalStrength > 0) || !(body.mass > 0) || !(g > 0)) return 0;
+  const r3 = (tidalStrength * 2 * g * body.mass * SHIP_LENGTH) / STRESS_WARN;
+  const r = Math.cbrt(r3);
+  return r > body.radius ? r : 0;
+}
+
+function closePassRate(x: number, y: number, config: SimConfig, time: number): number {
+  let rate = 0;
+  const bodies = config.bodies;
+  for (let i = 0; i < bodies.length; i++) {
+    const body = bodies[i];
+    if (isCompactBody(body) || !(body.radius > 0)) continue;
+    const pose = body.orbit ? bodyPose(body, time, bodies) : { x: body.x, y: body.y, vx: 0, vy: 0 };
+    const r = Math.hypot(x - pose.x, y - pose.y);
+    const outer = body.radius * CLOSE_FACTOR;
+    if (!(r > body.radius) || !(r < outer)) continue;
+    const depth = (outer - r) / (outer - body.radius);
+    rate += CLOSE_RATE * depth * depth;
+  }
+  return rate;
+}
+
+function solarRate(x: number, y: number, config: SimConfig, time: number): number {
+  const solar = config.solarStrength ?? 0;
+  if (!(solar > 0)) return 0;
+  let rate = 0;
+  const bodies = config.bodies;
+  for (let i = 0; i < bodies.length; i++) {
+    const body = bodies[i];
+    if (body.kind !== "star" || !(body.radius > 0)) continue;
+    const pose = body.orbit ? bodyPose(body, time, bodies) : { x: body.x, y: body.y, vx: 0, vy: 0 };
+    const r = Math.hypot(x - pose.x, y - pose.y);
+    if (!(r > 1e-6) || r > body.radius * 12) continue;
+    const ratio = body.radius / r;
+    rate += solar * ratio * ratio;
+  }
+  return rate;
+}
+
+/**
+ * Hull damage, the stress reading, and solar recharge. Motion is untouched.
+ * A stock ship (no tides, no solar, outside every close shell) only records
+ * a zero stress. Hull at 0 is a loss, judged here so prediction and flight agree.
+ */
+function applyShipSystems(state: SimState, config: SimConfig, time: number): void {
+  const stress = tidalStressAt(state.x, state.y, config, time);
+  const pass = closePassRate(state.x, state.y, config, time);
+  state.stress = stress;
+  if (stress > state.peakStress) state.peakStress = stress;
+  const damage = (stress + pass) * config.dt;
+  if (damage > 0) {
+    state.hull -= damage;
+    if (!(state.hull > 0)) {
+      state.hull = 0;
+      state.status = "lost";
+      state.lostReason = "hull";
+    }
+  }
+  const solar = solarRate(state.x, state.y, config, time);
+  if (!(solar > 0)) return;
+  const cap = config.fuelMax ?? state.tank;
+  const room = cap - state.tank;
+  if (!(room > 0)) return;
+  const gain = Math.min(solar * config.dt, room);
+  state.tank += gain;
+  state.recharged += gain;
+}
+
+/**
  * One velocity-Verlet step of size `config.dt`, then crash / capture / lost checks.
  * Burns are not applied here — `advancePlan` applies them before calling `step`.
  * Terminal states are not advanced. `dt` never depends on sim speed.
@@ -1033,11 +1180,14 @@ export function step(state: SimState, config: SimConfig): void {
     state.rate = properTimeRate(state.x, state.y, state.vx, state.vy, config, t0 + crashT * dt);
     state.status = "crashed";
     state.crashedBodyId = crashBody;
+    state.hull = 0;
     return;
   }
 
   accrueClocks(state, rateThen, dt);
   state.rate = properTimeRate(state.x, state.y, state.vx, state.vy, config, t1);
+  applyShipSystems(state, config, t1);
+  if (state.status !== "flying") return;
 
   const target = targetBody(config);
   const captureRadius = target?.captureRadius;
@@ -1106,8 +1256,17 @@ export function advancePlan(
     const index = cursor.index;
     const node = nodes[index];
     const before = hooks?.onBurn ? cloneState(state) : null;
-    state.vx += node.dvx;
-    state.vy += node.dvy;
+    const scale = burnScale(config);
+    if (scale === 1) {
+      state.vx += node.dvx;
+      state.vy += node.dvy;
+    } else {
+      state.vx += node.dvx * scale;
+      state.vy += node.dvy * scale;
+    }
+    const perDv = config.fuelPerDv ?? 1;
+    state.tank -= fuelCost(node.dvx, node.dvy, perDv);
+    if (state.tank < 0) state.tank = 0;
     cursor.index = index + 1;
     const more = cursor.index < nodes.length && nodes[cursor.index].step === state.step;
     if (!more && isCapturedOrbit(state, config)) state.status = "won";

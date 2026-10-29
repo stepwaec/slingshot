@@ -135,7 +135,7 @@ html, body, #app {
 #clocks {
   position: absolute;
   right: 40px;
-  top: 92px;
+  top: 148px;
   width: 300px;
   padding: 10px 12px 12px;
   border: 1px solid var(--border);
@@ -289,6 +289,94 @@ html, body, #app {
 
 #fuel-fill[data-band="low"] { background: #ffc857; }
 #fuel-fill[data-band="critical"] { background: #ff5a5f; }
+
+.hull-block {
+  position: absolute;
+  top: 64px;
+  right: 40px;
+  width: 220px;
+}
+
+#hull-value {
+  font: 400 12px/1 var(--mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+#hull-fill {
+  height: 100%;
+  width: 100%;
+  border-radius: 4px;
+  background: #8fd18a;
+}
+
+#hull-fill[data-band="low"] { background: #ffc857; }
+#hull-fill[data-band="critical"] { background: #ff5a5f; }
+
+#hull-warning {
+  margin: 6px 0 0;
+  font: 600 11px/1.2 var(--ui);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--critical);
+}
+
+#hull-warning[hidden] { display: none; }
+
+#upgrades {
+  position: absolute;
+  left: 40px;
+  top: 150px;
+  width: 260px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel);
+  pointer-events: auto;
+  z-index: 3;
+}
+
+#upgrades[hidden] { display: none; }
+
+.upgrade-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+#upgrade-points,
+#upgrade-mass {
+  margin: 0;
+  font: 400 12px/1.4 var(--mono);
+  color: var(--text);
+}
+
+#upgrade-mass { color: var(--muted); margin-top: 6px; }
+
+.upgrade-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.upgrade-row p {
+  margin: 0;
+  font: 400 11px/1.35 var(--ui);
+  color: var(--muted);
+}
+
+.upgrade-row strong {
+  display: block;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.upgrade-row button {
+  pointer-events: auto;
+  flex: 0 0 auto;
+}
 
 #telemetry {
   position: absolute;
