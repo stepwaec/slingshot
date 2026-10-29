@@ -180,7 +180,7 @@ Stephan points Claude at this section for the next visual pack.
 4. The pulsar's drawn beams (228) are longer than its damage reach (180): draw the beams as their own quad scaled to `beam.reach`.
 5. The comet's tails don't scale with distance, and its dust tail isn't mirrored to trail the motion.
 6. Solar recharge cutoff and luminosity are in the sim (`rateMax · L · min(1, (85/d)²)`, off below 8 %). The HUD glyph, shimmer and ghost are still open.
-7. Relay's moon, Pair's binary and Chain's moons now follow Kepler, with a loader lint. Done in this pull request.
+7. Relay's moon, Pair's binary and Chain's moons now follow Kepler, with a loader lint. Done in [PR #37](https://github.com/stepwaec/slingshot/pull/37).
 8. The shipyard cards lack thumbnails, tiers, mass and cost: follow `upgrade-screen.svg`.
 9. Nebulae draw above the bodies: give them a negative renderOrder.
 
