@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240">
+  <!-- Living sun surface (motion reference for star.svg's disc). ONE group #starSurfaceMotion at translate(120 120), scale 2 (r 46 in disc units). Ids: sm*.
+       Why: in the game the sun's rings turn and its haze breathes, but the disc is one still raster, so the surface looks dead. This file shows the
+       intended motion of the SAME look (star.svg v1.5 / sun J: body gradient, dark plasma, bright filaments, limb, ragged rim). All motion is cosmetic
+       (frame.now), slow, and never strobes. Layers inside the disc clip, back to front:
+       1. body        star.svg #starBody gradient (static).
+       2. deep plasma fractalNoise 0.035, 4 oct, seed 12 -> #A03308 at alpha 3.0 n - 1.55, x0.4; FLOWS one disc diameter (+92 units) per 140 s, west -> east.
+       3. dark plasma star.svg's dark plasma (fractalNoise 0.05, 5 oct, seed 4 -> #802105, alpha 3.4 n - 1.6, x0.55); FLOWS the other way, one diameter per 90 s.
+                      Two layers at different speeds and directions = differential rotation and depth, without anything visibly spinning.
+       4. boiling cells three copies of star.svg's filaments/cells (turbulence 0.06, 5 oct, seeds 9 / 17 / 25 -> #FFE7A0, alpha -6.5 n + 1.25, x0.85), each fading
+                      0 -> 0.9 -> 0.9 -> 0 over 9 s (keyTimes 0 .33 .55 1) and drifting 8 units, staggered by 3 s: cells form, live about 5 s, and dissolve.
+       5. faculae     five small bright patches near the limb (r 39, 6.4 x 2.8, radial #FFF6D6 a0.9 -> 0, aligned with the limb) twinkling a0.2 -> 1 over 3.7-6 s.
+       6. limb        star.svg #starLimb, its opacity breathing 1 -> 0.9 -> 1 over 3 s (a shimmer, not a pulse).
+       7. ragged rim  star.svg #starRimRag stroke, and the whole disc keeps star.svg's #starEdge wobble filter.
+       In a shader: three flow fields sampled with time-offset UVs (layers 2-3: uv.x += t / 140 and -= t / 90 of the disc diameter), a granulation term from
+       cellular or turbulence noise with three seeds cross-faded on a 9 s cycle (layer 4), and the faculae as a few limb-hugging sprites - threejs-notes.md §4.6.
+       Tokens: style.md §2 (sun.*); motion values: style.md §13 "Living surfaces". -->
+  <defs><radialGradient id="smStarBody" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#FFB43A"/><stop offset="0.65" stop-color="#FF8F1F"/><stop offset="1" stop-color="#FF7A14"/></radialGradient><radialGradient id="smStarLimb" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="46"><stop offset="0.8" stop-color="#FFD27A" stop-opacity="0"/><stop offset="0.93" stop-color="#FFD27A" stop-opacity="0.55"/><stop offset="0.97" stop-color="#FFF1C2" stop-opacity="0.9"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0.95"/></radialGradient><filter id="smStarEdge" filterUnits="userSpaceOnUse" x="-60" y="-60" width="120" height="120" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.11" numOctaves="3" seed="44" result="e0"/>
+      <feColorMatrix in="e0" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0 1" result="e"/>
+      <feDisplacementMap in="SourceGraphic" in2="e" scale="6.5" xChannelSelector="R" yChannelSelector="G"/>
+    </filter><filter id="smStarRimRag" filterUnits="userSpaceOnUse" x="-60" y="-60" width="120" height="120" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.22" numOctaves="2" seed="57" result="g0"/>
+      <feColorMatrix in="g0" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0 1" result="g"/>
+      <feDisplacementMap in="SourceGraphic" in2="g" scale="5" xChannelSelector="R" yChannelSelector="G" result="gd"/>
+      <feGaussianBlur in="gd" stdDeviation="0.35"/>
+    </filter><filter id="smDark" filterUnits="userSpaceOnUse" x="-150" y="-60" width="300" height="120" color-interpolation-filters="sRGB">
+  <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="5" seed="4"/>
+  <feColorMatrix type="matrix" values="0 0 0 0 0.502  0 0 0 0 0.129  0 0 0 0 0.02  3.4 0 0 0 -1.6"/>
+  <feComponentTransfer><feFuncA type="linear" slope="0.55"/></feComponentTransfer></filter>
+<filter id="smDark2" filterUnits="userSpaceOnUse" x="-150" y="-60" width="300" height="120" color-interpolation-filters="sRGB">
+  <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="4" seed="12"/>
+  <feColorMatrix type="matrix" values="0 0 0 0 0.627  0 0 0 0 0.2  0 0 0 0 0.04  3.0 0 0 0 -1.55"/>
+  <feComponentTransfer><feFuncA type="linear" slope="0.4"/></feComponentTransfer></filter>
+<filter id="smFil0" filterUnits="userSpaceOnUse" x="-60" y="-60" width="120" height="120" color-interpolation-filters="sRGB">
+  <feTurbulence type="turbulence" baseFrequency="0.06" numOctaves="5" seed="9"/>
+  <feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 0.906  0 0 0 0 0.627  -6.5 0 0 0 1.25"/>
+  <feComponentTransfer><feFuncA type="linear" slope="0.85"/></feComponentTransfer></filter>
+<filter id="smFil1" filterUnits="userSpaceOnUse" x="-60" y="-60" width="120" height="120" color-interpolation-filters="sRGB">
+  <feTurbulence type="turbulence" baseFrequency="0.06" numOctaves="5" seed="17"/>
+  <feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 0.906  0 0 0 0 0.627  -6.5 0 0 0 1.25"/>
+  <feComponentTransfer><feFuncA type="linear" slope="0.85"/></feComponentTransfer></filter>
+<filter id="smFil2" filterUnits="userSpaceOnUse" x="-60" y="-60" width="120" height="120" color-interpolation-filters="sRGB">
+  <feTurbulence type="turbulence" baseFrequency="0.06" numOctaves="5" seed="25"/>
+  <feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 0.906  0 0 0 0 0.627  -6.5 0 0 0 1.25"/>
+  <feComponentTransfer><feFuncA type="linear" slope="0.85"/></feComponentTransfer></filter>
+<clipPath id="smClip"><circle r="46"/></clipPath>
+<radialGradient id="smFac" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#FFF6D6" stop-opacity="0.9"/><stop offset="1" stop-color="#FFF6D6" stop-opacity="0"/></radialGradient></defs>
+  <rect width="240" height="240" fill="#050710"/>
+  <g id="starSurfaceMotion" transform="translate(120 120) scale(2)"><g filter="url(#smStarEdge)">
+<circle r="46" fill="url(#smStarBody)"/>
+<g clip-path="url(#smClip)">
+<rect x="-140" y="-50" width="280" height="100" filter="url(#smDark2)"><animateTransform attributeName="transform" type="translate" values="-46 0;46 0" dur="140s" repeatCount="indefinite"/></rect>
+<rect x="-140" y="-50" width="280" height="100" filter="url(#smDark)"><animateTransform attributeName="transform" type="translate" values="46 0;-46 0" dur="90s" repeatCount="indefinite"/></rect>
+<rect x="-50" y="-50" width="100" height="100" filter="url(#smFil0)" opacity="0"><animate attributeName="opacity" values="0;0.9;0.9;0" keyTimes="0;0.33;0.55;1" dur="9s" begin="0s" repeatCount="indefinite"/><animateTransform attributeName="transform" type="translate" values="0 0;8 0" dur="9s" begin="0s" repeatCount="indefinite"/></rect>
+<rect x="-50" y="-50" width="100" height="100" filter="url(#smFil1)" opacity="0"><animate attributeName="opacity" values="0;0.9;0.9;0" keyTimes="0;0.33;0.55;1" dur="9s" begin="-3s" repeatCount="indefinite"/><animateTransform attributeName="transform" type="translate" values="0 0;8 0" dur="9s" begin="-3s" repeatCount="indefinite"/></rect>
+<rect x="-50" y="-50" width="100" height="100" filter="url(#smFil2)" opacity="0"><animate attributeName="opacity" values="0;0.9;0.9;0" keyTimes="0;0.33;0.55;1" dur="9s" begin="-6s" repeatCount="indefinite"/><animateTransform attributeName="transform" type="translate" values="0 0;8 0" dur="9s" begin="-6s" repeatCount="indefinite"/></rect>
+<ellipse cx="33.8" cy="19.5" rx="3.2" ry="1.4" fill="url(#smFac)" transform="rotate(120 33.8 19.5)"><animate attributeName="opacity" values="0.2;1;0.2" dur="4.2s" repeatCount="indefinite"/></ellipse>
+<ellipse cx="-33.8" cy="19.5" rx="3.2" ry="1.4" fill="url(#smFac)" transform="rotate(240 -33.8 19.5)"><animate attributeName="opacity" values="0.2;1;0.2" dur="5.1s" repeatCount="indefinite"/></ellipse>
+<ellipse cx="-29.9" cy="-25.1" rx="3.2" ry="1.4" fill="url(#smFac)" transform="rotate(310 -29.9 -25.1)"><animate attributeName="opacity" values="0.2;1;0.2" dur="3.7s" repeatCount="indefinite"/></ellipse>
+<ellipse cx="19.5" cy="-33.8" rx="3.2" ry="1.4" fill="url(#smFac)" transform="rotate(390 19.5 -33.8)"><animate attributeName="opacity" values="0.2;1;0.2" dur="4.8s" repeatCount="indefinite"/></ellipse>
+<ellipse cx="-3.4" cy="38.9" rx="3.2" ry="1.4" fill="url(#smFac)" transform="rotate(185 -3.4 38.9)"><animate attributeName="opacity" values="0.2;1;0.2" dur="6.0s" repeatCount="indefinite"/></ellipse>
+</g>
+<circle r="46" fill="url(#smStarLimb)"><animate attributeName="opacity" values="1;0.9;1" dur="3s" repeatCount="indefinite"/></circle>
+</g>
+<circle r="46.2" fill="none" stroke="#FFF1C2" stroke-width="1.6" stroke-opacity="0.75" filter="url(#smStarRimRag)"/></g>
+</svg>

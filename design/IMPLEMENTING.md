@@ -52,6 +52,8 @@ Never edit anything in `design/` to make an implementation match. If a design is
 - **Apply the header's per-instance rules.** Examples: the comet's tail scale and mirror, rocks rotated toward their star, planets lit toward the brightest source.
 - **Respect the draw order.** Nebulae and belts sit behind bodies; overlays sit under bodies.
 
+**Living surfaces.** Bodies must never look like still pictures. Stars boil and flow, planets turn under fixed lighting, and gas giants flow in counter-moving bands. The values are in `style.md` §13 "Living surfaces", with an animated reference in `assets/star-surface-motion.svg`. This motion is cosmetic, so it runs on `frame.now`, slowly, never strobes, and never moves the rim, the radius or the lighting.
+
 **Lighting**
 - Bodies are lit **toward their star**, computed every frame from positions, and summed for binary stars.
 - The lit side never rotates with a texture. Only the surface scrolls under fixed lighting.

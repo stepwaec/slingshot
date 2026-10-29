@@ -1,6 +1,6 @@
 # Slingshot — visual style v1.5
 
-Calm, cinematic space for Slingshot. This file is the look; `canvas-notes.md` is the pixel-exact drawing reference (how each SVG recipe looks and what it costs, written for Canvas 2D); `threejs-notes.md` maps it onto the game's Three.js renderer (WP3); `assets.md` indexes every file. Sections: §1 mood · §2 palette (background, sky, the sun, the two original planets, the shared lighting tokens, UI) · §3 typography · §4 glow and blur rules, with **§4.1 Realism, vibrancy and crispness rules** · §5 motion · §6 layout · §7 asset index · §8 the **body library** (31 bodies: 12 planets, 6 stars and compact objects, 4 moons, 3 ringed planets, the 3 WP8 objects: binary star, red giant, moon chain, the 2 WP9 compact objects: pulsar, magnetar, and the WP10 comet) plus the WP9 **magnetism map** and the WP10 **solar recharge indicator** · §9 the **space environment** (nebulae, asteroid field, wreck debris) · §10 **ship systems** (modular ship, damage states, hull HUD, tidal-stress warning, upgrade screen) · §11 **WP11** (asteroid belts, Kuiper belt, rogue planet, radiation map, dose meter) · §12 **ship and planning view** (burn plume, burn node, gravity grid and sheet). Coding agents: read `IMPLEMENTING.md` first. Assets live in `design/assets` (bodies in `design/assets/bodies`, the environment in `design/assets/space`, map overlays in `design/assets/overlays`, the modular ship in `design/assets/ship`), mockups (1440×900, PNG = 2× render) in `design/mockups`, animated previews in `design/preview/planets.html`, `bodies.html` and `space.html`.
+Calm, cinematic space for Slingshot. This file is the look; `canvas-notes.md` is the pixel-exact drawing reference (how each SVG recipe looks and what it costs, written for Canvas 2D); `threejs-notes.md` maps it onto the game's Three.js renderer (WP3); `assets.md` indexes every file. Sections: §1 mood · §2 palette (background, sky, the sun, the two original planets, the shared lighting tokens, UI) · §3 typography · §4 glow and blur rules, with **§4.1 Realism, vibrancy and crispness rules** · §5 motion · §6 layout · §7 asset index · §8 the **body library** (31 bodies: 12 planets, 6 stars and compact objects, 4 moons, 3 ringed planets, the 3 WP8 objects: binary star, red giant, moon chain, the 2 WP9 compact objects: pulsar, magnetar, and the WP10 comet) plus the WP9 **magnetism map** and the WP10 **solar recharge indicator** · §9 the **space environment** (nebulae, asteroid field, wreck debris) · §10 **ship systems** (modular ship, damage states, hull HUD, tidal-stress warning, upgrade screen) · §11 **WP11** (asteroid belts, Kuiper belt, rogue planet, radiation map, dose meter) · §12 **ship and planning view** (burn plume, burn node, gravity grid and sheet) · §13 **late game** (stellar engine, Dyson swarm, ringworld, Shkadov thruster, space elevator, wormhole pair) and **living surfaces**. Coding agents: read `IMPLEMENTING.md` first. Assets live in `design/assets` (bodies in `design/assets/bodies`, the environment in `design/assets/space`, map overlays in `design/assets/overlays`, the modular ship in `design/assets/ship`, late-game structures in `design/assets/mega`), mockups (1440×900, PNG = 2× render) in `design/mockups`, animated previews in `design/preview/planets.html`, `bodies.html` and `space.html`.
 
 **History in one paragraph.** v1 set the layout, UI and the two-glow rule. v1.1 was the first realism pass (limb-darkened star, planets with a terminator and a rim, a tinted starfield with a Milky Way). v1.2 made the planets rotate: a seamless texture strip slides under a lighting overlay that never moves. v1.3 built the body library (12 planets, 6 stars and compact objects) and gave the stars prominences and a flare. v1.4 adds moons, ringed planets, nebulae and debris fields (§8, §9). **v1.5 (revised) is the realism, vibrancy and crispness pass**, agreed with the client on two approved reference assets — the ocean world "variant F" and the sun "variant J" — and applied to every body: vivid multi-zone surfaces with crisp edges, elongated clouds with cast shadows, a warm terminator band, a lit-side haze and rim, a fiery plasma sun with ragged flame rings and an irregular rim, and no untinted grey anywhere. The earlier v1.5 "crispness pass" numbers (halve blurs, ±12 % lightness, limb line at α 0.30) were rejected as indistinguishable from v1.2 and are **not** used; §4.1 holds the rules that replaced them.
 
@@ -1158,3 +1158,55 @@ The warp is unchanged: lines still bend and bunch toward masses by the real pote
 | `grid.depth` | `#2A4A8A` (0) · `#3D8BFF` (0.18) · `#3DE0C2` (0.42) · `#FFC857` (0.68) · `#FF5A1F` (1) | Grid and sheet lines by depth (`#2A4A8A` is new; the rest are existing tokens) |
 | `grid.tidal` | `#FF5A5F` | Tidal ring |
 | `sheet.glass` | `#0B1430` | Sheet cells, α 0.55 |
+
+## 13. Late game (v2.6): megastructures, wormholes and living surfaces
+
+Files: `assets/mega/stellar-engine.svg`, `dyson-swarm.svg`, `ringworld.svg`, `shkadov-thruster.svg`, `space-elevator.svg`, `wormhole.svg`, `assets/star-surface-motion.svg`, mockup `mockups/late-game.svg`. Each structure is drawn around the level's real star or planet; the assets show a placeholder disc there. Renderer notes: `threejs-notes.md` §4.6 and §16.
+
+| Structure | Read | Gameplay hook (level data) |
+|---|---|---|
+| Stellar engine | A star with a collimated plasma jet through a magnetic nozzle, mirror collectors behind | Jet core burns; jet margins refill fuel with the gas scoop; the jet pushes the ship along it |
+| Dyson swarm | Three tilted collector shells around a dimmed star, gold glints, a deep-red waste-heat ring | Recharge × (1 − coverage); a collector hit costs a little hull; the gaps are safe lanes |
+| Ringworld | A tilted ring: land, seas and clouds on the far inner floor, dark hull and city lights near, shadow squares | The band is solid except at transit gaps; inside, the ring's own pull cancels at the centre |
+| Shkadov thruster | A star-sized curved mirror; the light escapes the other way as crisp rays | The mirror is solid; every body drifts with a tiny constant acceleration toward the mirror |
+| Space elevator | A tether from the equator past a station to a counterweight; climbers ride it | The tether is solid; release at the top gives v = ω × r: a free launch boost |
+| Wormhole pair | Each mouth shows the other end's sky, lensed at the rim, with smeared star arcs | Entering a mouth moves the ship to the other one, speed kept; the exit adds its clock offset |
+
+| Token | Hex | Used for |
+|---|---|---|
+| `engine.jet` | `#FFF6D6` → `#FFD27A` → `#FF9A4A` → `#FF5A8A` → `#E0408A` | Stellar-engine jet: golden-white into hot pink, never brown |
+| `engine.jetCore` | `#FFFFFF` / `#FFF6D6` | Jet core and knots (`#FFE7A0` knot edge) |
+| `mega.mirror` | `#F4F8FF` / `#AFC2EE` / `#5A6E9E` | Collector tiles, Shkadov mirror (`#FFFFFF` / `#E6F2FF` / `#8FA3D0`), struts |
+| `mega.structure` | `#DCE4F6` / `#1A2240` / `#141A33` / `#2A3560` | Nozzle bars, tether, rims, hulls, ribs |
+| `swarm.collector` | `#5E8FFF` | Dyson collectors (3 px dashes); glints `#FFE7A0` |
+| `swarm.heat` | `#A8303A` / `#8A2A3A` | Waste-heat ring, peak α 0.16 |
+| `ring.land` | `#5FA84A` / `#3B7E3A` / `#1E5BD6` / `#36B9D8` / `#E8A85C` | Ringworld floor strips (the ocean-world tokens); night `#050B1E` α 0.65; lights `#FFD9B0` |
+| `elevator.climber` | `#FFE08A` | Climbers; station beacon `#5EF2FF`; release arrow and chip `#3DE0C2` |
+| `wormhole.warm` / `.cool` | `#8A2A4A` / `#4A1A3A` · `#2A5AB8` / `#0E2A5A` | The sky seen through each mouth; stars `#FFD9B0` / `#B8CCFF`; Einstein ring `#FFFFFF` + `#B8CCFF`; arcs `#E9EEF8` |
+
+Easter-egg and pop-culture nods stay hints only (`ROADMAP.md`): no ring gates, logos or copied ship designs.
+
+### Living surfaces
+
+Bodies should never look like still pictures. The game now animates the sun's rings and haze, but its disc, the planets' surfaces and the gas giants' bands are still. Motion is cosmetic (`frame.now`), slow, and never strobes or flickers fast. The reference is `assets/star-surface-motion.svg`.
+
+**The sun and every star look** (the same layers, each look's own colours):
+
+| Layer | Motion | Values |
+|---|---|---|
+| Deep plasma | flows west → east | fractalNoise 0.035, 4 octaves; one disc diameter per 140 s |
+| Dark plasma (`star.svg` surface) | flows east → west | fractalNoise 0.05, 5 octaves; one diameter per 90 s |
+| Cells and filaments | boil | turbulence 0.06, three seeds cross-fading 0 → 0.9 → 0.9 → 0 over 9 s, staggered 3 s, each drifting 8 units |
+| Faculae | twinkle | 5 bright patches at 0.85 r, α 0.2 → 1 over 3.7–6 s |
+| Limb | shimmers | opacity 1 → 0.9 → 1 over 3 s |
+| Rim | wobbles | `star.svg` `#starEdge`, unchanged |
+
+- Two plasma layers moving opposite ways at different speeds read as differential rotation and depth, without the disc visibly spinning.
+- Cross-fading seeds make cells form, live about 5 s, and dissolve: a boiling photosphere.
+- Red giant: half the frequencies, 1.6× the periods, so big cells churn slowly. White dwarf: no surface motion, since it stays perfectly smooth.
+
+**Planets and moons:** scroll the baked surface strip under a still lighting overlay at the header period (ocean 90 s, Planet X 120 s, moon 180 s and so on), and clouds or wisps at their own period. Layer ids are in each header (`#pxSurfaceAnim`, `#pxWispAnim`, `#psCloud`).
+
+**Gas giants:** three band groups flowing in opposite directions (`#gbAnimA` / `B` / `C` at 180 / 110 / 150 s). The storm spot rides its band.
+
+Never animate the lighting, the crash radius or anything a player reads as a hazard edge.
