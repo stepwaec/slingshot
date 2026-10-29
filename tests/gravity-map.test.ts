@@ -10,6 +10,7 @@ import {
 import {
   gridX,
   gridY,
+  pinchTowardMasses,
   sampleGravityGrid,
   scaleWellDepth,
   wellHeight,
@@ -69,6 +70,11 @@ describe("gravity grid", () => {
             expect(grid.depth[i], `${x},${y} @ ${time}`).toBe(potentialDepth(x, y, item.config, time));
             expect(grid.scale[i]).toBe(scaleWellDepth(grid.depth[i], grid.knee));
             expect(grid.rate[i]).toBe(properTimeRate(x, y, 0, 0, item.config, time));
+            const pinch = pinchTowardMasses(x, y, item.config, time, grid.knee);
+            expect(Number.isFinite(grid.pinchX[i])).toBe(true);
+            expect(Number.isFinite(grid.pinchY[i])).toBe(true);
+            expect(grid.pinchX[i]).toBe(x + pinch.dx);
+            expect(grid.pinchY[i]).toBe(y + pinch.dy);
             if (grid.depth[i] !== other.depth[i]) moved = true;
           }
         }
@@ -126,6 +132,51 @@ describe("gravity grid", () => {
     expect(wellHeight(0, 100)).toBe(0);
     expect(wellHeight(1, 80)).toBe(-80);
   });
+
+  it("pinches toward the masses, harder in a deeper well, and stays finite on a singularity", () => {
+    const knee = 40;
+    const body = {
+      id: "mass",
+      name: "mass",
+      kind: "star" as const,
+      x: 0,
+      y: 0,
+      mass: 400,
+      radius: 6,
+    };
+    const light: SimConfig = { ...empty, bodies: [{ ...body, mass: 80 }] };
+    const heavy: SimConfig = { ...empty, bodies: [body] };
+    const at = (config: SimConfig, x: number, y: number) => pinchTowardMasses(x, y, config, 0, knee);
+
+    const right = at(heavy, 90, 0);
+    expect(right.dx).toBeLessThan(0);
+    expect(right.dy).toBe(0);
+    const diagonal = at(heavy, 30, 40);
+    const towardX = -30;
+    const towardY = -40;
+    const dot = diagonal.dx * towardX + diagonal.dy * towardY;
+    const towardLen = Math.hypot(towardX, towardY);
+    const pinchLen = Math.hypot(diagonal.dx, diagonal.dy);
+    expect(dot / (towardLen * pinchLen)).toBeGreaterThan(0.98);
+
+    const shallow = at(light, 90, 0);
+    expect(Math.hypot(right.dx, right.dy)).toBeGreaterThan(Math.hypot(shallow.dx, shallow.dy));
+
+    const onMass = at(heavy, 0, 0);
+    expect(onMass.dx).toBe(0);
+    expect(onMass.dy).toBe(0);
+    const beside = at(heavy, 1e-4, 0);
+    expect(Number.isFinite(beside.dx)).toBe(true);
+    expect(Number.isFinite(beside.dy)).toBe(true);
+    expect(Math.hypot(beside.dx, beside.dy)).toBeLessThan(1);
+
+    const inner = at(heavy, 36, 0);
+    const outer = at(heavy, 72, 0);
+    const restGap = 72 - 36;
+    const shownGap = 72 + outer.dx - (36 + inner.dx);
+    expect(shownGap).toBeLessThan(restGap);
+    expect(shownGap).toBeGreaterThan(0);
+  });
 });
 
 describe("gravity map toggle", () => {
@@ -141,7 +192,7 @@ describe("gravity map toggle", () => {
     const tau = ship.tau;
     const fuel = game.fuel;
 
-    expect(cycleGravity(game)).toBe("heat");
+    expect(cycleGravity(game)).toBe("grid");
     setGravityClock(game, true);
     expect(cycleGravity(game)).toBe("sheet");
     expect(cycleGravity(game)).toBe("off");

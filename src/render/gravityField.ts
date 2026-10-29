@@ -10,10 +10,17 @@ import { bodyPose, potentialDepth, rateFrom, type SimConfig } from "../sim/physi
  *   height = -scale * amplitude
  *
  * scale(0) = 0, scale is strictly increasing, and scale(∞) = 1.
+ *
+ * The flat view also pinches the grid in the plane. Each vertex moves toward
+ * the masses along ∇Φ (samples of `potentialDepth`) by
+ * `distance * PINCH_REACH * scale`. The step grows with depth, stays finite
+ * on a singularity, and packs the lines tighter near a deep well.
  */
 
 export const WELL_SOFTNESS = 1.5;
 export const KNEE_RADII = 3;
+/** Largest fraction of the distance to a mass a vertex may slide. */
+export const PINCH_REACH = 0.55;
 
 export interface GridBounds {
   minX: number;
@@ -37,6 +44,10 @@ export interface GravityGrid {
   scale: Float64Array;
   /** Rest-frame dτ/dt from `rateFrom(depth, 0, 0, c)`. */
   rate: Float64Array;
+  /** Display x after the in-plane pinch. Finite where `depth` is not. */
+  pinchX: Float64Array;
+  /** Display y after the in-plane pinch. */
+  pinchY: Float64Array;
 }
 
 export function scaleWellDepth(depth: number, knee: number, softness = WELL_SOFTNESS): number {
@@ -115,6 +126,89 @@ export function gridY(grid: GravityGrid, row: number): number {
   return grid.minY + grid.stepY * row;
 }
 
+export interface Pinch {
+  /** World-unit slide from the rest point. Finite. */
+  dx: number;
+  dy: number;
+}
+
+/**
+ * Slide `(x, y)` toward the masses. Direction is the gradient of
+ * `potentialDepth`. Length is `nearest * reach * scale(Φ, knee)`, so a
+ * deeper well pulls harder and a point sitting on a body does not move.
+ */
+export function pinchTowardMasses(
+  x: number,
+  y: number,
+  config: SimConfig,
+  time: number,
+  knee: number,
+  reach = PINCH_REACH,
+): Pinch {
+  const bodies = config.bodies;
+  let nearest = Infinity;
+  let nx = 0;
+  let ny = 0;
+  for (let i = 0; i < bodies.length; i++) {
+    const body = bodies[i];
+    if (!(body.mass > 0)) continue;
+    const pose = bodyPose(body, time, bodies);
+    const ox = pose.x - x;
+    const oy = pose.y - y;
+    const dist = Math.hypot(ox, oy);
+    if (dist < nearest) {
+      nearest = dist;
+      nx = ox;
+      ny = oy;
+    }
+  }
+  if (!(nearest > 1e-6) || !Number.isFinite(nearest)) return { dx: 0, dy: 0 };
+
+  const depth = potentialDepth(x, y, config, time);
+  const scale = scaleWellDepth(depth, knee);
+  const step = nearest * (reach > 0 ? reach : 0) * scale;
+  if (!(step > 0) || !Number.isFinite(step)) return { dx: 0, dy: 0 };
+
+  const eps = Math.min(nearest * 0.2, Math.max(nearest * 0.05, 1e-3));
+  const gx = depthSlope(x, y, eps, 0, config, time);
+  const gy = depthSlope(x, y, 0, eps, config, time);
+  let dirX = gx;
+  let dirY = gy;
+  const glen = Math.hypot(gx, gy);
+  if (!(glen > 1e-8) || !Number.isFinite(glen)) {
+    dirX = nx / nearest;
+    dirY = ny / nearest;
+  } else {
+    dirX = gx / glen;
+    dirY = gy / glen;
+  }
+  const dx = dirX * step;
+  const dy = dirY * step;
+  if (!Number.isFinite(dx) || !Number.isFinite(dy)) return { dx: 0, dy: 0 };
+  return { dx, dy };
+}
+
+function depthSlope(
+  x: number,
+  y: number,
+  ex: number,
+  ey: number,
+  config: SimConfig,
+  time: number,
+): number {
+  const plus = finiteDepth(x + ex, y + ey, config, time);
+  const minus = finiteDepth(x - ex, y - ey, config, time);
+  if (plus === null && minus === null) return 0;
+  if (plus === null) return 1;
+  if (minus === null) return -1;
+  return plus - minus;
+}
+
+function finiteDepth(x: number, y: number, config: SimConfig, time: number): number | null {
+  const depth = potentialDepth(x, y, config, time);
+  return Number.isFinite(depth) ? depth : null;
+}
+
 /**
  * Sample Φ on a regular grid. `depth` is the physics potential, untouched.
  * `scale` is the display transform. Pass `into` to reuse the buffers.
@@ -142,7 +236,13 @@ export function sampleGravityGrid(
           depth: new Float64Array(count),
           scale: new Float64Array(count),
           rate: new Float64Array(count),
+          pinchX: new Float64Array(count),
+          pinchY: new Float64Array(count),
         };
+  if (grid.pinchX.length !== count) {
+    grid.pinchX = new Float64Array(count);
+    grid.pinchY = new Float64Array(count);
+  }
   grid.cols = cols;
   grid.rows = rows;
   grid.minX = bounds.minX;
@@ -162,6 +262,9 @@ export function sampleGravityGrid(
       grid.depth[i] = depth;
       grid.scale[i] = scaleWellDepth(depth, knee);
       grid.rate[i] = rateFrom(depth, 0, 0, c);
+      const pinch = pinchTowardMasses(x, y, config, time, knee);
+      grid.pinchX[i] = x + pinch.dx;
+      grid.pinchY[i] = y + pinch.dy;
     }
   }
   return grid;
@@ -202,8 +305,6 @@ export function writeClockContours(
   let cursor = 0;
   const limit = positions.length - 5;
   for (let row = 0; row < rows - 1; row++) {
-    const y0 = gridY(grid, row);
-    const y1 = gridY(grid, row + 1);
     for (let col = 0; col < cols - 1; col++) {
       const i00 = row * cols + col;
       const r00 = grid.rate[i00];
@@ -217,11 +318,20 @@ export function writeClockContours(
       if (r01 >= level) mask |= 8;
       const edges = CONTOUR_EDGES[mask];
       if (edges.length === 0) continue;
-      const x0 = gridX(grid, col);
-      const x1 = gridX(grid, col + 1);
+      const i10 = i00 + 1;
+      const i01 = i00 + cols;
+      const i11 = i00 + cols + 1;
+      const x00 = grid.pinchX[i00];
+      const y00 = grid.pinchY[i00];
+      const x10 = grid.pinchX[i10];
+      const y10 = grid.pinchY[i10];
+      const x11 = grid.pinchX[i11];
+      const y11 = grid.pinchY[i11];
+      const x01 = grid.pinchX[i01];
+      const y01 = grid.pinchY[i01];
       for (let e = 0; e < edges.length; e++) {
         if (cursor > limit) return cursor / 3;
-        const point = contourEdge(edges[e], x0, y0, x1, y1, r00, r10, r11, r01, level);
+        const point = contourEdge(edges[e], x00, y00, x10, y10, x11, y11, x01, y01, r00, r10, r11, r01, level);
         positions[cursor] = point.x;
         positions[cursor + 1] = point.y;
         positions[cursor + 2] = z;
@@ -234,24 +344,36 @@ export function writeClockContours(
 
 function contourEdge(
   edge: number,
-  x0: number,
-  y0: number,
-  x1: number,
-  y1: number,
+  x00: number,
+  y00: number,
+  x10: number,
+  y10: number,
+  x11: number,
+  y11: number,
+  x01: number,
+  y01: number,
   r00: number,
   r10: number,
   r11: number,
   r01: number,
   level: number,
 ): { x: number; y: number } {
-  if (edge === 0) return { x: mix(x0, x1, r00, r10, level), y: y0 };
-  if (edge === 1) return { x: x1, y: mix(y0, y1, r10, r11, level) };
-  if (edge === 2) return { x: mix(x0, x1, r01, r11, level), y: y1 };
-  return { x: x0, y: mix(y0, y1, r00, r01, level) };
+  if (edge === 0) return blend(x00, y00, x10, y10, r00, r10, level);
+  if (edge === 1) return blend(x10, y10, x11, y11, r10, r11, level);
+  if (edge === 2) return blend(x01, y01, x11, y11, r01, r11, level);
+  return blend(x00, y00, x01, y01, r00, r01, level);
 }
 
-function mix(a: number, b: number, va: number, vb: number, level: number): number {
+function blend(
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number,
+  va: number,
+  vb: number,
+  level: number,
+): { x: number; y: number } {
   const d = vb - va;
-  if (d === 0) return (a + b) * 0.5;
-  return a + (b - a) * ((level - va) / d);
+  const t = d === 0 ? 0.5 : (level - va) / d;
+  return { x: ax + (bx - ax) * t, y: ay + (by - ay) * t };
 }
