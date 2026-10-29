@@ -48,6 +48,16 @@
             <div id="fuel-fill"></div>
           </div>
         </div>
+        <div class="hull-block">
+          <div class="fuel-head">
+            <span class="hud-label">Hull</span>
+            <span id="hull-value">100</span>
+          </div>
+          <div class="fuel-track" aria-hidden="true">
+            <div id="hull-fill"></div>
+          </div>
+          <p id="hull-warning" hidden>Tidal stress</p>
+        </div>
         <p id="telemetry">v   —  ·  dX    0</p>
         <p id="plan-note" hidden></p>
         <span id="fps">— fps</span>
@@ -62,6 +72,7 @@
               <button type="button" id="route-safe">Safe arc</button>
               <button type="button" id="route-deep">Deep dive</button>
             </div>
+            <button id="upgrade-toggle" type="button">Upgrades</button>
             <button id="launch" type="button" disabled>Launch</button>
           </div>
           <div id="flight-actions" hidden>
@@ -77,6 +88,14 @@
           </div>
         </div>
       </div>
+      <section id="upgrades" hidden aria-label="Upgrades">
+        <div class="upgrade-head">
+          <span class="hud-label">Upgrades</span>
+          <span id="upgrade-points">4 pts</span>
+        </div>
+        <p id="upgrade-mass">Mass 1.00</p>
+        <div id="upgrade-list"></div>
+      </section>
       <div id="overlay" hidden>
         <div class="card" data-result="win">
           <h2 id="overlay-title"></h2>

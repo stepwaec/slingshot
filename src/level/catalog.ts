@@ -6,6 +6,7 @@ import pairData from "../levels/pair.json";
 import emberData from "../levels/ember.json";
 import chainData from "../levels/chain.json";
 import { loadLevelData, type Level, type LevelPhysics } from "./schema";
+import { shipLoadout } from "../game/upgrades";
 
 /**
  * Shipped levels, loaded from `src/levels/*.json`.
@@ -42,9 +43,12 @@ export function pauseRuleOf(level: Level): PauseRule {
  * Sim config for a level. Physics knobs that the file omits stay off the
  * config object, and the integrator treats that as today's behaviour.
  * `physics.c`, when set, replaces the level `c`.
+ * Upgrades fold into mass, hull, tank size, engines and solar recharge.
+ * With no upgrades the fuel numbers match the level file.
  */
-export function simConfigFromLevel(level: Level): SimConfig {
+export function simConfigFromLevel(level: Level, upgrades: readonly string[] = []): SimConfig {
   const physics: LevelPhysics | undefined = level.physics;
+  const load = shipLoadout(upgrades);
   const config: SimConfig = {
     g: level.g,
     dt: level.dt,
@@ -55,7 +59,14 @@ export function simConfigFromLevel(level: Level): SimConfig {
     periapsisMargin: level.periapsisMargin,
     c: physics?.c ?? level.c,
     horizon: level.horizon,
+    fuelPerDv: level.fuelPerDv * load.mass,
+    fuelStart: level.fuel * load.fuelFactor,
+    fuelMax: level.fuel * load.fuelFactor,
   };
+  if (load.mass !== 1) config.shipMass = load.mass;
+  if (load.engine !== 1) config.engineScale = load.engine;
+  if (load.hullMax !== 100) config.hullMax = load.hullMax;
+  if (load.solar > 0) config.solarStrength = load.solar;
   if (physics?.gravityScale !== undefined) config.gravityScale = physics.gravityScale;
   if (physics?.eps !== undefined) config.eps = physics.eps;
   if (physics?.p !== undefined) config.p = physics.p;

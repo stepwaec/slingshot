@@ -42,7 +42,8 @@ export interface MissionProfile {
  * - `dilationCap` — maximum slowdown, for example `10` keeps `dτ/dt` at or
  *   above `1/10`. Omitted means no finite cap: the rate may reach 0, which is
  *   the hard clamp used today. A finite cap saturates smoothly.
- * - `tidalStrength` — accepted and stored. The integrator does not read it yet.
+ * - `tidalStrength` — hull damage per second from the gravity gradient near a
+ *   white dwarf, neutron star or black hole. Omitted or 0 deals none.
  * - `dragStrength` — scales drag inside a body's `atmosphereRadius`. Omitted
  *   or 0 is no drag. The force only slows the ship relative to that body.
  */
