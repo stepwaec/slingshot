@@ -103,6 +103,7 @@ class GalleryVisual implements Visual {
   readonly space = "world" as const;
   readonly object = new THREE.Group();
   private readonly sprites: Sprite[] = [];
+  private readonly dysonRestore: THREE.Mesh[] = [];
   private readonly theme: Theme;
   private bakeKey = "";
   private bakeGen = 0;
@@ -453,6 +454,12 @@ class GalleryVisual implements Visual {
 
   update(frame: VisualFrame): void {
     this.ensureBake(frame);
+    for (let i = 0; i < this.dysonRestore.length; i++) {
+      const mesh = this.dysonRestore[i];
+      const material = mesh.material as THREE.MeshBasicMaterial;
+      if (typeof mesh.userData.dysonBase === "number") material.opacity = mesh.userData.dysonBase;
+    }
+    this.dysonRestore.length = 0;
     const game = frame.game;
     const secondsNow = frame.now / 1000;
     this.edgeOffset.value = dragDashOffset(secondsNow);
@@ -575,6 +582,17 @@ class GalleryVisual implements Visual {
       }
       poseArt(sprite.mesh, sprite.fit, pose.x, pose.y, body.radius, rot);
       poseField(sprite.mesh, seconds);
+    }
+    for (let i = 0; i < this.sprites.length; i++) {
+      const sprite = this.sprites[i];
+      const coverage = sprite.body?.dyson?.coverage ?? 0;
+      if (!(coverage > 0) || !sprite.mesh.visible) continue;
+      const material = sprite.mesh.material as THREE.Material;
+      if ((material as THREE.ShaderMaterial).isShaderMaterial) continue;
+      const basic = material as THREE.MeshBasicMaterial;
+      sprite.mesh.userData.dysonBase = basic.opacity;
+      basic.opacity = basic.opacity * (1 - coverage);
+      this.dysonRestore.push(sprite.mesh);
     }
   }
 

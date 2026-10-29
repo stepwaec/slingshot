@@ -13,6 +13,7 @@ import {
   type PauseRule,
   keplerMeanMotion,
 } from "../sim/physics";
+import type { DysonSwarm, ShkadovThruster, StellarEngine } from "../sim/mega";
 
 /**
  * How a level turns clocks and fuel into points.
@@ -168,7 +169,13 @@ const BODY_KEYS = [
   "supernova",
   "quasar",
   "script",
+  "engine",
+  "dyson",
+  "shkadov",
 ] as const;
+const ENGINE_KEYS = ["angle", "burn", "scoop", "push"] as const;
+const DYSON_KEYS = ["coverage", "nick"] as const;
+const SHKADOV_KEYS = ["angle", "accel"] as const;
 const DRIFT_KEYS = ["vx", "vy"] as const;
 const FLARE_KEYS = ["angle", "period", "start", "duration"] as const;
 const SUPERNOVA_KEYS = ["at", "blast", "speed", "damage"] as const;
@@ -489,6 +496,12 @@ function readBody(value: unknown, path: string, issues: string[]): Body | undefi
   if (Object.prototype.hasOwnProperty.call(value, "quasar")) quasar = readQuasar(value.quasar, `${path}.quasar`, issues);
   let script: Body["script"];
   if (Object.prototype.hasOwnProperty.call(value, "script")) script = readScript(value.script, `${path}.script`, issues);
+  let engine: StellarEngine | undefined;
+  if (Object.prototype.hasOwnProperty.call(value, "engine")) engine = readEngine(value.engine, `${path}.engine`, issues);
+  let dyson: DysonSwarm | undefined;
+  if (Object.prototype.hasOwnProperty.call(value, "dyson")) dyson = readDyson(value.dyson, `${path}.dyson`, issues);
+  let shkadov: ShkadovThruster | undefined;
+  if (Object.prototype.hasOwnProperty.call(value, "shkadov")) shkadov = readShkadov(value.shkadov, `${path}.shkadov`, issues);
   let look: BodyLook | undefined;
   if (Object.prototype.hasOwnProperty.call(value, "look")) {
     const raw = value.look;
@@ -525,10 +538,51 @@ function readBody(value: unknown, path: string, issues: string[]): Body | undefi
   if (supernova) body.supernova = supernova;
   if (quasar) body.quasar = quasar;
   if (script) body.script = script;
+  if (engine) body.engine = engine;
+  if (dyson) body.dyson = dyson;
+  if (shkadov) body.shkadov = shkadov;
   if (harvestRadius !== undefined && radius !== undefined && !(harvestRadius > radius)) {
     issues.push(`${path}.harvestRadius must be greater than radius`);
   }
   return body;
+}
+
+function readEngine(value: unknown, path: string, issues: string[]): StellarEngine | undefined {
+  if (!isObject(value)) {
+    issues.push(`${path} must be an object`);
+    return undefined;
+  }
+  rejectUnknown(value, ENGINE_KEYS, path, issues);
+  const angle = readFinite(value, "angle", path, issues, {});
+  const burn = readFinite(value, "burn", path, issues, { min: 0 });
+  const scoop = readFinite(value, "scoop", path, issues, { min: 0 });
+  const push = readFinite(value, "push", path, issues, { min: 0 });
+  if (angle === undefined || burn === undefined || scoop === undefined || push === undefined) return undefined;
+  return { angle, burn, scoop, push };
+}
+
+function readDyson(value: unknown, path: string, issues: string[]): DysonSwarm | undefined {
+  if (!isObject(value)) {
+    issues.push(`${path} must be an object`);
+    return undefined;
+  }
+  rejectUnknown(value, DYSON_KEYS, path, issues);
+  const coverage = readFinite(value, "coverage", path, issues, { min: 0, max: 1, exclusiveMin: true });
+  const nick = readFinite(value, "nick", path, issues, { min: 0 });
+  if (coverage === undefined || nick === undefined) return undefined;
+  return { coverage, nick };
+}
+
+function readShkadov(value: unknown, path: string, issues: string[]): ShkadovThruster | undefined {
+  if (!isObject(value)) {
+    issues.push(`${path} must be an object`);
+    return undefined;
+  }
+  rejectUnknown(value, SHKADOV_KEYS, path, issues);
+  const angle = readFinite(value, "angle", path, issues, {});
+  const accel = readFinite(value, "accel", path, issues, { min: 0 });
+  if (angle === undefined || accel === undefined) return undefined;
+  return { angle, accel };
 }
 
 function readSupernova(value: unknown, path: string, issues: string[]): Body["supernova"] | undefined {
