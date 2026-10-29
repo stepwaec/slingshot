@@ -1,0 +1,132 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200" viewBox="0 0 320 200">
+  <!-- Shepherded ring, v1.4 ringed planets, built to the v1.5 REVISED rules (reference planet-ref.svg F). ONE group #ringShepherd at
+       translate(160 100); geometry relative to (0,0). Ids: sh*. Lit from the upper-right; lighting never rotates.
+       PLANET  ice giant r 26. Tokens: iceGiant.base #7FB8FF · iceGiant.dark #5E9ED6 · iceGiant.bright #DCEFFF (brief) + NEW iceGiant.deep #3D7FE0
+               (main body colour, vivid) · iceGiant.belt #2A5BB5 (dark belts, polar hoods) · iceGiant.storm #1C3F8A (dark oval) ; clouds #FFFFFF over cloud shadow #06122E (reference); haze #9CCBFF -> #DCEFFF,
+               rim #A8DBFF / #7FC4FF, bloom #E6F2FF, terminator.warm #FF9455, night #08122E / #050B1E (reference lighting tokens).
+         Bands = colour look-up table on a latitude field (as ring-saturn): field = ramp (rect fill #shLat, y -8 -> 60 = 0 -> 1) +
+           0.10 x (fractalNoise "0.008 0.05", 5 oct, seed 81, stitched P x 68 - 0.5); tables one entry per px (69 entries) ->
+           crisp 1 px band edges with turbulent borders: -8..5 #2A5BB5 | 5..9 #3D7FE0 | 9..11 #7FB8FF | 11..18 #3D7FE0 | 18..20 #2A5BB5 | 20..24 #5E9ED6 | 24..28 #7FB8FF | 28..32 #5E9ED6 | 32..34 #2A5BB5 | 34..41 #3D7FE0 | 41..43 #7FB8FF | 43..47 #3D7FE0 | 47..61 #2A5BB5
+           Zonal streaks (tinted): fractalNoise "0.006 0.2", 4 oct, seed 83: light #DCEFFF a = clamp(14 n - 7.84) x 0.22 ; dark #2A5BB5 a = clamp(6.16 - 14 n) x 0.22.
+           Storm (in the band strip, drifts with it): oval #2A5BB5 rx 4.4 ry 2.3 + dark core #1C3F8A rx 2.6 ry 1.2 at (+0.6, -0.3) + bright companion streak #FFFFFF a0.85
+           rx 3.4 ry 0.8 at (+2.5, -3.1); strip y 34.5 (southern belt), drawn at strip x 213 and 50 (one period apart -> seamless), screen x -6 at t = 0.
+           Band strip: P = round(2 pi r) = 163, rect 2P x 68, translate 0 -> +P over 110 s, inner translate(-219 -26).
+         Clouds (reference technique, crisp): fractalNoise "0.035 0.16" (elongated), 6 oct, seed 87, stitched P x 2r: #FFFFFF alpha = clamp(26 n - 17.16)
+           (threshold 0.66, sparse high cirrus ~8 %), blur 0.2, group opacity 0.85; cloud SHADOW = same noise #06122E, blur 0.45, offset (0.8, 0.8),
+           opacity 0.4. Cloud strip translate 0 -> +P over 80 s (faster than the bands), inner translate(-219 -26).
+         Lighting (reference F scaled to r 26): shade centre (6.62, -6.62) radius 32.5: 0 #E6F2FF a0.18 | 0.32 a0 | 0.64 #FF9455 a0 |
+           0.705 a0.24 | 0.76 #08122E a0.74 | 0.84 #050B1E a0.97 | 1 a1 ; haze r 26: 0.78 #9CCBFF a0 | 0.96 a0.30 | 1 #DCEFFF a0.5 ;
+           rim r 28: 0.90 #A8DBFF a0 | 0.928 a0.95 | 0.955 #7FC4FF a0.4 | 1 a0 ; both lit-side masked (1 | 0.45 | 0.06).
+       RINGS   ring plane = rotate(-24) scale(1 0.26) (opening 0.26 = 15 deg). Two very thin bright rings, #ECF0FA a0.7, stroke 1 px, drawn as
+         SCREEN-SPACE ellipses (rotate -24 only, no scale, so the hairline stays a uniform 1 px): inner r 1.75 r = 45.5 (ry 11.83),
+         outer r 2.2 r = 57.2 (ry 14.87).
+         Shepherd moons (r 2.5, icy: #DCE4FF, crater #7FA6C9 a0.8 r 0.55 at (-0.6, 0.4), hard terminator #shMoonShade: centre (0.64, -0.64) r 3.12,
+           0 #FFFFFF a0.5 | 0.32 a0 | 0.64 #FF9455 a0 | 0.71 a0.22 | 0.76 #050B1E a0.8 | 0.84 a0.97 | 1 a1):
+           A inside the outer ring  r 54, period 36 s, start ring angle 35 deg ;
+           B outside the outer ring r 60.4, period 40 s, start ring angle 205 deg (inner one faster, they slowly lap each other).
+           Orbit = rotate(-24) scale(1 0.26) . rotate(a0 -> a0-360) . translate(R 0) . rotate(-a0 -> -a0+360) . scale(1 3.8462) rotate(24) . moon
+           (prograde, the near side moves left -> right; the moon's own frame stays un-rotated and round, so its lit side always faces the upper-right).
+         Ring material = defs group #shMat (rings + moons), drawn twice with <use>: back pass before the planet through the shadow mask #shRingLit,
+           front pass after the planet clipped to #shFront = the lower half of the disc r 26 (rotate -24). A moon passing behind the planet is
+           therefore hidden, and in front of it drawn over it - the z-order swap needs no toggles.
+       SHADOWS (light: phase 54 deg toward the upper-right, L = (0.572, -0.572, 0.588); n.L = 0.433).
+         Planet shadow on the rings: half-ellipse in ring space, semi-axes 60.1 x 26, path "M0 -26A60.08 26 0 0 1 0 26Z" rotated -146.9 deg (back-left),
+           black a0.85 in a luminance mask, blur 0.6 (ring space): ring arcs (and moons) inside it keep 15 %.
+         Ring shadow on the planet: iso-contours of the ray-traced hit radius at R +- 0.6 px for both rings -> two hairline bands #050B1E a0.55,
+           clipped to the disc, under the terminator.
+       DRAW ORDER: rim (outer, under the rings) -> back pass (masked) -> base #3D7FE0 -> clip { bands + storm, cloud shadow, clouds, ring shadows } ->
+         shade -> haze -> rim (clipped to the disc) -> front pass. Static renders show t = 0; loops 110 s / 80 s / 36 s / 40 s. -->
+  <defs>
+    <clipPath id="shClip"><circle r="26"/></clipPath>
+    <clipPath id="shFront"><path d="M-26 0A26 26 0 0 0 26 0Z" transform="rotate(-24)"/></clipPath>
+    <linearGradient id="shLat" gradientUnits="userSpaceOnUse" x1="0" y1="-8" x2="0" y2="60"><stop offset="0" stop-color="#000000"/><stop offset="1" stop-color="#FFFFFF"/></linearGradient>
+    <filter id="shBands" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="0" y="-8" width="326" height="68" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.008 0.05" numOctaves="5" seed="81" stitchTiles="stitch" x="0" y="-8" width="163" height="68" result="w1"/>
+      <feTile in="w1" x="0" y="-8" width="326" height="68" result="w2"/>
+      <feColorMatrix in="w2" type="matrix" values="1 0 0 0 0  1 0 0 0 0  1 0 0 0 0  0 0 0 0 1" result="w"/>
+      <feComposite in="SourceGraphic" in2="w" operator="arithmetic" k1="0" k2="1" k3="0.1" k4="-0.05" result="fld"/>
+      <feComponentTransfer in="fld" result="bands">
+        <feFuncR type="table" tableValues="0.165 0.165 0.165 0.165 0.165 0.165 0.165 0.165 0.165 0.165 0.165 0.165 0.165 0.239 0.239 0.239 0.239 0.498 0.498 0.239 0.239 0.239 0.239 0.239 0.239 0.239 0.165 0.165 0.369 0.369 0.369 0.369 0.498 0.498 0.498 0.498 0.369 0.369 0.369 0.369 0.165 0.165 0.239 0.239 0.239 0.239 0.239 0.239 0.239 0.498 0.498 0.239 0.239 0.239 0.239 0.165 0.165 0.165 0.165 0.165 0.165 0.165 0.165 0.165 0.165 0.165 0.165 0.165 0.165"/>
+        <feFuncG type="table" tableValues="0.357 0.357 0.357 0.357 0.357 0.357 0.357 0.357 0.357 0.357 0.357 0.357 0.357 0.498 0.498 0.498 0.498 0.722 0.722 0.498 0.498 0.498 0.498 0.498 0.498 0.498 0.357 0.357 0.62 0.62 0.62 0.62 0.722 0.722 0.722 0.722 0.62 0.62 0.62 0.62 0.357 0.357 0.498 0.498 0.498 0.498 0.498 0.498 0.498 0.722 0.722 0.498 0.498 0.498 0.498 0.357 0.357 0.357 0.357 0.357 0.357 0.357 0.357 0.357 0.357 0.357 0.357 0.357 0.357"/>
+        <feFuncB type="table" tableValues="0.71 0.71 0.71 0.71 0.71 0.71 0.71 0.71 0.71 0.71 0.71 0.71 0.71 0.878 0.878 0.878 0.878 1 1 0.878 0.878 0.878 0.878 0.878 0.878 0.878 0.71 0.71 0.839 0.839 0.839 0.839 1 1 1 1 0.839 0.839 0.839 0.839 0.71 0.71 0.878 0.878 0.878 0.878 0.878 0.878 0.878 1 1 0.878 0.878 0.878 0.878 0.71 0.71 0.71 0.71 0.71 0.71 0.71 0.71 0.71 0.71 0.71 0.71 0.71 0.71"/>
+      </feComponentTransfer>
+      <feTurbulence type="fractalNoise" baseFrequency="0.006 0.2" numOctaves="4" seed="83" stitchTiles="stitch" x="0" y="-8" width="163" height="68" result="s1"/>
+      <feTile in="s1" x="0" y="-8" width="326" height="68" result="s"/>
+      <feColorMatrix in="s" type="matrix" values="0 0 0 0 0.863  0 0 0 0 0.937  0 0 0 0 1  14 0 0 0 -7.84" result="sl0"/>
+      <feComponentTransfer in="sl0" result="sl"><feFuncA type="linear" slope="0.22"/></feComponentTransfer>
+      <feColorMatrix in="s" type="matrix" values="0 0 0 0 0.165  0 0 0 0 0.357  0 0 0 0 0.710  -14 0 0 0 6.16" result="sd0"/>
+      <feComponentTransfer in="sd0" result="sd"><feFuncA type="linear" slope="0.22"/></feComponentTransfer>
+      <feMerge><feMergeNode in="bands"/><feMergeNode in="sl"/><feMergeNode in="sd"/></feMerge>
+    </filter>
+    <filter id="shCloud" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-4" y="-4" width="334" height="60" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.035 0.16" numOctaves="6" seed="87" stitchTiles="stitch" x="0" y="0" width="163" height="52" result="c1"/>
+      <feTile in="c1" x="-4" y="-4" width="334" height="60" result="c"/>
+      <feColorMatrix in="c" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  26 0 0 0 -17.16" result="cm"/>
+      <feGaussianBlur in="cm" stdDeviation="0.2" result="cs"/>
+      <feComposite in="cs" in2="SourceGraphic" operator="in"/>
+    </filter>
+    <filter id="shCloudShadow" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-4" y="-4" width="334" height="60" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.035 0.16" numOctaves="6" seed="87" stitchTiles="stitch" x="0" y="0" width="163" height="52" result="c1"/>
+      <feTile in="c1" x="-4" y="-4" width="334" height="60" result="c"/>
+      <feColorMatrix in="c" type="matrix" values="0 0 0 0 0.024  0 0 0 0 0.071  0 0 0 0 0.180  26 0 0 0 -17.16" result="cm"/>
+      <feGaussianBlur in="cm" stdDeviation="0.45" result="cs"/>
+      <feComposite in="cs" in2="SourceGraphic" operator="in"/>
+    </filter>
+    <radialGradient id="shMoonShade" gradientUnits="userSpaceOnUse" cx="0.64" cy="-0.64" r="3.12">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.5"/><stop offset="0.32" stop-color="#FFFFFF" stop-opacity="0"/>
+      <stop offset="0.64" stop-color="#FF9455" stop-opacity="0"/><stop offset="0.71" stop-color="#FF9455" stop-opacity="0.22"/>
+      <stop offset="0.76" stop-color="#050B1E" stop-opacity="0.8"/><stop offset="0.84" stop-color="#050B1E" stop-opacity="0.97"/><stop offset="1" stop-color="#050B1E"/>
+    </radialGradient>
+    <radialGradient id="shShade" gradientUnits="userSpaceOnUse" cx="6.62" cy="-6.62" r="32.5">
+      <stop offset="0" stop-color="#E6F2FF" stop-opacity="0.18"/>
+      <stop offset="0.32" stop-color="#E6F2FF" stop-opacity="0"/>
+      <stop offset="0.64" stop-color="#FF9455" stop-opacity="0"/>
+      <stop offset="0.705" stop-color="#FF9455" stop-opacity="0.24"/>
+      <stop offset="0.76" stop-color="#08122E" stop-opacity="0.74"/>
+      <stop offset="0.84" stop-color="#050B1E" stop-opacity="0.97"/>
+      <stop offset="1" stop-color="#050B1E" stop-opacity="1"/>
+    </radialGradient>
+    <radialGradient id="shHaze" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="26"><stop offset="0.78" stop-color="#9CCBFF" stop-opacity="0"/><stop offset="0.96" stop-color="#9CCBFF" stop-opacity="0.3"/><stop offset="1" stop-color="#DCEFFF" stop-opacity="0.5"/></radialGradient>
+    <radialGradient id="shRim" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="28"><stop offset="0.90" stop-color="#A8DBFF" stop-opacity="0"/><stop offset="0.928" stop-color="#A8DBFF" stop-opacity="0.95"/><stop offset="0.955" stop-color="#7FC4FF" stop-opacity="0.4"/><stop offset="1" stop-color="#7FC4FF" stop-opacity="0"/></radialGradient>
+    <linearGradient id="shLit" gradientUnits="userSpaceOnUse" x1="18.36" y1="-18.36" x2="-18.36" y2="18.36"><stop offset="0" stop-color="#FFFFFF"/><stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.45"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0.06"/></linearGradient>
+    <mask id="shLitMask" mask-type="alpha" maskUnits="userSpaceOnUse" x="-31.2" y="-31.2" width="62.4" height="62.4"><rect x="-31.2" y="-31.2" width="62.4" height="62.4" fill="url(#shLit)"/></mask>
+    <filter id="shShBlur" filterUnits="userSpaceOnUse" x="-400" y="-400" width="800" height="800"><feGaussianBlur stdDeviation="0.6 0.6"/></filter>
+    <mask id="shRingLit" maskUnits="userSpaceOnUse" x="-160" y="-100" width="320" height="200">
+      <rect x="-160" y="-100" width="320" height="200" fill="#FFFFFF"/>
+      <g transform="rotate(-24) scale(1 0.26)"><path d="M0 -26A60.08 26 0 0 1 0 26Z" transform="rotate(-146.91)" fill="#000000" fill-opacity="0.85" filter="url(#shShBlur)"/></g>
+    </mask>
+    <g id="shMat">
+      <g fill="none" stroke="#ECF0FA" stroke-opacity="0.7" stroke-width="1" transform="rotate(-24)">
+        <ellipse rx="45.5" ry="11.83"/>
+        <ellipse rx="57.2" ry="14.87"/>
+      </g>
+        <g transform="rotate(-24) scale(1 0.26)"><g><animateTransform attributeName="transform" type="rotate" from="35" to="-325" dur="36s" repeatCount="indefinite"/>
+          <g transform="translate(54 0)"><g><animateTransform attributeName="transform" type="rotate" from="-35" to="325" dur="36s" repeatCount="indefinite"/>
+            <g transform="scale(1 3.8462) rotate(24)"><g id="shMoonA"><circle r="2.5" fill="#DCE4FF"/><circle cx="-0.6" cy="0.4" r="0.55" fill="#7FA6C9" fill-opacity="0.8"/><circle r="2.5" fill="url(#shMoonShade)"/></g></g></g></g></g></g>
+        <g transform="rotate(-24) scale(1 0.26)"><g><animateTransform attributeName="transform" type="rotate" from="205" to="-155" dur="40s" repeatCount="indefinite"/>
+          <g transform="translate(60.4 0)"><g><animateTransform attributeName="transform" type="rotate" from="-205" to="155" dur="40s" repeatCount="indefinite"/>
+            <g transform="scale(1 3.8462) rotate(24)"><g id="shMoonB"><circle r="2.5" fill="#DCE4FF"/><circle cx="-0.6" cy="0.4" r="0.55" fill="#7FA6C9" fill-opacity="0.8"/><circle r="2.5" fill="url(#shMoonShade)"/></g></g></g></g></g></g>
+    </g>
+  </defs>
+  <g id="ringShepherd" transform="translate(160 100)">
+    <circle r="28" fill="url(#shRim)" mask="url(#shLitMask)"/>
+    <use href="#shMat" mask="url(#shRingLit)"/>
+    <circle r="26" fill="#3D7FE0"/>
+    <g clip-path="url(#shClip)">
+      <g><animateTransform attributeName="transform" type="translate" from="0 0" to="163 0" dur="110s" repeatCount="indefinite"/>
+        <g transform="translate(-219 -26)"><rect y="-8" width="326" height="68" fill="url(#shLat)" filter="url(#shBands)"/><ellipse cx="213" cy="34.5" rx="4.4" ry="2.3" fill="#2A5BB5"/><ellipse cx="213.6" cy="34.2" rx="2.6" ry="1.2" fill="#1C3F8A"/><ellipse cx="215.5" cy="31.4" rx="3.4" ry="0.8" fill="#FFFFFF" fill-opacity="0.85"/><ellipse cx="50" cy="34.5" rx="4.4" ry="2.3" fill="#2A5BB5"/><ellipse cx="50.6" cy="34.2" rx="2.6" ry="1.2" fill="#1C3F8A"/><ellipse cx="52.5" cy="31.4" rx="3.4" ry="0.8" fill="#FFFFFF" fill-opacity="0.85"/></g>
+      </g>
+      <g opacity="0.4"><animateTransform attributeName="transform" type="translate" from="0.8 0.8" to="163.8 0.8" dur="80s" repeatCount="indefinite"/>
+        <g transform="translate(-219 -26)"><rect width="326" height="52" fill="#000000" filter="url(#shCloudShadow)"/></g>
+      </g>
+      <g opacity="0.85"><animateTransform attributeName="transform" type="translate" from="0 0" to="163 0" dur="80s" repeatCount="indefinite"/>
+        <g transform="translate(-219 -26)"><rect width="326" height="52" fill="#FFFFFF" filter="url(#shCloud)"/></g>
+      </g>
+      <g fill="#050B1E" fill-rule="evenodd" fill-opacity="0.55"><path d="M29.5 -3.45L26.2 0.39 25 2.34 22.6 4.87 18.7 8.34 8.79 16.6 4.26 20.8 1.43 24.1 0.73 25.3 0.59 26.2 -3.19 29.5 -2.9 29.5 29.5 29.66 29.66 29.5 29.5 -3.45ZM29.5 -2.61L26.2 1.2 25.3 2.7 23.5 4.72 19.9 8.06 10.14 16.3 6.16 19.9 2.57 23.8 1.61 25.3 1.39 26.2 -2.3 29.5 29.5 29.66 29.66 29.5 29.5 -2.61Z"/><path d="M29.5 4.46L22.3 12.34 13.74 20.5 10.73 23.8 4.65 29.5 4.9 29.5 29.5 29.62 29.62 29.5 29.5 4.46ZM29.5 5.25L21.7 13.68 5.5 29.5 29.5 29.62 29.62 29.5 29.5 5.25Z"/></g>
+    </g>
+    <circle r="26" fill="url(#shShade)"/>
+    <circle r="26" fill="url(#shHaze)" mask="url(#shLitMask)"/>
+    <g clip-path="url(#shClip)"><circle r="28" fill="url(#shRim)" mask="url(#shLitMask)"/></g>
+    <use href="#shMat" clip-path="url(#shFront)"/>
+  </g>
+</svg>

@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="320" viewBox="0 0 480 320">
+  <!-- Dark cloud, v1.4 space environment, built to the v1.5 (revised) bar: a cold dust cloud that BLOCKS the stars behind it - soft, irregular gas body
+       with a CRISP thin rim on the side facing the light (upper-right, L = (+0.7071, -0.7071)). viewBox 0 0 480 320. ONE group #nebulaDark at
+       translate(240 160); geometry relative to (0,0). Ids nd*. Background-pass art: draw it OVER the starfield (it occludes stars), under the bodies.
+       Gameplay hook (optional, NOT in scope): drag zone = circle r 150 about (0,0) (outline radius 150 px).
+
+       Mass: 8 ellipses (main mass, lobes, two detached globules) filled with #ndMassG (radial, #000000: 0 a1 | 0.35 a0.75 | 1 a0), (cx cy rx ry rot):
+         (-30 10 130 80 -8) · (64 -20 92 62 14) · (-120 40 64 44 0) · (36 54 78 42 -6) · (132 -54 40 30 20) · (-172 74 30 20 25) · (172 -86 18 14 0) · (-60 -48 46 22 -20).
+       Filter #ndMass (region -240 -160 480 320, sRGB):
+         m   = mask displaced by opaque fractalNoise 0.012 / 4 oct / seed 31 (scale 64 -> lumpy, irregular outline), smoothed 0.8 (gas),
+               x texture (fractalNoise 0.035 / 5 oct / seed 37: 0.15 + 1.8 R -> clumpy density, thin patches let faint stars through).
+         body  #000000 (bg.edge) alpha = 0.85 x smoothstep(0.03, 0.75, m)  (core 0.85 -> 0 at the soft edge).
+         S     = smoothstep(0.07, 0.10, m), anti-aliased by blur 0.5 (the cloud's silhouette).
+         rim   = S out S offset (-1.6, +1.6) -> only the edges whose upper-right neighbour is empty: a crisp 1-2 px rim facing the light;
+               #FFD9B0 (stars.warm) a0.25 (v1.5: rim blur 1 -> 0.5).
+         glow  = (S out S offset (-9, +9)) blurred 3, kept inside S: faint warm light scattered just inside the lit edge, #FFD9B0 a0.07.
+         tail  = S offset (-20, +20) away from the light, blurred 12, x the clumpy texture, #000000 a0.55: the soft, wispy down-light side
+               (dust streaming away from the light), so only the lit side has a hard edge.
+         merge tail -> body -> glow -> rim. No grey anywhere: the body is black dust, the lit edge warm.
+       Animation: breathe scale 1 -> 1.01 -> 1 over 30 s about (0,0) (otherwise static). Static renders show t = 0. -->
+  <defs>
+    <radialGradient id="ndMassG" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#000000"/><stop offset="0.35" stop-color="#000000" stop-opacity="0.75"/><stop offset="1" stop-color="#000000" stop-opacity="0"/></radialGradient>
+    <filter id="ndMass" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-240" y="-160" width="480" height="320" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="4" seed="31" result="e0"/>
+      <feColorMatrix in="e0" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0 1" result="e"/>
+      <feDisplacementMap in="SourceGraphic" in2="e" scale="64" xChannelSelector="R" yChannelSelector="G" result="m0"/>
+      <feGaussianBlur in="m0" stdDeviation="0.8" result="m1"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="5" seed="37" result="t0"/>
+      <feColorMatrix in="t0" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  1.8 0 0 0 0.15" result="t"/>
+      <feComposite in="m1" in2="t" operator="arithmetic" k1="1" result="m"/>
+      <feComponentTransfer in="m" result="body0"><feFuncA type="table" tableValues="0 0 0.002 0.01 0.023 0.04 0.063 0.09 0.12 0.153 0.19 0.228 0.269 0.311 0.354 0.398 0.443 0.487 0.53 0.573 0.614 0.653 0.69 0.724 0.755 0.782 0.805 0.824 0.838 0.847 0.85 0.85 0.85 0.85 0.85 0.85 0.85 0.85 0.85 0.85 0.85"/></feComponentTransfer>
+      <feColorMatrix in="body0" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="body"/>
+      <feComponentTransfer in="m" result="S0"><feFuncA type="table" tableValues="0 0 0 0 0 0 0 0 0.259 0.741 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"/></feComponentTransfer>
+      <feGaussianBlur in="S0" stdDeviation="0.5" result="S"/>
+      <feOffset in="S" dx="-1.6" dy="1.6" result="So"/>
+      <feComposite in="S" in2="So" operator="out" result="rim0"/>
+      <feColorMatrix in="rim0" type="matrix" values="0 0 0 0 1  0 0 0 0 0.851  0 0 0 0 0.69  0 0 0 0.25 0" result="rim"/>
+      <feOffset in="S" dx="-9" dy="9" result="Sg"/>
+      <feComposite in="S" in2="Sg" operator="out" result="g0"/>
+      <feGaussianBlur in="g0" stdDeviation="3" result="g1"/>
+      <feComposite in="g1" in2="S" operator="in" result="g2"/>
+      <feColorMatrix in="g2" type="matrix" values="0 0 0 0 1  0 0 0 0 0.851  0 0 0 0 0.69  0 0 0 0.07 0" result="glow"/>
+      <feOffset in="S" dx="-20" dy="20" result="St"/>
+      <feGaussianBlur in="St" stdDeviation="12" result="Stb"/>
+      <feComposite in="Stb" in2="t" operator="arithmetic" k1="1" result="tail0"/>
+      <feColorMatrix in="tail0" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.55 0" result="tail"/>
+      <feMerge><feMergeNode in="tail"/><feMergeNode in="body"/><feMergeNode in="glow"/><feMergeNode in="rim"/></feMerge>
+    </filter>
+  </defs>
+  <g id="nebulaDark" transform="translate(240 160)">
+    <g filter="url(#ndMass)"><animateTransform attributeName="transform" type="scale" values="1;1.01;1" dur="30s" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.37 0 0.63 1;0.37 0 0.63 1" repeatCount="indefinite"/><ellipse cx="-30" cy="10" rx="130" ry="80" transform="rotate(-8 -30 10)" fill="url(#ndMassG)"/><ellipse cx="64" cy="-20" rx="92" ry="62" transform="rotate(14 64 -20)" fill="url(#ndMassG)"/><ellipse cx="-120" cy="40" rx="64" ry="44" fill="url(#ndMassG)"/><ellipse cx="36" cy="54" rx="78" ry="42" transform="rotate(-6 36 54)" fill="url(#ndMassG)"/><ellipse cx="132" cy="-54" rx="40" ry="30" transform="rotate(20 132 -54)" fill="url(#ndMassG)"/><ellipse cx="-172" cy="74" rx="30" ry="20" transform="rotate(25 -172 74)" fill="url(#ndMassG)"/><ellipse cx="172" cy="-86" rx="18" ry="14" fill="url(#ndMassG)"/><ellipse cx="-60" cy="-48" rx="46" ry="22" transform="rotate(-20 -60 -48)" fill="url(#ndMassG)"/></g>
+  </g>
+</svg>

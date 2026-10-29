@@ -1,0 +1,233 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="260" viewBox="0 0 400 260">
+  <!-- Wreck debris, v1.4 space environment, built to the v1.5 (revised) bar: crisp metal fragments with bevelled edges, tinted brushed-metal texture,
+       lit from the upper-right L = (+0.7071, -0.7071) (lighting NEVER rotates with the tumbling pieces). viewBox 0 0 400 260. ONE group #wreckDebris
+       at translate(200 130); geometry relative to (0,0). Ids wr* (the brief's "wd2" prefix is replaced by wr; wd* belongs to the white dwarf).
+
+       20 pieces: a broken hull panel (torn edge, hazard stripe, seams + rivets, scorched puncture), a solar-panel fragment (24 cells),
+       a truss strut (open lattice, torn rail), a bent pipe with flange, 6 flat shards, 10 flakes (r 1.5-3.5, mulberry32 seed 0x5EC7, placed in an
+       ellipse rx 175 ry 105 clear of the big pieces). Each tumbles: SMIL rotate 360 deg, 30-200 s (bigger = slower), direction per piece.
+       Piece construction (the silhouette path #wrKn carries the rotation and is reused through <use>; s = bevel width per piece):
+         clip       the rotating silhouette (#wrKnc).
+         1. shadow bevel   silhouette, metal.edge #2A3245 (= cracked.dark, existing).
+         2. lit bevel      silhouette shifted by a STATIC (+s, -s), #ECF0FA (ui.text, = the brief's metal highlight) -> exposes a crisp dark
+                           sliver on the lower-left edges.
+         3. face           silhouette shifted (-s, +s), clipped by the silhouette shifted (+s, -s) too (#wrKnu) -> a crisp lit sliver along the
+                           upper-right edges; face fill = brushed metal pattern (64 px tile, rotates with the piece):
+                           wrBrush  base #8B95B5 + streaks fractalNoise "0.03 0.55" 3 oct seed 13: #ECF0FA alpha smoothstep(0.56,0.68) x0.30,
+                                    #4B5470 alpha (1 - smoothstep(0.32,0.44)) x0.40
+                           wrBrushD base #4B5470 + same noise seed 19: #8B95B5 x0.38, #2A3245 x0.45
+                           + details rotating with the piece: seams #2A3245 1 px with a #ECF0FA a0.35 0.6 px lit lip, rivets r 0.6 #2A3245,
+                           hazard stripe #FFC857 (star.body/fuel.low, existing) hatched #2A3245, scorch #3A2A2A (lava.crust, existing) gradients,
+                           puncture #050710, solar cells #wrCell (#5EA0FF -> #142B5E -> #0A0D1A, all existing tokens).
+         4. light          STATIC circle r 1.05 Rmax, radial #wrLight (objectBoundingBox centre (0.78, 0.22), r 1): 0 #ECF0FA a0.34 | 0.38 a0 |
+                           0.58 #050B1E a0.30 | 1 #050B1E a0.66 (metal: broad falloff, no planet terminator).
+         glints            4-point star (#wrGlint, unit size, scaled 3-4.5 px) + dot, #FFFFFF, riding a corner of its piece (same rotation),
+                           opacity 0.2 <-> 0.6 over 3.1-6.4 s, staggered (negative) begins so they are out of phase at t = 0.
+       Gameplay hook (optional, NOT in scope): pieces with R >= 10 could be crash bodies of radius 0.6 R; the rest are visual only.
+       Piece table (id kind (x,y) period+dir bevel s max radius R):
+         wrK1 hull panel (-80,-12) 150s- s0.8 R36.1 · wrK2 solar panel (66,38) 120s+ s0.7 R29.2 · wrK3 truss strut (124,-60) 200s- s0.5 R43.9
+         wrK4 bent pipe (-36,78) 110s+ s0.5 R27.2 · wrK5 shard (18,-54) 70s+ s0.55 R10.8 · wrK6 shard (-144,42) 85s- s0.55 R10.6
+         wrK7 shard (150,52) 64s+ s0.45 R12.6 · wrK8 shard (-150,-58) 90s+ s0.55 R10 · wrK9 shard (34,96) 58s- s0.45 R7.8
+         wrK10 shard (-6,-92) 76s- s0.45 R11.2 · wrK11 flake (47.5,1.8) 58s+ s0.35 R3.2 · wrK12 flake (-16.2,-51.4) 39s+ s0.35 R2.9
+         wrK13 flake (-139.4,14.6) 56s- s0.35 R2.7 · wrK14 flake (-127.9,7.7) 34s- s0.35 R2.3 · wrK15 flake (-31.2,-80.1) 42s- s0.35 R4
+         wrK16 flake (-125.8,64.2) 55s- s0.35 R1.8 · wrK17 flake (47.2,75.7) 57s- s0.35 R2.5 · wrK18 flake (83,73.2) 42s+ s0.35 R2.3
+         wrK19 flake (-14.5,9.2) 38s+ s0.35 R3.8 · wrK20 flake (-65.9,-86.3) 52s- s0.35 R3.1
+       Static renders show t = 0. -->
+  <defs>
+    <filter id="wrBrushF" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="0" y="0" width="64" height="64" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.03 0.55" numOctaves="3" seed="13" stitchTiles="stitch" result="n0"/>
+      <feColorMatrix in="n0" type="matrix" values="0 0 0 0 0.925  0 0 0 0 0.941  0 0 0 0 0.98  1 0 0 0 0" result="l1"/>
+      <feComponentTransfer in="l1" result="lite"><feFuncA type="table" tableValues="0 0 0 0 0 0 0 0 0 0 0 0 0.078 0.253 0.3 0.3 0.3 0.3 0.3 0.3 0.3"/></feComponentTransfer>
+      <feColorMatrix in="n0" type="matrix" values="0 0 0 0 0.294  0 0 0 0 0.329  0 0 0 0 0.439  1 0 0 0 0" result="d1"/>
+      <feComponentTransfer in="d1" result="dark"><feFuncA type="table" tableValues="0.4 0.4 0.4 0.4 0.4 0.4 0.4 0.338 0.104 0 0 0 0 0 0 0 0 0 0 0 0"/></feComponentTransfer>
+      <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="dark"/><feMergeNode in="lite"/></feMerge>
+    </filter>
+    <filter id="wrBrushDF" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="0" y="0" width="64" height="64" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.03 0.55" numOctaves="3" seed="19" stitchTiles="stitch" result="n0"/>
+      <feColorMatrix in="n0" type="matrix" values="0 0 0 0 0.545  0 0 0 0 0.584  0 0 0 0 0.71  1 0 0 0 0" result="l1"/>
+      <feComponentTransfer in="l1" result="lite"><feFuncA type="table" tableValues="0 0 0 0 0 0 0 0 0 0 0 0 0.099 0.321 0.38 0.38 0.38 0.38 0.38 0.38 0.38"/></feComponentTransfer>
+      <feColorMatrix in="n0" type="matrix" values="0 0 0 0 0.165  0 0 0 0 0.196  0 0 0 0 0.271  1 0 0 0 0" result="d1"/>
+      <feComponentTransfer in="d1" result="dark"><feFuncA type="table" tableValues="0.45 0.45 0.45 0.45 0.45 0.45 0.45 0.38 0.117 0 0 0 0 0 0 0 0 0 0 0 0"/></feComponentTransfer>
+      <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="dark"/><feMergeNode in="lite"/></feMerge>
+    </filter>
+    <pattern id="wrBrush" patternUnits="userSpaceOnUse" x="-32" y="-32" width="64" height="64"><rect width="64" height="64" fill="#8B95B5" filter="url(#wrBrushF)"/></pattern>
+    <pattern id="wrBrushD" patternUnits="userSpaceOnUse" x="-32" y="-32" width="64" height="64"><rect width="64" height="64" fill="#4B5470" filter="url(#wrBrushDF)"/></pattern>
+    <radialGradient id="wrLight" cx="0.78" cy="0.22" r="1">
+      <stop offset="0" stop-color="#ECF0FA" stop-opacity="0.34"/><stop offset="0.38" stop-color="#ECF0FA" stop-opacity="0"/>
+      <stop offset="0.58" stop-color="#050B1E" stop-opacity="0.30"/><stop offset="1" stop-color="#050B1E" stop-opacity="0.66"/>
+    </radialGradient>
+    <linearGradient id="wrScorch" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#3A2A2A" stop-opacity="0"/><stop offset="0.7" stop-color="#3A2A2A" stop-opacity="0.6"/><stop offset="1" stop-color="#3A2A2A" stop-opacity="0.85"/></linearGradient>
+    <radialGradient id="wrBurn" cx="0.5" cy="0.5" r="0.5"><stop offset="0.3" stop-color="#3A2A2A" stop-opacity="0.85"/><stop offset="1" stop-color="#3A2A2A" stop-opacity="0"/></radialGradient>
+    <linearGradient id="wrCell" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5EA0FF" stop-opacity="0.95"/><stop offset="0.45" stop-color="#142B5E"/><stop offset="1" stop-color="#0A0D1A"/></linearGradient>
+    <path id="wrGlint" d="M0,-1 L0.22,-0.22 L1,0 L0.22,0.22 L0,1 L-0.22,0.22 L-1,0 L-0.22,-0.22 Z" fill="#FFFFFF"/>
+    <path id="wrK1" d="M-30,-20 L14,-22 L17,-15 L23,-17 L21,-8 L29,-3 L23,3 L27,11 L15,13 L17,21 L-28,20 L-32,1 Z"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="150s" repeatCount="indefinite"/></path><clipPath id="wrK1c"><use href="#wrK1"/></clipPath><clipPath id="wrK1u"><use href="#wrK1" transform="translate(0.8 -0.8)"/></clipPath>
+    <path id="wrK2" d="M-25,-15 L23,-15 L25,-5 L17,1 L21,8 L12,15 L-25,15 Z"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="120s" repeatCount="indefinite"/></path><clipPath id="wrK2c"><use href="#wrK2"/></clipPath><clipPath id="wrK2u"><use href="#wrK2" transform="translate(0.7 -0.7)"/></clipPath>
+    <path id="wrK3" d="M-39.43,15.3 L34.74,-24.13 L35.49,-22.72 L-38.68,16.72 Z M-35.49,22.72 L30.73,-12.49 L34.7,-11.43 L33.74,-10.24 L30.25,-10.42 L-34.74,24.13 Z M-41.23,15.12 L-39.02,13.95 L-33.38,24.55 L-35.59,25.72 Z M-37.93,15.08 L-26.22,17.92 L-26.53,19.19 L-38.23,16.35 Z M-26.99,18.33 L-22.8,7.04 L-21.58,7.49 L-25.77,18.78 Z M-22.03,6.63 L-10.33,9.47 L-10.64,10.74 L-22.34,7.9 Z M-11.09,9.88 L-6.9,-1.41 L-5.68,-0.96 L-9.87,10.33 Z M-6.14,-1.82 L5.56,1.02 L5.26,2.29 L-6.45,-0.55 Z M4.8,1.43 L8.99,-9.86 L10.21,-9.41 L6.02,1.88 Z M9.75,-10.27 L21.46,-7.43 L21.15,-6.16 L9.45,-9 Z M20.69,-7.02 L24.88,-18.31 L26.1,-17.86 L21.91,-6.57 Z M31.95,-22.02 L37.79,-17.42 L37.05,-16.48 L31.21,-21.08 Z"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="200s" repeatCount="indefinite"/></path><clipPath id="wrK3c"><use href="#wrK3"/></clipPath><clipPath id="wrK3u"><use href="#wrK3" transform="translate(0.5 -0.5)"/></clipPath>
+    <path id="wrK4" d="M-24,-1.8 L-0.3,-1.8 L20.1,-9.2 L21.3,-5.8 L0.3,1.8 L-24,1.8 Z M-27,-3.2 L-23.6,-3.2 L-23.6,3.2 L-27,3.2 Z"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="110s" repeatCount="indefinite"/></path><clipPath id="wrK4c"><use href="#wrK4"/></clipPath><clipPath id="wrK4u"><use href="#wrK4" transform="translate(0.5 -0.5)"/></clipPath>
+    <path id="wrK5" d="M-9,-6 L10,-3 L-2,8 Z"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="70s" repeatCount="indefinite"/></path><clipPath id="wrK5c"><use href="#wrK5"/></clipPath><clipPath id="wrK5u"><use href="#wrK5" transform="translate(0.55 -0.55)"/></clipPath>
+    <path id="wrK6" d="M-8,-7 L9,-5 L6,6 L-6,8 Z"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="85s" repeatCount="indefinite"/></path><clipPath id="wrK6c"><use href="#wrK6"/></clipPath><clipPath id="wrK6u"><use href="#wrK6" transform="translate(0.55 -0.55)"/></clipPath>
+    <path id="wrK7" d="M-12,-2 L12,-4 L2,4 Z"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="64s" repeatCount="indefinite"/></path><clipPath id="wrK7c"><use href="#wrK7"/></clipPath><clipPath id="wrK7u"><use href="#wrK7" transform="translate(0.45 -0.45)"/></clipPath>
+    <path id="wrK8" d="M-7,-5 L8,-6 L9,3 L-5,7 Z"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="90s" repeatCount="indefinite"/></path><clipPath id="wrK8c"><use href="#wrK8"/></clipPath><clipPath id="wrK8u"><use href="#wrK8" transform="translate(0.55 -0.55)"/></clipPath>
+    <path id="wrK9" d="M-6,-5 L7,-2 L-1,6 Z"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="58s" repeatCount="indefinite"/></path><clipPath id="wrK9c"><use href="#wrK9"/></clipPath><clipPath id="wrK9u"><use href="#wrK9" transform="translate(0.45 -0.45)"/></clipPath>
+    <path id="wrK10" d="M-10,-3 L10,-5 L11,1 L-9,4 Z"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="76s" repeatCount="indefinite"/></path><clipPath id="wrK10c"><use href="#wrK10"/></clipPath><clipPath id="wrK10u"><use href="#wrK10" transform="translate(0.45 -0.45)"/></clipPath>
+    <path id="wrK11" d="M2.54,0.29 L-1.19,2.83 L-2.79,-1.59 L0.56,-2.85 Z"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="58s" repeatCount="indefinite"/></path><clipPath id="wrK11c"><use href="#wrK11"/></clipPath><clipPath id="wrK11u"><use href="#wrK11" transform="translate(0.35 -0.35)"/></clipPath>
+    <path id="wrK12" d="M2.18,0.87 L-0.02,1.79 L-2.71,-0.95 L0.51,-2.53 Z"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="39s" repeatCount="indefinite"/></path><clipPath id="wrK12c"><use href="#wrK12"/></clipPath><clipPath id="wrK12u"><use href="#wrK12" transform="translate(0.35 -0.35)"/></clipPath>
+    <path id="wrK13" d="M2.63,0.74 L-1.55,1.6 L-0.25,-2.06 Z"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="56s" repeatCount="indefinite"/></path><clipPath id="wrK13c"><use href="#wrK13"/></clipPath><clipPath id="wrK13u"><use href="#wrK13" transform="translate(0.35 -0.35)"/></clipPath>
+    <path id="wrK14" d="M1.88,1.35 L-1.86,1.1 L0.37,-2.3 Z"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="34s" repeatCount="indefinite"/></path><clipPath id="wrK14c"><use href="#wrK14"/></clipPath><clipPath id="wrK14u"><use href="#wrK14" transform="translate(0.35 -0.35)"/></clipPath>
+    <path id="wrK15" d="M2.8,1.68 L-2.26,1.13 L0.43,-3.98 Z"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="42s" repeatCount="indefinite"/></path><clipPath id="wrK15c"><use href="#wrK15"/></clipPath><clipPath id="wrK15u"><use href="#wrK15" transform="translate(0.35 -0.35)"/></clipPath>
+    <path id="wrK16" d="M1.45,0.31 L-1.51,0.99 L-0.58,-1.41 Z"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="55s" repeatCount="indefinite"/></path><clipPath id="wrK16c"><use href="#wrK16"/></clipPath><clipPath id="wrK16u"><use href="#wrK16" transform="translate(0.35 -0.35)"/></clipPath>
+    <path id="wrK17" d="M2.26,0.48 L-1.75,1.81 L0.63,-2.23 Z"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="57s" repeatCount="indefinite"/></path><clipPath id="wrK17c"><use href="#wrK17"/></clipPath><clipPath id="wrK17u"><use href="#wrK17" transform="translate(0.35 -0.35)"/></clipPath>
+    <path id="wrK18" d="M1.84,0.61 L-2.04,1.08 L-0.33,-1.69 Z"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="42s" repeatCount="indefinite"/></path><clipPath id="wrK18c"><use href="#wrK18"/></clipPath><clipPath id="wrK18u"><use href="#wrK18" transform="translate(0.35 -0.35)"/></clipPath>
+    <path id="wrK19" d="M3.28,0.34 L-2.78,1.13 L-1.52,-3.52 Z"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="38s" repeatCount="indefinite"/></path><clipPath id="wrK19c"><use href="#wrK19"/></clipPath><clipPath id="wrK19u"><use href="#wrK19" transform="translate(0.35 -0.35)"/></clipPath>
+    <path id="wrK20" d="M2.24,1.58 L-2.05,2.35 L0.4,-1.7 Z"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="52s" repeatCount="indefinite"/></path><clipPath id="wrK20c"><use href="#wrK20"/></clipPath><clipPath id="wrK20u"><use href="#wrK20" transform="translate(0.35 -0.35)"/></clipPath>
+  </defs>
+  <g id="wreckDebris" transform="translate(200 130)">
+    <g transform="translate(-80 -12)">
+      <g clip-path="url(#wrK1c)">
+        <use href="#wrK1" fill="#2A3245"/><use href="#wrK1" fill="#ECF0FA" transform="translate(0.8 -0.8)"/>
+        <g clip-path="url(#wrK1u)"><g transform="translate(-0.8 0.8)"><use href="#wrK1" fill="url(#wrBrush)"/><g><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="150s" repeatCount="indefinite"/><rect x="6" y="-24" width="24" height="48" fill="url(#wrScorch)"/><path d="M-9.5,-23 V22 M-33,-1.5 H30" fill="none" stroke="#2A3245" stroke-width="1"/><path d="M-8.9,-23 V22 M-33,-0.9 H30" fill="none" stroke="#ECF0FA" stroke-opacity="0.35" stroke-width="0.6"/><g fill="#2A3245"><circle cx="-12.4" cy="-18" r="0.6"/><circle cx="-12.4" cy="-14" r="0.6"/><circle cx="-12.4" cy="-10" r="0.6"/><circle cx="-12.4" cy="-6" r="0.6"/><circle cx="-12.4" cy="2" r="0.6"/><circle cx="-12.4" cy="6" r="0.6"/><circle cx="-12.4" cy="10" r="0.6"/><circle cx="-12.4" cy="14" r="0.6"/><circle cx="-12.4" cy="18" r="0.6"/><circle cx="-24" cy="-4" r="0.6"/><circle cx="-20" cy="-4" r="0.6"/><circle cx="-16" cy="-4" r="0.6"/><circle cx="-12" cy="-4" r="0.6"/><circle cx="-4" cy="-4" r="0.6"/><circle cx="0" cy="-4" r="0.6"/><circle cx="4" cy="-4" r="0.6"/><circle cx="8" cy="-4" r="0.6"/><circle cx="12" cy="-4" r="0.6"/><circle cx="16" cy="-4" r="0.6"/><circle cx="20" cy="-4" r="0.6"/></g><rect x="-33" y="-22" width="6" height="44" fill="#FFC857"/><path d="M-32,-16 L-26,-22 M-32,-12 L-26,-18 M-32,-8 L-26,-14 M-32,-4 L-26,-10 M-32,0 L-26,-6 M-32,4 L-26,-2 M-32,8 L-26,2 M-32,12 L-26,6 M-32,16 L-26,10 M-32,20 L-26,14 M-32,24 L-26,18" fill="none" stroke="#2A3245" stroke-width="1.5"/><circle cx="3" cy="8" r="6.5" fill="url(#wrBurn)"/><path d="M-1,5 L4,4.4 L5.6,8 L3,11.6 L-1.6,10 Z" fill="#050710"/><path d="M-1,5 L4,4.4 L5.6,8" fill="none" stroke="#2A3245" stroke-width="0.7"/></g></g></g>
+        <circle r="37.86" fill="url(#wrLight)"/>
+      </g>
+      <g><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="150s" repeatCount="indefinite"/><g transform="translate(14 -22) scale(4.5)" opacity="0.2"><animate attributeName="opacity" values="0.2;0.6;0.2" dur="5.2s" begin="-2.6s" repeatCount="indefinite"/><use href="#wrGlint"/><circle r="0.16" fill="#FFFFFF"/></g></g>
+      <g><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="150s" repeatCount="indefinite"/><g transform="translate(29 -3) scale(3.2)" opacity="0.2"><animate attributeName="opacity" values="0.2;0.6;0.2" dur="3.6s" begin="-0.4s" repeatCount="indefinite"/><use href="#wrGlint"/><circle r="0.16" fill="#FFFFFF"/></g></g>
+    </g>
+    <g transform="translate(66 38)">
+      <g clip-path="url(#wrK2c)">
+        <use href="#wrK2" fill="#2A3245"/><use href="#wrK2" fill="#ECF0FA" transform="translate(0.7 -0.7)"/>
+        <g clip-path="url(#wrK2u)"><g transform="translate(-0.7 0.7)"><use href="#wrK2" fill="url(#wrBrushD)"/><g><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="120s" repeatCount="indefinite"/><g fill="url(#wrCell)"><rect x="-23" y="-13" width="7" height="5.8"/><rect x="-23" y="-6.4" width="7" height="5.8"/><rect x="-23" y="0.2" width="7" height="5.8"/><rect x="-23" y="6.8" width="7" height="5.8"/><rect x="-15.2" y="-13" width="7" height="5.8"/><rect x="-15.2" y="-6.4" width="7" height="5.8"/><rect x="-15.2" y="0.2" width="7" height="5.8"/><rect x="-15.2" y="6.8" width="7" height="5.8"/><rect x="-7.4" y="-13" width="7" height="5.8"/><rect x="-7.4" y="-6.4" width="7" height="5.8"/><rect x="-7.4" y="0.2" width="7" height="5.8"/><rect x="-7.4" y="6.8" width="7" height="5.8"/><rect x="0.4" y="-13" width="7" height="5.8"/><rect x="0.4" y="-6.4" width="7" height="5.8"/><rect x="0.4" y="0.2" width="7" height="5.8"/><rect x="0.4" y="6.8" width="7" height="5.8"/><rect x="8.2" y="-13" width="7" height="5.8"/><rect x="8.2" y="-6.4" width="7" height="5.8"/><rect x="8.2" y="0.2" width="7" height="5.8"/><rect x="8.2" y="6.8" width="7" height="5.8"/><rect x="16" y="-13" width="7" height="5.8"/><rect x="16" y="-6.4" width="7" height="5.8"/><rect x="16" y="0.2" width="7" height="5.8"/><rect x="16" y="6.8" width="7" height="5.8"/></g><path d="M-25,-14.2 H25" stroke="#ECF0FA" stroke-opacity="0.4" stroke-width="0.6"/></g></g></g>
+        <circle r="30.61" fill="url(#wrLight)"/>
+      </g>
+      <g><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="120s" repeatCount="indefinite"/><g transform="translate(23 -15) scale(4)" opacity="0.2"><animate attributeName="opacity" values="0.2;0.6;0.2" dur="6.4s" begin="-1.1s" repeatCount="indefinite"/><use href="#wrGlint"/><circle r="0.16" fill="#FFFFFF"/></g></g>
+    </g>
+    <g transform="translate(124 -60)">
+      <g clip-path="url(#wrK3c)">
+        <use href="#wrK3" fill="#2A3245"/><use href="#wrK3" fill="#ECF0FA" transform="translate(0.5 -0.5)"/>
+        <g clip-path="url(#wrK3u)"><g transform="translate(-0.5 0.5)"><use href="#wrK3" fill="url(#wrBrush)"/><g><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="200s" repeatCount="indefinite"/><g fill="#2A3245"><circle cx="-38.17" cy="15.54" r="0.55"/><circle cx="-22.28" cy="7.09" r="0.55"/><circle cx="-6.39" cy="-1.36" r="0.55"/><circle cx="9.51" cy="-9.81" r="0.55"/><circle cx="25.4" cy="-18.26" r="0.55"/></g></g></g></g>
+        <circle r="46.11" fill="url(#wrLight)"/>
+      </g>
+      <g><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="200s" repeatCount="indefinite"/><g transform="translate(35.11 -23.43) scale(3.6)" opacity="0.2"><animate attributeName="opacity" values="0.2;0.6;0.2" dur="4.4s" begin="-3.3s" repeatCount="indefinite"/><use href="#wrGlint"/><circle r="0.16" fill="#FFFFFF"/></g></g>
+    </g>
+    <g transform="translate(-36 78)">
+      <g clip-path="url(#wrK4c)">
+        <use href="#wrK4" fill="#2A3245"/><use href="#wrK4" fill="#ECF0FA" transform="translate(0.5 -0.5)"/>
+        <g clip-path="url(#wrK4u)"><g transform="translate(-0.5 0.5)"><use href="#wrK4" fill="url(#wrBrushD)"/><g><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="110s" repeatCount="indefinite"/><path d="M-24,-0.9 H-0.2 L20.4,-8.3" fill="none" stroke="#ECF0FA" stroke-opacity="0.55" stroke-width="0.6"/><path d="M-14,-1.8 V1.8 M-6,-1.8 V1.8" stroke="#2A3245" stroke-width="0.8"/></g></g></g>
+        <circle r="28.55" fill="url(#wrLight)"/>
+      </g>
+      <g><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="110s" repeatCount="indefinite"/><g transform="translate(-27 -3.2) scale(3)" opacity="0.2"><animate attributeName="opacity" values="0.2;0.6;0.2" dur="3.1s" begin="-1.9s" repeatCount="indefinite"/><use href="#wrGlint"/><circle r="0.16" fill="#FFFFFF"/></g></g>
+    </g>
+    <g transform="translate(18 -54)">
+      <g clip-path="url(#wrK5c)">
+        <use href="#wrK5" fill="#2A3245"/><use href="#wrK5" fill="#ECF0FA" transform="translate(0.55 -0.55)"/>
+        <g clip-path="url(#wrK5u)"><g transform="translate(-0.55 0.55)"><use href="#wrK5" fill="url(#wrBrush)"/><g><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="70s" repeatCount="indefinite"/><path d="M-6,-3.5 L6,5" stroke="#2A3245" stroke-width="0.7"/></g></g></g>
+        <circle r="11.36" fill="url(#wrLight)"/>
+      </g>
+      <g><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="70s" repeatCount="indefinite"/><g transform="translate(10 -3) scale(3)" opacity="0.2"><animate attributeName="opacity" values="0.2;0.6;0.2" dur="5.8s" begin="-4.6s" repeatCount="indefinite"/><use href="#wrGlint"/><circle r="0.16" fill="#FFFFFF"/></g></g>
+    </g>
+    <g transform="translate(-144 42)">
+      <g clip-path="url(#wrK6c)">
+        <use href="#wrK6" fill="#2A3245"/><use href="#wrK6" fill="#ECF0FA" transform="translate(0.55 -0.55)"/>
+        <g clip-path="url(#wrK6u)"><g transform="translate(-0.55 0.55)"><use href="#wrK6" fill="url(#wrBrushD)"/><g><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="85s" repeatCount="indefinite"/><rect x="-9" y="-1" width="20" height="2.4" fill="#FFC857" opacity="0.85"/></g></g></g>
+        <circle r="11.16" fill="url(#wrLight)"/>
+      </g>
+    </g>
+    <g transform="translate(150 52)">
+      <g clip-path="url(#wrK7c)">
+        <use href="#wrK7" fill="#2A3245"/><use href="#wrK7" fill="#ECF0FA" transform="translate(0.45 -0.45)"/>
+        <g clip-path="url(#wrK7u)"><g transform="translate(-0.45 0.45)"><use href="#wrK7" fill="url(#wrBrush)"/></g></g>
+        <circle r="13.28" fill="url(#wrLight)"/>
+      </g>
+      <g><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="64s" repeatCount="indefinite"/><g transform="translate(12 -4) scale(3.4)" opacity="0.2"><animate attributeName="opacity" values="0.2;0.6;0.2" dur="4.8s" begin="-2s" repeatCount="indefinite"/><use href="#wrGlint"/><circle r="0.16" fill="#FFFFFF"/></g></g>
+    </g>
+    <g transform="translate(-150 -58)">
+      <g clip-path="url(#wrK8c)">
+        <use href="#wrK8" fill="#2A3245"/><use href="#wrK8" fill="#ECF0FA" transform="translate(0.55 -0.55)"/>
+        <g clip-path="url(#wrK8u)"><g transform="translate(-0.55 0.55)"><use href="#wrK8" fill="url(#wrBrushD)"/><g><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="90s" repeatCount="indefinite"/><circle cx="1" cy="0" r="4.5" fill="url(#wrBurn)"/></g></g></g>
+        <circle r="10.5" fill="url(#wrLight)"/>
+      </g>
+    </g>
+    <g transform="translate(34 96)">
+      <g clip-path="url(#wrK9c)">
+        <use href="#wrK9" fill="#2A3245"/><use href="#wrK9" fill="#ECF0FA" transform="translate(0.45 -0.45)"/>
+        <g clip-path="url(#wrK9u)"><g transform="translate(-0.45 0.45)"><use href="#wrK9" fill="url(#wrBrush)"/></g></g>
+        <circle r="8.2" fill="url(#wrLight)"/>
+      </g>
+    </g>
+    <g transform="translate(-6 -92)">
+      <g clip-path="url(#wrK10c)">
+        <use href="#wrK10" fill="#2A3245"/><use href="#wrK10" fill="#ECF0FA" transform="translate(0.45 -0.45)"/>
+        <g clip-path="url(#wrK10u)"><g transform="translate(-0.45 0.45)"><use href="#wrK10" fill="url(#wrBrush)"/><g><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="76s" repeatCount="indefinite"/><path d="M-3,-4 V3.5" stroke="#2A3245" stroke-width="0.7"/></g></g></g>
+        <circle r="11.74" fill="url(#wrLight)"/>
+      </g>
+    </g>
+    <g transform="translate(47.5 1.8)">
+      <g clip-path="url(#wrK11c)">
+        <use href="#wrK11" fill="#2A3245"/><use href="#wrK11" fill="#ECF0FA" transform="translate(0.35 -0.35)"/>
+        <g clip-path="url(#wrK11u)"><g transform="translate(-0.35 0.35)"><use href="#wrK11" fill="url(#wrBrush)"/></g></g>
+        <circle r="3.37" fill="url(#wrLight)"/>
+      </g>
+    </g>
+    <g transform="translate(-16.2 -51.4)">
+      <g clip-path="url(#wrK12c)">
+        <use href="#wrK12" fill="#2A3245"/><use href="#wrK12" fill="#ECF0FA" transform="translate(0.35 -0.35)"/>
+        <g clip-path="url(#wrK12u)"><g transform="translate(-0.35 0.35)"><use href="#wrK12" fill="url(#wrBrush)"/></g></g>
+        <circle r="3.01" fill="url(#wrLight)"/>
+      </g>
+    </g>
+    <g transform="translate(-139.4 14.6)">
+      <g clip-path="url(#wrK13c)">
+        <use href="#wrK13" fill="#2A3245"/><use href="#wrK13" fill="#ECF0FA" transform="translate(0.35 -0.35)"/>
+        <g clip-path="url(#wrK13u)"><g transform="translate(-0.35 0.35)"><use href="#wrK13" fill="url(#wrBrushD)"/></g></g>
+        <circle r="2.87" fill="url(#wrLight)"/>
+      </g>
+    </g>
+    <g transform="translate(-127.9 7.7)">
+      <g clip-path="url(#wrK14c)">
+        <use href="#wrK14" fill="#2A3245"/><use href="#wrK14" fill="#ECF0FA" transform="translate(0.35 -0.35)"/>
+        <g clip-path="url(#wrK14u)"><g transform="translate(-0.35 0.35)"><use href="#wrK14" fill="url(#wrBrushD)"/></g></g>
+        <circle r="2.45" fill="url(#wrLight)"/>
+      </g>
+    </g>
+    <g transform="translate(-31.2 -80.1)">
+      <g clip-path="url(#wrK15c)">
+        <use href="#wrK15" fill="#2A3245"/><use href="#wrK15" fill="#ECF0FA" transform="translate(0.35 -0.35)"/>
+        <g clip-path="url(#wrK15u)"><g transform="translate(-0.35 0.35)"><use href="#wrK15" fill="url(#wrBrush)"/></g></g>
+        <circle r="4.21" fill="url(#wrLight)"/>
+      </g>
+    </g>
+    <g transform="translate(-125.8 64.2)">
+      <g clip-path="url(#wrK16c)">
+        <use href="#wrK16" fill="#2A3245"/><use href="#wrK16" fill="#ECF0FA" transform="translate(0.35 -0.35)"/>
+        <g clip-path="url(#wrK16u)"><g transform="translate(-0.35 0.35)"><use href="#wrK16" fill="url(#wrBrushD)"/></g></g>
+        <circle r="1.89" fill="url(#wrLight)"/>
+      </g>
+    </g>
+    <g transform="translate(47.2 75.7)">
+      <g clip-path="url(#wrK17c)">
+        <use href="#wrK17" fill="#2A3245"/><use href="#wrK17" fill="#ECF0FA" transform="translate(0.35 -0.35)"/>
+        <g clip-path="url(#wrK17u)"><g transform="translate(-0.35 0.35)"><use href="#wrK17" fill="url(#wrBrush)"/></g></g>
+        <circle r="2.64" fill="url(#wrLight)"/>
+      </g>
+    </g>
+    <g transform="translate(83 73.2)">
+      <g clip-path="url(#wrK18c)">
+        <use href="#wrK18" fill="#2A3245"/><use href="#wrK18" fill="#ECF0FA" transform="translate(0.35 -0.35)"/>
+        <g clip-path="url(#wrK18u)"><g transform="translate(-0.35 0.35)"><use href="#wrK18" fill="url(#wrBrush)"/></g></g>
+        <circle r="2.43" fill="url(#wrLight)"/>
+      </g>
+    </g>
+    <g transform="translate(-14.5 9.2)">
+      <g clip-path="url(#wrK19c)">
+        <use href="#wrK19" fill="#2A3245"/><use href="#wrK19" fill="#ECF0FA" transform="translate(0.35 -0.35)"/>
+        <g clip-path="url(#wrK19u)"><g transform="translate(-0.35 0.35)"><use href="#wrK19" fill="url(#wrBrush)"/></g></g>
+        <circle r="4.03" fill="url(#wrLight)"/>
+      </g>
+    </g>
+    <g transform="translate(-65.9 -86.3)">
+      <g clip-path="url(#wrK20c)">
+        <use href="#wrK20" fill="#2A3245"/><use href="#wrK20" fill="#ECF0FA" transform="translate(0.35 -0.35)"/>
+        <g clip-path="url(#wrK20u)"><g transform="translate(-0.35 0.35)"><use href="#wrK20" fill="url(#wrBrush)"/></g></g>
+        <circle r="3.28" fill="url(#wrLight)"/>
+      </g>
+    </g>
+  </g>
+</svg>

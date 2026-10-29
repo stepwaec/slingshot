@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="480" viewBox="0 0 480 480">
+  <!-- Blue giant (v1.5 revised: the sun reference construction in white / blue-white).  ONE group #blueGiant at translate(240 240); geometry relative to (0,0). Ids bg*.
+       Scale k = 54/46 = 1.1739 of the sun (flames r 72.8, wisps r 91.6, haze r 240 = the full half viewBox: the wider glow). FINER texture (dark 0.08, filaments 0.10)
+       and MORE flame detail (flames 0.10 / 5 oct, wisps 0.065 / 6 oct, displacement 24/40); filaments near-white. v1.3 loop angles/timings kept, arcs x1.1.
+       Construction = the approved sun reference (star-ref.svg, variant J): warm haze, two ragged flame rings, fiery tinted surface, bright limb, wobbling
+       disc edge, ragged rim stroke, two-tone crisp prominences, flare. No grey anywhere: every noise layer is tinted. Self-emitted light (no terminator).
+       body r 54 (crashRadius 54).
+       Draw order (back to front):
+       1. haze        circle r 240 (half the viewBox), radial: 0 #5E9BFF a0.55 | 0.23 #5E9BFF a0.48 | 0.33 #3A6AF0 a0.3 | 0.55 #2C4FBF a0.14 | 0.8 #15287A a0.05 | 1 #15287A a0
+       2. wisp ring   circle r 91.6 FILLED SOLID TO THE CENTRE (no annulus gaps), userSpace radial: 0 #7FB2FF a0.55 | 0.62 #7FB2FF a0.55 | 0.8 #4F8DFF a0.24 | 1 #3A6AF0 a0;
+                      filter #bgWisp: fractalNoise baseFrequency 0.065, 6 octaves, seed 39, made OPAQUE (feColorMatrix alpha = 1)
+                      -> feDisplacementMap scale 40 (R/G) -> blur sd 0.8 (flame softness, as the reference). Rotates 0 -> -360 over 300 s.
+       3. flame ring  circle r 72.8 filled solid, userSpace radial: 0 #F4F8FF a0.95 | 0.74 #F4F8FF a0.95 | 0.8 #A9C8FF a0.85 | 0.9 #4F8DFF a0.45 | 1 #2C4FBF a0;
+                      filter #bgFlame: fractalNoise 0.1, 5 octaves, seed 27, opaque -> displacement scale 24 -> blur sd 0.4.
+                      Rotates 0 -> +360 over 200 s (counter to the wisps).
+          Layers 1-3 sit in group #bgBreathe: SMIL scale 1 -> 1.03 -> 1 -> 0.97 -> 1 over 6 s (sine splines, +-3 %, t = 0 = rest size).
+          The disc, rim, prominences and flare never breathe (the crash radius never moves).
+       4. prominences 3 loops footed on the limb, drawn before the disc (feet hidden by it). Loop i in <g transform="rotate(A_i) translate(54 0)">
+          (x radial, y tangential). Two-tone, NO blur: outer stroke #5EA0FF 3.2 px a0.85 + inner core #F4F8FF 1.15 px a0.9, round caps.
+            P1  A 332.7  d="M-1.06 -11.17 C26.44 -8.93 26.44 8.93 -1.06 11.17"  dur 12 s  begin 0 s
+            P2  A 243.5  d="M-1.19 -11.81 C25.25 -9.45 25.25 9.45 -1.19 11.81"  dur 16 s  begin 5 s
+            P3  A 168.7  d="M-1.64 -13.86 C31.21 -11.09 31.21 11.09 -1.64 13.86"  dur 14 s  begin 9 s
+          Per loop (SMIL, sine splines, repeatCount indefinite): scale about the base point 0.6 -> 1.0 -> 0.6 and group opacity 0 -> 1 -> 0 over dur from begin.
+          Base attributes (t = 0, static renders): scale(0.6), opacity 0. Peaks at begin + dur/2 + n dur (6 s / 13 s / 16 s first) - never all at once.
+       5. flare       wedge M54 -2.1 L101 0 L54 2.1 Z rotated 278.3 deg, linear gradient along it #FFFFFF -> #B8CCFF a0.15, no blur.
+                      Opacity over a 22 s cycle: 0 until 13 s, 1 at 13.9 s, 0 at 14.8 s (keyTimes 0 | 0.5909 | 0.6318 | 0.6727 | 1), repeatCount indefinite.
+       6. disc group  #bgDisc with filter #bgEdge - fine opaque fractalNoise 0.13, 3 octaves, seed 48, displacement scale 7
+                      (the irregular, not-perfectly-round rim; no blur). Contains:
+          6a. body    circle r 54, radial: 0 #EAF1FF | 0.65 #A6C0FF | 1 #7FA3FF; filter #bgSurf (clipped to the disc):
+                      darker regions = fractalNoise 0.08, 5 oct, seed 6, colour #2F5BD8, alpha = 3.4 R -1.6 then x0.45 (cap);
+                      plasma filaments = turbulence 0.1, 5 oct, seed 15, colour #FFFFFF, alpha = 1.25 - 6.5 R then x0.9; merged over the body.
+          6b. limb    circle r 54, userSpace radial: 0.8 #CFE0FF a0 | 0.93 #CFE0FF a0.55 | 0.97 #F4F8FF a0.9 | 1 #FFFFFF a0.95
+       7. ragged rim  circle r 54.2, stroke #F4F8FF 1.8 px a0.75, displaced by fractalNoise 0.26, 2 oct, seed 61, scale 5.5, blur sd 0.35.
+       v1.3 tokens reused: core #FFFFFF (limb, flare), body #B8CCFF (flame edge, flare tip), corona #5EA0FF (prominence), glow #2C4FBF (haze, flame edge); the disc itself uses the ramp #EAF1FF / #A6C0FF / #7FA3FF.
+       Canvas: bake as canvas-notes v1.5 says - haze sprite; flame + wisp rings pre-rendered WITH their displacement into 2-3 rotating sprite frames
+       (drawn with rotate at 2*pi*t/200 s and -2*pi*t/300 s, cross-faded), inside the 6 s breathe scale; one body sprite with surface,
+       limb, rim wobble and ragged rim baked in (static); 3 prominence sprites (two-tone, unblurred) + 1 flare sprite with the (angle, dur, begin) table above,
+       s = 0.6 + 0.4 sin^2(pi (t - begin)/dur), a = sin^2(...). Zero shadowBlur. -->
+  <defs>
+    <radialGradient id="bgHaze" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#5E9BFF" stop-opacity="0.55"/><stop offset="0.23" stop-color="#5E9BFF" stop-opacity="0.48"/><stop offset="0.33" stop-color="#3A6AF0" stop-opacity="0.3"/><stop offset="0.55" stop-color="#2C4FBF" stop-opacity="0.14"/><stop offset="0.8" stop-color="#15287A" stop-opacity="0.05"/><stop offset="1" stop-color="#15287A" stop-opacity="0"/></radialGradient>
+    <radialGradient id="bgFlameFill" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="72.8"><stop offset="0" stop-color="#F4F8FF" stop-opacity="0.95"/><stop offset="0.74" stop-color="#F4F8FF" stop-opacity="0.95"/><stop offset="0.8" stop-color="#A9C8FF" stop-opacity="0.85"/><stop offset="0.9" stop-color="#4F8DFF" stop-opacity="0.45"/><stop offset="1" stop-color="#2C4FBF" stop-opacity="0"/></radialGradient>
+    <radialGradient id="bgWispFill" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="91.6"><stop offset="0" stop-color="#7FB2FF" stop-opacity="0.55"/><stop offset="0.62" stop-color="#7FB2FF" stop-opacity="0.55"/><stop offset="0.8" stop-color="#4F8DFF" stop-opacity="0.24"/><stop offset="1" stop-color="#3A6AF0" stop-opacity="0"/></radialGradient>
+    <radialGradient id="bgBody" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#EAF1FF"/><stop offset="0.65" stop-color="#A6C0FF"/><stop offset="1" stop-color="#7FA3FF"/></radialGradient>
+    <radialGradient id="bgLimb" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="54"><stop offset="0.8" stop-color="#CFE0FF" stop-opacity="0"/><stop offset="0.93" stop-color="#CFE0FF" stop-opacity="0.55"/><stop offset="0.97" stop-color="#F4F8FF" stop-opacity="0.9"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0.95"/></radialGradient>
+    <linearGradient id="bgFlareFill" gradientUnits="userSpaceOnUse" x1="54" y1="0" x2="101" y2="0"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#B8CCFF" stop-opacity="0.15"/></linearGradient>
+    <filter id="bgFlame" filterUnits="userSpaceOnUse" x="-100.8" y="-100.8" width="201.6" height="201.6" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.1" numOctaves="5" seed="27" result="n0"/>
+      <feColorMatrix in="n0" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0 1" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="24" xChannelSelector="R" yChannelSelector="G" result="nd"/>
+      <feGaussianBlur in="nd" stdDeviation="0.4"/>
+    </filter>
+    <filter id="bgWisp" filterUnits="userSpaceOnUse" x="-123.6" y="-123.6" width="247.2" height="247.2" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.065" numOctaves="6" seed="39" result="w0"/>
+      <feColorMatrix in="w0" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0 1" result="w"/>
+      <feDisplacementMap in="SourceGraphic" in2="w" scale="40" xChannelSelector="R" yChannelSelector="G" result="wd"/>
+      <feGaussianBlur in="wd" stdDeviation="0.8"/>
+    </filter>
+    <filter id="bgSurf" filterUnits="userSpaceOnUse" x="-56" y="-56" width="112" height="112" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.08" numOctaves="5" seed="6" result="f"/>
+      <feColorMatrix in="f" type="matrix" values="0 0 0 0 0.184  0 0 0 0 0.357  0 0 0 0 0.847  3.4 0 0 0 -1.6" result="dk"/>
+      <feComponentTransfer in="dk" result="dark"><feFuncA type="linear" slope="0.45"/></feComponentTransfer>
+      <feTurbulence type="turbulence" baseFrequency="0.1" numOctaves="5" seed="15" result="t"/>
+      <feColorMatrix in="t" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  -6.5 0 0 0 1.25" result="fl"/>
+      <feComponentTransfer in="fl" result="fil"><feFuncA type="linear" slope="0.9"/></feComponentTransfer>
+      <feMerge result="m"><feMergeNode in="SourceGraphic"/><feMergeNode in="dark"/><feMergeNode in="fil"/></feMerge>
+      <feComposite in="m" in2="SourceGraphic" operator="in"/>
+    </filter>
+    <filter id="bgEdge" filterUnits="userSpaceOnUse" x="-70" y="-70" width="140" height="140" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.13" numOctaves="3" seed="48" result="e0"/>
+      <feColorMatrix in="e0" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0 1" result="e"/>
+      <feDisplacementMap in="SourceGraphic" in2="e" scale="7" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="bgRimRag" filterUnits="userSpaceOnUse" x="-70" y="-70" width="140" height="140" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.26" numOctaves="2" seed="61" result="g0"/>
+      <feColorMatrix in="g0" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0 1" result="g"/>
+      <feDisplacementMap in="SourceGraphic" in2="g" scale="5.5" xChannelSelector="R" yChannelSelector="G" result="gd"/>
+      <feGaussianBlur in="gd" stdDeviation="0.35"/>
+    </filter>
+  </defs>
+  <g id="blueGiant" transform="translate(240 240)">
+    <g id="bgBreathe">
+      <animateTransform attributeName="transform" type="scale" values="1;1.03;1;0.97;1" keyTimes="0;0.25;0.5;0.75;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1" dur="6s" repeatCount="indefinite"/>
+      <circle r="240" fill="url(#bgHaze)"/>
+      <g><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="300s" repeatCount="indefinite"/>
+        <circle r="91.6" fill="url(#bgWispFill)" filter="url(#bgWisp)"/></g>
+      <g><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="200s" repeatCount="indefinite"/>
+        <circle r="72.8" fill="url(#bgFlameFill)" filter="url(#bgFlame)"/></g>
+    </g>
+    <g id="bgProminences" fill="none" stroke-linecap="round">
+      <g transform="rotate(332.7) translate(54 0)">
+        <g id="bgProm1" transform="scale(0.6)" opacity="0">
+          <animateTransform attributeName="transform" type="scale" values="0.6;1;0.6" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="12s" begin="0s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0;1;0" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="12s" begin="0s" repeatCount="indefinite"/>
+          <path d="M-1.06 -11.17 C26.44 -8.93 26.44 8.93 -1.06 11.17" stroke="#5EA0FF" stroke-width="3.2" stroke-opacity="0.85"/>
+          <path d="M-1.06 -11.17 C26.44 -8.93 26.44 8.93 -1.06 11.17" stroke="#F4F8FF" stroke-width="1.15" stroke-opacity="0.9"/>
+        </g>
+      </g>
+      <g transform="rotate(243.5) translate(54 0)">
+        <g id="bgProm2" transform="scale(0.6)" opacity="0">
+          <animateTransform attributeName="transform" type="scale" values="0.6;1;0.6" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="16s" begin="5s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0;1;0" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="16s" begin="5s" repeatCount="indefinite"/>
+          <path d="M-1.19 -11.81 C25.25 -9.45 25.25 9.45 -1.19 11.81" stroke="#5EA0FF" stroke-width="3.2" stroke-opacity="0.85"/>
+          <path d="M-1.19 -11.81 C25.25 -9.45 25.25 9.45 -1.19 11.81" stroke="#F4F8FF" stroke-width="1.15" stroke-opacity="0.9"/>
+        </g>
+      </g>
+      <g transform="rotate(168.7) translate(54 0)">
+        <g id="bgProm3" transform="scale(0.6)" opacity="0">
+          <animateTransform attributeName="transform" type="scale" values="0.6;1;0.6" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="14s" begin="9s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0;1;0" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="14s" begin="9s" repeatCount="indefinite"/>
+          <path d="M-1.64 -13.86 C31.21 -11.09 31.21 11.09 -1.64 13.86" stroke="#5EA0FF" stroke-width="3.2" stroke-opacity="0.85"/>
+          <path d="M-1.64 -13.86 C31.21 -11.09 31.21 11.09 -1.64 13.86" stroke="#F4F8FF" stroke-width="1.15" stroke-opacity="0.9"/>
+        </g>
+      </g>
+    </g>
+    <g id="bgFlare" transform="rotate(278.3)" opacity="0">
+      <animate attributeName="opacity" values="0;0;1;0;0" keyTimes="0;0.5909;0.6318;0.6727;1" dur="22s" repeatCount="indefinite"/>
+      <path d="M54 -2.1 L101 0 L54 2.1 Z" fill="url(#bgFlareFill)"/>
+    </g>
+    <g id="bgDisc" filter="url(#bgEdge)">
+      <circle r="54" fill="url(#bgBody)" filter="url(#bgSurf)"/>
+      <circle r="54" fill="url(#bgLimb)"/>
+    </g>
+    <circle r="54.2" fill="none" stroke="#F4F8FF" stroke-width="1.8" stroke-opacity="0.75" filter="url(#bgRimRag)"/>
+  </g>
+</svg>

@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">
+  <!-- Captured asteroid moon, v1.4 moons, built to the v1.5 (revised) planet reference. ONE group #moonCaptured at translate(18 18); geometry
+       relative to (0,0). The only NON-CIRCULAR body: an irregular "potato" (Phobos-like). Mean radius r 9 (= radius of the equal-area circle;
+       the outline spans 6.7 .. 11.9 from the centre). Lit from the upper-right L = (+0.7071, -0.7071); lighting never rotates. Airless: no rim,
+       no haze, hard terminator.
+
+       Silhouette #mcShape: 16 radii at 22.5 deg steps (from +x, clockwise on screen), scaled x1.0108 to r 9:
+         raw 11.8 11 9.2 7.8 7.3 7.6 8.4 10.2 11.4 10.6 8.2 6.6 6.9 7.2 8 10.4
+         joined by a closed Catmull-Rom spline (tension 1/6 -> cubic Beziers) = smoothed curves, no corners.
+       Tumble: the body group #mcTumble rotates 0 -> 360 deg over 70 s (SMIL rotate about the centre). The albedo (fill, surface zones, craters)
+         turns with it; ALL lighting is computed afterwards in the fixed frame by filter #mcLight, so the lit side stays upper-right at every angle.
+
+       Albedo (rotating):
+         base       #mcShape fill #7E7468 (mc.base = asteroid base token).
+         zones      rect -13..13 clipped to the shape, filter #mcSurface (non-periodic, no strip; 6-octave fields, steep slopes, all TINTED):
+                    warm regolith fractalNoise 0.16, 6 oct, seed 83: slope 30, intercept -16.8 (n > 0.56), #A07E5A (mc.warm), cap 0.85.
+                    rust          fractalNoise 0.22 (ejecta field), slope -30, intercept 11.7 (n < 0.39), #8A5A3C (mc.rust, iron-rich), cap 0.6.
+                    dark regolith same field: slope -30, intercept 12.6 (n < 0.42), #3E3833 (mc.dark = asteroid dark), cap 0.6.
+                    ejecta        fractalNoise 0.22, 6 oct, seed 89: slope 30, intercept -18.6 (n > 0.62), #C9BBA8 (mc.highlight = asteroid
+                                  highlight), cap 0.7.
+                    grooves       fractalNoise "0.035 0.2" (stretched), 4 oct, seed 97: two iso-contour lines (n = 0.46 and 0.56, table peak
+                                  half-width 0.012) #3E3833 cap 0.6 = Phobos-style parallel striations.
+                    specks        fractalNoise 0.45, 2 oct, seed 101: slope 40, intercept -27.6 (n > 0.69), #3E3833, cap 0.7.
+         craters    10 circles (x y R), the largest = the Stickney-like crater at the blunt end: (-6 0.9 3) · (4.6 -2.4 1.7) · (1.8 3.3 1.3) · (8.4 1 1.1) · (-2.3 -3.8 1) · (6.2 -4.5 0.75) · (-0.6 0 0.9) · (-8.9 -2.6 0.8) · (4.9 4.4 0.65) · (-3.6 4.2 0.7).
+                    Each = rim disc R fill #mcRimG (radial: 0.7 #C9BBA8 a0 | 0.88 a0.32 | 1 a0) + bowl r 0.8 R centred (+0.15 R, -0.15 R),
+                    fill #mcBowl (linear, upper-right #3E3833 a0.9 -> 0.55 #3E3833 a0.6 -> lower-left #C9BBA8 a0.55 = the inner wall facing the light).
+                    Every crater sits in a translate(x y) and COUNTER-rotates 0 -> -360 / 70 s, so its position tumbles with the body while its
+                    lit wall stays toward the star.
+       Lighting (filter #mcLight on the fixed wrapper; resolution-independent, everything in user units):
+         lit mask   M = blur(SourceAlpha offset by d L = (+2.6, -2.6), sigma 0.6): a point is lit when the point d = 0.41 r away from it, AWAY from the
+                    star, is still inside the body -> a crescent terminator that follows the silhouette (matches the reference terminator: the
+                    night crescent is 0.41 r deep on the light axis).
+         volume     V = blur(SourceAlpha offset by (+1.6, -1.6), sigma 2.4); albedo x (0.6 + 0.45 V) = brighter toward the star, darker toward
+                    the terminator (shape-aware bloom).
+         warm band  M minus M' (M' = same with offset (+3.2, -3.2)) = a ~0.85 px band on the lit side of the terminator, #FF9455
+                    (terminator.warm) a0.2 - the airless warm band of the v1.5 moon.svg, made shape-aware.
+         night      #050B1E (night.deep) at alpha 0.97 (1 - M).
+         lit edge   SourceAlpha OUT (SourceAlpha offset by (-0.9, +0.9)) = the 0.9 px edge facing the star, #E6D8C4 (mc.edge) a0.7, only where M.
+         merge: shaded albedo -> warm band -> night -> lit edge, composited IN SourceAlpha. No blur above 0.6 except the volume field (not visible as blur).
+       Static renders show t = 0. Ids: mc*. -->
+  <defs>
+    <path id="mcShape" d="M11.93 0.00 C12.02 1.38 11.16 3.16 10.27 4.26 C9.38 5.35 7.79 6.07 6.58 6.58 C5.37 7.08 4.11 7.15 3.02 7.28 C1.92 7.42 0.99 7.41 0.00 7.38 C-0.99 7.35 -1.94 7.33 -2.94 7.10 C-3.94 6.87 -4.91 6.53 -6.00 6.00 C-7.10 5.48 -8.61 4.95 -9.53 3.95 C-10.45 2.94 -11.46 1.34 -11.52 0.00 C-11.59 -1.34 -10.84 -3.12 -9.90 -4.10 C-8.96 -5.08 -7.09 -5.52 -5.86 -5.86 C-4.64 -6.20 -3.53 -5.98 -2.55 -6.16 C-1.58 -6.35 -0.89 -6.88 -0.00 -6.97 C0.89 -7.07 1.83 -6.93 2.79 -6.72 C3.74 -6.51 4.56 -6.17 5.72 -5.72 C6.87 -5.27 8.68 -4.98 9.71 -4.02 C10.75 -3.07 11.83 -1.38 11.93 0.00Z"/>
+    <clipPath id="mcClip"><use href="#mcShape"/></clipPath>
+    <filter id="mcSurface" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-13" y="-13" width="26" height="26" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.16" numOctaves="6" seed="83" result="mcN"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.22" numOctaves="6" seed="89" result="mcE"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.035 0.2" numOctaves="4" seed="97" result="mcG"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.45" numOctaves="2" seed="101" result="mcS"/>
+      <feComponentTransfer in="mcN" result="mcWarmA"><feFuncA type="linear" slope="30" intercept="-16.8"/></feComponentTransfer>
+      <feColorMatrix in="mcWarmA" type="matrix" values="0 0 0 0 0.627  0 0 0 0 0.494  0 0 0 0 0.353  0 0 0 0.85 0" result="mcWarm"/>
+      <feComponentTransfer in="mcE" result="mcRustA"><feFuncA type="linear" slope="-30" intercept="11.7"/></feComponentTransfer>
+      <feColorMatrix in="mcRustA" type="matrix" values="0 0 0 0 0.541  0 0 0 0 0.353  0 0 0 0 0.235  0 0 0 0.6 0" result="mcRust"/>
+      <feComponentTransfer in="mcN" result="mcDarkA"><feFuncA type="linear" slope="-30" intercept="12.6"/></feComponentTransfer>
+      <feColorMatrix in="mcDarkA" type="matrix" values="0 0 0 0 0.243  0 0 0 0 0.22  0 0 0 0 0.2  0 0 0 0.6 0" result="mcDark"/>
+      <feComponentTransfer in="mcE" result="mcEjectaA"><feFuncA type="linear" slope="30" intercept="-18.6"/></feComponentTransfer>
+      <feColorMatrix in="mcEjectaA" type="matrix" values="0 0 0 0 0.788  0 0 0 0 0.733  0 0 0 0 0.659  0 0 0 0.7 0" result="mcEjecta"/>
+      <feComponentTransfer in="mcS" result="mcSpeckA"><feFuncA type="linear" slope="40" intercept="-27.6"/></feComponentTransfer>
+      <feColorMatrix in="mcSpeckA" type="matrix" values="0 0 0 0 0.243  0 0 0 0 0.22  0 0 0 0 0.2  0 0 0 0.7 0" result="mcSpeck"/>
+      <feComponentTransfer in="mcG" result="mcGrooveA"><feFuncA type="table" tableValues="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.167 1 0.167 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"/></feComponentTransfer>
+  <feColorMatrix in="mcGrooveA" type="matrix" values="0 0 0 0 0.243  0 0 0 0 0.22  0 0 0 0 0.2  0 0 0 0.6 0" result="mcGroove"/>
+  <feComponentTransfer in="mcG" result="mcGroove2A"><feFuncA type="table" tableValues="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.167 1 0.167 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"/></feComponentTransfer>
+  <feColorMatrix in="mcGroove2A" type="matrix" values="0 0 0 0 0.243  0 0 0 0 0.22  0 0 0 0 0.2  0 0 0 0.6 0" result="mcGroove2"/>
+      <feMerge result="mcSurfaceAll"><feMergeNode in="SourceGraphic"/><feMergeNode in="mcWarm"/><feMergeNode in="mcRust"/><feMergeNode in="mcDark"/><feMergeNode in="mcEjecta"/><feMergeNode in="mcSpeck"/><feMergeNode in="mcGroove"/><feMergeNode in="mcGroove2"/></feMerge>
+      <feComposite in="mcSurfaceAll" in2="SourceGraphic" operator="in"/>
+    </filter>
+    <radialGradient id="mcRimG" cx="0.5" cy="0.5" r="0.5"><stop offset="0.7" stop-color="#C9BBA8" stop-opacity="0"/><stop offset="0.88" stop-color="#C9BBA8" stop-opacity="0.32"/><stop offset="1" stop-color="#C9BBA8" stop-opacity="0"/></radialGradient>
+    <linearGradient id="mcBowl" x1="0.85" y1="0.15" x2="0.15" y2="0.85"><stop offset="0" stop-color="#3E3833" stop-opacity="0.9"/><stop offset="0.55" stop-color="#3E3833" stop-opacity="0.6"/><stop offset="1" stop-color="#C9BBA8" stop-opacity="0.55"/></linearGradient>
+    <filter id="mcLight" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-15" y="-15" width="30" height="30" color-interpolation-filters="sRGB">
+      <feOffset in="SourceAlpha" dx="2.6" dy="-2.6" result="mcOff"/>
+      <feGaussianBlur in="mcOff" stdDeviation="0.6" result="mcM"/>
+      <feOffset in="SourceAlpha" dx="1.6" dy="-1.6" result="mcVOff"/>
+      <feGaussianBlur in="mcVOff" stdDeviation="2.4" result="mcVA"/>
+      <feColorMatrix in="mcVA" type="matrix" values="0 0 0 1 0  0 0 0 1 0  0 0 0 1 0  0 0 0 0 1" result="mcV"/>
+      <feComposite in="SourceGraphic" in2="mcV" operator="arithmetic" k1="0.45" k2="0.6" k3="0" k4="0" result="mcShaded"/>
+      <feOffset in="SourceAlpha" dx="3.2" dy="-3.2" result="mcBOff"/>
+      <feGaussianBlur in="mcBOff" stdDeviation="0.6" result="mcMB"/>
+      <feComposite in="mcM" in2="mcMB" operator="arithmetic" k1="0" k2="1" k3="-1" k4="0" result="mcBandA"/>
+      <feFlood flood-color="#FF9455" flood-opacity="0.2" result="mcWarmC"/>
+      <feComposite in="mcWarmC" in2="mcBandA" operator="in" result="mcBand"/>
+      <feComponentTransfer in="mcM" result="mcNightA"><feFuncA type="linear" slope="-0.97" intercept="0.97"/></feComponentTransfer>
+      <feFlood flood-color="#050B1E" result="mcNavy"/>
+      <feComposite in="mcNavy" in2="mcNightA" operator="in" result="mcNight"/>
+      <feOffset in="SourceAlpha" dx="-0.9" dy="0.9" result="mcEOff"/>
+      <feComposite in="SourceAlpha" in2="mcEOff" operator="out" result="mcEA"/>
+      <feComposite in="mcEA" in2="mcM" operator="in" result="mcEM"/>
+      <feFlood flood-color="#E6D8C4" flood-opacity="0.7" result="mcEC"/>
+      <feComposite in="mcEC" in2="mcEM" operator="in" result="mcEdge"/>
+      <feMerge result="mcAll"><feMergeNode in="mcShaded"/><feMergeNode in="mcBand"/><feMergeNode in="mcNight"/><feMergeNode in="mcEdge"/></feMerge>
+      <feComposite in="mcAll" in2="SourceAlpha" operator="in"/>
+    </filter>
+  </defs>
+  <g id="moonCaptured" transform="translate(18 18)">
+    <g filter="url(#mcLight)">
+      <g id="mcTumble"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="70s" repeatCount="indefinite"/>
+        <use href="#mcShape" fill="#7E7468"/>
+        <g clip-path="url(#mcClip)">
+          <rect x="-13" y="-13" width="26" height="26" fill="#7E7468" filter="url(#mcSurface)"/>
+          <g transform="translate(-6 0.9)"><g><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="70s" repeatCount="indefinite"/><circle r="3" fill="url(#mcRimG)"/><circle cx="0.45" cy="-0.45" r="2.40" fill="url(#mcBowl)"/></g></g>
+          <g transform="translate(4.6 -2.4)"><g><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="70s" repeatCount="indefinite"/><circle r="1.7" fill="url(#mcRimG)"/><circle cx="0.26" cy="-0.26" r="1.36" fill="url(#mcBowl)"/></g></g>
+          <g transform="translate(1.8 3.3)"><g><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="70s" repeatCount="indefinite"/><circle r="1.3" fill="url(#mcRimG)"/><circle cx="0.20" cy="-0.20" r="1.04" fill="url(#mcBowl)"/></g></g>
+          <g transform="translate(8.4 1)"><g><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="70s" repeatCount="indefinite"/><circle r="1.1" fill="url(#mcRimG)"/><circle cx="0.17" cy="-0.17" r="0.88" fill="url(#mcBowl)"/></g></g>
+          <g transform="translate(-2.3 -3.8)"><g><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="70s" repeatCount="indefinite"/><circle r="1" fill="url(#mcRimG)"/><circle cx="0.15" cy="-0.15" r="0.80" fill="url(#mcBowl)"/></g></g>
+          <g transform="translate(6.2 -4.5)"><g><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="70s" repeatCount="indefinite"/><circle r="0.75" fill="url(#mcRimG)"/><circle cx="0.11" cy="-0.11" r="0.60" fill="url(#mcBowl)"/></g></g>
+          <g transform="translate(-0.6 0)"><g><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="70s" repeatCount="indefinite"/><circle r="0.9" fill="url(#mcRimG)"/><circle cx="0.14" cy="-0.14" r="0.72" fill="url(#mcBowl)"/></g></g>
+          <g transform="translate(-8.9 -2.6)"><g><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="70s" repeatCount="indefinite"/><circle r="0.8" fill="url(#mcRimG)"/><circle cx="0.12" cy="-0.12" r="0.64" fill="url(#mcBowl)"/></g></g>
+          <g transform="translate(4.9 4.4)"><g><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="70s" repeatCount="indefinite"/><circle r="0.65" fill="url(#mcRimG)"/><circle cx="0.10" cy="-0.10" r="0.52" fill="url(#mcBowl)"/></g></g>
+          <g transform="translate(-3.6 4.2)"><g><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="70s" repeatCount="indefinite"/><circle r="0.7" fill="url(#mcRimG)"/><circle cx="0.10" cy="-0.10" r="0.56" fill="url(#mcBowl)"/></g></g>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>

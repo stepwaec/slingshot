@@ -1,0 +1,220 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="240" viewBox="0 0 400 240">
+  <!-- Saturn-like ice ring, v1.4 ringed planets, built to the v1.5 REVISED rules (reference: planet-ref.svg variant F).
+       ONE group #ringSaturn at translate(200 120); geometry relative to (0,0). Ids: rs*. Lit from the upper-right, lighting never rotates.
+       PLANET  pale gas giant r 44. Tokens: band.cream #F2D9B8 · band.tan #E3B07C · band.dull #C9A27A (brief) + NEW ringSaturn.gold #D9954F ·
+               ringSaturn.belt #A86F3E (thin dark belts) · ring tokens #F2E6D2 / #D8C9AE (brief) + NEW ringSaturn.ringB #EAD7B4 ·
+               ringSaturn.ringA #D9BF92 · ringSaturn.ringC #B49A76 (warmer, so the ring reads ivory, not grey, on navy) · ringSaturn.haze #F5D7B0 (= gasBanded.atmo) · ringSaturn.rim #FFE9C8 (NEW) ·
+               bloom #FFF1C2 (= sun limb token) · shared v1.5 lighting tokens terminator.warm #FF9455, night #08122E / #050B1E.
+         Bands = a colour LOOK-UP TABLE on a latitude field (crisp, anti-aliased 1 px band edges, frilly turbulent borders - no blur):
+           field = latitude ramp (rect fill #rsLat: y -8 -> 96 = 0 -> 1) + 0.12 x (fractalNoise - 0.5)  [feComposite arithmetic k2 1, k3 0.12, k4 -0.06]
+           waviness noise: fractalNoise baseFrequency "0.008 0.045", numOctaves 5, seed 61 (A) / 67 (B), stitched over P x 104, feTile'd (seamless).
+           feComponentTransfer tables, ONE ENTRY PER PX of latitude (105 entries, y -8..96), so band edges are 1 px wide (+-3 px wave).
+           Group A (all bands, drifts W->E: translate 0 -> +P over 150 s): -8..7 #C9A27A | 7..13 #E3B07C | 13..22 #F2D9B8 | 22..27 #D9954F | 27..33 #E3B07C | 33..55 #F2D9B8 | 55..60 #E3B07C | 60..64 #D9954F | 64..71 #F2D9B8 | 71..77 #E3B07C | 77..82 #C9A27A | 82..97 #C9A27A
+           Group B (thin belts, counter-flow: translate 0 -> -P over 110 s), alpha table 1 inside / 0 outside: 18..21 #A86F3E | 40..42 #E3B07C | 49..51 #E3B07C | 66..69 #A86F3E
+           Zonal streak texture (tinted, never grey): fractalNoise "0.006 0.16", 4 octaves, seed 71; light streaks #F2E6D2 a = clamp(14 n - 7.84) x 0.22,
+           dark streaks #A86F3E a = clamp(6.16 - 14 n) x 0.22 (i.e. thresholds 0.56 / 0.44, slope 14).
+         Strip: period P = round(2 pi r) = 276; rect 2P x 104 (y -8..96); A inner translate(-364 -44) (window strip x 44..408),
+           B inner translate(-88 -44). Clip #rsClip circle r 44.
+         Lighting (reference F, scaled to r 44): shade radial centre 0.36 r L = (11.2, -11.2), radius 1.25 r = 55:
+           0 #FFF1C2 a0.24 | 0.32 a0 | 0.64 #FF9455 a0 | 0.705 #FF9455 a0.24 | 0.76 #08122E a0.74 | 0.84 #050B1E a0.97 | 1 #050B1E a1.
+           inner haze r 44: 0.78 #F5D7B0 a0 | 0.96 a0.26 | 1.0 #FFE9C8 a0.5 (pale planet: bloom and haze lowered from the reference's 0.38 / 0.42 / 0.65 so the bands keep their contrast) ; outer rim r 1.077 r = 47.39: 0.90 #FFE9C8 a0 | 0.928 a0.95 |
+           0.955 #F5D7B0 a0.4 | 1 a0 ; both alpha-masked to the lit side (linear (+-0.706 r) along L: 1 | 0.45 | 0.06). No limb line, no glint.
+       RING    seen at 18 deg: ring space = rotate(-22) scale(1 0.31) (opening ry = 0.31 rx = sin 18 deg; major axis rolled -22 deg).
+         (a) 6 smooth density bands = concentric circle STROKES in ring space (the scale foreshortens them correctly):
+         1. C ring 1.26-1.48           centre 1.370 r =  60.28 px, width 0.220 r =  9.68 px, #B49A76 a0.4
+         2. B ring inner 1.48-1.58     centre 1.530 r =  67.32 px, width 0.100 r =  4.40 px, #EAD7B4 a0.68
+         3. B ring core 1.58-1.72      centre 1.650 r =  72.60 px, width 0.140 r =  6.16 px, #F2E6D2 a0.86
+         4. A ring inner 1.78-1.93     centre 1.855 r =  81.62 px, width 0.150 r =  6.60 px, #D9BF92 a0.66
+         5. A ring outer 1.95-2.08     centre 2.015 r =  88.66 px, width 0.130 r =  5.72 px, #D8C9AE a0.52
+         6. F ring hairline 2.16       centre 2.160 r =  95.04 px, width 0.012 r =  0.53 px, #F2E6D2 a0.6
+             gaps: Cassini 1.72-1.78 r (2.6 px, centred 1.75 r), Encke 1.93-1.95 r. Inner edge 1.26 r, outer 2.17 r.
+         (a') ringlet grain: circle r 2.2 r with a hard-stop radial gradient #rsGrain, 13 ringlets 0.008-0.03 r wide over 1.49-2.07 r,
+             bright #FFF6E6 a0.06-0.14 or dark #6E5A40 a0.10-0.22 (seed 0x5A7) - crisp fine structure, no blur.
+         (b) particle sparkle, 370 particles #FFFFFF r 0.4-0.75 (ring space; 0.4 + 0.35 u^2), a 0.3-0.6 (0.1 steps), seed 0x7A11,
+             3 Keplerian sub-rings, each a SMIL rotate 0 -> -360 inside the ring-space wrapper (prograde: the near side moves left -> right
+             like the cloud bands; inner faster):
+         In   period  60 s, 150 particles, radii 1.270-1.480 r (25 %), 1.480-1.715 r (75 %)
+         Mid  period  90 s, 120 particles, radii 1.785-1.925 r (100 %)
+         Out  period 130 s, 100 particles, radii 1.955-2.075 r (85 %), 2.150-2.170 r (15 %)
+         Ring material = ONE defs group #rsMat (bands + grain + particles), drawn twice with <use>:
+           back  pass: whole ring, before the planet, through mask #rsRingLit (the planet's shadow);
+           front pass: after the planet, clipped to #rsFront = the lower half of the planet disc r 44 in ring orientation (rotate -22).
+           Both passes use the SAME circle as the planet disc, so the disc edge and the clip edge are complementary (no seam);
+           the ring's inner edge (1.26 r) clears the disc, so no back-half material ever enters the front clip.
+       SHADOWS (light = phase angle 54 deg from the view axis toward the upper-right, L = (0.572, -0.572, 0.588) screen x, y-down, z to viewer;
+         this is the light the reference crescent implies; n.L = 0.483, the lit face of the ring is the one we see).
+         Planet shadow on the ring: cylinder r 44 along -L cut by the ring plane = half-ellipse in ring space, semi-axes 91.1 (= r / n.L) x 44,
+           path "M0 -44A91.15 44 0 0 1 0 44Z" rotated -148.3 deg in ring space (back-left), black a0.85 in a luminance mask (white elsewhere), blur 0.8 (ring space).
+           The ring material inside it keeps 15 % (sky shows through - a shadowed ring is dark, not painted).
+         Ring shadow on the planet: for each band edge radius R the ray from the ring circle along -L to the sphere (first hit), projected;
+           bands between edge curves, filled #050B1E (night token), clipped to the disc, drawn under the terminator:
+         1.26-1.48 r -> #050B1E a0.25
+         1.48-1.72 r -> #050B1E a0.62
+         1.78-2.08 r -> #050B1E a0.45
+       DRAW ORDER: rim (outer part, under the ring) -> back ring (masked) -> base disc #F2D9B8 -> clip { bands A, belts B, ring shadow bands } ->
+         shade -> haze -> rim again clipped to the disc -> front ring. (The rim is drawn twice so that outside the disc it lies UNDER both ring
+         passes - the ring is in front of the atmosphere there - and inside the disc above the planet; disc-edge AA makes the halves complementary.)
+       Static renders show t = 0. Loops: bands 150 s / 110 s, particles 60 / 90 / 130 s. -->
+  <defs>
+    <clipPath id="rsClip"><circle r="44"/></clipPath>
+    <clipPath id="rsFront"><path d="M-44 0A44 44 0 0 0 44 0Z" transform="rotate(-22)"/></clipPath>
+    <linearGradient id="rsLat" gradientUnits="userSpaceOnUse" x1="0" y1="-8" x2="0" y2="96"><stop offset="0" stop-color="#000000"/><stop offset="1" stop-color="#FFFFFF"/></linearGradient>
+    <filter id="rsBandsA" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="0" y="-8" width="552" height="104" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.008 0.045" numOctaves="5" seed="61" stitchTiles="stitch" x="0" y="-8" width="276" height="104" result="w1"/>
+      <feTile in="w1" x="0" y="-8" width="552" height="104" result="w2"/>
+      <feColorMatrix in="w2" type="matrix" values="1 0 0 0 0  1 0 0 0 0  1 0 0 0 0  0 0 0 0 1" result="w"/>
+      <feComposite in="SourceGraphic" in2="w" operator="arithmetic" k1="0" k2="1" k3="0.12" k4="-0.06" result="fld"/>
+      <feComponentTransfer in="fld" result="bands">
+        <feFuncR type="table" tableValues="0.788 0.788 0.788 0.788 0.788 0.788 0.788 0.788 0.788 0.788 0.788 0.788 0.788 0.788 0.788 0.89 0.89 0.89 0.89 0.89 0.89 0.949 0.949 0.949 0.949 0.949 0.949 0.949 0.949 0.949 0.851 0.851 0.851 0.851 0.851 0.89 0.89 0.89 0.89 0.89 0.89 0.949 0.949 0.949 0.949 0.949 0.949 0.949 0.949 0.949 0.949 0.949 0.949 0.949 0.949 0.949 0.949 0.949 0.949 0.949 0.949 0.949 0.949 0.89 0.89 0.89 0.89 0.89 0.851 0.851 0.851 0.851 0.949 0.949 0.949 0.949 0.949 0.949 0.949 0.89 0.89 0.89 0.89 0.89 0.89 0.788 0.788 0.788 0.788 0.788 0.788 0.788 0.788 0.788 0.788 0.788 0.788 0.788 0.788 0.788 0.788 0.788 0.788 0.788 0.788"/>
+        <feFuncG type="table" tableValues="0.635 0.635 0.635 0.635 0.635 0.635 0.635 0.635 0.635 0.635 0.635 0.635 0.635 0.635 0.635 0.69 0.69 0.69 0.69 0.69 0.69 0.851 0.851 0.851 0.851 0.851 0.851 0.851 0.851 0.851 0.584 0.584 0.584 0.584 0.584 0.69 0.69 0.69 0.69 0.69 0.69 0.851 0.851 0.851 0.851 0.851 0.851 0.851 0.851 0.851 0.851 0.851 0.851 0.851 0.851 0.851 0.851 0.851 0.851 0.851 0.851 0.851 0.851 0.69 0.69 0.69 0.69 0.69 0.584 0.584 0.584 0.584 0.851 0.851 0.851 0.851 0.851 0.851 0.851 0.69 0.69 0.69 0.69 0.69 0.69 0.635 0.635 0.635 0.635 0.635 0.635 0.635 0.635 0.635 0.635 0.635 0.635 0.635 0.635 0.635 0.635 0.635 0.635 0.635 0.635"/>
+        <feFuncB type="table" tableValues="0.478 0.478 0.478 0.478 0.478 0.478 0.478 0.478 0.478 0.478 0.478 0.478 0.478 0.478 0.478 0.486 0.486 0.486 0.486 0.486 0.486 0.722 0.722 0.722 0.722 0.722 0.722 0.722 0.722 0.722 0.31 0.31 0.31 0.31 0.31 0.486 0.486 0.486 0.486 0.486 0.486 0.722 0.722 0.722 0.722 0.722 0.722 0.722 0.722 0.722 0.722 0.722 0.722 0.722 0.722 0.722 0.722 0.722 0.722 0.722 0.722 0.722 0.722 0.486 0.486 0.486 0.486 0.486 0.31 0.31 0.31 0.31 0.722 0.722 0.722 0.722 0.722 0.722 0.722 0.486 0.486 0.486 0.486 0.486 0.486 0.478 0.478 0.478 0.478 0.478 0.478 0.478 0.478 0.478 0.478 0.478 0.478 0.478 0.478 0.478 0.478 0.478 0.478 0.478 0.478"/>
+      </feComponentTransfer>
+      <feTurbulence type="fractalNoise" baseFrequency="0.006 0.16" numOctaves="4" seed="71" stitchTiles="stitch" x="0" y="-8" width="276" height="104" result="s1"/>
+      <feTile in="s1" x="0" y="-8" width="552" height="104" result="s"/>
+      <feColorMatrix in="s" type="matrix" values="0 0 0 0 0.949  0 0 0 0 0.902  0 0 0 0 0.824  14 0 0 0 -7.84" result="sl0"/>
+      <feComponentTransfer in="sl0" result="sl"><feFuncA type="linear" slope="0.22"/></feComponentTransfer>
+      <feColorMatrix in="s" type="matrix" values="0 0 0 0 0.659  0 0 0 0 0.435  0 0 0 0 0.243  -14 0 0 0 6.16" result="sd0"/>
+      <feComponentTransfer in="sd0" result="sd"><feFuncA type="linear" slope="0.22"/></feComponentTransfer>
+      <feMerge><feMergeNode in="bands"/><feMergeNode in="sl"/><feMergeNode in="sd"/></feMerge>
+    </filter>
+    <filter id="rsBeltsB" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="0" y="-8" width="552" height="104" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.008 0.045" numOctaves="5" seed="67" stitchTiles="stitch" x="0" y="-8" width="276" height="104" result="w1"/>
+      <feTile in="w1" x="0" y="-8" width="552" height="104" result="w2"/>
+      <feColorMatrix in="w2" type="matrix" values="1 0 0 0 0  1 0 0 0 0  1 0 0 0 0  0 0 0 0 1" result="w"/>
+      <feComposite in="SourceGraphic" in2="w" operator="arithmetic" k1="0" k2="1" k3="0.12" k4="-0.06" result="fld"/>
+      <feComponentTransfer in="fld" result="col">
+        <feFuncR type="table" tableValues="0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.89 0.89 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.89 0.89 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659 0.659"/>
+        <feFuncG type="table" tableValues="0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.69 0.69 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.69 0.69 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435 0.435"/>
+        <feFuncB type="table" tableValues="0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.486 0.486 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.486 0.486 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243 0.243"/>
+      </feComponentTransfer>
+      <feColorMatrix in="fld" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  1 0 0 0 0" result="fa"/>
+      <feComponentTransfer in="fa" result="m"><feFuncA type="table" tableValues="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 0 0 0 0 0 0 0 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"/></feComponentTransfer>
+      <feComposite in="col" in2="m" operator="in"/>
+    </filter>
+    <radialGradient id="rsGrain" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="96.8">
+      <stop offset="0.6773" stop-color="#FFF6E6" stop-opacity="0"/>
+      <stop offset="0.6773" stop-color="#FFF6E6" stop-opacity="0.1"/>
+      <stop offset="0.6818" stop-color="#FFF6E6" stop-opacity="0.1"/>
+      <stop offset="0.6818" stop-color="#FFF6E6" stop-opacity="0"/>
+      <stop offset="0.6863" stop-color="#FFF6E6" stop-opacity="0"/>
+      <stop offset="0.6863" stop-color="#FFF6E6" stop-opacity="0.1"/>
+      <stop offset="0.6942" stop-color="#FFF6E6" stop-opacity="0.1"/>
+      <stop offset="0.6942" stop-color="#FFF6E6" stop-opacity="0"/>
+      <stop offset="0.6994" stop-color="#6E5A40" stop-opacity="0"/>
+      <stop offset="0.6994" stop-color="#6E5A40" stop-opacity="0.17"/>
+      <stop offset="0.705" stop-color="#6E5A40" stop-opacity="0.17"/>
+      <stop offset="0.705" stop-color="#6E5A40" stop-opacity="0"/>
+      <stop offset="0.7088" stop-color="#FFF6E6" stop-opacity="0"/>
+      <stop offset="0.7088" stop-color="#FFF6E6" stop-opacity="0.08"/>
+      <stop offset="0.7152" stop-color="#FFF6E6" stop-opacity="0.08"/>
+      <stop offset="0.7152" stop-color="#FFF6E6" stop-opacity="0"/>
+      <stop offset="0.7171" stop-color="#FFF6E6" stop-opacity="0"/>
+      <stop offset="0.7171" stop-color="#FFF6E6" stop-opacity="0.1"/>
+      <stop offset="0.7257" stop-color="#FFF6E6" stop-opacity="0.1"/>
+      <stop offset="0.7257" stop-color="#FFF6E6" stop-opacity="0"/>
+      <stop offset="0.7525" stop-color="#6E5A40" stop-opacity="0"/>
+      <stop offset="0.7525" stop-color="#6E5A40" stop-opacity="0.12"/>
+      <stop offset="0.7622" stop-color="#6E5A40" stop-opacity="0.12"/>
+      <stop offset="0.7622" stop-color="#6E5A40" stop-opacity="0"/>
+      <stop offset="0.7664" stop-color="#FFF6E6" stop-opacity="0"/>
+      <stop offset="0.7664" stop-color="#FFF6E6" stop-opacity="0.12"/>
+      <stop offset="0.7795" stop-color="#FFF6E6" stop-opacity="0.12"/>
+      <stop offset="0.7795" stop-color="#FFF6E6" stop-opacity="0"/>
+      <stop offset="0.8196" stop-color="#FFF6E6" stop-opacity="0"/>
+      <stop offset="0.8196" stop-color="#FFF6E6" stop-opacity="0.08"/>
+      <stop offset="0.826" stop-color="#FFF6E6" stop-opacity="0.08"/>
+      <stop offset="0.826" stop-color="#FFF6E6" stop-opacity="0"/>
+      <stop offset="0.8331" stop-color="#6E5A40" stop-opacity="0"/>
+      <stop offset="0.8331" stop-color="#6E5A40" stop-opacity="0.21"/>
+      <stop offset="0.8406" stop-color="#6E5A40" stop-opacity="0.21"/>
+      <stop offset="0.8406" stop-color="#6E5A40" stop-opacity="0"/>
+      <stop offset="0.8429" stop-color="#6E5A40" stop-opacity="0"/>
+      <stop offset="0.8429" stop-color="#6E5A40" stop-opacity="0.21"/>
+      <stop offset="0.85" stop-color="#6E5A40" stop-opacity="0.21"/>
+      <stop offset="0.85" stop-color="#6E5A40" stop-opacity="0"/>
+      <stop offset="0.8538" stop-color="#6E5A40" stop-opacity="0"/>
+      <stop offset="0.8538" stop-color="#6E5A40" stop-opacity="0.14"/>
+      <stop offset="0.8595" stop-color="#6E5A40" stop-opacity="0.14"/>
+      <stop offset="0.8595" stop-color="#6E5A40" stop-opacity="0"/>
+      <stop offset="0.896" stop-color="#FFF6E6" stop-opacity="0"/>
+      <stop offset="0.896" stop-color="#FFF6E6" stop-opacity="0.06"/>
+      <stop offset="0.9019" stop-color="#FFF6E6" stop-opacity="0.06"/>
+      <stop offset="0.9019" stop-color="#FFF6E6" stop-opacity="0"/>
+      <stop offset="0.9267" stop-color="#FFF6E6" stop-opacity="0"/>
+      <stop offset="0.9267" stop-color="#FFF6E6" stop-opacity="0.11"/>
+      <stop offset="0.9359" stop-color="#FFF6E6" stop-opacity="0.11"/>
+      <stop offset="0.9359" stop-color="#FFF6E6" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="rsShade" gradientUnits="userSpaceOnUse" cx="11.2" cy="-11.2" r="55">
+      <stop offset="0" stop-color="#FFF1C2" stop-opacity="0.24"/>
+      <stop offset="0.32" stop-color="#FFF1C2" stop-opacity="0"/>
+      <stop offset="0.64" stop-color="#FF9455" stop-opacity="0"/>
+      <stop offset="0.705" stop-color="#FF9455" stop-opacity="0.24"/>
+      <stop offset="0.76" stop-color="#08122E" stop-opacity="0.74"/>
+      <stop offset="0.84" stop-color="#050B1E" stop-opacity="0.97"/>
+      <stop offset="1" stop-color="#050B1E" stop-opacity="1"/>
+    </radialGradient>
+    <radialGradient id="rsHaze" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="44"><stop offset="0.78" stop-color="#F5D7B0" stop-opacity="0"/><stop offset="0.96" stop-color="#F5D7B0" stop-opacity="0.26"/><stop offset="1" stop-color="#FFE9C8" stop-opacity="0.5"/></radialGradient>
+    <radialGradient id="rsRim" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="47.39"><stop offset="0.90" stop-color="#FFE9C8" stop-opacity="0"/><stop offset="0.928" stop-color="#FFE9C8" stop-opacity="0.95"/><stop offset="0.955" stop-color="#F5D7B0" stop-opacity="0.4"/><stop offset="1" stop-color="#F5D7B0" stop-opacity="0"/></radialGradient>
+    <linearGradient id="rsLit" gradientUnits="userSpaceOnUse" x1="31.06" y1="-31.06" x2="-31.06" y2="31.06"><stop offset="0" stop-color="#FFFFFF"/><stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.45"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0.06"/></linearGradient>
+    <mask id="rsLitMask" mask-type="alpha" maskUnits="userSpaceOnUse" x="-52.8" y="-52.8" width="105.6" height="105.6"><rect x="-52.8" y="-52.8" width="105.6" height="105.6" fill="url(#rsLit)"/></mask>
+    <filter id="rsShBlur" filterUnits="userSpaceOnUse" x="-400" y="-400" width="800" height="800"><feGaussianBlur stdDeviation="0.8 0.8"/></filter>
+    <mask id="rsRingLit" maskUnits="userSpaceOnUse" x="-200" y="-120" width="400" height="240">
+      <rect x="-200" y="-120" width="400" height="240" fill="#FFFFFF"/>
+      <g transform="rotate(-22) scale(1 0.31)"><path d="M0 -44A91.15 44 0 0 1 0 44Z" transform="rotate(-148.25)" fill="#000000" fill-opacity="0.85" filter="url(#rsShBlur)"/></g>
+    </mask>
+    <g id="rsMat">
+      <g transform="rotate(-22) scale(1 0.31)">
+        <circle r="60.28" fill="none" stroke="#B49A76" stroke-width="9.68" stroke-opacity="0.4"/>
+        <circle r="67.32" fill="none" stroke="#EAD7B4" stroke-width="4.4" stroke-opacity="0.68"/>
+        <circle r="72.6" fill="none" stroke="#F2E6D2" stroke-width="6.16" stroke-opacity="0.86"/>
+        <circle r="81.62" fill="none" stroke="#D9BF92" stroke-width="6.6" stroke-opacity="0.66"/>
+        <circle r="88.66" fill="none" stroke="#D8C9AE" stroke-width="5.72" stroke-opacity="0.52"/>
+        <circle r="95.04" fill="none" stroke="#F2E6D2" stroke-width="0.53" stroke-opacity="0.6"/>
+        <circle r="96.8" fill="url(#rsGrain)"/>
+        <g fill="#FFFFFF">
+        <g id="rsSubIn"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="60s" repeatCount="indefinite"/>
+            <g opacity="0.3"><circle cx="-16" cy="-70.4" r="0.51"/><circle cx="-20.7" cy="-70.8" r="0.5"/><circle cx="61.1" cy="1.7" r="0.72"/><circle cx="-66" cy="10.5" r="0.62"/><circle cx="36.2" cy="54.2" r="0.53"/><circle cx="-29.5" cy="60.8" r="0.43"/><circle cx="61" cy="-6" r="0.4"/><circle cx="67.9" cy="-7" r="0.54"/><circle cx="-50.4" cy="56.1" r="0.56"/><circle cx="-10.8" cy="-66.9" r="0.55"/><circle cx="-33.8" cy="56.8" r="0.42"/><circle cx="-4" cy="64.6" r="0.69"/><circle cx="-57.9" cy="-39.7" r="0.52"/><circle cx="-65.1" cy="-23.9" r="0.75"/><circle cx="55.3" cy="25.8" r="0.49"/><circle cx="-53.1" cy="21.9" r="0.63"/><circle cx="-65.8" cy="-32.7" r="0.41"/><circle cx="11.5" cy="-65.7" r="0.42"/><circle cx="31.8" cy="54" r="0.54"/><circle cx="-66.1" cy="-35.2" r="0.41"/><circle cx="41.6" cy="52" r="0.47"/><circle cx="1.3" cy="72.9" r="0.45"/><circle cx="57.9" cy="34.5" r="0.47"/></g>
+            <g opacity="0.4"><circle cx="-28.8" cy="-56.2" r="0.42"/><circle cx="-67.5" cy="-31.7" r="0.4"/><circle cx="-68.8" cy="-11.7" r="0.4"/><circle cx="25.1" cy="66.6" r="0.41"/><circle cx="41.6" cy="-52.1" r="0.64"/><circle cx="61.5" cy="17.6" r="0.6"/><circle cx="-73.3" cy="6.7" r="0.42"/><circle cx="25" cy="60.3" r="0.6"/><circle cx="25.6" cy="-65.2" r="0.41"/><circle cx="-46.7" cy="-52" r="0.4"/><circle cx="-17.4" cy="-67.5" r="0.45"/><circle cx="-49.4" cy="-34.4" r="0.51"/><circle cx="5.9" cy="-68" r="0.4"/><circle cx="-55.9" cy="42.5" r="0.43"/><circle cx="69.4" cy="16.4" r="0.62"/><circle cx="-30.8" cy="-62.2" r="0.42"/><circle cx="27.6" cy="-59.5" r="0.4"/><circle cx="-28.2" cy="51.1" r="0.4"/><circle cx="68.2" cy="15" r="0.44"/><circle cx="-71.9" cy="-12.9" r="0.54"/><circle cx="43.2" cy="-53.7" r="0.54"/><circle cx="51.5" cy="-52.9" r="0.45"/><circle cx="-43.5" cy="55.9" r="0.67"/><circle cx="7.8" cy="63.9" r="0.68"/><circle cx="-36" cy="-48.3" r="0.41"/><circle cx="-20.8" cy="-54.8" r="0.44"/><circle cx="-50" cy="33.7" r="0.4"/><circle cx="61.1" cy="35.1" r="0.45"/><circle cx="11.7" cy="-72.4" r="0.5"/><circle cx="-23" cy="-67.5" r="0.46"/><circle cx="33.5" cy="56.6" r="0.42"/><circle cx="-41" cy="-57.2" r="0.48"/><circle cx="67" cy="24.3" r="0.41"/><circle cx="40.2" cy="-56.2" r="0.71"/><circle cx="-8.9" cy="-69.6" r="0.41"/><circle cx="63.1" cy="-36.2" r="0.54"/><circle cx="68" cy="28.1" r="0.43"/><circle cx="-41" cy="42.2" r="0.6"/><circle cx="-65.9" cy="-31" r="0.4"/><circle cx="69.4" cy="-10.9" r="0.6"/><circle cx="-65.7" cy="-8.1" r="0.68"/><circle cx="46.4" cy="53" r="0.5"/></g>
+            <g opacity="0.5"><circle cx="17.3" cy="-64.6" r="0.55"/><circle cx="-23.3" cy="-68.5" r="0.68"/><circle cx="-53.6" cy="-42" r="0.66"/><circle cx="44.8" cy="38.1" r="0.66"/><circle cx="68.1" cy="26.8" r="0.52"/><circle cx="16.6" cy="55.7" r="0.43"/><circle cx="-27.7" cy="63.7" r="0.44"/><circle cx="69.5" cy="-22.8" r="0.6"/><circle cx="47.3" cy="33.3" r="0.49"/><circle cx="40.7" cy="-60.6" r="0.45"/><circle cx="-60.9" cy="-24.2" r="0.46"/><circle cx="59.1" cy="38.2" r="0.54"/><circle cx="-9" cy="-74.8" r="0.59"/><circle cx="-57.4" cy="34.8" r="0.4"/><circle cx="-66.4" cy="-30.4" r="0.4"/><circle cx="-51.3" cy="-47.8" r="0.56"/><circle cx="-48.1" cy="38.7" r="0.4"/><circle cx="-61.5" cy="-17.4" r="0.4"/><circle cx="71.3" cy="-3.7" r="0.7"/><circle cx="-12.8" cy="72.8" r="0.7"/><circle cx="63.3" cy="16.7" r="0.43"/><circle cx="4.5" cy="-71.3" r="0.6"/><circle cx="0.4" cy="-70.1" r="0.41"/><circle cx="-61.3" cy="21.1" r="0.4"/><circle cx="-9.8" cy="56.2" r="0.64"/><circle cx="-61" cy="40.4" r="0.4"/><circle cx="-44.5" cy="53.4" r="0.41"/><circle cx="-65.5" cy="-18.8" r="0.53"/><circle cx="-24.7" cy="57" r="0.4"/><circle cx="-46.4" cy="44.6" r="0.41"/><circle cx="73.1" cy="14.9" r="0.62"/><circle cx="58.2" cy="-40.2" r="0.63"/><circle cx="-21" cy="65.9" r="0.73"/><circle cx="-4.2" cy="56.6" r="0.69"/><circle cx="72.2" cy="-10.8" r="0.51"/><circle cx="-24.4" cy="-69.7" r="0.4"/><circle cx="35.5" cy="-55.9" r="0.43"/><circle cx="46.6" cy="-56.5" r="0.4"/><circle cx="-41.1" cy="-61.9" r="0.4"/><circle cx="-10.1" cy="69.3" r="0.41"/><circle cx="45.6" cy="-55.7" r="0.4"/><circle cx="64.7" cy="36.3" r="0.42"/><circle cx="-65.7" cy="-16" r="0.52"/><circle cx="-1.3" cy="74.6" r="0.4"/><circle cx="64" cy="-17.2" r="0.7"/><circle cx="59.1" cy="10.7" r="0.41"/><circle cx="25.6" cy="63.4" r="0.4"/></g>
+            <g opacity="0.6"><circle cx="-44.7" cy="-35.4" r="0.46"/><circle cx="-28.3" cy="-64.4" r="0.68"/><circle cx="-59.4" cy="8.4" r="0.47"/><circle cx="41.2" cy="-50.8" r="0.4"/><circle cx="28.2" cy="60.3" r="0.4"/><circle cx="-39.8" cy="61.6" r="0.44"/><circle cx="62.1" cy="37.9" r="0.41"/><circle cx="29.5" cy="65.7" r="0.42"/><circle cx="14" cy="59" r="0.4"/><circle cx="32.2" cy="64.8" r="0.52"/><circle cx="11.6" cy="58.1" r="0.58"/><circle cx="-69.1" cy="-14.2" r="0.44"/><circle cx="-68" cy="2.4" r="0.45"/><circle cx="66.3" cy="-35.4" r="0.57"/><circle cx="-62.7" cy="-39.1" r="0.41"/><circle cx="-9.3" cy="-63" r="0.42"/><circle cx="-41.7" cy="52.3" r="0.59"/><circle cx="40.7" cy="-61.3" r="0.47"/><circle cx="47.3" cy="45.7" r="0.52"/><circle cx="59.1" cy="-5.6" r="0.58"/><circle cx="56.2" cy="28" r="0.73"/><circle cx="45.3" cy="49.9" r="0.4"/><circle cx="62.5" cy="-27.2" r="0.43"/><circle cx="-61" cy="4.3" r="0.42"/><circle cx="65.4" cy="14.9" r="0.51"/><circle cx="-74.6" cy="-1.4" r="0.7"/><circle cx="-69.8" cy="1.2" r="0.74"/><circle cx="59.7" cy="-30.3" r="0.61"/><circle cx="-68.5" cy="-3.8" r="0.54"/><circle cx="10.3" cy="-69.8" r="0.63"/><circle cx="49.7" cy="-52.8" r="0.66"/><circle cx="65.3" cy="-15" r="0.4"/><circle cx="51.6" cy="42.4" r="0.53"/><circle cx="72.2" cy="13.6" r="0.57"/><circle cx="56.9" cy="-7.1" r="0.66"/><circle cx="-67.3" cy="-22.5" r="0.61"/><circle cx="51.3" cy="-43" r="0.47"/><circle cx="-68.5" cy="23.5" r="0.59"/></g>
+        </g>
+        <g id="rsSubMid"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="90s" repeatCount="indefinite"/>
+            <g opacity="0.3"><circle cx="-78.4" cy="-30.3" r="0.53"/><circle cx="-34.5" cy="70.9" r="0.4"/><circle cx="-46.6" cy="-65.4" r="0.48"/><circle cx="72.2" cy="-44.2" r="0.57"/><circle cx="19.9" cy="77.5" r="0.59"/><circle cx="-15.1" cy="-82.2" r="0.5"/><circle cx="65.8" cy="-50.9" r="0.43"/><circle cx="73.5" cy="-35.3" r="0.41"/><circle cx="81.8" cy="-12.2" r="0.6"/><circle cx="40.2" cy="73" r="0.58"/><circle cx="8" cy="79" r="0.51"/><circle cx="-44.3" cy="67.9" r="0.46"/><circle cx="-26" cy="79.8" r="0.66"/><circle cx="73.5" cy="31.3" r="0.4"/><circle cx="-81.1" cy="4.6" r="0.53"/><circle cx="-57.6" cy="-60.7" r="0.41"/><circle cx="46.5" cy="66.1" r="0.5"/><circle cx="82.4" cy="11.7" r="0.41"/><circle cx="-7.7" cy="82.2" r="0.42"/><circle cx="-75.3" cy="-28" r="0.43"/><circle cx="-8.7" cy="80.6" r="0.6"/><circle cx="-49.6" cy="66.8" r="0.48"/><circle cx="-35.2" cy="70.2" r="0.57"/><circle cx="-79.6" cy="24.1" r="0.51"/><circle cx="-12.8" cy="-77.9" r="0.74"/></g>
+            <g opacity="0.4"><circle cx="-30.7" cy="77.3" r="0.49"/><circle cx="-62.6" cy="-56.1" r="0.54"/><circle cx="63.8" cy="-52.4" r="0.53"/><circle cx="75.3" cy="25.9" r="0.41"/><circle cx="80.8" cy="7.7" r="0.4"/><circle cx="79.1" cy="19.1" r="0.71"/><circle cx="53.4" cy="63.6" r="0.41"/><circle cx="-65.7" cy="-53.2" r="0.62"/><circle cx="80.9" cy="19.4" r="0.4"/><circle cx="-62.5" cy="55.3" r="0.52"/><circle cx="67.2" cy="-43.2" r="0.43"/><circle cx="-68" cy="45.7" r="0.52"/><circle cx="-32" cy="75.4" r="0.4"/><circle cx="-35.9" cy="76.6" r="0.42"/><circle cx="39.9" cy="-72.7" r="0.52"/><circle cx="-60.8" cy="54.9" r="0.59"/><circle cx="50.2" cy="64.7" r="0.4"/><circle cx="-22" cy="79.8" r="0.54"/><circle cx="-18.1" cy="-79.7" r="0.5"/><circle cx="75.7" cy="-25.6" r="0.65"/><circle cx="64.4" cy="51.9" r="0.4"/><circle cx="-77" cy="-22.3" r="0.43"/><circle cx="-62.7" cy="52.2" r="0.42"/><circle cx="-73.6" cy="37.2" r="0.65"/><circle cx="36.9" cy="75.5" r="0.46"/><circle cx="79.1" cy="23.5" r="0.5"/><circle cx="-14.8" cy="78.5" r="0.7"/><circle cx="70.1" cy="46.2" r="0.42"/><circle cx="-81.5" cy="-6.2" r="0.41"/><circle cx="68.4" cy="-47.7" r="0.4"/><circle cx="-44.9" cy="-65.1" r="0.41"/><circle cx="-84.2" cy="-3.8" r="0.41"/><circle cx="47.2" cy="68.2" r="0.49"/><circle cx="52.1" cy="-59.7" r="0.69"/><circle cx="32.9" cy="73.5" r="0.44"/><circle cx="23.9" cy="79.9" r="0.6"/><circle cx="-49.2" cy="-68.5" r="0.67"/><circle cx="-3.2" cy="-81.9" r="0.55"/><circle cx="81.7" cy="17.1" r="0.54"/><circle cx="-62.2" cy="-50.4" r="0.46"/><circle cx="-22.2" cy="-80.1" r="0.66"/><circle cx="81.3" cy="9.2" r="0.64"/><circle cx="12" cy="82.2" r="0.4"/></g>
+            <g opacity="0.5"><circle cx="-52.3" cy="62.2" r="0.52"/><circle cx="82.4" cy="3.1" r="0.41"/><circle cx="63.2" cy="55.2" r="0.41"/><circle cx="78.6" cy="20.3" r="0.42"/><circle cx="-81.1" cy="-19.6" r="0.56"/><circle cx="82.9" cy="-7.9" r="0.44"/><circle cx="70.8" cy="36.5" r="0.43"/><circle cx="77.4" cy="26.2" r="0.42"/><circle cx="41.5" cy="69.1" r="0.46"/><circle cx="34.4" cy="-72.6" r="0.48"/><circle cx="-29.8" cy="73.5" r="0.4"/><circle cx="3.9" cy="82.5" r="0.58"/><circle cx="17.3" cy="80.4" r="0.6"/><circle cx="-73.1" cy="-29" r="0.72"/><circle cx="69.3" cy="-38.8" r="0.67"/><circle cx="21.7" cy="77.8" r="0.43"/><circle cx="79.2" cy="16.1" r="0.41"/><circle cx="-12.7" cy="-81.5" r="0.43"/><circle cx="42.7" cy="70.5" r="0.75"/><circle cx="70.9" cy="38.6" r="0.42"/><circle cx="72.4" cy="-35" r="0.47"/><circle cx="-2.4" cy="-82.9" r="0.61"/><circle cx="79" cy="-23.8" r="0.67"/><circle cx="53.5" cy="-57.6" r="0.44"/><circle cx="82.2" cy="-1" r="0.74"/><circle cx="-59.3" cy="-59.8" r="0.4"/><circle cx="9.3" cy="-82.3" r="0.45"/><circle cx="-83.3" cy="7.7" r="0.72"/><circle cx="57.2" cy="58.2" r="0.55"/><circle cx="-84.1" cy="-2.7" r="0.59"/><circle cx="-6.3" cy="-78.7" r="0.42"/><circle cx="-63.2" cy="50" r="0.43"/><circle cx="-83.2" cy="13.3" r="0.66"/><circle cx="-14.8" cy="82.6" r="0.5"/><circle cx="-69.4" cy="-41.3" r="0.47"/></g>
+            <g opacity="0.6"><circle cx="-48.5" cy="-63.3" r="0.62"/><circle cx="59.9" cy="-51.8" r="0.47"/><circle cx="-78.6" cy="-0.1" r="0.4"/><circle cx="-62" cy="54.4" r="0.45"/><circle cx="9.2" cy="-79.1" r="0.5"/><circle cx="-60" cy="-58.8" r="0.41"/><circle cx="18.7" cy="-81.3" r="0.61"/><circle cx="0.8" cy="80.6" r="0.43"/><circle cx="48.9" cy="-65.5" r="0.52"/><circle cx="-81.6" cy="-3.6" r="0.72"/><circle cx="71.8" cy="-32" r="0.4"/><circle cx="58.3" cy="-60" r="0.46"/><circle cx="67.2" cy="-42.8" r="0.72"/><circle cx="35.6" cy="-72.5" r="0.4"/><circle cx="31.4" cy="75.5" r="0.52"/><circle cx="83.9" cy="-2.8" r="0.48"/><circle cx="62" cy="51.4" r="0.55"/></g>
+        </g>
+        <g id="rsSubOut"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="130s" repeatCount="indefinite"/>
+            <g opacity="0.3"><circle cx="20.4" cy="-85.8" r="0.41"/><circle cx="-65.8" cy="68.7" r="0.51"/><circle cx="-87.7" cy="-17" r="0.59"/><circle cx="87.3" cy="9.9" r="0.41"/><circle cx="57.6" cy="75.3" r="0.42"/><circle cx="-5.4" cy="86.9" r="0.43"/><circle cx="41.9" cy="76.9" r="0.42"/><circle cx="86.7" cy="4.9" r="0.55"/><circle cx="79.5" cy="-52.7" r="0.4"/><circle cx="71" cy="-55.6" r="0.51"/><circle cx="-30.2" cy="-81.6" r="0.54"/><circle cx="-12.3" cy="87.6" r="0.53"/><circle cx="-83.7" cy="-26" r="0.5"/><circle cx="-88.5" cy="16.9" r="0.58"/><circle cx="-26.2" cy="-83.5" r="0.45"/><circle cx="93.3" cy="16.6" r="0.43"/><circle cx="-58.1" cy="65.4" r="0.45"/><circle cx="-65.8" cy="62.5" r="0.41"/></g>
+            <g opacity="0.4"><circle cx="-56.1" cy="65.4" r="0.69"/><circle cx="81.6" cy="-29.9" r="0.7"/><circle cx="-29.5" cy="84.8" r="0.45"/><circle cx="85.9" cy="20.4" r="0.74"/><circle cx="81.9" cy="33.3" r="0.43"/><circle cx="55" cy="-69.6" r="0.41"/><circle cx="77.5" cy="44.4" r="0.65"/><circle cx="83.7" cy="44.1" r="0.63"/><circle cx="61.4" cy="-64.8" r="0.63"/><circle cx="58.2" cy="68.5" r="0.41"/><circle cx="-69.5" cy="-58.7" r="0.52"/><circle cx="-57.4" cy="66.4" r="0.49"/><circle cx="9.4" cy="90.5" r="0.48"/><circle cx="88.3" cy="13.6" r="0.59"/><circle cx="-22.1" cy="85.6" r="0.49"/><circle cx="-32.7" cy="89.2" r="0.55"/><circle cx="69.7" cy="56.1" r="0.54"/><circle cx="-52.6" cy="-71.1" r="0.54"/><circle cx="-85.4" cy="-17.2" r="0.43"/><circle cx="-20.6" cy="88.9" r="0.48"/><circle cx="-75.6" cy="42.3" r="0.4"/><circle cx="-75.1" cy="-42.5" r="0.52"/><circle cx="35.8" cy="80.7" r="0.47"/><circle cx="-0.5" cy="94.8" r="0.65"/><circle cx="-85.6" cy="-13.9" r="0.73"/><circle cx="90" cy="15" r="0.4"/><circle cx="84.2" cy="31.1" r="0.4"/><circle cx="-62.4" cy="-66.1" r="0.59"/><circle cx="-52.5" cy="72.3" r="0.42"/><circle cx="83" cy="-24.7" r="0.71"/><circle cx="21.8" cy="-92.6" r="0.69"/></g>
+            <g opacity="0.5"><circle cx="-85" cy="-19.6" r="0.75"/><circle cx="48.5" cy="75.2" r="0.7"/><circle cx="84" cy="23" r="0.73"/><circle cx="45.2" cy="79" r="0.42"/><circle cx="8.4" cy="90" r="0.65"/><circle cx="-84.3" cy="-25" r="0.57"/><circle cx="-84.1" cy="29.9" r="0.67"/><circle cx="72.1" cy="-49.2" r="0.59"/><circle cx="88.4" cy="-35.3" r="0.4"/><circle cx="-16.4" cy="86" r="0.41"/><circle cx="-74.3" cy="45.3" r="0.45"/><circle cx="87.9" cy="9" r="0.67"/><circle cx="-29.3" cy="84.3" r="0.4"/><circle cx="53.5" cy="-73.8" r="0.49"/><circle cx="-59.8" cy="-68.5" r="0.57"/><circle cx="80.8" cy="37.8" r="0.57"/><circle cx="-83.5" cy="24.2" r="0.52"/><circle cx="-93.5" cy="-16.9" r="0.43"/><circle cx="-21" cy="87.7" r="0.58"/><circle cx="-54.1" cy="69.1" r="0.58"/><circle cx="-33.4" cy="89.4" r="0.4"/><circle cx="88.7" cy="5.6" r="0.42"/><circle cx="-49.1" cy="-74.6" r="0.55"/><circle cx="87.4" cy="13.1" r="0.41"/><circle cx="-20.1" cy="86.5" r="0.51"/><circle cx="-78" cy="-36.5" r="0.41"/><circle cx="-88.6" cy="-8.7" r="0.4"/><circle cx="-79.7" cy="-38.5" r="0.52"/><circle cx="-66" cy="-57.4" r="0.41"/><circle cx="-10.5" cy="86.7" r="0.71"/><circle cx="-72.4" cy="49.2" r="0.46"/><circle cx="37.7" cy="77.6" r="0.47"/></g>
+            <g opacity="0.6"><circle cx="-77.2" cy="56.1" r="0.57"/><circle cx="48.3" cy="-76.2" r="0.42"/><circle cx="80.7" cy="-37.1" r="0.45"/><circle cx="66.5" cy="59.9" r="0.48"/><circle cx="-48.4" cy="76.9" r="0.52"/><circle cx="9.5" cy="85.7" r="0.64"/><circle cx="24" cy="86.4" r="0.4"/><circle cx="62.3" cy="63.4" r="0.63"/><circle cx="85" cy="30" r="0.7"/><circle cx="43.5" cy="-76.7" r="0.59"/><circle cx="-49.9" cy="-70.1" r="0.43"/><circle cx="34.9" cy="-82.6" r="0.59"/><circle cx="-18.1" cy="88.4" r="0.61"/><circle cx="81.1" cy="49.3" r="0.53"/><circle cx="-87.9" cy="14.4" r="0.42"/><circle cx="-71.8" cy="-53.9" r="0.42"/><circle cx="-87.7" cy="-8.2" r="0.49"/><circle cx="52.8" cy="-69.1" r="0.59"/><circle cx="-79.9" cy="33.4" r="0.47"/></g>
+        </g>
+        </g>
+      </g>
+    </g>
+  </defs>
+  <g id="ringSaturn" transform="translate(200 120)">
+    <circle r="47.39" fill="url(#rsRim)" mask="url(#rsLitMask)"/>
+    <use href="#rsMat" mask="url(#rsRingLit)"/>
+    <circle r="44" fill="#F2D9B8"/>
+    <g clip-path="url(#rsClip)">
+      <g><animateTransform attributeName="transform" type="translate" from="0 0" to="276 0" dur="150s" repeatCount="indefinite"/>
+        <g transform="translate(-364 -44)"><rect y="-8" width="552" height="104" fill="url(#rsLat)" filter="url(#rsBandsA)"/></g>
+      </g>
+      <g><animateTransform attributeName="transform" type="translate" from="0 0" to="-276 0" dur="110s" repeatCount="indefinite"/>
+        <g transform="translate(-88 -44)"><rect y="-8" width="552" height="104" fill="url(#rsLat)" filter="url(#rsBeltsB)"/></g>
+      </g>
+      <g fill="#050B1E" fill-rule="evenodd">
+        <path d="M-50.2 -50.29L-50.2 -23.53 -47.97 -27.8 -45.41 -31.8 -42.6 -35.48 -39.4 -39 -35.8 -42.33 -31.82 -45.4 -27.8 -47.97 -23.53 -50.2 -50.2 -50.29ZM23.8 -50.2L23.53 -50.2 28.6 -47.49 32.2 -45.13 35.8 -42.33 39 -39.4 42.2 -35.95 45 -32.38 47.49 -28.6 49.8 -24.36 49.8 -50.29 23.8 -50.2ZM49.8 -18.4L43.3 -9.4 42.97 -7.4 42.15 -5.4 40.6 -3.05 38.2 -0.28 34.2 3.49 28.6 8 22.6 12.32 6.42 23.4 2.23 26.6 -1 29.4 -5 33.72 -6.47 35.8 -7.57 37.8 -8.34 39.8 -8.61 41.4 -8.42 42.6 -8.17 43 -7.55 43.4 -15.19 49.4 -15.73 49.8 -5.4 49.87 49.8 50.05 50.05 49.8 49.8 -18.4ZM-50.2 -50.23L-50.2 -41.48 -46.2 -45.89 -41.48 -50.2 -50.2 -50.23ZM41.8 -50.2L41.48 -50.2 45.8 -46.29 49.8 -41.96 49.83 -50.2 41.8 -50.2ZM49.8 -9.64L44.2 -2.53 43.4 -0.21 42.6 1.18 41 3.31 39 5.54 35.8 8.66 31.4 12.49 13.57 26.6 6.67 32.6 3 36.4 0.37 39.8 -1.04 42.6 -1.16 43.4 -0.85 44.2 -7.44 49.8 49.8 50.02 50.02 49.8 49.8 -9.64Z" fill-opacity="0.25"/>
+        <path d="M-50.2 -50.23L-50.2 -41.48 -46.2 -45.89 -41.48 -50.2 -50.2 -50.23ZM41.8 -50.2L41.48 -50.2 45.8 -46.29 49.8 -41.96 49.83 -50.2 41.8 -50.2ZM49.8 -9.64L44.2 -2.53 43.4 -0.21 42.6 1.18 41 3.31 39 5.54 35.8 8.66 31.4 12.49 13.57 26.6 6.67 32.6 3 36.4 0.37 39.8 -1.04 42.6 -1.16 43.4 -0.85 44.2 -7.44 49.8 49.8 50.02 50.02 49.8 49.8 -9.64ZM49.8 -1.01L43.8 6.15 42.2 9.01 39 12.76 33.4 18.15 19.63 30.2 14.45 35 11.4 38.13 9.3 40.6 7.98 42.6 7.89 43.4 0.8 49.8 1 49.8 49.8 49.99 49.99 49.8 49.8 -1.01Z" fill-opacity="0.62"/>
+        <path d="M49.8 1.06L43.4 8.6 41.8 11.27 38.6 14.97 33.4 20.01 16.43 35.4 11.94 40.2 10.75 41.8 10.23 43 2.79 49.8 3 49.8 49.8 49.99 49.99 49.8 49.8 1.06ZM49.8 11.09L41.29 20.6 32.6 29.86 24.2 38.42 12.6 49.8 49.8 49.95 49.95 49.8 49.8 11.09Z" fill-opacity="0.45"/>
+      </g>
+    </g>
+    <circle r="44" fill="url(#rsShade)"/>
+    <circle r="44" fill="url(#rsHaze)" mask="url(#rsLitMask)"/>
+    <g clip-path="url(#rsClip)"><circle r="47.39" fill="url(#rsRim)" mask="url(#rsLitMask)"/></g>
+    <use href="#rsMat" clip-path="url(#rsFront)"/>
+  </g>
+</svg>

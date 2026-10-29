@@ -1,0 +1,157 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 60 60">
+  <!-- Barren moon, v1.5 (revised: realistic + vibrant + crisp, built to reference/planet-ref.svg variant F; airless rules). ONE group #moon at
+       translate(30 30); geometry relative to (0,0). Ids: mn*.
+       r 14, disc diameter H = 28. Lit side faces the star: L = (+0.7071, -0.7071) (upper-right). Lighting never rotates.
+       Airless: NO haze, NO rim, NO clouds, NO polar caps, NO limb line; crisp zones and craters; HARD terminator.
+       Palette (v1.5 tokens; cool lavender-tinted greys - never untinted grey): moon.base #A6A2B6 · moon.shelf #7A7694 · moon.maria #4B4866 ·
+         moon.highland #DDD9EC · moon.pit #3C3955 (also crater bowls) · moon.craterRim #EFECF8 · moon.highlight #F4F2FC ·
+         shared terminator.warm #FF9455 · night #08122E / #050B1E  (v1.3 #9A9AA6 / #5E5E6B / #D8D8E0 retired).
+
+       Texture strip: period P = round(2 pi r) = 88 px. ONE rect 2P x 2r = 176x28 (never two abutting rects); noise computed once over the 88x28
+       subregion (stitchTiles stitch) and feTile'd over 176x28. Scrolled west->east: SMIL translate 0 -> +88 over 180 s through #mnClip.
+       Start phase: inner translate(-132 -14) (tile x 30 at the disc's left edge); the visible window stays inside strip x [30, 148], so every
+       crater is drawn twice (at x and x + P).
+
+       Draw order:
+       1. base     circle r 14, #A6A2B6.
+       2. surface  strip, SMIL translate 0 -> 88 over 180 s.
+          2a. regolith  rect 176x28 fill #A6A2B6, filter #mnSurface (region 0..176 x 0..28, sRGB):
+                   n = fractalNoise 0.06, 6 oct, seed 7 · h = fractalNoise 0.11, 4 oct, seed 11 · p = fractalNoise 0.30, 1 oct, seed 9
+                   (all stitched on the P x 2r tile, feTile'd over 2P). Crisp zones (alpha channel, linear threshold, then x alpha):
+                     shelf   #7A7694 a0.5: n slope -36 (alpha 1 below 0.4722, 0 at 0.5)
+                     dark    #4B4866 a0.9: n slope -40 (alpha 1 below 0.43, 0 at 0.455)
+                     bright  #DDD9EC a0.5: h threshold 0.58 slope 28, composited IN the upland mask n > 0.49 (slope 14)
+                     pits    #3C3955 a0.6: p threshold 0.643 slope 30 (1-2 px specks)
+                     merge: base, shelf, dark, bright, pits.
+          2b. craters   the v1.3 seeded table (37 craters, mulberry32 seed 0x4D4F4F, x y R unchanged), each drawn at x and x + P:
+                   outer circle R #EFECF8 a0.75 (crisp sunlit rim wall) + bowl circle 0.82 R centred (+0.18 R, -0.18 R) toward the star, fill #mnBowl =
+                   linear gradient from the bowl's upper-right (0.00 #3C3955 a0.95, the shadowed wall) through 0.55 a0.75 to its lower-left (1.00 a0.5).
+                   Table (x y R): (60.4 13.4 4.2) · (43.3 22.2 3.8) · (10.7 17.3 3.4) · (51.2 13.8 3) · (50.9 21.1 2.6) · (77 23.5 2.4) · (34.5 7 2.3) · (45.3 4.2 2.1) · (25.7 23.3 2) · (41 11.1 1.9) · (35.6 25.7 1.8) · (0.3 16.8 1.6) · (57.9 20.3 1.55) · (61.4 20.4 1.5) · (28.4 5.8 1.45) · (8.7 7.9 1.4) · (80.4 9.6 1.35) · (6.2 6.1 1.3) · (15.6 3.4 1.25) · (17.7 23.9 1.2) · (32.5 4.3 1.2) · (19.3 22.1 1.15) · (54.8 3.5 1.1) · (55.1 16.5 1.1) · (12.2 1.7 1.05) · (46.6 19.1 0.9) · (18.7 12.4 0.9) · (86.2 23.8 0.9) · (3.1 5.5 0.9) · (13.6 4.3 0.9) · (37.2 8.6 0.9) · (60.4 3.6 0.9) · (69.9 2.4 0.9) · (54.7 21.5 0.9) · (58.9 23 0.9) · (28.3 1.8 0.9) · (21.4 7.3 0.9)
+       3. shade    radial, userSpace centre 0.36 r L = (3.56, -3.56), radius 1.25 r = 17.5 (airless HARD terminator):
+                   0 #F4F2FC a0.24 | 0.30 a0 | 0.69 #FF9455 a0 | 0.73 #FF9455 a0.18 (warm terminator band) | 0.755 #08122E a0.82 | 0.80 #050B1E a0.97 | 1.00 a1.
+                   No haze, no rim, no limb line (airless).
+       Static renders show t = 0. -->
+  <defs>
+    <clipPath id="mnClip"><circle r="14"/></clipPath>
+    <filter id="mnSurface" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="0" y="0" width="176" height="28" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.06" numOctaves="6" seed="7" stitchTiles="stitch" x="0" y="0" width="88" height="28" result="mnSurfaceN1"/>
+      <feTile in="mnSurfaceN1" x="0" y="0" width="176" height="28" result="mnSurfaceN"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.11" numOctaves="4" seed="11" stitchTiles="stitch" x="0" y="0" width="88" height="28" result="mnSurfaceH1"/>
+      <feTile in="mnSurfaceH1" x="0" y="0" width="176" height="28" result="mnSurfaceH"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.30" numOctaves="1" seed="9" stitchTiles="stitch" x="0" y="0" width="88" height="28" result="mnSurfaceP1"/>
+      <feTile in="mnSurfaceP1" x="0" y="0" width="176" height="28" result="mnSurfacePn"/>
+      <feColorMatrix in="mnSurfaceN" type="matrix" values="0 0 0 0 0.478  0 0 0 0 0.463  0 0 0 0 0.580  0 0 0 1 0" result="mnSurfaceShelfRGB"/>
+      <feComponentTransfer in="mnSurfaceShelfRGB" result="mnSurfaceShelfT"><feFuncA type="linear" slope="-36" intercept="18"/></feComponentTransfer>
+      <feComponentTransfer in="mnSurfaceShelfT" result="mnSurfaceShelf"><feFuncA type="linear" slope="0.5"/></feComponentTransfer>
+      <feColorMatrix in="mnSurfaceN" type="matrix" values="0 0 0 0 0.294  0 0 0 0 0.282  0 0 0 0 0.400  0 0 0 1 0" result="mnSurfaceDarkRGB"/>
+      <feComponentTransfer in="mnSurfaceDarkRGB" result="mnSurfaceDarkT"><feFuncA type="linear" slope="-40" intercept="18.2"/></feComponentTransfer>
+      <feComponentTransfer in="mnSurfaceDarkT" result="mnSurfaceDark"><feFuncA type="linear" slope="0.9"/></feComponentTransfer>
+      <feColorMatrix in="mnSurfaceH" type="matrix" values="0 0 0 0 0.867  0 0 0 0 0.851  0 0 0 0 0.925  0 0 0 1 0" result="mnSurfaceBriMRGB"/>
+      <feComponentTransfer in="mnSurfaceBriMRGB" result="mnSurfaceBriMT"><feFuncA type="linear" slope="28" intercept="-16.24"/></feComponentTransfer>
+      <feComponentTransfer in="mnSurfaceBriMT" result="mnSurfaceBriM"><feFuncA type="linear" slope="0.5"/></feComponentTransfer>
+      <feColorMatrix in="mnSurfaceN" type="matrix" values="0 0 0 0 1.000  0 0 0 0 1.000  0 0 0 0 1.000  0 0 0 1 0" result="mnSurfaceUpRGB"/>
+      <feComponentTransfer in="mnSurfaceUpRGB" result="mnSurfaceUp"><feFuncA type="linear" slope="14" intercept="-6.86"/></feComponentTransfer>
+      <feComposite in="mnSurfaceBriM" in2="mnSurfaceUp" operator="in" result="mnSurfaceBright"/>
+      <feColorMatrix in="mnSurfacePn" type="matrix" values="0 0 0 0 0.235  0 0 0 0 0.224  0 0 0 0 0.333  0 0 0 1 0" result="mnSurfacePitsRGB"/>
+      <feComponentTransfer in="mnSurfacePitsRGB" result="mnSurfacePitsT"><feFuncA type="linear" slope="30" intercept="-19.29"/></feComponentTransfer>
+      <feComponentTransfer in="mnSurfacePitsT" result="mnSurfacePits"><feFuncA type="linear" slope="0.6"/></feComponentTransfer>
+      <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="mnSurfaceShelf"/><feMergeNode in="mnSurfaceDark"/><feMergeNode in="mnSurfaceBright"/><feMergeNode in="mnSurfacePits"/></feMerge>
+    </filter>
+    <linearGradient id="mnBowl" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3C3955" stop-opacity="0.95"/><stop offset="0.55" stop-color="#3C3955" stop-opacity="0.75"/><stop offset="1" stop-color="#3C3955" stop-opacity="0.5"/></linearGradient>
+    <radialGradient id="mnShade" gradientUnits="userSpaceOnUse" cx="3.56" cy="-3.56" r="17.5">
+      <stop offset="0" stop-color="#F4F2FC" stop-opacity="0.24"/>
+      <stop offset="0.3" stop-color="#F4F2FC" stop-opacity="0"/>
+      <stop offset="0.69" stop-color="#FF9455" stop-opacity="0"/>
+      <stop offset="0.73" stop-color="#FF9455" stop-opacity="0.18"/>
+      <stop offset="0.755" stop-color="#08122E" stop-opacity="0.82"/>
+      <stop offset="0.8" stop-color="#050B1E" stop-opacity="0.97"/>
+      <stop offset="1" stop-color="#050B1E" stop-opacity="1"/>
+    </radialGradient>
+  </defs>
+  <g id="moon" transform="translate(30 30)">
+    <circle r="14" fill="#A6A2B6"/>
+    <g clip-path="url(#mnClip)">
+      <g id="mnSurfaceAnim">
+        <animateTransform attributeName="transform" type="translate" from="0 0" to="88 0" dur="180s" repeatCount="indefinite"/>
+        <g id="mnSurfaceStrip" transform="translate(-132 -14)">
+          <rect width="176" height="28" fill="#A6A2B6" filter="url(#mnSurface)"/>
+          <circle cx="60.4" cy="13.4" r="4.2" fill="#EFECF8" fill-opacity="0.75"/><circle cx="61.16" cy="12.64" r="3.44" fill="url(#mnBowl)"/>
+          <circle cx="148.4" cy="13.4" r="4.2" fill="#EFECF8" fill-opacity="0.75"/><circle cx="149.16" cy="12.64" r="3.44" fill="url(#mnBowl)"/>
+          <circle cx="43.3" cy="22.2" r="3.8" fill="#EFECF8" fill-opacity="0.75"/><circle cx="43.98" cy="21.52" r="3.12" fill="url(#mnBowl)"/>
+          <circle cx="131.3" cy="22.2" r="3.8" fill="#EFECF8" fill-opacity="0.75"/><circle cx="131.98" cy="21.52" r="3.12" fill="url(#mnBowl)"/>
+          <circle cx="10.7" cy="17.3" r="3.4" fill="#EFECF8" fill-opacity="0.75"/><circle cx="11.31" cy="16.69" r="2.79" fill="url(#mnBowl)"/>
+          <circle cx="98.7" cy="17.3" r="3.4" fill="#EFECF8" fill-opacity="0.75"/><circle cx="99.31" cy="16.69" r="2.79" fill="url(#mnBowl)"/>
+          <circle cx="51.2" cy="13.8" r="3" fill="#EFECF8" fill-opacity="0.75"/><circle cx="51.74" cy="13.26" r="2.46" fill="url(#mnBowl)"/>
+          <circle cx="139.2" cy="13.8" r="3" fill="#EFECF8" fill-opacity="0.75"/><circle cx="139.74" cy="13.26" r="2.46" fill="url(#mnBowl)"/>
+          <circle cx="50.9" cy="21.1" r="2.6" fill="#EFECF8" fill-opacity="0.75"/><circle cx="51.37" cy="20.63" r="2.13" fill="url(#mnBowl)"/>
+          <circle cx="138.9" cy="21.1" r="2.6" fill="#EFECF8" fill-opacity="0.75"/><circle cx="139.37" cy="20.63" r="2.13" fill="url(#mnBowl)"/>
+          <circle cx="77" cy="23.5" r="2.4" fill="#EFECF8" fill-opacity="0.75"/><circle cx="77.43" cy="23.07" r="1.97" fill="url(#mnBowl)"/>
+          <circle cx="165" cy="23.5" r="2.4" fill="#EFECF8" fill-opacity="0.75"/><circle cx="165.43" cy="23.07" r="1.97" fill="url(#mnBowl)"/>
+          <circle cx="34.5" cy="7" r="2.3" fill="#EFECF8" fill-opacity="0.75"/><circle cx="34.91" cy="6.59" r="1.89" fill="url(#mnBowl)"/>
+          <circle cx="122.5" cy="7" r="2.3" fill="#EFECF8" fill-opacity="0.75"/><circle cx="122.91" cy="6.59" r="1.89" fill="url(#mnBowl)"/>
+          <circle cx="45.3" cy="4.2" r="2.1" fill="#EFECF8" fill-opacity="0.75"/><circle cx="45.68" cy="3.82" r="1.72" fill="url(#mnBowl)"/>
+          <circle cx="133.3" cy="4.2" r="2.1" fill="#EFECF8" fill-opacity="0.75"/><circle cx="133.68" cy="3.82" r="1.72" fill="url(#mnBowl)"/>
+          <circle cx="25.7" cy="23.3" r="2" fill="#EFECF8" fill-opacity="0.75"/><circle cx="26.06" cy="22.94" r="1.64" fill="url(#mnBowl)"/>
+          <circle cx="113.7" cy="23.3" r="2" fill="#EFECF8" fill-opacity="0.75"/><circle cx="114.06" cy="22.94" r="1.64" fill="url(#mnBowl)"/>
+          <circle cx="41" cy="11.1" r="1.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="41.34" cy="10.76" r="1.56" fill="url(#mnBowl)"/>
+          <circle cx="129" cy="11.1" r="1.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="129.34" cy="10.76" r="1.56" fill="url(#mnBowl)"/>
+          <circle cx="35.6" cy="25.7" r="1.8" fill="#EFECF8" fill-opacity="0.75"/><circle cx="35.92" cy="25.38" r="1.48" fill="url(#mnBowl)"/>
+          <circle cx="123.6" cy="25.7" r="1.8" fill="#EFECF8" fill-opacity="0.75"/><circle cx="123.92" cy="25.38" r="1.48" fill="url(#mnBowl)"/>
+          <circle cx="0.3" cy="16.8" r="1.6" fill="#EFECF8" fill-opacity="0.75"/><circle cx="0.59" cy="16.51" r="1.31" fill="url(#mnBowl)"/>
+          <circle cx="88.3" cy="16.8" r="1.6" fill="#EFECF8" fill-opacity="0.75"/><circle cx="88.59" cy="16.51" r="1.31" fill="url(#mnBowl)"/>
+          <circle cx="57.9" cy="20.3" r="1.55" fill="#EFECF8" fill-opacity="0.75"/><circle cx="58.18" cy="20.02" r="1.27" fill="url(#mnBowl)"/>
+          <circle cx="145.9" cy="20.3" r="1.55" fill="#EFECF8" fill-opacity="0.75"/><circle cx="146.18" cy="20.02" r="1.27" fill="url(#mnBowl)"/>
+          <circle cx="61.4" cy="20.4" r="1.5" fill="#EFECF8" fill-opacity="0.75"/><circle cx="61.67" cy="20.13" r="1.23" fill="url(#mnBowl)"/>
+          <circle cx="149.4" cy="20.4" r="1.5" fill="#EFECF8" fill-opacity="0.75"/><circle cx="149.67" cy="20.13" r="1.23" fill="url(#mnBowl)"/>
+          <circle cx="28.4" cy="5.8" r="1.45" fill="#EFECF8" fill-opacity="0.75"/><circle cx="28.66" cy="5.54" r="1.19" fill="url(#mnBowl)"/>
+          <circle cx="116.4" cy="5.8" r="1.45" fill="#EFECF8" fill-opacity="0.75"/><circle cx="116.66" cy="5.54" r="1.19" fill="url(#mnBowl)"/>
+          <circle cx="8.7" cy="7.9" r="1.4" fill="#EFECF8" fill-opacity="0.75"/><circle cx="8.95" cy="7.65" r="1.15" fill="url(#mnBowl)"/>
+          <circle cx="96.7" cy="7.9" r="1.4" fill="#EFECF8" fill-opacity="0.75"/><circle cx="96.95" cy="7.65" r="1.15" fill="url(#mnBowl)"/>
+          <circle cx="80.4" cy="9.6" r="1.35" fill="#EFECF8" fill-opacity="0.75"/><circle cx="80.64" cy="9.36" r="1.11" fill="url(#mnBowl)"/>
+          <circle cx="168.4" cy="9.6" r="1.35" fill="#EFECF8" fill-opacity="0.75"/><circle cx="168.64" cy="9.36" r="1.11" fill="url(#mnBowl)"/>
+          <circle cx="6.2" cy="6.1" r="1.3" fill="#EFECF8" fill-opacity="0.75"/><circle cx="6.43" cy="5.87" r="1.07" fill="url(#mnBowl)"/>
+          <circle cx="94.2" cy="6.1" r="1.3" fill="#EFECF8" fill-opacity="0.75"/><circle cx="94.43" cy="5.87" r="1.07" fill="url(#mnBowl)"/>
+          <circle cx="15.6" cy="3.4" r="1.25" fill="#EFECF8" fill-opacity="0.75"/><circle cx="15.82" cy="3.17" r="1.02" fill="url(#mnBowl)"/>
+          <circle cx="103.6" cy="3.4" r="1.25" fill="#EFECF8" fill-opacity="0.75"/><circle cx="103.82" cy="3.17" r="1.02" fill="url(#mnBowl)"/>
+          <circle cx="17.7" cy="23.9" r="1.2" fill="#EFECF8" fill-opacity="0.75"/><circle cx="17.92" cy="23.68" r="0.98" fill="url(#mnBowl)"/>
+          <circle cx="105.7" cy="23.9" r="1.2" fill="#EFECF8" fill-opacity="0.75"/><circle cx="105.92" cy="23.68" r="0.98" fill="url(#mnBowl)"/>
+          <circle cx="32.5" cy="4.3" r="1.2" fill="#EFECF8" fill-opacity="0.75"/><circle cx="32.72" cy="4.08" r="0.98" fill="url(#mnBowl)"/>
+          <circle cx="120.5" cy="4.3" r="1.2" fill="#EFECF8" fill-opacity="0.75"/><circle cx="120.72" cy="4.08" r="0.98" fill="url(#mnBowl)"/>
+          <circle cx="19.3" cy="22.1" r="1.15" fill="#EFECF8" fill-opacity="0.75"/><circle cx="19.51" cy="21.89" r="0.94" fill="url(#mnBowl)"/>
+          <circle cx="107.3" cy="22.1" r="1.15" fill="#EFECF8" fill-opacity="0.75"/><circle cx="107.51" cy="21.89" r="0.94" fill="url(#mnBowl)"/>
+          <circle cx="54.8" cy="3.5" r="1.1" fill="#EFECF8" fill-opacity="0.75"/><circle cx="55" cy="3.3" r="0.9" fill="url(#mnBowl)"/>
+          <circle cx="142.8" cy="3.5" r="1.1" fill="#EFECF8" fill-opacity="0.75"/><circle cx="143" cy="3.3" r="0.9" fill="url(#mnBowl)"/>
+          <circle cx="55.1" cy="16.5" r="1.1" fill="#EFECF8" fill-opacity="0.75"/><circle cx="55.3" cy="16.3" r="0.9" fill="url(#mnBowl)"/>
+          <circle cx="143.1" cy="16.5" r="1.1" fill="#EFECF8" fill-opacity="0.75"/><circle cx="143.3" cy="16.3" r="0.9" fill="url(#mnBowl)"/>
+          <circle cx="12.2" cy="1.7" r="1.05" fill="#EFECF8" fill-opacity="0.75"/><circle cx="12.39" cy="1.51" r="0.86" fill="url(#mnBowl)"/>
+          <circle cx="100.2" cy="1.7" r="1.05" fill="#EFECF8" fill-opacity="0.75"/><circle cx="100.39" cy="1.51" r="0.86" fill="url(#mnBowl)"/>
+          <circle cx="46.6" cy="19.1" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="46.76" cy="18.94" r="0.74" fill="url(#mnBowl)"/>
+          <circle cx="134.6" cy="19.1" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="134.76" cy="18.94" r="0.74" fill="url(#mnBowl)"/>
+          <circle cx="18.7" cy="12.4" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="18.86" cy="12.24" r="0.74" fill="url(#mnBowl)"/>
+          <circle cx="106.7" cy="12.4" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="106.86" cy="12.24" r="0.74" fill="url(#mnBowl)"/>
+          <circle cx="86.2" cy="23.8" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="86.36" cy="23.64" r="0.74" fill="url(#mnBowl)"/>
+          <circle cx="174.2" cy="23.8" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="174.36" cy="23.64" r="0.74" fill="url(#mnBowl)"/>
+          <circle cx="3.1" cy="5.5" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="3.26" cy="5.34" r="0.74" fill="url(#mnBowl)"/>
+          <circle cx="91.1" cy="5.5" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="91.26" cy="5.34" r="0.74" fill="url(#mnBowl)"/>
+          <circle cx="13.6" cy="4.3" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="13.76" cy="4.14" r="0.74" fill="url(#mnBowl)"/>
+          <circle cx="101.6" cy="4.3" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="101.76" cy="4.14" r="0.74" fill="url(#mnBowl)"/>
+          <circle cx="37.2" cy="8.6" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="37.36" cy="8.44" r="0.74" fill="url(#mnBowl)"/>
+          <circle cx="125.2" cy="8.6" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="125.36" cy="8.44" r="0.74" fill="url(#mnBowl)"/>
+          <circle cx="60.4" cy="3.6" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="60.56" cy="3.44" r="0.74" fill="url(#mnBowl)"/>
+          <circle cx="148.4" cy="3.6" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="148.56" cy="3.44" r="0.74" fill="url(#mnBowl)"/>
+          <circle cx="69.9" cy="2.4" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="70.06" cy="2.24" r="0.74" fill="url(#mnBowl)"/>
+          <circle cx="157.9" cy="2.4" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="158.06" cy="2.24" r="0.74" fill="url(#mnBowl)"/>
+          <circle cx="54.7" cy="21.5" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="54.86" cy="21.34" r="0.74" fill="url(#mnBowl)"/>
+          <circle cx="142.7" cy="21.5" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="142.86" cy="21.34" r="0.74" fill="url(#mnBowl)"/>
+          <circle cx="58.9" cy="23" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="59.06" cy="22.84" r="0.74" fill="url(#mnBowl)"/>
+          <circle cx="146.9" cy="23" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="147.06" cy="22.84" r="0.74" fill="url(#mnBowl)"/>
+          <circle cx="28.3" cy="1.8" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="28.46" cy="1.64" r="0.74" fill="url(#mnBowl)"/>
+          <circle cx="116.3" cy="1.8" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="116.46" cy="1.64" r="0.74" fill="url(#mnBowl)"/>
+          <circle cx="21.4" cy="7.3" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="21.56" cy="7.14" r="0.74" fill="url(#mnBowl)"/>
+          <circle cx="109.4" cy="7.3" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="109.56" cy="7.14" r="0.74" fill="url(#mnBowl)"/>
+        </g>
+      </g>
+    </g>
+    <circle r="14" fill="url(#mnShade)"/>
+  </g>
+</svg>

@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="400" viewBox="0 0 640 400">
+  <!-- Emission nebula, v1.4 space environment, built to the v1.5 (revised) bar: soft glowing hydrogen gas, faint ionisation fronts only where the
+       embedded stars light the gas, crisp dark dust lanes; every texture tinted. viewBox 0 0 640 400. ONE group #nebulaEmission at translate(320 200);
+       geometry relative to (0,0). Ids ne*. Background-pass art (drawn after the starfield, before the bodies). Gameplay hook (optional, NOT in scope):
+       drag zone = ellipse rx 250 ry 150 about (0,0) (circle-equivalent outline radius 195 px).
+
+       Mask: 4 blobs, ellipses filled with #neMask (radial, white: 0 a1 | 0.5 a0.65 | 1 a0): (cx cy rx ry rot) (-95 -5 200 135 -12) · (75 25 175 120 18) ·
+         (150 -70 120 85 0) · (-175 65 125 80 0). Inside each cloud/rim filter the blob mask is displaced by the big noise (feDisplacementMap scale 60,
+         R/G) and softened by blur 1, so the outline is irregular, not elliptical.
+       Cloud filters #neCloudA / #neCloudB (region -320 -200 640 400, sRGB):
+         n  = 0.6 * big + 0.4 * fine, both opaque fractalNoise R: big 0.006 / 4 oct / seed 5 (shared, so the layers agree on the big shapes);
+              fine 0.012 / 4 oct / seed 11 (layer A) or 17 (layer B).
+         d  = clamp(2.2 n - 0.75) x displaced mask alpha (density).
+         violet  #B48CFF  alpha = 0.16 x smoothstep(0.00, 0.40, d)  (21-entry table; outer gas; neb.emission.edge = result.lost hex)
+         rose    #E0566F  alpha = 0.22 x smoothstep(0.28, 0.65, d)  (21-entry table; H-alpha core; neb.emission.core)
+         Body alpha per colour layer <= 0.22 (soft: gas looks like gas).
+       Ionisation fronts #neRim (same n, d as layer A): D = smoothstep(0.24, 0.27, d) (101-entry table), blur 0.5; front band = D out blur(D, 2.2)
+         (a ~1-2 px band just inside the gas edge), broken up by g = clamp(3.5 x fractalNoise(0.02, 3 oct, seed 3) - 1.45), colour #FF9DB0
+         (neb.emission.rim) x 0.5. The rim group is masked by #neRimMask = a0.12 floor + white radial pools (0 a1 | 0.45 a0.75 | 1 a0) of r 150 /
+         170 / 80 around the stars at (-150,-22), (42,-38), (168,-82): the fronts glow where the young stars ionise the gas and fade to a faint
+         a0.06 elsewhere, so the blobs read as glowing gas, not outlined shapes. (No second violet rim.)
+       Dust lanes: rect -260 -90 520 180 under translate(40 12) rotate(20), filled #neLaneMask (radial, white a1 at 0 -> 0.6 a0.7 -> 1 a0), filter #neLane:
+         turbulence (absolute-value noise) "0.006 0.024" / 4 oct / seed 27, alpha = clamp(1.0 - 5 R) x mask -> thin crisp wisps along the valleys,
+         colour bg.base #050710 x 0.35.
+       Stars (8 young stars, near-star style): (x y r colour) (-150 -22 1.6 #FFFFFF) · (42 -38 1.5 #B8CCFF) · (-62 30 1.1 #FFFFFF) · (112 22 1.0 #B8CCFF) ·
+         (-112 70 0.9 #B8CCFF) · (168 -82 1.1 #FFFFFF) · (8 62 0.9 #FFFFFF) · (-30 -72 1.0 #B8CCFF); halo #neHalo r 4.5 (the two brightest r 7)
+         white 0 a0.30 | 0.35 a0.12 | 1 a0; the two brightest add 4 crisp spikes (length 6 / 5.5 px, half-width 0.35, a0.5).
+       Animation: layer A opacity 1 -> 0.6 -> 1, layer B 0.6 -> 1 -> 0.6, both 40 s eased (cross-fade = the fine structure morphs);
+         the whole cloud (lanes + stars included) breathes scale 1 -> 1.01 -> 1 over 30 s about (0,0). Static renders show t = 0. -->
+  <defs>
+    <radialGradient id="neMask" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#FFFFFF"/><stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.65"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/></radialGradient>
+    <radialGradient id="neLaneMask" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#FFFFFF"/><stop offset="0.6" stop-color="#FFFFFF" stop-opacity="0.7"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/></radialGradient>
+    <radialGradient id="neHalo" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#FFFFFF" stop-opacity="0.30"/><stop offset="0.35" stop-color="#FFFFFF" stop-opacity="0.12"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/></radialGradient>
+    <filter id="neCloudA" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-320" y="-200" width="640" height="400" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.006" numOctaves="4" seed="5" result="b0"/>
+      <feColorMatrix in="b0" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0 1" result="b"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="4" seed="11" result="f0"/>
+      <feColorMatrix in="f0" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0 1" result="f"/>
+      <feComposite in="b" in2="f" operator="arithmetic" k2="0.6" k3="0.4" result="n"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  2.2 0 0 0 -0.75" result="na"/>
+      <feDisplacementMap in="SourceGraphic" in2="b" scale="60" xChannelSelector="R" yChannelSelector="G" result="m0"/><feGaussianBlur in="m0" stdDeviation="1" result="m"/>
+      <feComposite in="na" in2="m" operator="arithmetic" k1="1" result="d"/>
+      <feColorMatrix in="d" type="matrix" values="0 0 0 0 0.706  0 0 0 0 0.549  0 0 0 0 1  0 0 0 1 0" result="vi0"/>
+      <feComponentTransfer in="vi0" result="vi"><feFuncA type="table" tableValues="0 0.003 0.018 0.043 0.074 0.105 0.133 0.152 0.16 0.16 0.16 0.16 0.16 0.16 0.16 0.16 0.16 0.16 0.16 0.16 0.16"/></feComponentTransfer>
+      <feColorMatrix in="d" type="matrix" values="0 0 0 0 0.878  0 0 0 0 0.337  0 0 0 0 0.435  0 0 0 1 0" result="ro0"/>
+      <feComponentTransfer in="ro0" result="ro"><feFuncA type="table" tableValues="0 0 0 0 0 0 0.002 0.024 0.063 0.11 0.157 0.196 0.218 0.22 0.22 0.22 0.22 0.22 0.22 0.22 0.22"/></feComponentTransfer>
+      <feMerge><feMergeNode in="vi"/><feMergeNode in="ro"/></feMerge>
+    </filter>
+    <filter id="neCloudB" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-320" y="-200" width="640" height="400" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.006" numOctaves="4" seed="5" result="b0"/>
+      <feColorMatrix in="b0" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0 1" result="b"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="4" seed="17" result="f0"/>
+      <feColorMatrix in="f0" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0 1" result="f"/>
+      <feComposite in="b" in2="f" operator="arithmetic" k2="0.6" k3="0.4" result="n"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  2.2 0 0 0 -0.75" result="na"/>
+      <feDisplacementMap in="SourceGraphic" in2="b" scale="60" xChannelSelector="R" yChannelSelector="G" result="m0"/><feGaussianBlur in="m0" stdDeviation="1" result="m"/>
+      <feComposite in="na" in2="m" operator="arithmetic" k1="1" result="d"/>
+      <feColorMatrix in="d" type="matrix" values="0 0 0 0 0.706  0 0 0 0 0.549  0 0 0 0 1  0 0 0 1 0" result="vi0"/>
+      <feComponentTransfer in="vi0" result="vi"><feFuncA type="table" tableValues="0 0.003 0.018 0.043 0.074 0.105 0.133 0.152 0.16 0.16 0.16 0.16 0.16 0.16 0.16 0.16 0.16 0.16 0.16 0.16 0.16"/></feComponentTransfer>
+      <feColorMatrix in="d" type="matrix" values="0 0 0 0 0.878  0 0 0 0 0.337  0 0 0 0 0.435  0 0 0 1 0" result="ro0"/>
+      <feComponentTransfer in="ro0" result="ro"><feFuncA type="table" tableValues="0 0 0 0 0 0 0.002 0.024 0.063 0.11 0.157 0.196 0.218 0.22 0.22 0.22 0.22 0.22 0.22 0.22 0.22"/></feComponentTransfer>
+      <feMerge><feMergeNode in="vi"/><feMergeNode in="ro"/></feMerge>
+    </filter>
+    <filter id="neRim" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-320" y="-200" width="640" height="400" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.006" numOctaves="4" seed="5" result="b0"/>
+      <feColorMatrix in="b0" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0 1" result="b"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="4" seed="11" result="f0"/>
+      <feColorMatrix in="f0" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0 1" result="f"/>
+      <feComposite in="b" in2="f" operator="arithmetic" k2="0.6" k3="0.4" result="n"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  2.2 0 0 0 -0.75" result="na"/>
+      <feDisplacementMap in="SourceGraphic" in2="b" scale="60" xChannelSelector="R" yChannelSelector="G" result="m0"/><feGaussianBlur in="m0" stdDeviation="1" result="m"/>
+      <feComposite in="na" in2="m" operator="arithmetic" k1="1" result="d"/>
+      <feComponentTransfer in="d" result="D0"><feFuncA type="table" tableValues="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.055 0.394 0.802 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"/></feComponentTransfer>
+      <feGaussianBlur in="D0" stdDeviation="0.5" result="D"/>
+      <feGaussianBlur in="D" stdDeviation="2.2" result="Db"/>
+      <feComposite in="D" in2="Db" operator="out" result="R0"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="3" seed="3" result="g0"/>
+      <feColorMatrix in="g0" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  3.5 0 0 0 -1.45" result="g"/>
+      <feComposite in="R0" in2="g" operator="arithmetic" k1="1" result="R1"/>
+      <feColorMatrix in="R1" type="matrix" values="0 0 0 0 1  0 0 0 0 0.616  0 0 0 0 0.69  0 0 0 0.5 0" result="rimc"/>
+      <feColorMatrix in="D" type="matrix" values="0 0 0 0 0.878  0 0 0 0 0.337  0 0 0 0 0.435  0 0 0 0 0" result="dfill"/>
+      <feMerge><feMergeNode in="dfill"/><feMergeNode in="rimc"/></feMerge>
+    </filter>
+    <radialGradient id="neRimLight" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#FFFFFF"/><stop offset="0.45" stop-color="#FFFFFF" stop-opacity="0.75"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/></radialGradient>
+    <mask id="neRimMask" mask-type="alpha" maskUnits="userSpaceOnUse" x="-320" y="-200" width="640" height="400"><rect x="-320" y="-200" width="640" height="400" fill="#FFFFFF" fill-opacity="0.12"/><circle cx="-150" cy="-22" r="150" fill="url(#neRimLight)"/><circle cx="42" cy="-38" r="170" fill="url(#neRimLight)"/><circle cx="168" cy="-82" r="80" fill="url(#neRimLight)"/></mask>
+    <filter id="neLane" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-260" y="-90" width="520" height="180" color-interpolation-filters="sRGB">
+      <feTurbulence type="turbulence" baseFrequency="0.006 0.024" numOctaves="4" seed="27" result="t0"/>
+      <feColorMatrix in="t0" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -5 0 0 0 1.0" result="t"/>
+      <feComposite in="t" in2="SourceGraphic" operator="arithmetic" k1="1" result="l"/>
+      <feColorMatrix in="l" type="matrix" values="0 0 0 0 0.02  0 0 0 0 0.027  0 0 0 0 0.063  0 0 0 1 0" result="l1"/>
+      <feComponentTransfer in="l1"><feFuncA type="linear" slope="0.35"/></feComponentTransfer>
+    </filter>
+  </defs>
+  <g id="nebulaEmission" transform="translate(320 200)">
+    <g><animateTransform attributeName="transform" type="scale" values="1;1.01;1" dur="30s" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.37 0 0.63 1;0.37 0 0.63 1" repeatCount="indefinite"/>
+      <g filter="url(#neCloudA)"><animate attributeName="opacity" values="1;0.6;1" dur="40s" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.37 0 0.63 1;0.37 0 0.63 1" repeatCount="indefinite"/><ellipse cx="-95" cy="-5" rx="200" ry="135" transform="rotate(-12 -95 -5)" fill="url(#neMask)"/><ellipse cx="75" cy="25" rx="175" ry="120" transform="rotate(18 75 25)" fill="url(#neMask)"/><ellipse cx="150" cy="-70" rx="120" ry="85" fill="url(#neMask)"/><ellipse cx="-175" cy="65" rx="125" ry="80" fill="url(#neMask)"/></g>
+      <g filter="url(#neCloudB)" opacity="0.6"><animate attributeName="opacity" values="0.6;1;0.6" dur="40s" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.37 0 0.63 1;0.37 0 0.63 1" repeatCount="indefinite"/><ellipse cx="-95" cy="-5" rx="200" ry="135" transform="rotate(-12 -95 -5)" fill="url(#neMask)"/><ellipse cx="75" cy="25" rx="175" ry="120" transform="rotate(18 75 25)" fill="url(#neMask)"/><ellipse cx="150" cy="-70" rx="120" ry="85" fill="url(#neMask)"/><ellipse cx="-175" cy="65" rx="125" ry="80" fill="url(#neMask)"/></g>
+      <g filter="url(#neRim)" mask="url(#neRimMask)"><ellipse cx="-95" cy="-5" rx="200" ry="135" transform="rotate(-12 -95 -5)" fill="url(#neMask)"/><ellipse cx="75" cy="25" rx="175" ry="120" transform="rotate(18 75 25)" fill="url(#neMask)"/><ellipse cx="150" cy="-70" rx="120" ry="85" fill="url(#neMask)"/><ellipse cx="-175" cy="65" rx="125" ry="80" fill="url(#neMask)"/></g>
+      <g transform="translate(40 12) rotate(20)"><rect x="-260" y="-90" width="520" height="180" fill="url(#neLaneMask)" filter="url(#neLane)"/></g>
+      <circle cx="-150" cy="-22" r="7" fill="url(#neHalo)"/><path d="M-150,-28 L-149.65,-22 L-150,-16 L-150.35,-22 Z M-156,-22 L-150,-21.65 L-144,-22 L-150,-22.35 Z" fill="#FFFFFF" fill-opacity="0.5"/><circle cx="-150" cy="-22" r="1.6" fill="#FFFFFF"/><circle cx="42" cy="-38" r="7" fill="url(#neHalo)"/><path d="M42,-43.5 L42.35,-38 L42,-32.5 L41.65,-38 Z M36.5,-38 L42,-37.65 L47.5,-38 L42,-38.35 Z" fill="#B8CCFF" fill-opacity="0.5"/><circle cx="42" cy="-38" r="1.5" fill="#B8CCFF"/><circle cx="-62" cy="30" r="4.5" fill="url(#neHalo)"/><circle cx="-62" cy="30" r="1.1" fill="#FFFFFF"/><circle cx="112" cy="22" r="4.5" fill="url(#neHalo)"/><circle cx="112" cy="22" r="1" fill="#B8CCFF"/><circle cx="-112" cy="70" r="4.5" fill="url(#neHalo)"/><circle cx="-112" cy="70" r="0.9" fill="#B8CCFF"/><circle cx="168" cy="-82" r="4.5" fill="url(#neHalo)"/><circle cx="168" cy="-82" r="1.1" fill="#FFFFFF"/><circle cx="8" cy="62" r="4.5" fill="url(#neHalo)"/><circle cx="8" cy="62" r="0.9" fill="#FFFFFF"/><circle cx="-30" cy="-72" r="4.5" fill="url(#neHalo)"/><circle cx="-30" cy="-72" r="1" fill="#B8CCFF"/>
+    </g>
+  </g>
+</svg>

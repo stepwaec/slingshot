@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <!-- Volcanic moon, v1.4 moons, built to the v1.5 (revised) planet reference (planet-ref.svg, variant F). ONE group #moonVolcanic at
+       translate(24 24); geometry relative to (0,0). r 13 (disc diameter 26). Lit from the upper-right L = (+0.7071, -0.7071); lighting never rotates.
+       Io-like sulphur world: airless-type lighting (hard terminator, no haze, no clouds; airless stops of the v1.5 moon.svg) with a thin lit-side rim #FFE08A (brief).
+
+       Texture strip (v1.2 technique): period P = round(2 pi r) = 82 px = one rotation, 120 s, scrolled 0 -> +P (texture moves left -> right).
+       ONE rect 2P x 2r = 164x26; noise computed once over the 82x26 subregion (stitchTiles stitch) and feTile'd over the padded region
+       (-2..166 x -2..28). Inner translate(-119 -13) = -(r + P + 24), -r: the visible window stays in strip x [24, 132] for the whole loop.
+
+       Surface zones (filter #mvSurface). Each zone = noise alpha -> linear threshold (slope, intercept) -> tinted colour x cap; 6-octave fields,
+       steep slopes = crisp edges; every layer TINTED (no grey):
+         base        rect fill #E0C25A (mv.base, brief token).
+         frost       fractalNoise 0.075, 6 oct, seed 61: slope 30, intercept -17.4 (n > 0.58), #F6EBA8 (mv.frost, pale SO2 frost), cap 0.85.
+         orange      same field: slope -30, intercept 12.9 (n < 0.43), #E0892E (mv.orange, red-orange sulphur), cap 0.8.
+         dark flows  fractalNoise 0.055, 6 oct, seed 67: slope 30, intercept -18 (n > 0.60), #8C6A2A (mv.dark, brief token), cap 0.9.
+         lava fields same field: slope 30, intercept -20.1 (n > 0.67), #3A2A2A (mv.spot, brief token), cap 0.85.
+         specks      fractalNoise 0.30, 2 oct, seed 71: slope 40, intercept -27.2 (n > 0.68, 1 px calderas), #3A2A2A, cap 0.75.
+         polar tint  top/bottom bands 4 px (15 % of 2r), #A0603A (mv.pole, reddish-brown poles) a0.55 at the pole -> 0 at the band's inner edge.
+         plumes      5 hand-placed calderas on the 82x26 tile, each drawn at x and x + P: (x, y, R) = (14, 9, R 3.4) · (31, 21, R 2.2) · (43, 14, R 2.8) · (57, 20.5, R 1.8) · (68, 6.5, R 2.4).
+                     Ring deposit = circle R, fill radial #mvPlume: 0 #D9622B (mv.plume) a0.15 | 0.55 a0.22 | 0.8 #C9502A (mv.plumeRing) a0.62 | 1 a0;
+                     vent = circle r 1 #3A2A2A.
+       Lighting (fixed):
+         shade  radial, userSpace centre +0.36 r L = (3.31, -3.31), radius 1.25 r = 16.25:
+                0.00 #FFF6D8 a0.30 (mv.bloom) | 0.30 a0 | 0.69 #FF9455 a0 | 0.73 #FF9455 a0.18 (thin warm terminator band, as v1.5 moon.svg) | 0.755 #08122E a0.82 | 0.80 #050B1E a0.97 | 1.00 a1.
+         rim    circle r 1.077 r = 14.0, radial, #FFE08A (mv.rim, brief token): 0.90 a0 | 0.928 a0.70 | 0.955 a0.28 | 1.00 a0, alpha-masked to the
+                lit side by a linear gradient along L: (+9.75,-9.75) a1.0 | mid a0.45 | (-9.75,+9.75) a0.06.
+       Emissive hot spots (drawn AFTER the shade so they glow on the night side too): a second clipped strip with the SAME translate animation,
+         one circle r 1.5 per caldera (x and x + P), fill radial #mvHot: 0 #FFC857 a1 | 0.3 #FF6A2A a0.95 | 1 #FF6A2A a0 (hot spot = brief token
+         #FF6A2A, core = star.body-family #FFC857). Each caldera's pair pulses opacity 0.55 -> 1 -> 0.55 over 6 s, begins 0 / -2 / -4 / -6 / -8 s (i x -2 s; never in step).
+       Draw order: base disc -> clipped strip (zones, polar tint, plumes) -> shade -> rim -> clipped emissive strip.
+       No limb line, no specular, no halo. Static renders show t = 0. Ids: mv*. -->
+  <defs>
+    <clipPath id="mvClip"><circle r="13"/></clipPath>
+    <filter id="mvSurface" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-2" y="-2" width="168" height="30" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.075" numOctaves="6" seed="61" stitchTiles="stitch" x="0" y="0" width="82" height="26" result="mvA1"/>
+      <feTile in="mvA1" x="-2" y="-2" width="168" height="30" result="mvA"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.055" numOctaves="6" seed="67" stitchTiles="stitch" x="0" y="0" width="82" height="26" result="mvB1"/>
+      <feTile in="mvB1" x="-2" y="-2" width="168" height="30" result="mvB"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.30" numOctaves="2" seed="71" stitchTiles="stitch" x="0" y="0" width="82" height="26" result="mvS1"/>
+      <feTile in="mvS1" x="-2" y="-2" width="168" height="30" result="mvS"/>
+      <feComponentTransfer in="mvA" result="mvFrostA"><feFuncA type="linear" slope="30" intercept="-17.4"/></feComponentTransfer>
+      <feColorMatrix in="mvFrostA" type="matrix" values="0 0 0 0 0.965  0 0 0 0 0.922  0 0 0 0 0.659  0 0 0 0.85 0" result="mvFrost"/>
+      <feComponentTransfer in="mvA" result="mvOrangeA"><feFuncA type="linear" slope="-30" intercept="12.9"/></feComponentTransfer>
+      <feColorMatrix in="mvOrangeA" type="matrix" values="0 0 0 0 0.878  0 0 0 0 0.537  0 0 0 0 0.18  0 0 0 0.8 0" result="mvOrange"/>
+      <feComponentTransfer in="mvB" result="mvDarkA"><feFuncA type="linear" slope="30" intercept="-18"/></feComponentTransfer>
+      <feColorMatrix in="mvDarkA" type="matrix" values="0 0 0 0 0.549  0 0 0 0 0.416  0 0 0 0 0.165  0 0 0 0.9 0" result="mvDark"/>
+      <feComponentTransfer in="mvB" result="mvBlackA"><feFuncA type="linear" slope="30" intercept="-20.1"/></feComponentTransfer>
+      <feColorMatrix in="mvBlackA" type="matrix" values="0 0 0 0 0.227  0 0 0 0 0.165  0 0 0 0 0.165  0 0 0 0.85 0" result="mvBlack"/>
+      <feComponentTransfer in="mvS" result="mvSpeckA"><feFuncA type="linear" slope="40" intercept="-27.2"/></feComponentTransfer>
+      <feColorMatrix in="mvSpeckA" type="matrix" values="0 0 0 0 0.227  0 0 0 0 0.165  0 0 0 0 0.165  0 0 0 0.75 0" result="mvSpeck"/>
+      <feMerge result="mvSurfaceAll"><feMergeNode in="SourceGraphic"/><feMergeNode in="mvFrost"/><feMergeNode in="mvOrange"/><feMergeNode in="mvDark"/><feMergeNode in="mvBlack"/><feMergeNode in="mvSpeck"/></feMerge>
+      <feComposite in="mvSurfaceAll" in2="SourceGraphic" operator="in"/>
+    </filter>
+    <linearGradient id="mvPoleN" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#A0603A" stop-opacity="0.55"/><stop offset="1" stop-color="#A0603A" stop-opacity="0"/></linearGradient>
+    <linearGradient id="mvPoleS" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#A0603A" stop-opacity="0.55"/><stop offset="1" stop-color="#A0603A" stop-opacity="0"/></linearGradient>
+    <radialGradient id="mvPlume" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#D9622B" stop-opacity="0.15"/><stop offset="0.55" stop-color="#D9622B" stop-opacity="0.22"/><stop offset="0.8" stop-color="#C9502A" stop-opacity="0.62"/><stop offset="1" stop-color="#C9502A" stop-opacity="0"/></radialGradient>
+    <radialGradient id="mvHot" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#FFC857"/><stop offset="0.3" stop-color="#FF6A2A" stop-opacity="0.95"/><stop offset="1" stop-color="#FF6A2A" stop-opacity="0"/></radialGradient>
+    <radialGradient id="mvShade" gradientUnits="userSpaceOnUse" cx="3.31" cy="-3.31" r="16.25">
+      <stop offset="0" stop-color="#FFF6D8" stop-opacity="0.30"/>
+      <stop offset="0.30" stop-color="#FFF6D8" stop-opacity="0"/>
+      <stop offset="0.69" stop-color="#FF9455" stop-opacity="0"/>
+      <stop offset="0.73" stop-color="#FF9455" stop-opacity="0.18"/>
+      <stop offset="0.755" stop-color="#08122E" stop-opacity="0.82"/>
+      <stop offset="0.80" stop-color="#050B1E" stop-opacity="0.97"/>
+      <stop offset="1" stop-color="#050B1E" stop-opacity="1"/>
+    </radialGradient>
+    <radialGradient id="mvRim" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="14">
+      <stop offset="0.90" stop-color="#FFE08A" stop-opacity="0"/>
+      <stop offset="0.928" stop-color="#FFE08A" stop-opacity="0.70"/>
+      <stop offset="0.955" stop-color="#FFE08A" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#FFE08A" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="mvLit" gradientUnits="userSpaceOnUse" x1="9.75" y1="-9.75" x2="-9.75" y2="9.75">
+      <stop offset="0" stop-color="#FFFFFF"/><stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.45"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0.06"/>
+    </linearGradient>
+    <mask id="mvLitMask" mask-type="alpha" maskUnits="userSpaceOnUse" x="-16" y="-16" width="32" height="32"><rect x="-16" y="-16" width="32" height="32" fill="url(#mvLit)"/></mask>
+  </defs>
+  <g id="moonVolcanic" transform="translate(24 24)">
+    <circle r="13" fill="#E0C25A"/>
+    <g clip-path="url(#mvClip)">
+      <g id="mvSurfaceAnim"><animateTransform attributeName="transform" type="translate" from="0 0" to="82 0" dur="120s" repeatCount="indefinite"/>
+        <g transform="translate(-119 -13)">
+          <rect width="164" height="26" fill="#E0C25A" filter="url(#mvSurface)"/>
+          <rect width="164" height="4" fill="url(#mvPoleN)"/>
+          <rect y="22" width="164" height="4" fill="url(#mvPoleS)"/>
+          <circle cx="14" cy="9" r="3.4" fill="url(#mvPlume)"/><circle cx="96" cy="9" r="3.4" fill="url(#mvPlume)"/><circle cx="31" cy="21" r="2.2" fill="url(#mvPlume)"/><circle cx="113" cy="21" r="2.2" fill="url(#mvPlume)"/><circle cx="43" cy="14" r="2.8" fill="url(#mvPlume)"/><circle cx="125" cy="14" r="2.8" fill="url(#mvPlume)"/><circle cx="57" cy="20.5" r="1.8" fill="url(#mvPlume)"/><circle cx="139" cy="20.5" r="1.8" fill="url(#mvPlume)"/><circle cx="68" cy="6.5" r="2.4" fill="url(#mvPlume)"/><circle cx="150" cy="6.5" r="2.4" fill="url(#mvPlume)"/>
+          <circle cx="14" cy="9" r="1" fill="#3A2A2A"/><circle cx="96" cy="9" r="1" fill="#3A2A2A"/><circle cx="31" cy="21" r="1" fill="#3A2A2A"/><circle cx="113" cy="21" r="1" fill="#3A2A2A"/><circle cx="43" cy="14" r="1" fill="#3A2A2A"/><circle cx="125" cy="14" r="1" fill="#3A2A2A"/><circle cx="57" cy="20.5" r="1" fill="#3A2A2A"/><circle cx="139" cy="20.5" r="1" fill="#3A2A2A"/><circle cx="68" cy="6.5" r="1" fill="#3A2A2A"/><circle cx="150" cy="6.5" r="1" fill="#3A2A2A"/>
+        </g>
+      </g>
+    </g>
+    <circle r="13" fill="url(#mvShade)"/>
+    <circle r="14" fill="url(#mvRim)" mask="url(#mvLitMask)"/>
+    <g clip-path="url(#mvClip)">
+      <g id="mvHotAnim"><animateTransform attributeName="transform" type="translate" from="0 0" to="82 0" dur="120s" repeatCount="indefinite"/>
+        <g transform="translate(-119 -13)">
+          <g opacity="0.55"><animate attributeName="opacity" values="0.55;1;0.55" dur="6s" begin="0s" repeatCount="indefinite"/><circle cx="14" cy="9" r="1.5" fill="url(#mvHot)"/><circle cx="96" cy="9" r="1.5" fill="url(#mvHot)"/></g>
+          <g opacity="0.55"><animate attributeName="opacity" values="0.55;1;0.55" dur="6s" begin="-2s" repeatCount="indefinite"/><circle cx="31" cy="21" r="1.5" fill="url(#mvHot)"/><circle cx="113" cy="21" r="1.5" fill="url(#mvHot)"/></g>
+          <g opacity="0.55"><animate attributeName="opacity" values="0.55;1;0.55" dur="6s" begin="-4s" repeatCount="indefinite"/><circle cx="43" cy="14" r="1.5" fill="url(#mvHot)"/><circle cx="125" cy="14" r="1.5" fill="url(#mvHot)"/></g>
+          <g opacity="0.55"><animate attributeName="opacity" values="0.55;1;0.55" dur="6s" begin="-6s" repeatCount="indefinite"/><circle cx="57" cy="20.5" r="1.5" fill="url(#mvHot)"/><circle cx="139" cy="20.5" r="1.5" fill="url(#mvHot)"/></g>
+          <g opacity="0.55"><animate attributeName="opacity" values="0.55;1;0.55" dur="6s" begin="-8s" repeatCount="indefinite"/><circle cx="68" cy="6.5" r="1.5" fill="url(#mvHot)"/><circle cx="150" cy="6.5" r="1.5" fill="url(#mvHot)"/></g>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>

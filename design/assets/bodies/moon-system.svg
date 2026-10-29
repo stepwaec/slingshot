@@ -1,0 +1,192 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="260" viewBox="0 0 360 260">
+  <!-- Planet with moons, v1.4 moons, built to the v1.5 (revised) planet reference (planet-ref.svg, variant F). viewBox 0 0 360 260.
+       ONE group #moonSystem at translate(180 130) = the planet centre; geometry relative to (0,0). Lit from the upper-right L = (+0.7071, -0.7071)
+       for EVERY body at EVERY orbit position (bodies only translate; their frames never rotate). Ids: ms* (msP* planet, msA* inner moon, msB* outer moon).
+
+       PLANET  r 26, rocky desert, palette = rocky v1.5 tokens (rocky.base #D2803F · rocky.sand #F0C47E · rocky.rust #B04A22 · rocky.dark #6B3820 ·
+         rocky.highlight #F7D8B0 · rocky.pit #4A2414 · rocky.atmo #E8B07A · rocky.rim #FFD9B0 · bloom #FFF0DC), zone thresholds tuned for r 26.
+         Strip: P = round(2 pi r) = 163, ONE rect 2P x 2r = 326x52, noise stitched on the 163x52 tile and feTile'd over the padded region
+         (-4..330 x -4..56); SMIL translate 0 -> +163 over 110 s; inner translate(-229 -26) = -(r + P + 40), -r (window stays in strip x [40, 255]).
+         Zones (filter #msPSurface; alpha threshold -> tint x cap):
+           n  fractalNoise 0.032, 6 oct, seed 5 · du fractalNoise "0.016 0.06", 6 oct, seed 13 · ru fractalNoise 0.05, 4 oct, seed 29 ·
+           cr fractalNoise 0.17, 1 oct, seed 31.
+           sand    du: slope 30, intercept -16.5 (0.55 -> 0.583) #F0C47E cap 0.9 · rust ru: slope 18, intercept -10.08 #B04A22 cap 0.9 ·
+           basalt  n: slope -30, intercept 12.6 (solid below 0.387) #6B3820 · plateau n: slope 18, intercept -11 (0.611 -> 0.667) #F7D8B0 cap 0.85 ·
+           pits    cr: slope 40, intercept -26.4 (threshold 0.66) #6B3820 cap 0.85; lit wall = pit minus pit offset (+1,-1) #F7D8B0 x0.7;
+                   dark wall = pit minus pit offset (-1,+1) #4A2414 x0.6.  Merge: base, sand, rust, basalt, plateau, pit, dark wall, lit wall.
+         Eclipse shadows (inside the planet clip, under the shade): one disc per moon, same orbit animation, offset (-3.5, +3.5) from the moon
+           (cast away from L), radius = the moon's r, radial #050B1E 0.7 a0.6 -> 1 a0; visible only while that moon is in front.
+         shade  radial, centre +0.36 r L = (6.62, -6.62), radius 1.25 r = 32.5: 0 #FFF0DC a0.32 | 0.32 a0 | 0.64 #FF9455 a0 | 0.705 #FF9455 a0.26 |
+                0.76 #08122E a0.74 | 0.84 #050B1E a0.97 | 1 a1.
+         haze   r 26: 0.80 #E8B07A a0 | 0.96 #E8B07A a0.30 | 1 #FFD9B0 a0.48 · rim r 28 (1.077 r): 0.90 #FFD9B0 a0 | 0.928 a0.75 | 0.955 #E8B07A a0.3 |
+                1 a0 · both alpha-masked to the lit side (linear (19.5,-19.5) a1 | 0.5 a0.45 | (-19.5,19.5) a0.06).
+
+       MOON A (inner)  r 5, icy palette (mi.* tokens: base #DCE4FF, blue ice #7FA6E0, frost #FFFFFF, crack #4E78A8, rim #BFE3FF).
+         Strip P = 31, rect 62x10, translate 0 -> +31 over 30 s (= the orbit period: tidally locked), inner translate(-46 -5).
+         Zones: fractalNoise 0.2, 6 oct, seed 41: blue ice slope 36, intercept -20.88 cap 0.9; frost slope -36, intercept 14.4;
+                cracks = iso-contour n = 0.5 (half-width 0.02) of fractalNoise 0.16, 5 oct, seed 47, #4E78A8 cap 0.9.
+         Shade centre (1.27, -1.27), r 6.25: 0 #FFFFFF a0.28 | 0.30 a0 | 0.69 #FF9455 a0 | 0.73 #FF9455 a0.18 | 0.755 #08122E a0.82 | 0.80 #050B1E a0.97 | 1 a1.
+         Rim r 5.39: 0.90 #BFE3FF a0 | 0.928 a0.75 | 0.955 a0.3 | 1 a0, lit-side mask.
+       MOON B (outer)  r 7, asteroid palette (mc.* tokens: base #7E7468, warm #A07E5A, dark #3E3833, ejecta/highlight #C9BBA8). No rim (airless).
+         Strip P = 44, rect 88x14, translate 0 -> +44 over 52 s (tidally locked), inner translate(-65 -7).
+         Zones: fractalNoise 0.16, 6 oct, seed 83: warm slope 30, intercept -16.8 cap 0.85; dark slope -30, intercept 12.6 cap 0.6;
+                ejecta fractalNoise 0.22, 6 oct, seed 89: slope 30, intercept -18.6 cap 0.7; pits fractalNoise 0.3, 2 oct, seed 37: slope 36,
+                intercept -23.4 #3E3833 cap 0.8, walls offset 0.8 (lit #C9BBA8 x0.6, dark #3E3833 x0.6).
+         Shade centre (1.78, -1.78), r 8.75: 0 #E8DCC8 a0.3 | 0.30 a0 | 0.69 #FF9455 a0 | 0.73 #FF9455 a0.18 | 0.755 #08122E a0.82 | 0.80 #050B1E a0.97 | 1 a1.
+         The two moon bodies live in <defs> (#msMoonA, #msMoonB) and are drawn by <use> in their front and back copies.
+
+       ORBITS (uniform angular rate, theta(t) = theta0 + 360 t / T; position in the orbit plane (A cos theta, B sin theta), the plane drawn as an
+         ellipse rotated by the inclination phi; theta in [0,180) = lower half = IN FRONT of the planet):
+         A  semi-axes 50 x 15 (ry = 0.30 rx), phi -14 deg, T 30 s, theta0 60 deg  -> t = 0 at (27.4, 6.6), overlapping the planet's lit limb.
+            Passes fully behind the disc at theta 270 (centre 15 px from the planet centre).
+         B  semi-axes 96 x 21.12 (ry = 0.22 rx), phi +8 deg, T 52 s, theta0 200 deg -> t = 0 at (-88.3, -19.7), upper left, behind.
+            Mostly hidden behind the disc at theta 270 (centre 21 px from the planet centre).
+         Construction (no anisotropic scale, so filters stay undistorted): static rotate(phi) -> EPICYCLE of three SMIL rotates
+           rotate(theta) -> translate(e1 0) -> rotate(-2 theta) -> translate(e2 0) -> rotate(theta) -> static rotate(-phi) -> body,
+           e1 = (A+B)/2, e2 = (A-B)/2 (A: 32.5 / 17.5; B: 58.56 / 37.44). Rotates: theta0 -> theta0+360, -2 theta0 -> -2 theta0 - 720,
+           theta0 -> theta0+360, all dur T. Net body rotation = 0, so each moon's shading stays upper-right everywhere on its orbit.
+         Z-ORDER SWAP: each moon is drawn twice with identical animation, #msABack/#msBBack BEFORE the planet and #msAFront/#msBFront AFTER it;
+           discrete opacity toggles at theta = 0 / 180 (the ellipse ends, A 50 px / B 96 px from the centre, well clear of the disc, so the swap is
+           never seen): A front values 1;0;1 keyTimes 0;0.3333;0.8333 (back = inverse); B front values 0;1;0 keyTimes 0;0.4444;0.9444 (back = inverse).
+         Orbit lines: each ellipse as two half arcs in the rotated frame, back half (through the top) before the planet, front half after it;
+           1 px, #ECF0FA (ui.text) a0.08, dash 2 6.
+       Draw order: orbit back arcs (B, A) -> back moon copies (B, A) -> planet (base, strip, eclipse shadows, shade, haze, rim) ->
+         orbit front arcs (B, A) -> front moon copies (A, B).
+         (Depth rule for the rare moon-moon overlap: behind the planet the inner moon is nearer the viewer, in front the outer one is, since
+         depth = orbit radius x sin theta.) Static renders show t = 0. -->
+
+  <defs>
+    <clipPath id="msPClip"><circle r="26"/></clipPath>
+    <clipPath id="msAClip"><circle r="5"/></clipPath>
+    <clipPath id="msBClip"><circle r="7"/></clipPath>
+    <filter id="msPSurface" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-4" y="-4" width="334" height="60" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.032" numOctaves="6" seed="5" stitchTiles="stitch" x="0" y="0" width="163" height="52" result="msPN1"/>
+      <feTile in="msPN1" x="-4" y="-4" width="334" height="60" result="msPN"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.016 0.06" numOctaves="6" seed="13" stitchTiles="stitch" x="0" y="0" width="163" height="52" result="msPDu1"/>
+      <feTile in="msPDu1" x="-4" y="-4" width="334" height="60" result="msPDu"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="4" seed="29" stitchTiles="stitch" x="0" y="0" width="163" height="52" result="msPRu1"/>
+      <feTile in="msPRu1" x="-4" y="-4" width="334" height="60" result="msPRu"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.17" numOctaves="1" seed="31" stitchTiles="stitch" x="0" y="0" width="163" height="52" result="msPCr1"/>
+      <feTile in="msPCr1" x="-4" y="-4" width="334" height="60" result="msPCr"/>
+      <feComponentTransfer in="msPDu" result="msPSandA"><feFuncA type="linear" slope="30" intercept="-16.5"/></feComponentTransfer>
+      <feColorMatrix in="msPSandA" type="matrix" values="0 0 0 0 0.941  0 0 0 0 0.769  0 0 0 0 0.494  0 0 0 0.9 0" result="msPSand"/>
+      <feComponentTransfer in="msPRu" result="msPRustA"><feFuncA type="linear" slope="18" intercept="-10.08"/></feComponentTransfer>
+      <feColorMatrix in="msPRustA" type="matrix" values="0 0 0 0 0.69  0 0 0 0 0.29  0 0 0 0 0.133  0 0 0 0.9 0" result="msPRust"/>
+      <feComponentTransfer in="msPN" result="msPBasaltA"><feFuncA type="linear" slope="-30" intercept="12.6"/></feComponentTransfer>
+      <feColorMatrix in="msPBasaltA" type="matrix" values="0 0 0 0 0.42  0 0 0 0 0.22  0 0 0 0 0.125  0 0 0 1 0" result="msPBasalt"/>
+      <feComponentTransfer in="msPN" result="msPPlateauA"><feFuncA type="linear" slope="18" intercept="-11"/></feComponentTransfer>
+      <feColorMatrix in="msPPlateauA" type="matrix" values="0 0 0 0 0.969  0 0 0 0 0.847  0 0 0 0 0.69  0 0 0 0.85 0" result="msPPlateau"/>
+      <feComponentTransfer in="msPCr" result="msPPitCut"><feFuncA type="linear" slope="40" intercept="-26.4"/></feComponentTransfer>
+  <feColorMatrix in="msPPitCut" type="matrix" values="0 0 0 0 0.42  0 0 0 0 0.22  0 0 0 0 0.125  0 0 0 0.85 0" result="msPPit"/>
+  <feOffset in="msPPitCut" dx="1" dy="-1" result="msPPitNE"/>
+  <feComposite in="msPPitCut" in2="msPPitNE" operator="arithmetic" k1="0" k2="1" k3="-1" k4="0" result="msPLitA"/>
+  <feColorMatrix in="msPLitA" type="matrix" values="0 0 0 0 0.969  0 0 0 0 0.847  0 0 0 0 0.69  0 0 0 0.7 0" result="msPLitW"/>
+  <feOffset in="msPPitCut" dx="-1" dy="1" result="msPPitSW"/>
+  <feComposite in="msPPitCut" in2="msPPitSW" operator="arithmetic" k1="0" k2="1" k3="-1" k4="0" result="msPDarkA"/>
+  <feColorMatrix in="msPDarkA" type="matrix" values="0 0 0 0 0.29  0 0 0 0 0.141  0 0 0 0 0.078  0 0 0 0.6 0" result="msPDarkW"/>
+      <feMerge result="msPSurfaceAll"><feMergeNode in="SourceGraphic"/><feMergeNode in="msPSand"/><feMergeNode in="msPRust"/><feMergeNode in="msPBasalt"/><feMergeNode in="msPPlateau"/><feMergeNode in="msPPit"/><feMergeNode in="msPDarkW"/><feMergeNode in="msPLitW"/></feMerge>
+      <feComposite in="msPSurfaceAll" in2="SourceGraphic" operator="in"/>
+    </filter>
+    <filter id="msASurface" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-2" y="-2" width="66" height="14" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.2" numOctaves="6" seed="41" stitchTiles="stitch" x="0" y="0" width="31" height="10" result="msAN1"/>
+      <feTile in="msAN1" x="-2" y="-2" width="66" height="14" result="msAN"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.16" numOctaves="5" seed="47" stitchTiles="stitch" x="0" y="0" width="31" height="10" result="msAK1"/>
+      <feTile in="msAK1" x="-2" y="-2" width="66" height="14" result="msAK"/>
+      <feComponentTransfer in="msAN" result="msABlueA"><feFuncA type="linear" slope="36" intercept="-20.88"/></feComponentTransfer>
+      <feColorMatrix in="msABlueA" type="matrix" values="0 0 0 0 0.498  0 0 0 0 0.651  0 0 0 0 0.878  0 0 0 0.9 0" result="msABlue"/>
+      <feComponentTransfer in="msAN" result="msAFrostA"><feFuncA type="linear" slope="-36" intercept="14.4"/></feComponentTransfer>
+      <feColorMatrix in="msAFrostA" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1 0" result="msAFrost"/>
+      <feComponentTransfer in="msAK" result="msACrackA"><feFuncA type="table" tableValues="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.5 1 0.5 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"/></feComponentTransfer>
+  <feColorMatrix in="msACrackA" type="matrix" values="0 0 0 0 0.306  0 0 0 0 0.471  0 0 0 0 0.659  0 0 0 0.9 0" result="msACrack"/>
+      <feMerge result="msASurfaceAll"><feMergeNode in="SourceGraphic"/><feMergeNode in="msABlue"/><feMergeNode in="msAFrost"/><feMergeNode in="msACrack"/></feMerge>
+      <feComposite in="msASurfaceAll" in2="SourceGraphic" operator="in"/>
+    </filter>
+    <filter id="msBSurface" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-3" y="-3" width="94" height="20" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.16" numOctaves="6" seed="83" stitchTiles="stitch" x="0" y="0" width="44" height="14" result="msBN1"/>
+      <feTile in="msBN1" x="-3" y="-3" width="94" height="20" result="msBN"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.22" numOctaves="6" seed="89" stitchTiles="stitch" x="0" y="0" width="44" height="14" result="msBE1"/>
+      <feTile in="msBE1" x="-3" y="-3" width="94" height="20" result="msBE"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.3" numOctaves="2" seed="37" stitchTiles="stitch" x="0" y="0" width="44" height="14" result="msBC1"/>
+      <feTile in="msBC1" x="-3" y="-3" width="94" height="20" result="msBC"/>
+      <feComponentTransfer in="msBN" result="msBWarmA"><feFuncA type="linear" slope="30" intercept="-16.8"/></feComponentTransfer>
+      <feColorMatrix in="msBWarmA" type="matrix" values="0 0 0 0 0.627  0 0 0 0 0.494  0 0 0 0 0.353  0 0 0 0.85 0" result="msBWarm"/>
+      <feComponentTransfer in="msBN" result="msBDarkA"><feFuncA type="linear" slope="-30" intercept="12.6"/></feComponentTransfer>
+      <feColorMatrix in="msBDarkA" type="matrix" values="0 0 0 0 0.243  0 0 0 0 0.22  0 0 0 0 0.2  0 0 0 0.6 0" result="msBDark"/>
+      <feComponentTransfer in="msBE" result="msBEjectaA"><feFuncA type="linear" slope="30" intercept="-18.6"/></feComponentTransfer>
+      <feColorMatrix in="msBEjectaA" type="matrix" values="0 0 0 0 0.788  0 0 0 0 0.733  0 0 0 0 0.659  0 0 0 0.7 0" result="msBEjecta"/>
+      <feComponentTransfer in="msBC" result="msBPitCut"><feFuncA type="linear" slope="36" intercept="-23.4"/></feComponentTransfer>
+  <feColorMatrix in="msBPitCut" type="matrix" values="0 0 0 0 0.243  0 0 0 0 0.22  0 0 0 0 0.2  0 0 0 0.8 0" result="msBPit"/>
+  <feOffset in="msBPitCut" dx="0.8" dy="-0.8" result="msBPitNE"/>
+  <feComposite in="msBPitCut" in2="msBPitNE" operator="arithmetic" k1="0" k2="1" k3="-1" k4="0" result="msBLitA"/>
+  <feColorMatrix in="msBLitA" type="matrix" values="0 0 0 0 0.788  0 0 0 0 0.733  0 0 0 0 0.659  0 0 0 0.6 0" result="msBLitW"/>
+  <feOffset in="msBPitCut" dx="-0.8" dy="0.8" result="msBPitSW"/>
+  <feComposite in="msBPitCut" in2="msBPitSW" operator="arithmetic" k1="0" k2="1" k3="-1" k4="0" result="msBDarkA"/>
+  <feColorMatrix in="msBDarkA" type="matrix" values="0 0 0 0 0.243  0 0 0 0 0.22  0 0 0 0 0.2  0 0 0 0.6 0" result="msBDarkW"/>
+      <feMerge result="msBSurfaceAll"><feMergeNode in="SourceGraphic"/><feMergeNode in="msBWarm"/><feMergeNode in="msBDark"/><feMergeNode in="msBEjecta"/><feMergeNode in="msBPit"/><feMergeNode in="msBDarkW"/><feMergeNode in="msBLitW"/></feMerge>
+      <feComposite in="msBSurfaceAll" in2="SourceGraphic" operator="in"/>
+    </filter>
+    <radialGradient id="msPShade" gradientUnits="userSpaceOnUse" cx="6.62" cy="-6.62" r="32.5">
+      <stop offset="0" stop-color="#FFF0DC" stop-opacity="0.32"/>
+      <stop offset="0.32" stop-color="#FFF0DC" stop-opacity="0"/>
+      <stop offset="0.64" stop-color="#FF9455" stop-opacity="0"/>
+      <stop offset="0.705" stop-color="#FF9455" stop-opacity="0.26"/>
+      <stop offset="0.76" stop-color="#08122E" stop-opacity="0.74"/>
+      <stop offset="0.84" stop-color="#050B1E" stop-opacity="0.97"/>
+      <stop offset="1" stop-color="#050B1E" stop-opacity="1"/>
+    </radialGradient>
+    <radialGradient id="msPHaze" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="26"><stop offset="0.80" stop-color="#E8B07A" stop-opacity="0"/><stop offset="0.96" stop-color="#E8B07A" stop-opacity="0.30"/><stop offset="1" stop-color="#FFD9B0" stop-opacity="0.48"/></radialGradient>
+    <radialGradient id="msPRim" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="28"><stop offset="0.90" stop-color="#FFD9B0" stop-opacity="0"/><stop offset="0.928" stop-color="#FFD9B0" stop-opacity="0.75"/><stop offset="0.955" stop-color="#E8B07A" stop-opacity="0.3"/><stop offset="1" stop-color="#E8B07A" stop-opacity="0"/></radialGradient>
+    <linearGradient id="msPLit" gradientUnits="userSpaceOnUse" x1="19.5" y1="-19.5" x2="-19.5" y2="19.5"><stop offset="0" stop-color="#FFFFFF"/><stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.45"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0.06"/></linearGradient>
+    <mask id="msPLitMask" mask-type="alpha" maskUnits="userSpaceOnUse" x="-31" y="-31" width="62" height="62"><rect x="-31" y="-31" width="62" height="62" fill="url(#msPLit)"/></mask>
+    <radialGradient id="msEclipse" cx="0.5" cy="0.5" r="0.5"><stop offset="0.7" stop-color="#050B1E" stop-opacity="0.6"/><stop offset="1" stop-color="#050B1E" stop-opacity="0"/></radialGradient>
+    <radialGradient id="msAShade" gradientUnits="userSpaceOnUse" cx="1.27" cy="-1.27" r="6.25">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.28"/><stop offset="0.30" stop-color="#FFFFFF" stop-opacity="0"/>
+      <stop offset="0.69" stop-color="#FF9455" stop-opacity="0"/><stop offset="0.73" stop-color="#FF9455" stop-opacity="0.18"/>
+      <stop offset="0.755" stop-color="#08122E" stop-opacity="0.82"/><stop offset="0.80" stop-color="#050B1E" stop-opacity="0.97"/><stop offset="1" stop-color="#050B1E" stop-opacity="1"/>
+    </radialGradient>
+    <radialGradient id="msARim" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="5.39"><stop offset="0.90" stop-color="#BFE3FF" stop-opacity="0"/><stop offset="0.928" stop-color="#BFE3FF" stop-opacity="0.75"/><stop offset="0.955" stop-color="#BFE3FF" stop-opacity="0.3"/><stop offset="1" stop-color="#BFE3FF" stop-opacity="0"/></radialGradient>
+    <linearGradient id="msALit" gradientUnits="userSpaceOnUse" x1="3.75" y1="-3.75" x2="-3.75" y2="3.75"><stop offset="0" stop-color="#FFFFFF"/><stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.45"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0.06"/></linearGradient>
+    <mask id="msALitMask" mask-type="alpha" maskUnits="userSpaceOnUse" x="-6" y="-6" width="12" height="12"><rect x="-6" y="-6" width="12" height="12" fill="url(#msALit)"/></mask>
+    <radialGradient id="msBShade" gradientUnits="userSpaceOnUse" cx="1.78" cy="-1.78" r="8.75">
+      <stop offset="0" stop-color="#E8DCC8" stop-opacity="0.3"/><stop offset="0.30" stop-color="#E8DCC8" stop-opacity="0"/>
+      <stop offset="0.69" stop-color="#FF9455" stop-opacity="0"/><stop offset="0.73" stop-color="#FF9455" stop-opacity="0.18"/>
+      <stop offset="0.755" stop-color="#08122E" stop-opacity="0.82"/><stop offset="0.80" stop-color="#050B1E" stop-opacity="0.97"/><stop offset="1" stop-color="#050B1E" stop-opacity="1"/>
+    </radialGradient>
+    <g id="msMoonA">
+      <circle r="5" fill="#DCE4FF"/>
+      <g clip-path="url(#msAClip)"><g><animateTransform attributeName="transform" type="translate" from="0 0" to="31 0" dur="30s" repeatCount="indefinite"/>
+        <g transform="translate(-46 -5)"><rect width="62" height="10" fill="#DCE4FF" filter="url(#msASurface)"/></g></g></g>
+      <circle r="5" fill="url(#msAShade)"/>
+      <circle r="5.39" fill="url(#msARim)" mask="url(#msALitMask)"/>
+    </g>
+    <g id="msMoonB">
+      <circle r="7" fill="#7E7468"/>
+      <g clip-path="url(#msBClip)"><g><animateTransform attributeName="transform" type="translate" from="0 0" to="44 0" dur="52s" repeatCount="indefinite"/>
+        <g transform="translate(-65 -7)"><rect width="88" height="14" fill="#7E7468" filter="url(#msBSurface)"/></g></g></g>
+      <circle r="7" fill="url(#msBShade)"/>
+    </g>
+  </defs>
+  <g id="moonSystem" transform="translate(180 130)">
+    <path transform="rotate(8)" d="M-96 0A96 21.12 0 0 1 96 0" fill="none" stroke="#ECF0FA" stroke-opacity="0.08" stroke-dasharray="2 6"/>
+    <path transform="rotate(-14)" d="M-50 0A50 15 0 0 1 50 0" fill="none" stroke="#ECF0FA" stroke-opacity="0.08" stroke-dasharray="2 6"/>
+    <g id="msBBack" opacity="1"><animate attributeName="opacity" values="1;0;1" keyTimes="0;0.4444;0.9444" calcMode="discrete" dur="52s" repeatCount="indefinite"/><g transform="rotate(8)"><g><animateTransform attributeName="transform" type="rotate" from="200" to="560" dur="52s" repeatCount="indefinite"/><g transform="translate(58.56 0)"><g><animateTransform attributeName="transform" type="rotate" from="-400" to="-1120" dur="52s" repeatCount="indefinite"/><g transform="translate(37.44 0)"><g><animateTransform attributeName="transform" type="rotate" from="200" to="560" dur="52s" repeatCount="indefinite"/><g transform="rotate(-8)"><use href="#msMoonB"/></g></g></g></g></g></g></g></g>
+    <g id="msABack" opacity="0"><animate attributeName="opacity" values="0;1;0" keyTimes="0;0.3333;0.8333" calcMode="discrete" dur="30s" repeatCount="indefinite"/><g transform="rotate(-14)"><g><animateTransform attributeName="transform" type="rotate" from="60" to="420" dur="30s" repeatCount="indefinite"/><g transform="translate(32.5 0)"><g><animateTransform attributeName="transform" type="rotate" from="-120" to="-840" dur="30s" repeatCount="indefinite"/><g transform="translate(17.5 0)"><g><animateTransform attributeName="transform" type="rotate" from="60" to="420" dur="30s" repeatCount="indefinite"/><g transform="rotate(14)"><use href="#msMoonA"/></g></g></g></g></g></g></g></g>
+    <g id="msPlanet">
+      <circle r="26" fill="#D2803F"/>
+      <g clip-path="url(#msPClip)">
+        <g><animateTransform attributeName="transform" type="translate" from="0 0" to="163 0" dur="110s" repeatCount="indefinite"/>
+          <g transform="translate(-229 -26)"><rect width="326" height="52" fill="#D2803F" filter="url(#msPSurface)"/></g>
+        </g>
+        <g opacity="1"><animate attributeName="opacity" values="1;0;1" keyTimes="0;0.3333;0.8333" calcMode="discrete" dur="30s" repeatCount="indefinite"/><g transform="rotate(-14)"><g><animateTransform attributeName="transform" type="rotate" from="60" to="420" dur="30s" repeatCount="indefinite"/><g transform="translate(32.5 0)"><g><animateTransform attributeName="transform" type="rotate" from="-120" to="-840" dur="30s" repeatCount="indefinite"/><g transform="translate(17.5 0)"><g><animateTransform attributeName="transform" type="rotate" from="60" to="420" dur="30s" repeatCount="indefinite"/><g transform="rotate(14)"><circle cx="-3.5" cy="3.5" r="5" fill="url(#msEclipse)"/></g></g></g></g></g></g></g></g>
+        <g opacity="0"><animate attributeName="opacity" values="0;1;0" keyTimes="0;0.4444;0.9444" calcMode="discrete" dur="52s" repeatCount="indefinite"/><g transform="rotate(8)"><g><animateTransform attributeName="transform" type="rotate" from="200" to="560" dur="52s" repeatCount="indefinite"/><g transform="translate(58.56 0)"><g><animateTransform attributeName="transform" type="rotate" from="-400" to="-1120" dur="52s" repeatCount="indefinite"/><g transform="translate(37.44 0)"><g><animateTransform attributeName="transform" type="rotate" from="200" to="560" dur="52s" repeatCount="indefinite"/><g transform="rotate(-8)"><circle cx="-3.5" cy="3.5" r="7" fill="url(#msEclipse)"/></g></g></g></g></g></g></g></g>
+      </g>
+      <circle r="26" fill="url(#msPShade)"/>
+      <circle r="26" fill="url(#msPHaze)" mask="url(#msPLitMask)"/>
+      <circle r="28" fill="url(#msPRim)" mask="url(#msPLitMask)"/>
+    </g>
+    <path transform="rotate(8)" d="M96 0A96 21.12 0 0 1 -96 0" fill="none" stroke="#ECF0FA" stroke-opacity="0.08" stroke-dasharray="2 6"/>
+    <path transform="rotate(-14)" d="M50 0A50 15 0 0 1 -50 0" fill="none" stroke="#ECF0FA" stroke-opacity="0.08" stroke-dasharray="2 6"/>
+    <g id="msAFront" opacity="1"><animate attributeName="opacity" values="1;0;1" keyTimes="0;0.3333;0.8333" calcMode="discrete" dur="30s" repeatCount="indefinite"/><g transform="rotate(-14)"><g><animateTransform attributeName="transform" type="rotate" from="60" to="420" dur="30s" repeatCount="indefinite"/><g transform="translate(32.5 0)"><g><animateTransform attributeName="transform" type="rotate" from="-120" to="-840" dur="30s" repeatCount="indefinite"/><g transform="translate(17.5 0)"><g><animateTransform attributeName="transform" type="rotate" from="60" to="420" dur="30s" repeatCount="indefinite"/><g transform="rotate(14)"><use href="#msMoonA"/></g></g></g></g></g></g></g></g>
+    <g id="msBFront" opacity="0"><animate attributeName="opacity" values="0;1;0" keyTimes="0;0.4444;0.9444" calcMode="discrete" dur="52s" repeatCount="indefinite"/><g transform="rotate(8)"><g><animateTransform attributeName="transform" type="rotate" from="200" to="560" dur="52s" repeatCount="indefinite"/><g transform="translate(58.56 0)"><g><animateTransform attributeName="transform" type="rotate" from="-400" to="-1120" dur="52s" repeatCount="indefinite"/><g transform="translate(37.44 0)"><g><animateTransform attributeName="transform" type="rotate" from="200" to="560" dur="52s" repeatCount="indefinite"/><g transform="rotate(-8)"><use href="#msMoonB"/></g></g></g></g></g></g></g></g>
+  </g>
+</svg>
