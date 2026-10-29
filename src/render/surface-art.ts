@@ -24,17 +24,27 @@ export interface StripSpec {
   prep: (doc: Document) => void;
 }
 
-export function surfaceKind(body: Body): "ocean" | "planetx" | "giant" | null {
+export type SurfaceKind = "ocean" | "planetx" | "giant" | "moon" | "moon-icy" | "moon-volcanic" | "dwarf";
+
+export function surfaceKind(body: Body): SurfaceKind | null {
   if (body.kind === "home") return "ocean";
   if (body.kind === "target") return "planetx";
   if (body.look === "gas-giant") return "giant";
+  if (body.look === "moon-icy") return "moon-icy";
+  if (body.look === "moon-volcanic") return "moon-volcanic";
+  if (body.look === "dwarf") return "dwarf";
+  if (body.look === "moon" || body.kind === "moon") return "moon";
   return null;
 }
 
-export function stripsFor(kind: "ocean" | "planetx" | "giant"): StripSpec[] {
+export function stripsFor(kind: SurfaceKind): StripSpec[] {
   if (kind === "ocean") return OCEAN;
   if (kind === "planetx") return PLANET_X;
-  return GIANT;
+  if (kind === "giant") return GIANT;
+  if (kind === "moon") return MOON;
+  if (kind === "moon-icy") return MOON_ICY;
+  if (kind === "moon-volcanic") return MOON_VOLCANIC;
+  return DWARF;
 }
 
 const OCEAN: StripSpec[] = [
@@ -54,6 +64,21 @@ const GIANT: StripSpec[] = [
   strip("gb-b", 1, 552, 104, 0, -8, -88, -44, 44, 110, -276, 1, 3),
   strip("gb-a", 2, 552, 104, 0, -8, -364, -44, 44, 150, 276, 1, 4),
 ];
+
+/** Barren moon: one regolith strip, 88 px / 180 s. design/assets/bodies/moon.svg. */
+const MOON: StripSpec[] = [named("mnSurfaceAnim", "mn-surface", 176, 28, 0, 0, -132, -14, 14, 180, 88, 1, 2)];
+
+/** Icy moon: one stitched strip, 75 px / 150 s. design/assets/bodies/moon-icy.svg. */
+const MOON_ICY: StripSpec[] = [named("miSurfaceAnim", "mi-surface", 150, 24, 0, 0, -107, -12, 12, 150, 75, 1, 2)];
+
+/** Volcanic moon: surface and the hot-spot deck share the 82 px / 120 s scroll. */
+const MOON_VOLCANIC: StripSpec[] = [
+  named("mvSurfaceAnim", "mv-surface", 164, 26, 0, 0, -119, -13, 13, 120, 82, 1, 2),
+  named("mvHotAnim", "mv-hot", 164, 26, 0, 0, -119, -13, 13, 120, 82, 0.75, 3),
+];
+
+/** Dwarf planet: 63 px / 160 s. design/assets/bodies/dwarf.svg. */
+const DWARF: StripSpec[] = [named("dwSurfaceAnim", "dw-surface", 126, 20, 0, 0, -93, -10, 10, 160, 63, 1, 2)];
 
 function strip(
   id: string,

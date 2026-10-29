@@ -39,6 +39,17 @@ Note on numbering: Brainstormer's first draft called the flight loop "WP2" and r
 | WP15: galaxy map | Planned | A galaxy-scale mission map where galaxies move relative to each other; each level stays one solar system. |
 | Late game: easter eggs and megastructures (after WP13) | Planned, no package number | Rare, optional easter eggs and the megastructures and exotic objects listed below. Scope with Stephan later. |
 
+## Living universe
+
+Physics stays game-like but true to its real shape, and prediction always matches the flight.
+
+| Package | Status | Scope |
+| --- | --- | --- |
+| LU1: lively surfaces | In progress | Subtle animation on every body: star granulation and flares, gas giant bands drifting, cloud layers moving, planets rotating. Visual only. Home, Planet X and gas giants already scroll from the visual review. This pass adds the moons and the dwarf on the same strips, turns the sun's granulation under a fixed limb, and plays the red giant's flare on the sun's 22 s timeline. |
+| LU2: moving bodies | Planned | Planets orbit stars or black holes, and moons orbit planets, on deterministic on-rails Kepler orbits where position is a function of time. Prediction uses the bodies' future positions, with ghost markers for the target's future position. Reuse the elliptical comet orbits. Start with one or two levels. |
+| LU3: scripted collisions and consumption | Planned | Timed, deterministic events: a comet hits a planet, a planet spirals into a star and burns up, a star is pulled into a black hole's accretion disk. Debris and changing gravity become gameplay (escape windows, narrowing gaps). |
+| LU4: level design that uses motion | Planned | Launch windows, catching up with a moving target, and moon slingshots. |
+
 ## Full object list
 
 **In the game today**
