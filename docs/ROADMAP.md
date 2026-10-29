@@ -62,6 +62,8 @@ The ship systems package (after WP8) adds hull health, damage (collisions, close
 
 **Key rule:** every upgrade has a trade-off, mainly mass. A heavier ship needs more fuel, so players cannot max everything and must pick a build per mission.
 
+Every upgrade is visible on the modular ship: hull plating or structural strength, shielding, engines (chemical, ion and pulse, each with its own nozzle and plume), larger fuel tanks, solar panels, a gas scoop, sensors, and a cryosleep module.
+
 | Upgrade | What it does | Trade-off |
 | --- | --- | --- |
 | Hull strength | Resists tidal stress and impacts. | Mass. |
@@ -152,7 +154,7 @@ Stephan points Claude at this section for the next visual pack.
 
 **Open requests**, in priority order:
 
-1. **Ship systems:** hull health bar, tidal-stress warning, upgrade screen. These are being built now with placeholder UI, so the designs should match those UI slots.
+1. **Ship systems:** hull health bar, tidal-stress warning, and upgrade screen. These are being built now with placeholder UI, so the designs should match those UI slots. Also a spacecraft redesign with visible upgrade parts: a modular base hull, and each upgrade visibly changes the ship (hull plating or structural strength, shielding, engines — chemical, ion and pulse, each with its own nozzle and plume — larger fuel tanks, solar panels, a gas scoop, sensors, and a cryosleep module). Include damage states that match the hull health bar. Keep the blue-to-violet plume. It must read well at game scale.
 2. **WP10:** comet, solar recharge indicator.
 3. **WP11:** sparse, medium and dense asteroid belts; Kuiper belt; rogue planet; radiation heatmap; dose meter.
 4. **Ship and planning view:** blue-to-violet plume with no trailing halo; burn node; gravity grid styling.
