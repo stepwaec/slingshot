@@ -100,7 +100,7 @@ const magLegend = required<HTMLElement>("#mag-legend");
 
 const game = createGame();
 if (import.meta.env.DEV) {
-  (window as unknown as { __slingshot?: { game: Game } }).__slingshot = { game };
+  (window as unknown as { __slingshot?: { game: Game; setPlan: typeof setPlan } }).__slingshot = { game, setPlan };
 }
 const view = new SpaceView(canvas, game);
 const resetButtons = [...document.querySelectorAll<HTMLButtonElement>("[data-reset]")];

@@ -18,6 +18,7 @@ import frostData from "../levels/frost.json";
 import leadData from "../levels/lead.json";
 import flashData from "../levels/flash.json";
 import ashData from "../levels/ash.json";
+import torchData from "../levels/torch.json";
 import { loadLevelData, type Level, type LevelPhysics } from "./schema";
 import { shipLoadout } from "../game/upgrades";
 import { placeBelts } from "../sim/belts";
@@ -46,8 +47,9 @@ export const frost: Level = loadLevelData(frostData, "src/levels/frost.json");
 export const lead: Level = loadLevelData(leadData, "src/levels/lead.json");
 export const flash: Level = loadLevelData(flashData, "src/levels/flash.json");
 export const ash: Level = loadLevelData(ashData, "src/levels/ash.json");
+export const torch: Level = loadLevelData(torchData, "src/levels/torch.json");
 
-export const LEVELS: readonly Level[] = [passage, relay, rescue, pair, ember, chain, pulse, quake, needle, ice, veil, drift, shade, wander, weave, frost, lead, flash, ash];
+export const LEVELS: readonly Level[] = [passage, relay, rescue, pair, ember, chain, pulse, quake, needle, ice, veil, drift, shade, wander, weave, frost, lead, flash, ash, torch];
 
 function bodyById(level: Level, id: string): Body {
   const body = level.bodies.find((item) => item.id === id);

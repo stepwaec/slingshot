@@ -37,7 +37,7 @@ Note on numbering: Brainstormer's first draft called the flight loop "WP2" and r
 | WP13: three-body chaos | Planned | Multi-sun systems (Trisolaran style) where three-body chaos means planning uses widening probability cones instead of exact lines. |
 | WP14: world builder | Planned | Build and share levels, using the JSON level format from WP7c. |
 | WP15: galaxy map | Planned | A galaxy-scale mission map where galaxies move relative to each other; each level stays one solar system. |
-| Late game: easter eggs and megastructures (after WP13) | Planned, next, no package number | Rare, optional easter eggs and the megastructures and exotic objects listed below. Scope with Stephan later. |
+| Late game: easter eggs and megastructures (after WP13) | In progress | Stellar engine, Dyson swarm and Shkadov thruster from the PR #40 designs. Torch is the stellar-engine level: the jet core burns hull, the margins refill fuel, and the stream pushes the ship. A Dyson swarm multiplies that star's solar recharge by 1 − coverage and nicks hull on a collector shell. A Shkadov mirror is solid, and every body drifts toward it. Ringworld, the space elevator and the wormhole pair are still open. Easter eggs are still undecided. |
 
 ## Living universe
 
@@ -166,7 +166,7 @@ Other gameplay ideas raised by Brainstormer and not yet scheduled: realistic vis
 - **Gravity map performance:** 60 fps on a real GPU not yet confirmed (the no-GPU test machine showed 23 to 16 fps with the map on).
 - **Realistic visuals:** when to do the realism pass, and whether Claude's next update covers it.
 - **Gravity map cost in flight:** Brainstormer suggested it could be free in planning but cost energy in flight, or be unlocked by a tutorial; not decided.
-- **Easter eggs and megastructures:** which package(s) they go in after WP13.
+- **Easter eggs and megastructures:** the stellar engine, Dyson swarm and Shkadov thruster are in progress. Ringworld, the space elevator and the wormhole pair are still open. Easter eggs are still undecided.
 
 ## Design requests for Claude
 
@@ -185,6 +185,8 @@ Stephan points Claude at this section for the next visual pack.
 **Burn plume, burn node and gravity grid styling:** done in [PR #36](https://github.com/stepwaec/slingshot/pull/36). The plume is blue-to-violet, with no trailing halo.
 
 **Late game, wormholes and living surfaces:** done in [PR #40](https://github.com/stepwaec/slingshot/pull/40). That pack is the stellar engine, Dyson swarm, ringworld, Shkadov thruster, space elevator and wormhole (`design/assets/mega/`, `design/mockups/late-game.svg`), plus living surfaces: `design/assets/star-surface-motion.svg` and `style.md` §13, which gives granulation, flares, band drift, clouds and rotation per body type.
+
+The stellar engine, Dyson swarm and Shkadov thruster from that pack are in the game. Ringworld, the space elevator and the wormhole pair are not built yet. The Dyson header draws the star at opacity 0.72 and also says recharge ×0.4. The game uses one level `coverage` for both, so the drawn star and the recharge factor are both `1 − coverage`. Burn rate, scoop rate, jet push, collector nick and drift acceleration are level knobs; the headers describe the roles and do not number them.
 
 **Open requests**, in priority order:
 

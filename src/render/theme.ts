@@ -237,6 +237,37 @@ export const theme = {
     /** Rest-frame dτ/dt contours drawn over the flat grid. */
     clockLevels: [0.92, 0.75, 0.5, 0.25],
   },
+  /**
+   * Cosmetic timings from the megastructure headers.
+   * Lengths the sim uses live in `src/sim/mega.ts`, scaled by star radius.
+   */
+  mega: {
+    /** stellar-engine.svg: three ragged shapes, one every 0.5 s. */
+    jetRagPeriod: 0.5,
+    jetRagShapes: 3,
+    /** Knots cross the jet every 4 s. The SVG staggers them by 1.3 s and 2.6 s. */
+    knotPeriod: 4,
+    knotDelays: [0, 1.3, 2.6],
+    knotAlong0: 34,
+    knotAlong1: 300,
+    /** dyson-swarm.svg: 10 dash cycles in 26 / 40 / 60 s. Inner shell is faster. */
+    shellPeriods: [26, 40, 60],
+    shellDash: [3, 2.6, 3.2],
+    shellGap: [7, 8, 9],
+    shellGlint: 1.2,
+    heatPeakAlpha: 0.16,
+    /** shkadov-thruster.svg: 11 rays across ±35°, centre ray 2.2 px, edge rays 0.95 px. */
+    rayCount: 11,
+    rayHalfDeg: 35,
+    rayWidth0: 2.2,
+    rayWidth1: 0.95,
+    rayAlpha: 0.8,
+    glowAlpha: 0.35,
+    glowWidth: 5,
+    glowRadius: 78,
+    strutCount: 9,
+    strutLength: 6,
+  },
 } as const;
 
 export type Theme = typeof theme;

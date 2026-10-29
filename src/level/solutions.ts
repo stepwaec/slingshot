@@ -194,3 +194,9 @@ export const ashPlan: readonly BurnNode[] = [
   { step: 0, dvx: 8, dvy: 0 },
   { step: 1700, dvx: -4.260580335490253, dvy: -10.59112647138052 },
 ];
+
+/** Torch: leave Home above the stellar-engine jet and capture at Planet X. */
+export const torchPlan: readonly BurnNode[] = [
+  { step: 0, dvx: 14, dvy: 0 },
+  { step: 733, dvx: 3.5605591485068326, dvy: -7.211137656752013 },
+];

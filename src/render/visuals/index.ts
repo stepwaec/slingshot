@@ -2,6 +2,7 @@ import type { VisualFactory } from "../visual";
 import { createBelts } from "./belts";
 import { createFates } from "./fates";
 import { createGallery } from "./gallery";
+import { createMega } from "./mega";
 import { createHazards } from "./hazards";
 import { createGhosts } from "./ghosts";
 import { createClouds } from "./clouds";
@@ -38,6 +39,7 @@ export const visualFactories = {
   scenery: createScenery,
   belts: createBelts,
   gallery: createGallery,
+  mega: createMega,
   fates: createFates,
   planets: createPlanets,
   rogue: createRogue,

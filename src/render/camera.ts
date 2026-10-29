@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import type { Level } from "../level/catalog";
+import { structureReach } from "../sim/mega";
 import type { Vec2 } from "../sim/physics";
 
 export interface Camera {
@@ -144,7 +145,7 @@ export function frameLevel(camera: Camera, width: number, height: number, level:
   let minY = Infinity;
   let maxY = -Infinity;
   for (const body of level.bodies) {
-    const pad = Math.max(body.captureRadius ?? 0, body.radius) + 110;
+    const pad = Math.max(body.captureRadius ?? 0, body.radius, structureReach(body)) + 110;
     const cover = orbitCover(body, level.bodies);
     minX = Math.min(minX, cover.x - cover.reach - pad);
     maxX = Math.max(maxX, cover.x + cover.reach + pad);

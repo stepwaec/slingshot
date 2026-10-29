@@ -33,6 +33,17 @@
 
 import { beltDrift, pointInBelt, type Belt, type BeltRock } from "./belts";
 import { blastHits, quasarDamage, shockCrosses, type QuasarJet, type Supernova } from "./events";
+import {
+  coverageFactor,
+  dysonShellHit,
+  frameAcceleration,
+  jetContact,
+  mirrorRadii,
+  mirrorSegmentEntry,
+  type DysonSwarm,
+  type ShkadovThruster,
+  type StellarEngine,
+} from "./mega";
 
 export interface Vec2 {
   x: number;
@@ -178,6 +189,12 @@ export interface Body {
    * Omitted bodies keep their ordinary orbit or drift.
    */
   script?: BodyScript;
+  /** Stellar engine. Omitted stars have no jet. */
+  engine?: StellarEngine;
+  /** Dyson swarm. Omitted stars are uncovered. */
+  dyson?: DysonSwarm;
+  /** Shkadov thruster. Omitted bodies do not drift the frame. */
+  shkadov?: ShkadovThruster;
 }
 
 /**
@@ -484,9 +501,17 @@ export function bodyPresent(body: Body, time: number): boolean {
 }
 
 export function bodyPose(body: Body, time: number, bodies: readonly Body[], g = 1): Pose {
+  return withFrame(poseAt(body, time, bodies, g), bodies, time);
+}
+
+/**
+ * Pose before the Shkadov frame drift. Orbit centres resolve through this, so
+ * a moon is not drifted twice: the frame is added once, on the way out.
+ */
+function poseAt(body: Body, time: number, bodies: readonly Body[], g: number): Pose {
   if (body.script?.kind === "consume") return consumePose(body, time, bodies, g);
   if (body.script?.kind === "impact" && time >= body.script.at) {
-    return bodyPose({ ...body, script: undefined }, body.script.at, bodies, g);
+    return poseAt({ ...body, script: undefined }, body.script.at, bodies, g);
   }
   if (body.drift && !body.orbit) {
     return {
@@ -500,6 +525,19 @@ export function bodyPose(body: Body, time: number, bodies: readonly Body[], g = 
   return poseFromOrbit(body, time, bodies, 0, g);
 }
 
+/** Constant acceleration toward the mirror, the same vector on every body. */
+function withFrame(pose: Pose, bodies: readonly Body[], time: number): Pose {
+  if (time === 0) return pose;
+  const frame = frameAcceleration(bodies);
+  if (!frame) return pose;
+  return {
+    x: pose.x + 0.5 * frame.ax * time * time,
+    y: pose.y + 0.5 * frame.ay * time * time,
+    vx: pose.vx + frame.ax * time,
+    vy: pose.vy + frame.ay * time,
+  };
+}
+
 /** Fall from the orbit into the center. After `end` the pose stays on the surface. */
 function consumePose(body: Body, time: number, bodies: readonly Body[], g: number): Pose {
   const script = body.script;
@@ -510,7 +548,7 @@ function consumePose(body: Body, time: number, bodies: readonly Body[], g: numbe
   const clamped = time > end ? end : time;
   const centerBody = findBody(bodies, script.centerId);
   const center = centerBody
-    ? bodyPose(centerBody, clamped, bodies, g)
+    ? poseAt(centerBody, clamped, bodies, g)
     : { x: orbit.cx ?? 0, y: orbit.cy ?? 0, vx: 0, vy: 0 };
   const r0 = orbit.radius;
   const r1 = script.radius;
@@ -705,8 +743,31 @@ export function acceleration(
   const g = gravityConstant(config);
   const eps = config.eps ?? 0;
   const p = config.p ?? 2;
-  if (eps === 0 && p === 2) return newtonAcceleration(x, y, g, config, time);
-  return shapedAcceleration(x, y, g, eps, p, config, time);
+  const grav = eps === 0 && p === 2 ? newtonAcceleration(x, y, g, config, time) : shapedAcceleration(x, y, g, eps, p, config, time);
+  const push = enginePush(x, y, config, time);
+  if (!push) return grav;
+  return { ax: grav.ax + push.ax, ay: grav.ay + push.ay };
+}
+
+/** Acceleration along a stellar-engine plume. Null when the ship is outside every jet. */
+function enginePush(x: number, y: number, config: SimConfig, time: number): { ax: number; ay: number } | null {
+  const bodies = config.bodies;
+  const g = gravityConstant(config);
+  let ax = 0;
+  let ay = 0;
+  let any = false;
+  for (let i = 0; i < bodies.length; i++) {
+    const body = bodies[i];
+    const engine = body.engine;
+    if (!engine || !(engine.push > 0) || !bodyPresent(body, time)) continue;
+    const pose = bodyPose(body, time, bodies, g);
+    const contact = jetContact(x - pose.x, y - pose.y, body.radius, engine.angle);
+    if (!contact?.plume) continue;
+    any = true;
+    ax += Math.cos(engine.angle) * engine.push;
+    ay += Math.sin(engine.angle) * engine.push;
+  }
+  return any ? { ax, ay } : null;
 }
 
 /** Σ G M / r. Same operations as the pre-knob potential. */
@@ -1648,7 +1709,9 @@ export function solarRechargeRate(
     const distance = Math.hypot(x - pose.x, y - pose.y);
     if (!(distance > 1e-6)) continue;
     const falloff = Math.min(1, (SOLAR_RREF / distance) * (SOLAR_RREF / distance));
-    rate += solarStrength * luminosity * falloff;
+    const factor = coverageFactor(body.dyson?.coverage);
+    const term = solarStrength * luminosity * falloff;
+    rate += factor === 1 ? term : term * factor;
   }
   if (rate < SOLAR_CUTOFF * solarStrength) return 0;
   return rate;
@@ -1786,6 +1849,43 @@ function beltDust(x: number, y: number, config: SimConfig, time: number): number
   return rate;
 }
 
+/** Hull per second in a jet core, and fuel per second in the margins. */
+function engineRates(
+  x: number,
+  y: number,
+  time: number,
+  bodies: readonly Body[],
+  g: number,
+): { burn: number; scoop: number } {
+  let burn = 0;
+  let scoop = 0;
+  for (let i = 0; i < bodies.length; i++) {
+    const body = bodies[i];
+    const engine = body.engine;
+    if (!engine || !bodyPresent(body, time)) continue;
+    if (!(engine.burn > 0) && !(engine.scoop > 0)) continue;
+    const pose = bodyPose(body, time, bodies, g);
+    const contact = jetContact(x - pose.x, y - pose.y, body.radius, engine.angle);
+    if (!contact) continue;
+    if (contact.core && engine.burn > 0) burn += engine.burn;
+    if (contact.margin && engine.scoop > 0) scoop += engine.scoop;
+  }
+  return { burn, scoop };
+}
+
+/** Hull per second from a Dyson collector band. The gaps between shells add nothing. */
+function dysonNick(x: number, y: number, time: number, bodies: readonly Body[], g: number): number {
+  let rate = 0;
+  for (let i = 0; i < bodies.length; i++) {
+    const body = bodies[i];
+    const swarm = body.dyson;
+    if (!swarm || !(swarm.nick > 0) || !bodyPresent(body, time)) continue;
+    const pose = bodyPose(body, time, bodies, g);
+    if (dysonShellHit(x - pose.x, y - pose.y, body.radius)) rate += swarm.nick;
+  }
+  return rate;
+}
+
 /**
  * Hull damage, the stress reading, and solar recharge. Motion is untouched.
  * A stock ship (no tides, no solar, outside every close shell) only records
@@ -1797,7 +1897,10 @@ function applyShipSystems(state: SimState, config: SimConfig, time: number): voi
   const beam = beamDamageRate(state.x, state.y, time, config.bodies);
   state.stress = stress;
   if (stress > state.peakStress) state.peakStress = stress;
-  const damage = (stress + pass + beam + beltDust(state.x, state.y, config, time)) * config.dt;
+  const g = gravityConstant(config);
+  const engine = engineRates(state.x, state.y, time, config.bodies, g);
+  const nick = dysonNick(state.x, state.y, time, config.bodies, g);
+  const damage = (stress + pass + beam + beltDust(state.x, state.y, config, time) + engine.burn + nick) * config.dt;
   if (damage > 0) {
     state.hull -= damage;
     if (!(state.hull > 0)) {
@@ -1808,11 +1911,10 @@ function applyShipSystems(state: SimState, config: SimConfig, time: number): voi
   }
   applyDose(state, config, time);
   if (state.status !== "flying") return;
-  const g = gravityConstant(config);
   const solar = solarRate(state.x, state.y, config, time);
   const scoop = nebulaScoopRate(state.x, state.y, config.nebulae);
   const ice = iceHarvestRate(state.x, state.y, time, config.bodies, g);
-  const inflow = solar + scoop + ice;
+  const inflow = solar + scoop + ice + engine.scoop;
   if (!(inflow > 0)) return;
   const cap = config.fuelMax ?? state.tank;
   const room = cap - state.tank;
@@ -1894,6 +1996,28 @@ export function step(state: SimState, config: SimConfig): void {
           radius: rock.radius,
         };
       }
+    }
+  }
+
+  const mirrorG = gravityConstant(config);
+  for (let i = 0; i < bodies.length; i++) {
+    const body = bodies[i];
+    if (!body.shkadov) continue;
+    if (!bodyPresent(body, t0) && !bodyPresent(body, t1)) continue;
+    const p0 = bodyPose(body, t0, bodies, mirrorG);
+    const p1 = bodyPose(body, t1, bodies, mirrorG);
+    const radii = mirrorRadii(body.radius);
+    const c = Math.cos(body.shkadov.angle);
+    const s = Math.sin(body.shkadov.angle);
+    const rx0 = x0 - p0.x;
+    const ry0 = y0 - p0.y;
+    const rx1 = x1 - p1.x;
+    const ry1 = y1 - p1.y;
+    const hit = mirrorSegmentEntry(rx0 * c + ry0 * s, -rx0 * s + ry0 * c, rx1 * c + ry1 * s, -rx1 * s + ry1 * c, radii.inner, radii.outer);
+    if (hit !== null && hit < crashT) {
+      crashT = hit;
+      crashBody = `${body.id}:mirror`;
+      rockSnap = null;
     }
   }
 
