@@ -6,6 +6,11 @@ import starUrl from "../../design/assets/star.svg?url";
 import starfieldUrl from "../../design/assets/starfield.svg?url";
 import predictedPathUrl from "../../design/assets/predicted-path.svg?url";
 import dragArrowUrl from "../../design/assets/drag-arrow.svg?url";
+import binaryStarUrl from "../../design/assets/bodies/binary-star.svg?url";
+import redGiantUrl from "../../design/assets/bodies/red-giant.svg?url";
+import whiteDwarfUrl from "../../design/assets/bodies/white-dwarf.svg?url";
+import gasBandedUrl from "../../design/assets/bodies/gas-banded.svg?url";
+import moonChainUrl from "../../design/assets/bodies/moon-chain.svg?url";
 import { palette } from "./palette";
 
 /**
@@ -21,6 +26,11 @@ export const theme = {
     planetStart: planetStartUrl,
     planetX: planetXUrl,
     star: starUrl,
+    binaryStar: binaryStarUrl,
+    redGiant: redGiantUrl,
+    whiteDwarf: whiteDwarfUrl,
+    gasGiant: gasBandedUrl,
+    moonChain: moonChainUrl,
     starfield: starfieldUrl,
     predictedPath: predictedPathUrl,
     dragArrow: dragArrowUrl,

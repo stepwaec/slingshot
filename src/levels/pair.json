@@ -1,0 +1,92 @@
+{
+  "id": "pair",
+  "name": "Pair",
+  "g": 1,
+  "dt": 0.016666666666666666,
+  "bodies": [
+    {
+      "id": "home",
+      "name": "Home",
+      "kind": "home",
+      "x": 0,
+      "y": 0,
+      "mass": 12000,
+      "radius": 18
+    },
+    {
+      "id": "hot",
+      "name": "the primary",
+      "kind": "star",
+      "look": "binary-hot",
+      "x": 242,
+      "y": 360,
+      "mass": 42000,
+      "radius": 30,
+      "orbit": {
+        "cx": 210,
+        "cy": 360,
+        "radius": 32,
+        "phase": 0,
+        "omega": 0.1308996938995747
+      }
+    },
+    {
+      "id": "cool",
+      "name": "the secondary",
+      "kind": "star",
+      "look": "binary-cool",
+      "x": 152.4,
+      "y": 360,
+      "mass": 23333.333333333332,
+      "radius": 20,
+      "orbit": {
+        "cx": 210,
+        "cy": 360,
+        "radius": 57.6,
+        "phase": 3.141592653589793,
+        "omega": 0.1308996938995747
+      }
+    },
+    {
+      "id": "x",
+      "name": "Planet X",
+      "kind": "target",
+      "x": 500,
+      "y": 420,
+      "mass": 8000,
+      "radius": 20,
+      "captureRadius": 86
+    }
+  ],
+  "targetId": "x",
+  "ship": {
+    "x": 42,
+    "y": 0,
+    "vx": 0,
+    "vy": 16.903085094570333
+  },
+  "orbit": {
+    "bodyId": "home",
+    "radius": 42
+  },
+  "fuel": 100,
+  "fuelPerDv": 1,
+  "bounds": {
+    "minX": -5000,
+    "maxX": 5000,
+    "minY": -5000,
+    "maxY": 5000
+  },
+  "maxSteps": 4500,
+  "dvPerPixel": 0.2,
+  "periapsisMargin": 6,
+  "maxPlannedBurns": 4,
+  "c": 1000000,
+  "mission": {
+    "deadline": 200,
+    "crewLimit": 200,
+    "fuelStarMin": 0,
+    "crewWeight": 1,
+    "fuelWeight": 1
+  }
+}
