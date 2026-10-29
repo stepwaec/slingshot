@@ -6,12 +6,11 @@ import { theme } from "../render/theme";
 import { bakedSvgUrl } from "../render/svg-bake";
 
 /**
- * Shipyard screen. Buying hull, tanks, solar or engines still goes through
- * `buyUpgrade`. The other modules and the engine picture are cosmetic.
+ * Shipyard screen. Buying hull, tanks, solar, shielding or engines goes through
+ * `buyUpgrade`. Scoop, sensors, cryosleep and the engine picture are cosmetic.
  */
 
 const LOOKS: { id: LookModule; name: string; detail: string }[] = [
-  { id: "shield", name: "Shielding", detail: "A deflector arc ahead of the nose. Appearance only." },
   { id: "scoop", name: "Gas scoop", detail: "Shoulder intakes. Appearance only, until scoops exist." },
   { id: "sensors", name: "Sensors", detail: "A nose antenna and a dish. Appearance only." },
   { id: "cryo", name: "Cryosleep", detail: "Pod windows on the hull. Appearance only." },
@@ -21,6 +20,7 @@ const REAL: { id: UpgradeId; name: string; detail: string }[] = [
   { id: "hull", name: "Hull plating", detail: "Armour shell. Hull 160, and the ship is heavier." },
   { id: "tanks", name: "Fuel tanks", detail: "Side pods. Fuel tank 140%, extra mass." },
   { id: "solar", name: "Solar panels", detail: "Blue wings. Refills fuel near stars, extra mass." },
+  { id: "shield", name: "Shielding", detail: "Halves crew dose. The deflector shows, and the ship is heavier." },
 ];
 
 export function mountShipyard(): void {

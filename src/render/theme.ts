@@ -39,6 +39,8 @@ import solarRechargeUrl from "../../design/assets/solar-recharge.svg?url";
 import nebulaEmissionUrl from "../../design/assets/space/nebula-emission.svg?url";
 import nebulaReflectionUrl from "../../design/assets/space/nebula-reflection.svg?url";
 import nebulaDarkUrl from "../../design/assets/space/nebula-dark.svg?url";
+import rogueUrl from "../../design/assets/bodies/rogue-planet.svg?url";
+import radiationUrl from "../../design/assets/overlays/radiation-map.svg?url";
 import { palette } from "./palette";
 
 /**
@@ -73,6 +75,8 @@ export const theme = {
     nebulaEmission: nebulaEmissionUrl,
     nebulaReflection: nebulaReflectionUrl,
     nebulaDark: nebulaDarkUrl,
+    rogue: rogueUrl,
+    radiation: radiationUrl,
     starfield: starfieldUrl,
     predictedPath: predictedPathUrl,
     dragArrow: dragArrowUrl,

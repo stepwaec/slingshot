@@ -9,6 +9,7 @@ import {
   cycleGravity,
   launch,
   toggleMagnetism,
+  toggleRadiation,
   moveNodeAlong,
   nodeIncoming,
   nodePosition,
@@ -41,6 +42,7 @@ export interface InputElements {
   gravityButton: HTMLButtonElement;
   gravityClockButton: HTMLButtonElement;
   magnetismButton: HTMLButtonElement;
+  radiationButton: HTMLButtonElement;
 }
 
 const HANDLE_RADIUS = 16;
@@ -158,6 +160,7 @@ export function bindInput(
     if (!hasMagneticBody(game.level.bodies)) return;
     toggleMagnetism(game);
   });
+  elements.radiationButton.addEventListener("click", () => toggleRadiation(game));
   elements.deleteButton.addEventListener("click", () => deleteSelected(game));
   elements.nodeRemove.addEventListener("click", (event) => {
     event.stopPropagation();

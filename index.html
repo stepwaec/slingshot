@@ -24,6 +24,7 @@
           <button type="button" id="gravity" aria-pressed="false" title="Cycle the gravity map (G)">Gravity off</button>
           <button type="button" id="gravity-clock" hidden aria-pressed="false" title="Rest-frame clock rate on the grid (C)">Clock rate</button>
           <button type="button" id="magnetism" hidden aria-pressed="false" title="Magnetic danger map (M)">Magnetism</button>
+          <button type="button" id="radiation" hidden aria-pressed="false" title="Radiation map">Radiation</button>
         </div>
         <aside id="mag-legend" hidden>
           <div class="mag-head">
@@ -63,6 +64,17 @@
           </div>
         </div>
         <p id="recharge" hidden></p>
+        <section id="dose" hidden aria-label="Dose">
+          <div class="fuel-head">
+            <span class="hud-label">Dose</span>
+            <span id="dose-value">0 mSv</span>
+          </div>
+          <div class="fuel-track" aria-hidden="true">
+            <div id="dose-fill"></div>
+            <i id="dose-mark"></i>
+          </div>
+          <p id="dose-rate">0.0 mSv/s</p>
+        </section>
         <div class="hull-block">
           <div class="fuel-head">
             <span class="hud-label">Hull</span>

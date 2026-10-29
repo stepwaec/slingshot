@@ -1,7 +1,7 @@
 /**
- * Ship upgrades that change mass, hull, fuel or thrust.
- * The shipyard draws them; shield, scoop, sensors, cryosleep and the
- * engine picture are cosmetic and do not pass through here.
+ * Ship upgrades that change mass, hull, fuel, thrust or crew dose.
+ * The shipyard draws them. Scoop, sensors, cryosleep and the engine
+ * picture are cosmetic and do not pass through here.
  */
 
 export const UPGRADE_POINTS = 4;
@@ -35,6 +35,13 @@ export const UPGRADES = [
     cost: 2,
     mass: 0.35,
   },
+  {
+    id: "shield",
+    name: "Shield",
+    detail: "Halves crew dose. Extra mass.",
+    cost: 2,
+    mass: 0.3,
+  },
 ] as const;
 
 export type UpgradeId = (typeof UPGRADES)[number]["id"];
@@ -46,6 +53,8 @@ export interface ShipLoadout {
   fuelFactor: number;
   /** Fuel per second at a star's surface. 0 means no recharge. */
   solar: number;
+  /** Multiplier on crew dose. 1 is unshielded. */
+  shield: number;
 }
 
 export function isUpgradeId(value: string): value is UpgradeId {
@@ -64,5 +73,6 @@ export function shipLoadout(ids: readonly string[]): ShipLoadout {
     hullMax: owned.has("hull") ? 160 : 100,
     fuelFactor: owned.has("tanks") ? 1.4 : 1,
     solar: owned.has("solar") ? 12 : 0,
+    shield: owned.has("shield") ? 0.5 : 1,
   };
 }

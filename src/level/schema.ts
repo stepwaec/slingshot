@@ -62,6 +62,10 @@ export interface LevelPhysics {
   dilationCap?: number;
   tidalStrength?: number;
   dragStrength?: number;
+  /** mSv per second per unit of environmental dose rate. Omitted is 0. */
+  dosePerD1?: number;
+  /** Crew dose in mSv that fails the mission. */
+  doseLimit?: number;
 }
 
 export interface Level {
@@ -155,7 +159,11 @@ const BODY_KEYS = [
   "beam",
   "harvest",
   "harvestRadius",
+  "drift",
+  "flare",
 ] as const;
+const DRIFT_KEYS = ["vx", "vy"] as const;
+const FLARE_KEYS = ["angle", "period", "start", "duration"] as const;
 const MAGNET_KEYS = ["b1Reach", "tilt", "averaged"] as const;
 const BEAM_KEYS = ["reach", "period", "base", "tip", "damage"] as const;
 const BODY_ORBIT_KEYS = ["centerId", "cx", "cy", "radius", "phase", "omega", "kind", "a", "e", "periapsisAngle"] as const;
@@ -175,9 +183,11 @@ const PHYSICS_KEYS = [
   "dilationCap",
   "tidalStrength",
   "dragStrength",
+  "dosePerD1",
+  "doseLimit",
 ] as const;
 
-const BODY_KINDS: readonly BodyKind[] = ["home", "star", "target", "moon", "blackhole", "planet"];
+const BODY_KINDS: readonly BodyKind[] = ["home", "star", "target", "moon", "blackhole", "planet", "rogue"];
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -371,6 +381,32 @@ function readNebula(value: unknown, path: string, issues: string[]): Nebula | un
   return { id, x, y, rx, ry, angle, scoop, look: look as Nebula["look"] };
 }
 
+function readDrift(value: unknown, path: string, issues: string[]): Body["drift"] | undefined {
+  if (!isObject(value)) {
+    issues.push(`${path} must be an object`);
+    return undefined;
+  }
+  rejectUnknown(value, DRIFT_KEYS, path, issues);
+  const vx = readFinite(value, "vx", path, issues, {});
+  const vy = readFinite(value, "vy", path, issues, {});
+  if (vx === undefined || vy === undefined) return undefined;
+  return { vx, vy };
+}
+
+function readFlare(value: unknown, path: string, issues: string[]): Body["flare"] | undefined {
+  if (!isObject(value)) {
+    issues.push(`${path} must be an object`);
+    return undefined;
+  }
+  rejectUnknown(value, FLARE_KEYS, path, issues);
+  const angle = readFinite(value, "angle", path, issues, {});
+  const period = readFinite(value, "period", path, issues, { min: 0, exclusiveMin: true });
+  const start = readFinite(value, "start", path, issues, { min: 0 });
+  const duration = readFinite(value, "duration", path, issues, { min: 0, exclusiveMin: true });
+  if (angle === undefined || period === undefined || start === undefined || duration === undefined) return undefined;
+  return { angle, period, start, duration };
+}
+
 function readMagnet(value: unknown, path: string, issues: string[]): Magnet | undefined {
   if (!isObject(value)) {
     issues.push(`${path} must be an object`);
@@ -428,6 +464,10 @@ function readBody(value: unknown, path: string, issues: string[]): Body | undefi
   const atmosphereRadius = readOptionalFinite(value, "atmosphereRadius", path, issues, { min: 0, exclusiveMin: true });
   const harvest = readOptionalFinite(value, "harvest", path, issues, { min: 0 });
   const harvestRadius = readOptionalFinite(value, "harvestRadius", path, issues, { min: 0, exclusiveMin: true });
+  let drift: Body["drift"];
+  if (Object.prototype.hasOwnProperty.call(value, "drift")) drift = readDrift(value.drift, `${path}.drift`, issues);
+  let flare: Body["flare"];
+  if (Object.prototype.hasOwnProperty.call(value, "flare")) flare = readFlare(value.flare, `${path}.flare`, issues);
   let look: BodyLook | undefined;
   if (Object.prototype.hasOwnProperty.call(value, "look")) {
     const raw = value.look;
@@ -457,6 +497,10 @@ function readBody(value: unknown, path: string, issues: string[]): Body | undefi
   if (beam) body.beam = beam;
   if (harvest !== undefined) body.harvest = harvest;
   if (harvestRadius !== undefined) body.harvestRadius = harvestRadius;
+  if (drift && orbit) issues.push(`${path} cannot set both drift and orbit`);
+  if (kindRaw === "rogue" && orbit) issues.push(`${path} a rogue planet travels in a straight line, not an orbit`);
+  if (drift) body.drift = drift;
+  if (flare) body.flare = flare;
   if (harvestRadius !== undefined && radius !== undefined && !(harvestRadius > radius)) {
     issues.push(`${path}.harvestRadius must be greater than radius`);
   }
@@ -478,6 +522,8 @@ function readPhysics(value: unknown, path: string, issues: string[]): LevelPhysi
   const dilationCap = readOptionalFinite(value, "dilationCap", path, issues, { min: 1 });
   const tidalStrength = readOptionalFinite(value, "tidalStrength", path, issues, { min: 0 });
   const dragStrength = readOptionalFinite(value, "dragStrength", path, issues, { min: 0 });
+  const dosePerD1 = readOptionalFinite(value, "dosePerD1", path, issues, { min: 0 });
+  const doseLimit = readOptionalFinite(value, "doseLimit", path, issues, { min: 0 });
   if (c !== undefined) physics.c = c;
   if (gravityScale !== undefined) physics.gravityScale = gravityScale;
   if (eps !== undefined) physics.eps = eps;
@@ -486,6 +532,8 @@ function readPhysics(value: unknown, path: string, issues: string[]): LevelPhysi
   if (dilationCap !== undefined) physics.dilationCap = dilationCap;
   if (tidalStrength !== undefined) physics.tidalStrength = tidalStrength;
   if (dragStrength !== undefined) physics.dragStrength = dragStrength;
+  if (dosePerD1 !== undefined) physics.dosePerD1 = dosePerD1;
+  if (doseLimit !== undefined) physics.doseLimit = doseLimit;
   return physics;
 }
 

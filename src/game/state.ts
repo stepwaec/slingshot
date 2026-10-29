@@ -67,6 +67,8 @@ export interface Game {
   gravityClock: boolean;
   /** Planning magnetism map. Does not affect prediction or flight. */
   magnetism: boolean;
+  /** Planning radiation map. Does not affect prediction or flight. */
+  radiation: boolean;
 }
 
 /** Planning, or a tactical pause mid-flight. Burns can be edited in both. */
@@ -110,6 +112,7 @@ export function createGame(level: Level = passage, camera: Camera = { x: 0, y: 0
     gravity: "off",
     gravityClock: false,
     magnetism: false,
+    radiation: false,
   };
 }
 
@@ -154,6 +157,15 @@ export function setMagnetism(game: Game, on: boolean): void {
 
 export function toggleMagnetism(game: Game): void {
   game.magnetism = !game.magnetism;
+}
+
+/** Radiation heatmap. Ignored by the sim and by prediction. */
+export function setRadiation(game: Game, on: boolean): void {
+  game.radiation = on;
+}
+
+export function toggleRadiation(game: Game): void {
+  game.radiation = !game.radiation;
 }
 
 export function loadLevel(game: Game, level: Level): void {
@@ -509,7 +521,9 @@ export function outcomeCopy(game: Game): { title: string; detail: string } | nul
         ? "The ship flew past Planet X without being captured."
     : game.ship.lostReason === "hull"
       ? "The hull failed."
-      : "The ship left the charted system.";
+      : game.ship.lostReason === "dose"
+        ? "The crew took a lethal dose."
+        : "The ship left the charted system.";
   return { title: "Lost in space", detail: why };
 }
 
