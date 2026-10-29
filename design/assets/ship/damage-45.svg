@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="160" viewBox="0 0 96 160">
+  <!-- Modular ship: damage overlay, hull 45 %. ONE group #shipDamage45 at translate(48 64). Ids: sxD2*.
+       Shared ship frame: viewBox 0 0 96 160, ship centre at (48, 64), nose UP (-y) at local y -26, tail at +22.6. Every ship part uses this frame, so parts stack exactly: translate(48 64) on each file's one top-level group. Base hull length 48.6 units = 22 px at zoom 1 (scale 0.453, theme.ship.lengthAtZoom1); minimum 12 px. Lighting is symmetric (bright ridge, cooler edges), so the sprite can rotate with the heading.
+       Draw order for a build: 1 back modules (solar, tanks, plating back) -> 2 engine plume -> 3 fins + engine nozzle + hull (hull-base) -> 4 front modules (plating front, cryo, scoop, sensors, shield) -> 5 one damage overlay. 
+       Layer 5, shown for hull 25-49 % (includes the 75 % marks). Adds a crack (#0A0D1A 0.6 over a #FF8A3A 1.8 α 0.55 glow), a breached panel (radial #FFB45A | 0.4 #FF6A2A | 1 #141A33, outline #0A0D1A) and a fin scorch.
+       Tokens: style.md §8 Ship systems (ship.*). -->
+  <defs>
+    <radialGradient id="sxD2Scorch" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#1E1410" stop-opacity="0.75"/><stop offset="0.6" stop-color="#3A2418" stop-opacity="0.45"/><stop offset="1" stop-color="#3A2418" stop-opacity="0"/></radialGradient>
+    <radialGradient id="sxD2Breach" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#FFB45A"/><stop offset="0.4" stop-color="#FF6A2A"/><stop offset="1" stop-color="#141A33"/></radialGradient>
+  </defs>
+  <g id="shipDamage45" transform="translate(48 64)">
+    <ellipse cx="4.2" cy="2" rx="2.8" ry="4" fill="url(#sxD2Scorch)"/><ellipse cx="-3.8" cy="14" rx="2.4" ry="2" fill="url(#sxD2Scorch)"/>
+    <path d="M-6.2 -9 L-4.4 -8.2 L-4.8 -6 L-6.5 -6.6 Z" fill="#AEBBDD"/>
+    <path d="M2.4 -9 L3.6 -6.4 L2.6 -4.2 L4.4 -1.4 L3.4 1.6" fill="none" stroke="#FF8A3A" stroke-width="1.8" stroke-opacity="0.55" stroke-linecap="round"/><path d="M2.4 -9 L3.6 -6.4 L2.6 -4.2 L4.4 -1.4 L3.4 1.6" fill="none" stroke="#0A0D1A" stroke-width="0.6"/>
+    <path d="M-7 3.4 L-3.8 2.4 L-2.8 5.4 L-4.2 9.4 L-7.3 8.6 Z" fill="url(#sxD2Breach)" stroke="#0A0D1A" stroke-width="0.6"/>
+    <ellipse cx="-11.5" cy="16" rx="2" ry="1.5" fill="url(#sxD2Scorch)"/>
+  </g>
+</svg>

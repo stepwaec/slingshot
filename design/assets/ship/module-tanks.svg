@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="160" viewBox="0 0 96 160">
+  <!-- Modular ship: Fuel tanks module. ONE group #shipModTanks at translate(48 64). Ids: sxMt*.
+       Shared ship frame: viewBox 0 0 96 160, ship centre at (48, 64), nose UP (-y) at local y -26, tail at +22.6. Every ship part uses this frame, so parts stack exactly: translate(48 64) on each file's one top-level group. Base hull length 48.6 units = 22 px at zoom 1 (scale 0.453, theme.ship.lengthAtZoom1); minimum 12 px. Lighting is symmetric (bright ridge, cooler edges), so the sprite can rotate with the heading.
+       Draw order for a build: 1 back modules (solar, tanks, plating back) -> 2 engine plume -> 3 fins + engine nozzle + hull (hull-base) -> 4 front modules (plating front, cryo, scoop, sensors, shield) -> 5 one damage overlay. 
+       Back. Two side pods 4 × 21 at x ±(8.6-12.6), y -5..16 (#B9C6E4 | #FFFFFF | #A9B8DC), two #3DE0C2 (fuel.full) bands each. Tier 2 / 3: lengthen the pods to 25 / 29 units (y -9 / -13).
+       Tokens: style.md §8 Ship systems (ship.*). -->
+  <defs>
+    <linearGradient id="sxMtTank" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#B9C6E4"/><stop offset="0.45" stop-color="#FFFFFF"/><stop offset="1" stop-color="#A9B8DC"/></linearGradient>
+  </defs>
+  <g id="shipModTanks" transform="translate(48 64)">
+    <g id="shipModTanksBack">
+    <rect x="8.6" y="-5" width="4" height="21" rx="2" fill="url(#sxMtTank)" stroke="#0A0D1A" stroke-width="0.8"/><rect x="8.6" y="1.5" width="4" height="2.6" fill="#3DE0C2"/><rect x="8.6" y="8.5" width="4" height="2.6" fill="#3DE0C2"/>
+    <rect x="-12.6" y="-5" width="4" height="21" rx="2" fill="url(#sxMtTank)" stroke="#0A0D1A" stroke-width="0.8"/><rect x="-12.6" y="1.5" width="4" height="2.6" fill="#3DE0C2"/><rect x="-12.6" y="8.5" width="4" height="2.6" fill="#3DE0C2"/>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="160" viewBox="0 0 96 160">
+  <!-- Modular ship: Shielding module. ONE group #shipModShield at translate(48 64). Ids: sxMs*.
+       Shared ship frame: viewBox 0 0 96 160, ship centre at (48, 64), nose UP (-y) at local y -26, tail at +22.6. Every ship part uses this frame, so parts stack exactly: translate(48 64) on each file's one top-level group. Base hull length 48.6 units = 22 px at zoom 1 (scale 0.453, theme.ship.lengthAtZoom1); minimum 12 px. Lighting is symmetric (bright ridge, cooler edges), so the sprite can rotate with the heading.
+       Draw order for a build: 1 back modules (solar, tanks, plating back) -> 2 engine plume -> 3 fins + engine nozzle + hull (hull-base) -> 4 front modules (plating front, cryo, scoop, sensors, shield) -> 5 one damage overlay. 
+       Front. Deflector arc ahead of the nose (Q curve from (±13, -27) peaking at y -44): crescent #7FDBFF α 0.22, edge #9FE8FF 1.2 breathing α 0.95 -> 0.55 over 2.4 s; emitters r 1.1 #9FE8FF at the shoulders. Flash the arc to α 1 for 0.2 s when it absorbs a hit.
+       Tokens: style.md §8 Ship systems (ship.*). -->
+  <defs>
+    
+  </defs>
+  <g id="shipModShield" transform="translate(48 64)">
+    <g id="shipModShieldFront">
+    <path d="M-13 -27 Q0 -44 13 -27 Q0 -38 -13 -27 Z" fill="#7FDBFF" fill-opacity="0.22"/>
+    <path d="M-13 -27 Q0 -44 13 -27" fill="none" stroke="#9FE8FF" stroke-width="1.2" stroke-linecap="round"><animate attributeName="stroke-opacity" values="0.95;0.55;0.95" dur="2.4s" repeatCount="indefinite"/></path>
+    <circle cx="-6.6" cy="-12" r="1.1" fill="#9FE8FF"/><circle cx="6.6" cy="-12" r="1.1" fill="#9FE8FF"/>
+    </g>
+  </g>
+</svg>

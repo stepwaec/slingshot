@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Slingshot — modular ship (ship systems)</title>
+<!-- Ship systems preview. Every tile STACKS the real part files from design/assets/ship/ as <img> layers in the documented draw order, so this page is also the proof that the parts compose. SMIL animates on file://. -->
+<style>
+  :root {
+    --bg-base: #050710;
+    --ui-text: #ECF0FA;
+    --ui-text-muted: #8B95B5;
+    --ui-text-dim: #4B5470;
+    --ui-border: rgba(255,255,255,0.10);
+    --ui-panel: rgba(10,13,26,0.72);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg-base); }
+  body {
+    color: var(--ui-text);
+    font-family: -apple-system, "Segoe UI", Inter, Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 13px;
+    line-height: 1.4;
+    padding: 40px 40px 48px;
+    -webkit-font-smoothing: antialiased;
+  }
+  header { margin-bottom: 36px; }
+  .wordmark {
+    font-size: 13px; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--ui-text-muted); margin: 0 0 6px;
+  }
+  h1 { font-size: 16px; font-weight: 500; margin: 0; color: var(--ui-text); }
+  header p { margin: 6px 0 0; color: var(--ui-text-muted); max-width: 1100px; }
+  code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 12px; color: var(--ui-text); }
+  section { margin-bottom: 48px; }
+  .mode {
+    font-size: 11px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--ui-text-muted); margin: 0 0 16px;
+  }
+  .mode span { letter-spacing: 0; text-transform: none; font-weight: 400; color: var(--ui-text-dim); margin-left: 10px; }
+  .row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 36px 28px; }
+  figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 12px; width: var(--w); min-width: 168px; }
+  .box {
+    position: relative;
+    width: var(--w); height: var(--h);
+    border: 1px solid var(--ui-border); border-radius: 10px;
+    display: flex; align-items: center; justify-content: center; overflow: hidden;
+  }
+  .box > svg { position: relative; width: var(--w); height: var(--h); flex: none; display: block; }
+  .box > svg.sky { position: absolute; left: -1px; top: -1px; }
+  figcaption { text-align: center; color: var(--ui-text-muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+  figcaption b { font-weight: 500; color: var(--ui-text); display: block; margin-bottom: 2px; }
+  figcaption i { font-style: normal; color: var(--ui-text-dim); display: block; margin-top: 2px; }
+  .strip { border: 1px solid var(--ui-border); border-radius: 10px; overflow-x: auto; overflow-y: hidden; }
+  .strip > svg { display: block; }
+  .strip text { font-family: -apple-system, "Segoe UI", Inter, Roboto, "Helvetica Neue", Arial, sans-serif; font-variant-numeric: tabular-nums; }
+  .stack { position: relative; }
+  .stack img { position: absolute; inset: 0; width: 100%; height: 100%; }
+  footer { color: var(--ui-text-muted); border-top: 1px solid var(--ui-border); padding-top: 16px; }
+</style>
+</head><body>
+<header><p class="wordmark">Slingshot</p><h1>Modular ship — ship systems (v2.3)</h1><p>Each tile stacks the part files from <code>design/assets/ship/</code> in the draw order: back modules → engine → hull → front modules → damage. All parts share one 96 × 160 frame with the ship centre at (48, 64). Shown at 2×; the game draws the base hull 22 px long.</p></header>
+<section>
+  <p class="mode">Builds<span>2× · engines firing</span></p>
+  <div class="row"><figure style="--w:192px; --h:320px"><div class="box stack" style="width:192px;height:320px"><img src="../assets/ship/engine-chemical.svg" alt=""><img src="../assets/ship/hull-base.svg" alt=""></div><figcaption><b>Base hull</b>chemical engine<i>the starting ship</i></figcaption></figure><figure style="--w:192px; --h:320px"><div class="box stack" style="width:192px;height:320px"><img src="../assets/ship/module-solar.svg" alt=""><img src="../assets/ship/module-tanks.svg" alt=""><img src="../assets/ship/engine-ion.svg" alt=""><img src="../assets/ship/hull-base.svg" alt=""><img src="../assets/ship/module-sensors.svg" alt=""></div><figcaption><b>Explorer</b>ion · solar · tanks · sensors<i>long range, slow burns</i></figcaption></figure><figure style="--w:192px; --h:320px"><div class="box stack" style="width:192px;height:320px"><img src="../assets/ship/module-tanks.svg" alt=""><img src="../assets/ship/engine-chemical.svg" alt=""><img src="../assets/ship/hull-base.svg" alt=""><img src="../assets/ship/module-cryo.svg" alt=""><img src="../assets/ship/module-scoop.svg" alt=""></div><figcaption><b>Harvester</b>chemical · scoop · tanks · cryo<i>lives off nebulae and gas giants</i></figcaption></figure><figure style="--w:192px; --h:320px"><div class="box stack" style="width:192px;height:320px"><img src="../assets/ship/module-solar.svg" alt=""><img src="../assets/ship/module-tanks.svg" alt=""><img src="../assets/ship/module-plating.svg" alt=""><img src="../assets/ship/engine-pulse.svg" alt=""><img src="../assets/ship/hull-base.svg" alt=""><img src="../assets/ship/module-cryo.svg" alt=""><img src="../assets/ship/module-scoop.svg" alt=""><img src="../assets/ship/module-sensors.svg" alt=""><img src="../assets/ship/module-shield.svg" alt=""></div><figcaption><b>Fully upgraded</b>pulse · every module<i>heaviest: every upgrade costs mass</i></figcaption></figure></div>
+</section>
+
+<section>
+  <p class="mode">Engines<span>2× · each with its own nozzle and plume, blue → violet</span></p>
+  <div class="row"><figure style="--w:192px; --h:320px"><div class="box stack" style="width:192px;height:320px"><img src="../assets/ship/engine-chemical.svg" alt=""><img src="../assets/ship/hull-base.svg" alt=""></div><figcaption><b>Chemical</b>bell nozzle<i>flickering plume (the game's current plume)</i></figcaption></figure><figure style="--w:192px; --h:320px"><div class="box stack" style="width:192px;height:320px"><img src="../assets/ship/engine-ion.svg" alt=""><img src="../assets/ship/hull-base.svg" alt=""></div><figcaption><b>Ion</b>gridded plate<i>long, thin, steady beam</i></figcaption></figure><figure style="--w:192px; --h:320px"><div class="box stack" style="width:192px;height:320px"><img src="../assets/ship/engine-pulse.svg" alt=""><img src="../assets/ship/hull-base.svg" alt=""></div><figcaption><b>Pulse</b>pusher plate<i>a flash every 0.6 s</i></figcaption></figure></div>
+</section>
+
+<section>
+  <p class="mode">Modules<span>2× · one upgrade each, on the base hull</span></p>
+  <div class="row"><figure style="--w:192px; --h:320px"><div class="box stack" style="width:192px;height:320px"><img src="../assets/ship/module-plating.svg" alt=""><img src="../assets/ship/engine-chemical.svg" alt=""><img src="../assets/ship/hull-base.svg" alt=""></div><figcaption><b>Hull plating</b>plating<i>armour shell + seams</i></figcaption></figure><figure style="--w:192px; --h:320px"><div class="box stack" style="width:192px;height:320px"><img src="../assets/ship/engine-chemical.svg" alt=""><img src="../assets/ship/hull-base.svg" alt=""><img src="../assets/ship/module-shield.svg" alt=""></div><figcaption><b>Shielding</b>shield<i>deflector arc ahead of the nose</i></figcaption></figure><figure style="--w:192px; --h:320px"><div class="box stack" style="width:192px;height:320px"><img src="../assets/ship/module-tanks.svg" alt=""><img src="../assets/ship/engine-chemical.svg" alt=""><img src="../assets/ship/hull-base.svg" alt=""></div><figcaption><b>Fuel tanks</b>tanks<i>side pods, fuel-mint bands</i></figcaption></figure><figure style="--w:192px; --h:320px"><div class="box stack" style="width:192px;height:320px"><img src="../assets/ship/module-solar.svg" alt=""><img src="../assets/ship/engine-chemical.svg" alt=""><img src="../assets/ship/hull-base.svg" alt=""></div><figcaption><b>Solar panels</b>solar<i>blue wings, gold frames</i></figcaption></figure><figure style="--w:192px; --h:320px"><div class="box stack" style="width:192px;height:320px"><img src="../assets/ship/engine-chemical.svg" alt=""><img src="../assets/ship/hull-base.svg" alt=""><img src="../assets/ship/module-scoop.svg" alt=""></div><figcaption><b>Gas scoop</b>scoop<i>shoulder intakes, amber rims</i></figcaption></figure><figure style="--w:192px; --h:320px"><div class="box stack" style="width:192px;height:320px"><img src="../assets/ship/engine-chemical.svg" alt=""><img src="../assets/ship/hull-base.svg" alt=""><img src="../assets/ship/module-sensors.svg" alt=""></div><figcaption><b>Sensors</b>sensors<i>nose antenna, dish</i></figcaption></figure><figure style="--w:192px; --h:320px"><div class="box stack" style="width:192px;height:320px"><img src="../assets/ship/engine-chemical.svg" alt=""><img src="../assets/ship/hull-base.svg" alt=""><img src="../assets/ship/module-cryo.svg" alt=""></div><figcaption><b>Cryosleep</b>cryo<i>pod windows, breathing glow</i></figcaption></figure></div>
+</section>
+
+<section>
+  <p class="mode">Damage states<span>2× · one overlay at a time, matching the hull bar</span></p>
+  <div class="row"><figure style="--w:192px; --h:320px"><div class="box stack" style="width:192px;height:320px"><img src="../assets/ship/engine-chemical.svg" alt=""><img src="../assets/ship/hull-base.svg" alt=""></div><figcaption><b>100 %</b>clean<i>hull 80-100 %</i></figcaption></figure><figure style="--w:192px; --h:320px"><div class="box stack" style="width:192px;height:320px"><img src="../assets/ship/engine-chemical.svg" alt=""><img src="../assets/ship/hull-base.svg" alt=""><img src="../assets/ship/damage-75.svg" alt=""></div><figcaption><b>75 %</b>scorch, a dent<i>hull 50-79 %</i></figcaption></figure><figure style="--w:192px; --h:320px"><div class="box stack" style="width:192px;height:320px"><img src="../assets/ship/engine-chemical.svg" alt=""><img src="../assets/ship/hull-base.svg" alt=""><img src="../assets/ship/damage-45.svg" alt=""></div><figcaption><b>45 %</b>glowing crack, breached panel<i>hull 25-49 %</i></figcaption></figure><figure style="--w:192px; --h:320px"><div class="box stack" style="width:192px;height:320px"><img src="../assets/ship/engine-chemical.svg" alt=""><img src="../assets/ship/hull-base.svg" alt=""><img src="../assets/ship/damage-15.svg" alt=""></div><figcaption><b>15 %</b>venting, sparks, red beacon<i>hull below 25 %</i></figcaption></figure></div>
+</section>
+
+<section>
+  <p class="mode">Game scale<span>1× · base hull 22 px long</span></p>
+  <div class="row"><figure style="--w:96px; --h:110px"><div class="box stack"  style="width:44px;height:73px;border:none"><img src="../assets/ship/engine-chemical.svg" alt=""><img src="../assets/ship/hull-base.svg" alt=""></div><figcaption>base</figcaption></figure><figure style="--w:96px; --h:110px"><div class="box stack"  style="width:44px;height:73px;border:none"><img src="../assets/ship/module-solar.svg" alt=""><img src="../assets/ship/module-tanks.svg" alt=""><img src="../assets/ship/engine-ion.svg" alt=""><img src="../assets/ship/hull-base.svg" alt=""><img src="../assets/ship/module-sensors.svg" alt=""></div><figcaption>explorer</figcaption></figure><figure style="--w:96px; --h:110px"><div class="box stack"  style="width:44px;height:73px;border:none"><img src="../assets/ship/module-tanks.svg" alt=""><img src="../assets/ship/engine-chemical.svg" alt=""><img src="../assets/ship/hull-base.svg" alt=""><img src="../assets/ship/module-cryo.svg" alt=""><img src="../assets/ship/module-scoop.svg" alt=""></div><figcaption>harvester</figcaption></figure><figure style="--w:96px; --h:110px"><div class="box stack"  style="width:44px;height:73px;border:none"><img src="../assets/ship/module-solar.svg" alt=""><img src="../assets/ship/module-tanks.svg" alt=""><img src="../assets/ship/module-plating.svg" alt=""><img src="../assets/ship/engine-pulse.svg" alt=""><img src="../assets/ship/hull-base.svg" alt=""><img src="../assets/ship/module-cryo.svg" alt=""><img src="../assets/ship/module-scoop.svg" alt=""><img src="../assets/ship/module-sensors.svg" alt=""><img src="../assets/ship/module-shield.svg" alt=""></div><figcaption>full</figcaption></figure><figure style="--w:96px; --h:110px"><div class="box stack"  style="width:44px;height:73px;border:none"><img src="../assets/ship/engine-chemical.svg" alt=""><img src="../assets/ship/hull-base.svg" alt=""><img src="../assets/ship/damage-45.svg" alt=""></div><figcaption>45 %</figcaption></figure><figure style="--w:96px; --h:110px"><div class="box stack"  style="width:44px;height:73px;border:none"><img src="../assets/ship/engine-chemical.svg" alt=""><img src="../assets/ship/hull-base.svg" alt=""><img src="../assets/ship/damage-15.svg" alt=""></div><figcaption>15 %</figcaption></figure></div>
+</section>
+
+<section>
+  <p class="mode">HUD<span>hull bar, tidal-stress chip, in-world chevrons</span></p>
+  <div class="row"><figure style="--w:520px; --h:360px"><div class="box" style="width:520px;height:360px"><img src="../assets/hud-hull.svg" alt="" style="width:520px;height:360px"></div><figcaption><b>Hull and tidal stress</b>assets/hud-hull.svg<i>under the fuel block, x 1180-1400</i></figcaption></figure></div>
+</section>
+
+<footer>Upgrade screen: <code>mockups/upgrade-screen.svg</code> · flight with damage and tidal stress: <code>mockups/flight-damaged.svg</code> · tokens in <code>style.md</code> §8 Ship systems · renderer notes in <code>threejs-notes.md</code> §13.</footer>
+</body></html>

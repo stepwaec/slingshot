@@ -1,6 +1,6 @@
 # Slingshot — visual style v1.5
 
-Calm, cinematic space for Slingshot. This file is the look; `canvas-notes.md` is the pixel-exact drawing reference (how each SVG recipe looks and what it costs, written for Canvas 2D); `threejs-notes.md` maps it onto the game's Three.js renderer (WP3); `assets.md` indexes every file. Sections: §1 mood · §2 palette (background, sky, the sun, the two original planets, the shared lighting tokens, UI) · §3 typography · §4 glow and blur rules, with **§4.1 Realism, vibrancy and crispness rules** · §5 motion · §6 layout · §7 asset index · §8 the **body library** (31 bodies: 12 planets, 6 stars and compact objects, 4 moons, 3 ringed planets, the 3 WP8 objects: binary star, red giant, moon chain, the 2 WP9 compact objects: pulsar, magnetar, and the WP10 comet) plus the WP9 **magnetism map** and the WP10 **solar recharge indicator** · §9 the **space environment** (nebulae, asteroid field, wreck debris). Assets live in `design/assets` (bodies in `design/assets/bodies`, the environment in `design/assets/space`, map overlays in `design/assets/overlays`), mockups (1440×900, PNG = 2× render) in `design/mockups`, animated previews in `design/preview/planets.html`, `bodies.html` and `space.html`.
+Calm, cinematic space for Slingshot. This file is the look; `canvas-notes.md` is the pixel-exact drawing reference (how each SVG recipe looks and what it costs, written for Canvas 2D); `threejs-notes.md` maps it onto the game's Three.js renderer (WP3); `assets.md` indexes every file. Sections: §1 mood · §2 palette (background, sky, the sun, the two original planets, the shared lighting tokens, UI) · §3 typography · §4 glow and blur rules, with **§4.1 Realism, vibrancy and crispness rules** · §5 motion · §6 layout · §7 asset index · §8 the **body library** (31 bodies: 12 planets, 6 stars and compact objects, 4 moons, 3 ringed planets, the 3 WP8 objects: binary star, red giant, moon chain, the 2 WP9 compact objects: pulsar, magnetar, and the WP10 comet) plus the WP9 **magnetism map** and the WP10 **solar recharge indicator** · §9 the **space environment** (nebulae, asteroid field, wreck debris) · §10 **ship systems** (modular ship, damage states, hull HUD, tidal-stress warning, upgrade screen). Assets live in `design/assets` (bodies in `design/assets/bodies`, the environment in `design/assets/space`, map overlays in `design/assets/overlays`, the modular ship in `design/assets/ship`), mockups (1440×900, PNG = 2× render) in `design/mockups`, animated previews in `design/preview/planets.html`, `bodies.html` and `space.html`.
 
 **History in one paragraph.** v1 set the layout, UI and the two-glow rule. v1.1 was the first realism pass (limb-darkened star, planets with a terminator and a rim, a tinted starfield with a Milky Way). v1.2 made the planets rotate: a seamless texture strip slides under a lighting overlay that never moves. v1.3 built the body library (12 planets, 6 stars and compact objects) and gave the stars prominences and a flare. v1.4 adds moons, ringed planets, nebulae and debris fields (§8, §9). **v1.5 (revised) is the realism, vibrancy and crispness pass**, agreed with the client on two approved reference assets — the ocean world "variant F" and the sun "variant J" — and applied to every body: vivid multi-zone surfaces with crisp edges, elongated clouds with cast shadows, a warm terminator band, a lit-side haze and rim, a fiery plasma sun with ragged flame rings and an irregular rim, and no untinted grey anywhere. The earlier v1.5 "crispness pass" numbers (halve blurs, ±12 % lightness, limb line at α 0.30) were rejected as indistinguishable from v1.2 and are **not** used; §4.1 holds the rules that replaced them.
 
@@ -923,3 +923,88 @@ Documented so a later build knows where they would go; the prototype implements 
 | Asteroid crash bodies | the 6 large rocks as circles of their mean radius: afR83 11.3 · afR84 9.6 · afR85 10.7 · afR86 12.1 · afR87 12.0 · afR88 9.8 | contact = crash; dust and small rocks stay visual |
 | Wreck crash bodies | pieces with R ≥ 10 as circles of 0.6 R (wrK1–wrK8, wrK10) | contact = crash; flakes stay visual |
 | Ring material | ring particles, debris-ring rocks, shepherd rings | none planned — they are never solid |
+
+## 10. Ship systems (v2.3)
+
+The design for the ship systems package: a modular ship whose upgrades are visible, damage states, the hull HUD, the tidal-stress warning and the upgrade screen. Files: `assets/ship/*.svg` (parts), `assets/hud-hull.svg`, `mockups/upgrade-screen.svg`, `mockups/flight-damaged.svg`, preview `preview/ship.html`. Renderer notes: `threejs-notes.md` §13.
+
+### The modular ship
+
+- **One frame for every part.** Each file in `assets/ship/` is a 96 × 160 viewBox with the ship centre at (48, 64), nose up. Parts stack exactly, so a build is just its parts drawn in order.
+- **Draw order.** Back modules (solar, tanks, plating back) → engine plume → fins, engine nozzle and hull → front modules (plating front, cryo, scoop, sensors, shield) → one damage overlay.
+- **Size.** The base hull is 48.6 units long and stays 22 px at zoom 1 (minimum 12 px), as today. Upgrades widen the silhouette (solar wings to ±29 units, about 26 px across) rather than lengthen it.
+- **Identity kept.** White hull, navy outline, blue canopy and blue accents carry over from v1; the plume family stays blue-white to violet.
+- **Lighting is symmetric.** A bright ridge and cooler edges, so the sprite can rotate with the heading without breaking "lighting never rotates" for bodies.
+- **Readability rule.** Every upgrade must change the silhouette or add a coloured accent that reads at 22 px: wings, pods, intakes, arcs, antennas. Fine detail (panel lines, grids) is for the 2× and shipyard views.
+
+| Token | Hex | Used for |
+|---|---|---|
+| `ship.hull` | `#B9C6E4` → `#E9EEF9` → `#FFFFFF` → `#E9EEF9` → `#B9C6E4` | Hull, fins, cryo band (stops 0 / 0.3 / 0.5 / 0.7 / 1, across the ship) |
+| `ship.outline` | `#0A0D1A` | Outlines 0.6–1 unit; panel lines at α 0.32 |
+| `ship.accent` | `#5EA0FF` | Fin tips, nose chevron, dish feed (= `ship.cockpit`) |
+| `ship.canopy` | `#CFE8FF` → `#5EA0FF` → `#1E4FB8` | Canopy, highlight `#FFFFFF` α 0.75 |
+| `ship.steel` | `#8496C4` / `#DCE4F6` | Engine mount, nozzles, struts, scoop funnels |
+| `ship.throat` | `#1A2240` | Nozzle throat, scoop mouths |
+| `ship.armor` | `#4E66A0` / `#7F98CF` | Hull plating shell; edge highlight `#AFC2EE` |
+| `ship.shield` | `#7FDBFF` / `#9FE8FF` | Deflector crescent (α 0.22) and edge, emitters |
+| `ship.tank` | `#B9C6E4` / `#FFFFFF` / `#A9B8DC` | Fuel pods; bands `#3DE0C2` (= `fuel.full`) |
+| `ship.solar` | `#2E62D8` → `#1E3F9E` → `#15307E` | Solar cells; grid `#0A1A4A` α 0.7; frame `#FFD27A` (= `solar.glyph`) |
+| `ship.scoop` | `#FFB45A` | Scoop rims |
+| `ship.sensor` | `#DCE4FF` / `#5EF2FF` | Antenna and dish / blinking tip light |
+| `ship.cryo` | `#BFF4FF` / `#7CF5FF` / `#1E6E8A` | Pod windows, breathing glow, window rims |
+| `engine.ionPlate` | `#22305E` / `#7FB8FF` | Ion grid plate and grid bars |
+| `plume.chem` | `#F7FBFF` → `#D6C8FF` → `#A06BFF` → `#7A4AD8` | Chemical plume (= `theme.thrust`); throat glow `#E2D4FF` |
+| `plume.ion` | `#E6F4FF` → `#8FC2FF` → `#A06BFF` | Ion beam; core `#F2F9FF`, plate glow `#BFE0FF` |
+| `plume.pulse` | `#FFFFFF` → `#E2D4FF` → `#A06BFF` → `#7A4AD8` | Pulse flash; plate glow `#C8B8FF` |
+
+### Engines
+
+| Engine | Nozzle | Plume | Read |
+|---|---|---|---|
+| Chemical | Bell, 6.4 → 10 wide | Teardrop to 42 units, flickering 0.33 s (the game's current plume) | the default, punchy |
+| Ion | Gridded plate 14 × 3.8 | Long thin beam to 55 units, steady, slow 2 s shimmer | efficient, weak: burns last longer |
+| Pulse | Pusher plate on struts | A flash every 0.6 s, growing and fading aft | powerful, thirsty |
+
+The request's "no trailing halo" holds: the plumes have no separate bloom shape behind them.
+
+### Damage states
+
+One overlay at a time, chosen from the hull bar: none at 80–100 %, `damage-75` at 50–79 %, `damage-45` at 25–49 %, `damage-15` below 25 %. Each overlay includes the marks of the milder ones.
+
+| Token | Hex | Used for |
+|---|---|---|
+| `damage.scorch` | `#1E1410` / `#3A2418` | Scorch marks (α 0.75 → 0.45 → 0) |
+| `damage.dent` | `#AEBBDD` | Dented plate |
+| `damage.crackGlow` | `#FF8A3A` | Glow under cracks (α 0.55–0.6) |
+| `damage.breach` | `#FFB45A` → `#FF6A2A` → `#141A33` | Breached panel; missing plate `#141A33` |
+| `damage.vent` | `#DCE4FF` | Venting puffs |
+| `damage.spark` | `#FFD27A` | Sparks |
+| `damage.beacon` | `#FF5A5F` | Red warning beacon (= `fuel.critical`) |
+
+At game scale the breach glow, venting and beacon are what reads; the hull bar carries the exact number.
+
+### Hull HUD and tidal stress
+
+- **Hull block** under the fuel block (x 1180–1400): "HULL" label at baseline 96, percentage at x 1400, and a bar of **10 segments** at y 104 (20.2 × 8, gap 2, radius 2), so it never reads as the continuous fuel bar. A hit flashes the lost segment white for 120 ms.
+- **Tidal-stress chip** at y 122 (220 × 26, radius 7), only while stress > 0: stretch icon, "TIDAL STRESS", three level cells. Level 3 means the hull is losing points; the chip turns red and pulses.
+- **In-world chevrons**: two pairs 15–24 px from the ship, pointing outward along the stretch axis (the line to the mass causing it), pulsing every 0.8 s (0.5 s at level 3). Screen-space, never scaled.
+- **Layout:** with the hull block shown, the top-right HUD rectangle grows to x > 1160, y < 152; the nebula-core rule (§9) applies to it.
+
+| Token | Hex | Used for |
+|---|---|---|
+| `hull.ok` | `#9FC4FF` | Hull bar at ≥ 60 % |
+| `hull.warn` | `#FFC857` | Hull bar at 30–59 % (= `fuel.low`) |
+| `hull.critical` | `#FF5A5F` | Hull bar and percentage below 30 %, pulsing (= `fuel.critical`) |
+| `stress.warn` | `#FF9F43` | Tidal chip and chevrons, levels 1–2; mass notes on the upgrade screen |
+| `stress.critical` | `#FF5A5F` | Tidal chip and chevrons, level 3 |
+
+The stress chip uses a 1 px coloured border on the panel fill, never a tinted fill: low-alpha amber over navy reads olive.
+
+### Upgrade screen (shipyard)
+
+`mockups/upgrade-screen.svg`, shown between levels:
+
+- **Header:** wordmark and "SHIPYARD"; stars to spend at the top right (star glyph `#FFD27A`, count in 20 px mono).
+- **Left:** the live ship at 5.8×, docked with its engine idle, on a blue pad (`#5EA0FF` α 0.28 → 0, dashed ring). Under it a stats panel: mass (with "+13 t vs base hull" in `stress.warn`), fuel range ("−11 % from mass") and solar recharge. Every upgrade costs mass, so mass and range lead.
+- **Right:** eight cards, two columns, 392 × 150. Each card has a thumbnail (the module in full colour over a blueprint of the base hull: fill `#0B1024`, outline `#5EA0FF` α 0.6), name, effect, tier pips (3), mass, star cost and one action: "Fitted" (accent with a check), "Upgrade to 2" or "Fit" (panel button), locked ("Need 1 more star", padlock, muted), or for engines a Chemical | Ion | Pulse segmented control. Fitted cards get an accent border.
+- **Bottom:** "Back" and "Launch" (primary), with the next level named.

@@ -1,6 +1,6 @@
-# Slingshot — asset index (v2.2)
+# Slingshot — asset index (v2.3)
 
-One row per file in `design/assets/` (10 top-level files, 29 bodies in `bodies/`, 1 map overlay in `overlays/`, 5 environment files in `space/` — 45 SVGs), then the previews and the mockups. All SVGs are self-contained (no scripts, external refs or raster), `xmllint --noout` clean and use only the tokens of `style.md` §2 / §8 / §9. "Anchor" is the point the game positions and rotates. Exact Canvas code is in `canvas-notes.md` (§ numbers below). How to build each asset in the game\'s Three.js renderer is in `threejs-notes.md` (§10 maps every asset to its factory).
+One row per file in `design/assets/` (11 top-level files, 29 bodies in `bodies/`, 15 ship parts in `ship/`, 1 map overlay in `overlays/`, 5 environment files in `space/` — 61 SVGs), then the previews and the mockups. All SVGs are self-contained (no scripts, external refs or raster), `xmllint --noout` clean and use only the tokens of `style.md` §2 / §8 / §9. "Anchor" is the point the game positions and rotates. Exact Canvas code is in `canvas-notes.md` (§ numbers below). How to build each asset in the game\'s Three.js renderer is in `threejs-notes.md` (§10 maps every asset to its factory).
 
 **Structure.** Every body and environment asset is `<defs>` (ids prefixed per file) + **one** top-level group `<g id="…" transform="translate(cx cy)">` with all geometry relative to (0, 0), SMIL animation inside, and a **header comment listing every parameter — the header is the canon**. Mockups and galleries copy the defs and the group verbatim and change only the translate (plus scene-local lighting wrappers). Ids are unique across all 37 SVGs (checked: no id defined in two files, every `url(#…)` / `href` resolves). Static renders and mockups show t = 0.
 
@@ -20,6 +20,7 @@ One row per file in `design/assets/` (10 top-level files, 29 bodies in `bodies/`
 | `predicted-path.svg` | Predicted path sample | `0 0 600 200`; 3.4 KB | first dot (30, 150) | `path` #DCE4FF: dots r 1.5, α 0.7 / 0.35; end ring r 6 | one `Path2D` of dots, recomputed on pointer move (§8) |
 | `drag-arrow.svg` | Launch drag arrow at 62 % | `0 0 300 120`; 2.3 KB | ship centre (36, 92) | ghost #FFFFFF α 0.16 · `arrow` #FFFFFF · `arrow.power` #FFAE59 at 62 % · label `ui.textMuted` #8B95B5 | power colour computed from the ramp (§9) |
 | `solar-recharge.svg` (v2.2, WP10) | **Solar recharge indicator** sample sheet: fuel block in flight (off, charging, close pass), fuel block in planning (ghost segment), predicted-path dot ramp near a star, ship charging pulse | `0 0 520 320` | `#solarRecharge` (0, 0); `rc*` | `solar.glyph` #FFD27A · `solar.charge` #FFE08A · `solar.shimmer` #FFF6D6 · `solar.path` #FFD86E (`style.md` §8 WP10) | rate model and placement in the header; the mechanic itself lands with the ship systems package |
+| `hud-hull.svg` (v2.3, ship systems) | **Hull bar and tidal-stress warning** sample sheet: hull block at 100 / 64 / 38 / 16 % (10 segments), tidal-stress chip at levels 1–3, in-world chevrons around a ship near a white dwarf | `0 0 520 360` | `#hudHull` (0, 0) | `hull.*` #9FC4FF / #FFC857 / #FF5A5F · `stress.*` #FF9F43 / #FF5A5F (`style.md` §10) | HUD placement under the fuel block in the header; chevrons are screen-space |
 
 ## Body library (`design/assets/bodies/`)
 
@@ -59,6 +60,28 @@ One row per file in `design/assets/` (10 top-level files, 29 bodies in `bodies/`
 
 `planet-x.svg` and `star.svg` complete the library and appear in the galleries through their own files.
 
+## Modular ship (`design/assets/ship/`, v2.3, ship systems)
+
+Every part uses one frame — viewBox `0 0 96 160`, ship centre at (48, 64), nose up — so parts stack exactly. Draw order: back modules → engine plume → hull and nozzle → front modules → one damage overlay (`style.md` §10, `threejs-notes.md` §13). Proof: `preview/ship.html` stacks the real files.
+
+| File | What | Group; ids | Notes for the game |
+|---|---|---|---|
+| `hull-base.svg` | **Base hull**: fins with blue tips, hull, panel lines, nose chevron, canopy, engine mount (layer 3) | `#shipHull`; `sxBase*` | layered with the others; tokens `ship.*` (`style.md` §10) |
+| `engine-chemical.svg` | **Chemical engine**, firing: bell nozzle, flickering teardrop plume `#sxEcPlume`, throat glow | `#shipEngineChem`; `sxEc*` | layered with the others; tokens `ship.*` (`style.md` §10) |
+| `engine-ion.svg` | **Ion engine**, firing: gridded plate, long thin steady beam `#sxEiPlume` | `#shipEngineIon`; `sxEi*` | layered with the others; tokens `ship.*` (`style.md` §10) |
+| `engine-pulse.svg` | **Pulse engine**, firing: pusher plate on struts, a flash every 0.6 s `#sxEpPlume` | `#shipEnginePulse`; `sxEp*` | layered with the others; tokens `ship.*` (`style.md` §10) |
+| `module-plating.svg` | **Hull plating**: armour shell (`…Back`) and seams (`…Front`) | `#shipModPlating`; `sxMp*` | layered with the others; tokens `ship.*` (`style.md` §10) |
+| `module-shield.svg` | **Shielding**: deflector arc ahead of the nose, emitters (front) | `#shipModShield`; `sxMs*` | layered with the others; tokens `ship.*` (`style.md` §10) |
+| `module-tanks.svg` | **Fuel tanks**: side pods with fuel-mint bands (back) | `#shipModTanks`; `sxMt*` | layered with the others; tokens `ship.*` (`style.md` §10) |
+| `module-solar.svg` | **Solar panels**: blue wings with gold frames on struts (back) | `#shipModSolar`; `sxMo*` | layered with the others; tokens `ship.*` (`style.md` §10) |
+| `module-scoop.svg` | **Gas scoop**: shoulder intakes with amber rims (front) | `#shipModScoop`; `sxMg*` | layered with the others; tokens `ship.*` (`style.md` §10) |
+| `module-sensors.svg` | **Sensors**: nose antenna with blinking tip, dish (front) | `#shipModSensors`; `sxMn*` | layered with the others; tokens `ship.*` (`style.md` §10) |
+| `module-cryo.svg` | **Cryosleep**: mid-hull module with three breathing pod windows (front) | `#shipModCryo`; `sxMc*` | layered with the others; tokens `ship.*` (`style.md` §10) |
+| `damage-75.svg` | **Damage, 75 %**: scorch marks, a dent (layer 5, hull 50–79 %) | `#shipDamage75`; `sxD1*` | layered with the others; tokens `ship.*` (`style.md` §10) |
+| `damage-45.svg` | **Damage, 45 %**: adds a glowing crack and a breached panel (hull 25–49 %) | `#shipDamage45`; `sxD2*` | layered with the others; tokens `ship.*` (`style.md` §10) |
+| `damage-15.svg` | **Damage, 15 %**: adds venting, sparks, a missing plate and a red beacon (hull < 25 %) | `#shipDamage15`; `sxD3*` | layered with the others; tokens `ship.*` (`style.md` §10) |
+| `ship-builds.svg` | **Four example builds** composed from the parts: base, explorer, harvester, full | `#shipBuilds`, 384 × 160; `sxB1*`–`sxB4*` | preview only; tokens `ship.*` (`style.md` §10) |
+
 ## Map overlays (`design/assets/overlays/`, v2.1, WP9)
 
 | File | What | viewBox | Anchor | Key colours (token · hex) | Notes for the game |
@@ -86,10 +109,11 @@ All self-contained pages (inline CSS, no scripts) on `bg.base`, inlining the ass
 | `planets.html` | The original three bodies — `planet-start.svg`, `planet-x.svg`, `star.svg` — at 3× and 1×, labelled with their periods (surface 90 / 64 s, X 120 / 80 s, ring 2.4 s, star breathe 6 s, flames 200 / 300 s). The v1.5 star has its own SMIL breathe: the page must not add a CSS breathe on top |
 | `bodies.html` | The library bodies, one row per family — rocky worlds, gas worlds, ringed planets, small bodies (+ planet X), moons, stars & compact objects, **stellar variety (WP8)**: binary star, red giant, moon chain, **compact objects (WP9)**: pulsar, magnetar, magnetism map, and **comet (WP10)** at three distances — each tile labelled name · radius · periods · what it is for (stars and compact objects add the crash radius), plus a "relative sizes" strip drawing all 18 at 1× through `<use>` |
 | `space.html` (v1.4) | Rows "Gas clouds" (the three nebulae), "Debris fields" (asteroid field, wreck debris), "Moons" (icy, volcanic, captured, planet with moons), "Ringed planets" (Saturn ring, debris ring, shepherded ring), each tile labelled like `bodies.html`, plus a **composition** tile showing a nebula + the asteroid field + a ringed planet together at 1× |
+| `ship.html` (v2.3) | The modular ship: four builds, three engines, seven modules, four damage states, a game-scale row and the hull HUD sheet. Every tile stacks the real part files from `assets/ship/` as `<img>` layers in the draw order, so the page also proves that the parts compose |
 
 ## Mockups (`design/mockups/`, all `0 0 1440 900`; **PNG = 2× render**)
 
-Every PNG is a 2× render of its SVG (2880 × 1800, `--force-device-scale-factor=2`, same filename). All ten share the v1.1 background (a `bg.edge` rect, the vignette centred (720, 450) r 900, then the `#starfield` group verbatim) and splice every body group **verbatim** from the v1.5 assets with only its translate changed; where a library body's upper-right light does not face the scene's star, its lighting layers sit in a scene-local `rotate(angle(L_scene) − angle(L_library))` wrapper (strips and the asset files untouched).
+Every PNG is a 2× render of its SVG (2880 × 1800, `--force-device-scale-factor=2`, same filename). All twelve share the v1.1 background (the upgrade screen dims it) (a `bg.edge` rect, the vignette centred (720, 450) r 900, then the `#starfield` group verbatim) and splice every body group **verbatim** from the v1.5 assets with only its translate changed; where a library body's upper-right light does not face the scene's star, its lighting layers sit in a scene-local `rotate(angle(L_scene) − angle(L_library))` wrapper (strips and the asset files untouched).
 
 | File | Mode | What it demonstrates |
 |---|---|---|
@@ -103,6 +127,8 @@ Every PNG is a 2× render of its SVG (2880 × 1800, `--force-device-scale-factor
 | `scene-nebula.svg` / `.png` (v1.4) | Planning, nebula level | Emission nebula behind the left half, an asteroid band crossing the middle diagonally, sun (760, 470) with flares, Saturn-ringed planet (1040, 650) as the slingshot body, icy moon (520, 260), ocean start (250, 690), planet X (1190, 210); the path threads a gap in the belt (≥ 18 px from every large rock) and swings around the ringed planet's far side, outside the ring. Nebula cores kept out of the HUD rectangles (`style.md` §9) |
 | `magnetism-map.svg` / `.png` (v2.1, WP9) | Planning, magnetism map on (M) | Magnetar (690, 430) with all four zones, ringed gas giant (470, 300) with three, pulsar (1120, 650) with circular rotation-averaged zones; ocean start (230, 720), planet X (1236, 196). The predicted path bends round the magnetar inside its Scrambled zone and widens into a flickering spread (±27 px at the end); map toggles "Gravity off" / "Magnetism" (pressed) and the zone legend under them; telemetry adds `path spread ±27 px` |
 | `comet-recharge.svg` / `.png` (v2.2, WP10) | Planning, comet and solar recharge | The planning scene plus a comet at (430, 330), rotated so its tails point straight away from the sun (tail scale 0.75, harvest ring on). The predicted path's dots turn gold where it passes the sun (closest 136 px), "+5 % fuel" by the end ring; the fuel block reads 72 % with the lit sun glyph, the planning ghost segment and "+5 % on this path" |
+| `upgrade-screen.svg` / `.png` (v2.3, ship systems) | Shipyard, between levels | The live ship (ion, plating, shield, solar, tanks, sensors) docked at 5.8× with mass, fuel range and recharge; eight upgrade cards showing every state (fitted, upgrade, fit, locked, engine choice); 3 stars to spend; Back and Launch |
+| `flight-damaged.svg` / `.png` (v2.3, ship systems) | In flight, damaged | The flight scene without the removed trail: the modular explorer build at 45 % hull passing a white dwarf (1010, 286), tidal chevrons along the ship → dwarf axis, the hull block (45 %, amber) and tidal-stress chip (level 2) under the fuel block, and a 5× callout (mockup only) of the damage |
 
 ## Usage rules
 
