@@ -41,6 +41,7 @@ const app = required<HTMLElement>("#app");
 const canvas = required<HTMLCanvasElement>("#space");
 const launchButton = required<HTMLButtonElement>("#launch");
 const deleteButton = required<HTMLButtonElement>("#delete");
+const nodeRemove = required<HTMLButtonElement>("#node-x");
 const fuelValue = required<HTMLElement>("#fuel-value");
 const fuelFill = required<HTMLElement>("#fuel-fill");
 const modeLabel = required<HTMLElement>("#mode-label");
@@ -114,6 +115,7 @@ bindInput(
     canvas,
     launchButton,
     deleteButton,
+    nodeRemove,
     resetButtons,
     clearButtons,
     speedButtons,
@@ -181,7 +183,7 @@ function syncHud(current: Game): void {
   slowButton.setAttribute("aria-pressed", current.slow ? "true" : "false");
   if (levelSelect.value !== current.level.id) levelSelect.value = current.level.id;
 
-  const remaining = planning ? fuel.left : current.fuel;
+  const remaining = editing ? fuel.left : current.fuel;
   const ratio = remaining / budget;
   const clamped = Math.max(0, Math.min(1, ratio));
   fuelFill.style.width = clamped <= 0 ? "0px" : `${Math.max(8, Math.round(220 * clamped))}px`;
@@ -231,6 +233,7 @@ function syncMarkers(
 ): void {
   if (!isEditing(current) || width < 2) {
     nodeLayer.hidden = true;
+    nodeRemove.hidden = true;
     aimLabel.hidden = true;
     return;
   }
@@ -259,6 +262,15 @@ function syncMarkers(
   const selected = current.selected;
   const node = selected === null ? undefined : current.nodes[selected];
   const pos = selected === null ? null : nodePosition(current, selected);
+  const canRemove = selected !== null && selected >= current.cursor.index && pos !== null;
+  if (!canRemove || !pos) {
+    nodeRemove.hidden = true;
+  } else {
+    const at = worldToScreen(current.camera, width, height, pos.x, pos.y);
+    nodeRemove.hidden = false;
+    nodeRemove.style.left = `${Math.round(at.x + 16)}px`;
+    nodeRemove.style.top = `${Math.round(at.y - 16)}px`;
+  }
   if (selected === null || !node || !pos) {
     aimLabel.hidden = true;
     return;

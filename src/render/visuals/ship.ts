@@ -1,12 +1,15 @@
 import * as THREE from "three";
 import type { Vec2 } from "../../sim/physics";
+import { sampleBurnAnim, windupFlicker, type BurnSample } from "../burn-anim";
 import { projectToScreen } from "../camera";
+import { srgbVec, shader } from "./materials";
 import type { Theme } from "../theme";
 import { disposeObject, type Visual, type VisualFactory, type VisualFrame } from "../visual";
 
 /**
- * v1 ship: the ship.svg polygons, flat, screen-pixel sized, plus a one-frame
- * thrust flash and the crash burst. Swap this factory for a glTF. Load
+ * v1 ship: the ship.svg polygons, flat, screen-pixel sized, plus the burn
+ * wind-up and thrust tail. Those read sim time and the plan; they never
+ * step the simulation. Swap this factory for a glTF. Load
  * `theme.assets.ship` and parent it on `object`; keep the heading lerp.
  * The crash burst can move with the ship or become its own factory later.
  */
@@ -19,13 +22,16 @@ class ShipVisual implements Visual {
   private readonly ship = new THREE.Group();
   private readonly thrust = new THREE.Group();
   private readonly burst: THREE.Group;
-  private readonly outerAttr: THREE.BufferAttribute;
-  private readonly coreAttr: THREE.BufferAttribute;
+  private readonly plume: THREE.Mesh;
+  private readonly bloom: THREE.Mesh;
+  private readonly plumeUniforms: PlumeUniforms;
+  private readonly bloomUniforms: PlumeUniforms;
+  private readonly glow: THREE.Mesh;
+  private readonly glowAlpha: THREE.IUniform<number>;
   private readonly scratch: Vec2 = { x: 0, y: 0 };
   private angle = 0;
   private angleReady = false;
   private lastMode: VisualFrame["game"]["mode"] | null = null;
-  private lastSpent = 0;
   private burstFrames = 0;
 
   constructor(theme: Theme) {
@@ -62,37 +68,32 @@ class ShipVisual implements Visual {
 
     this.thrust.name = "thrust";
     this.thrust.userData.asset = theme.assets.shipThrust;
-    const outerGeo = new THREE.BufferGeometry();
-    const coreGeo = new THREE.BufferGeometry();
-    outerGeo.setAttribute(
-      "position",
-      new THREE.BufferAttribute(
-        new Float32Array([
-          -theme.thrust.outerHalfWidth, theme.thrust.base, 0,
-          theme.thrust.outerHalfWidth, theme.thrust.base, 0,
-          0, theme.thrust.base - theme.thrust.outerLength, 0,
-        ]),
-        3,
-      ),
+    const plume = theme.thrust;
+    const bloom = anchorPlume(plume, plume.bloomScale, plume.bloom, plume.bloom, plume.turbulence * 0.65);
+    const body = anchorPlume(plume, 1, plume.core, plume.edge, plume.turbulence);
+    this.bloom = bloom.mesh;
+    this.plume = body.mesh;
+    this.bloomUniforms = bloom.uniforms;
+    this.plumeUniforms = body.uniforms;
+    this.bloom.renderOrder = 4;
+    this.plume.renderOrder = 5;
+    const glowAlpha = { value: 0 };
+    this.glowAlpha = glowAlpha;
+    this.glow = new THREE.Mesh(
+      new THREE.CircleGeometry(1, 28),
+      shader(glowFrag, {
+        uColor: { value: srgbVec(plume.bloom) },
+        uAlpha: glowAlpha,
+      }),
     );
-    coreGeo.setAttribute(
-      "position",
-      new THREE.BufferAttribute(
-        new Float32Array([
-          -theme.thrust.coreHalfWidth, theme.thrust.base, 0,
-          theme.thrust.coreHalfWidth, theme.thrust.base, 0,
-          0, theme.thrust.base - theme.thrust.coreLength, 0,
-        ]),
-        3,
-      ),
-    );
-    this.outerAttr = outerGeo.getAttribute("position") as THREE.BufferAttribute;
-    this.coreAttr = coreGeo.getAttribute("position") as THREE.BufferAttribute;
-    const outer = new THREE.Mesh(outerGeo, flameMaterial(theme.colors.thrustOuter, theme.thrust.outerAlpha));
-    const core = new THREE.Mesh(coreGeo, flameMaterial(theme.colors.thrustCore, 1));
-    outer.renderOrder = 7;
-    core.renderOrder = 7;
-    this.thrust.add(outer, core);
+    this.glow.name = "burn-windup";
+    this.glow.position.set(0, plume.nozzle, 0);
+    this.glow.frustumCulled = false;
+    this.glow.renderOrder = 4;
+    this.glow.visible = false;
+    const glowMat = this.glow.material as THREE.ShaderMaterial;
+    glowMat.blending = THREE.AdditiveBlending;
+    this.thrust.add(this.bloom, this.glow, this.plume);
     this.thrust.visible = false;
 
     this.burst = buildBurst(theme);
@@ -108,7 +109,6 @@ class ShipVisual implements Visual {
         (this.lastMode === "paused" && game.mode === "flying");
       if (!flightPause) this.angleReady = false;
       this.lastMode = game.mode;
-      if (game.mode === "planning") this.lastSpent = 0;
     }
     const crashed = game.mode !== "planning" && game.ship.status === "crashed";
     const pose = game.mode === "planning" ? game.initial : game.ship;
@@ -128,18 +128,15 @@ class ShipVisual implements Visual {
     this.ship.rotation.z = this.angle;
     this.ship.scale.set(k, k, 1);
 
-    const thrusting = game.mode === "flying" && game.spentNodes > this.lastSpent;
-    if (game.mode !== "planning") this.lastSpent = game.spentNodes;
-    this.thrust.visible = thrusting && !crashed;
-    if (this.thrust.visible) {
-      const j = 0.9 + Math.random() * 0.2;
-      this.outerAttr.setY(2, this.theme.thrust.base - this.theme.thrust.outerLength * j);
-      this.coreAttr.setY(2, this.theme.thrust.base - this.theme.thrust.coreLength * j);
-      this.outerAttr.needsUpdate = true;
-      this.coreAttr.needsUpdate = true;
-      this.thrust.position.copy(this.ship.position);
-      this.thrust.rotation.z = this.angle;
-      this.thrust.scale.set(k, k, 1);
+    const showBurn = !crashed && (game.mode === "flying" || game.mode === "paused");
+    if (!showBurn) {
+      this.thrust.visible = false;
+    } else {
+      const burn = this.theme.burn;
+      this.poseThrust(
+        sampleBurnAnim(game.ship.step, game.level.dt, game.nodes, burn.windup, burn.tail),
+        k,
+      );
     }
 
     this.burst.visible = crashed;
@@ -157,21 +154,145 @@ class ShipVisual implements Visual {
   dispose(): void {
     disposeObject(this.object);
   }
+
+  /** Wind-up glow and thrust tail. Length and flicker come from sim time. */
+  private poseThrust(anim: BurnSample, scale: number): void {
+    const burn = this.theme.burn;
+    const windup = anim.windup;
+    const thrust = anim.thrust;
+    const flicker = windupFlicker(anim.time, windup, burn.flickerHz);
+    const show = thrust > 0 || windup > 0;
+    this.thrust.visible = show;
+    this.glow.visible = windup > 0;
+    if (!show) return;
+    this.thrust.position.copy(this.ship.position);
+    this.thrust.rotation.z = this.angle;
+    this.thrust.scale.set(scale, scale, 1);
+    const wobble = 0.94 + 0.06 * Math.sin(anim.time * burn.flickerHz * Math.PI * 2);
+    const extent =
+      thrust > 0 ? (0.72 + 0.28 * thrust) * wobble : (0.2 + 0.32 * windup) * (0.75 + 0.25 * flicker);
+    const alpha = thrust > 0 ? 0.45 + 0.55 * thrust : windup * flicker * 0.7;
+    posePlume(this.plumeUniforms, anim.time, extent, alpha);
+    posePlume(this.bloomUniforms, anim.time, Math.min(1, extent * 1.05), alpha * 0.55);
+    if (!this.glow.visible) return;
+    const span = 5 + 11 * windup * flicker;
+    this.glow.scale.set(span, span, 1);
+    this.glowAlpha.value = 0.28 + 0.6 * windup * flicker;
+  }
 }
 
-function flameMaterial(color: string, opacity: number): THREE.MeshBasicMaterial {
-  const material = new THREE.MeshBasicMaterial({
-    color,
-    transparent: true,
-    opacity,
-    blending: THREE.AdditiveBlending,
-    depthTest: false,
-    depthWrite: false,
-    toneMapped: false,
-    side: THREE.DoubleSide,
-  });
-  return material;
+const glowFrag = /* glsl */ `
+varying vec2 vLocal;
+uniform vec3 uColor;
+uniform float uAlpha;
+void main() {
+  float d = length(vLocal);
+  float alpha = smoothstep(1.0, 0.0, d);
+  alpha *= alpha;
+  if (alpha <= 0.01) discard;
+  gl_FragColor = vec4(uColor, alpha * uAlpha);
 }
+`;
+
+interface PlumeUniforms {
+  uCore: THREE.IUniform<THREE.Vector3>;
+  uEdge: THREE.IUniform<THREE.Vector3>;
+  uAlpha: THREE.IUniform<number>;
+  uTime: THREE.IUniform<number>;
+  uExtent: THREE.IUniform<number>;
+  uHalfWidth: THREE.IUniform<number>;
+  uLength: THREE.IUniform<number>;
+  uTurbulence: THREE.IUniform<number>;
+}
+
+/** Quad whose +Y edge sits on the nozzle and whose body runs aft (−Y). Drawn behind the hull. */
+function anchorPlume(
+  plume: Theme["thrust"],
+  scale: number,
+  core: string,
+  edge: string,
+  turbulence: number,
+): { mesh: THREE.Mesh; uniforms: PlumeUniforms } {
+  const halfWidth = plume.halfWidth * scale;
+  const length = plume.length * scale;
+  const uniforms: PlumeUniforms = {
+    uCore: { value: srgbVec(core) },
+    uEdge: { value: srgbVec(edge) },
+    uAlpha: { value: 0 },
+    uTime: { value: 0 },
+    uExtent: { value: 1 },
+    uHalfWidth: { value: halfWidth },
+    uLength: { value: length },
+    uTurbulence: { value: turbulence },
+  };
+  const material = shader(plumeFrag, uniforms as unknown as Record<string, THREE.IUniform>);
+  material.blending = THREE.AdditiveBlending;
+  material.side = THREE.DoubleSide;
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(halfWidth * 2, length), material);
+  mesh.position.set(0, plume.nozzle - length / 2, 0);
+  mesh.frustumCulled = false;
+  mesh.name = scale > 1 ? "plume-bloom" : "plume";
+  return { mesh, uniforms };
+}
+
+function posePlume(uniforms: PlumeUniforms, time: number, extent: number, alpha: number): void {
+  uniforms.uTime.value = time;
+  uniforms.uExtent.value = Math.min(1, Math.max(0, extent));
+  uniforms.uAlpha.value = alpha;
+}
+
+const plumeFrag = /* glsl */ `
+varying vec2 vLocal;
+uniform vec3 uCore;
+uniform vec3 uEdge;
+uniform float uAlpha;
+uniform float uTime;
+uniform float uExtent;
+uniform float uHalfWidth;
+uniform float uLength;
+uniform float uTurbulence;
+
+float hash(vec2 p) {
+  p = fract(p * vec2(123.34, 345.45));
+  p += dot(p, p + 34.345);
+  return fract(p.x * p.y);
+}
+
+float noise(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  vec2 u = f * f * (3.0 - 2.0 * f);
+  float a = hash(i);
+  float b = hash(i + vec2(1.0, 0.0));
+  float c = hash(i + vec2(0.0, 1.0));
+  float d = hash(i + vec2(1.0, 1.0));
+  return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+}
+
+void main() {
+  float along = (uLength * 0.5 - vLocal.y) / uLength;
+  if (along < 0.0 || along > uExtent) discard;
+  float t = along / max(uExtent, 0.001);
+  float n = noise(vec2(vLocal.x * 0.62, along * 7.5 - uTime * 9.0));
+  float n2 = noise(vec2(vLocal.x * 1.4 + 2.7, along * 13.0 + uTime * 14.0));
+  float jag = (n - 0.5) * uTurbulence;
+  float width = mix(0.36, 1.0, smoothstep(0.0, 0.3, t));
+  width *= 1.0 - smoothstep(0.42, 1.0, t);
+  width = max(width, 0.18 * (1.0 - t));
+  width += jag * t;
+  float radial = abs(vLocal.x) / max(uHalfWidth * width, 0.001);
+  float body = 1.0 - smoothstep(0.5, 1.2, radial);
+  if (body <= 0.0) discard;
+  float core = pow(1.0 - smoothstep(0.0, 0.5, radial), 1.35);
+  float fade = pow(1.0 - t, 0.8);
+  float mottled = mix(0.42, 1.0, n) * mix(0.6, 1.0, n2);
+  vec3 color = mix(uEdge, uCore, core);
+  color = mix(color, uEdge, smoothstep(0.05, 0.9, t) * (1.0 - core * 0.75));
+  float alpha = body * fade * mottled * uAlpha + core * fade * uAlpha * 0.4;
+  if (alpha < 0.02) discard;
+  gl_FragColor = vec4(color, alpha);
+}
+`;
 
 function shapeFromSvg(pts: readonly number[]): THREE.Shape {
   const shape = new THREE.Shape();
