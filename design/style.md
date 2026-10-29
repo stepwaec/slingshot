@@ -1,6 +1,6 @@
 # Slingshot — visual style v1.5
 
-Calm, cinematic space for Slingshot. This file is the look; `canvas-notes.md` is the pixel-exact drawing reference (how each SVG recipe looks and what it costs, written for Canvas 2D); `threejs-notes.md` maps it onto the game's Three.js renderer (WP3); `assets.md` indexes every file. Sections: §1 mood · §2 palette (background, sky, the sun, the two original planets, the shared lighting tokens, UI) · §3 typography · §4 glow and blur rules, with **§4.1 Realism, vibrancy and crispness rules** · §5 motion · §6 layout · §7 asset index · §8 the **body library** (30 bodies: 12 planets, 6 stars and compact objects, 4 moons, 3 ringed planets, the 3 WP8 objects: binary star, red giant, moon chain, and the 2 WP9 compact objects: pulsar, magnetar) plus the WP9 **magnetism map** · §9 the **space environment** (nebulae, asteroid field, wreck debris). Assets live in `design/assets` (bodies in `design/assets/bodies`, the environment in `design/assets/space`, map overlays in `design/assets/overlays`), mockups (1440×900, PNG = 2× render) in `design/mockups`, animated previews in `design/preview/planets.html`, `bodies.html` and `space.html`.
+Calm, cinematic space for Slingshot. This file is the look; `canvas-notes.md` is the pixel-exact drawing reference (how each SVG recipe looks and what it costs, written for Canvas 2D); `threejs-notes.md` maps it onto the game's Three.js renderer (WP3); `assets.md` indexes every file. Sections: §1 mood · §2 palette (background, sky, the sun, the two original planets, the shared lighting tokens, UI) · §3 typography · §4 glow and blur rules, with **§4.1 Realism, vibrancy and crispness rules** · §5 motion · §6 layout · §7 asset index · §8 the **body library** (31 bodies: 12 planets, 6 stars and compact objects, 4 moons, 3 ringed planets, the 3 WP8 objects: binary star, red giant, moon chain, the 2 WP9 compact objects: pulsar, magnetar, and the WP10 comet) plus the WP9 **magnetism map** and the WP10 **solar recharge indicator** · §9 the **space environment** (nebulae, asteroid field, wreck debris). Assets live in `design/assets` (bodies in `design/assets/bodies`, the environment in `design/assets/space`, map overlays in `design/assets/overlays`), mockups (1440×900, PNG = 2× render) in `design/mockups`, animated previews in `design/preview/planets.html`, `bodies.html` and `space.html`.
 
 **History in one paragraph.** v1 set the layout, UI and the two-glow rule. v1.1 was the first realism pass (limb-darkened star, planets with a terminator and a rim, a tinted starfield with a Milky Way). v1.2 made the planets rotate: a seamless texture strip slides under a lighting overlay that never moves. v1.3 built the body library (12 planets, 6 stars and compact objects) and gave the stars prominences and a flare. v1.4 adds moons, ringed planets, nebulae and debris fields (§8, §9). **v1.5 (revised) is the realism, vibrancy and crispness pass**, agreed with the client on two approved reference assets — the ocean world "variant F" and the sun "variant J" — and applied to every body: vivid multi-zone surfaces with crisp edges, elongated clouds with cast shadows, a warm terminator band, a lit-side haze and rim, a fiery plasma sun with ragged flame rings and an irregular rim, and no untinted grey anywhere. The earlier v1.5 "crispness pass" numbers (halve blurs, ±12 % lightness, limb line at α 0.30) were rejected as indistinguishable from v1.2 and are **not** used; §4.1 holds the rules that replaced them.
 
@@ -369,7 +369,7 @@ One row per top-level file in `design/assets`; the 23 library bodies in `design/
 
 ## 8. Body library (v1.3 set, v1.4 moons and rings, all built to the v1.5 rules)
 
-**30 bodies**: 12 planets, 6 stars and compact objects (v1.3), 4 moons and 3 ringed planets (v1.4), 3 WP8 objects (v2): a binary star, a red giant and a gas giant with a resonant moon chain, and 2 WP9 compact objects (v2.1): a pulsar and a magnetar. Each lives in `design/assets/bodies/<name>.svg` (the ocean world is `bodies/ocean.svg`, a copy of `planet-start.svg` with ids `ps*` → `oc*`; planet X stays `planet-x.svg`; the sun stays `star.svg`). Each = `<defs>` with ids prefixed by the body's short code + **one** top-level group with geometry relative to (0, 0), a header comment listing every parameter (the canon), and its SMIL inside. Prefixes, unique across all assets because galleries inline them together: `rk ic lv tx cr oc gb gr mn dw db rd bg wd ns bh mi mv mc ms rs dr sh bn rg mk pu mg` + `star* px*` (`ps*` only in `planet-start.svg`).
+**31 bodies**: 12 planets, 6 stars and compact objects (v1.3), 4 moons and 3 ringed planets (v1.4), 3 WP8 objects (v2): a binary star, a red giant and a gas giant with a resonant moon chain, 2 WP9 compact objects (v2.1): a pulsar and a magnetar, and the WP10 comet (v2.2). Each lives in `design/assets/bodies/<name>.svg` (the ocean world is `bodies/ocean.svg`, a copy of `planet-start.svg` with ids `ps*` → `oc*`; planet X stays `planet-x.svg`; the sun stays `star.svg`). Each = `<defs>` with ids prefixed by the body's short code + **one** top-level group with geometry relative to (0, 0), a header comment listing every parameter (the canon), and its SMIL inside. Prefixes, unique across all assets because galleries inline them together: `rk ic lv tx cr oc gb gr mn dw db rd bg wd ns bh mi mv mc ms rs dr sh bn rg mk pu mg cm` + `star* px*` (`ps*` only in `planet-start.svg`).
 
 **Direction (client decision, unchanged): stay realistic**, now also **vibrant and crisp** (§4.1). Kurzgesagt is inspiration only, for colour harmony on deep navy and bold silhouettes; nothing of theirs is copied.
 
@@ -399,6 +399,7 @@ r is the radius at zoom 1. **`crashRadius`** is the contact radius: the solid di
 | `pulsar` | Pulsar (WP9) | `pulsar.svg` · `#pulsar` · `pu*` | 8 | 8 | sweep 4 s (a point is hit every 2 s) | compact · long lighthouse beams that damage on a rhythm |
 | `magnetar` | Magnetar (WP9) | `magnetar.svg` · `#magnetar` · `mg*` | 9 | 9 | field flicker 1.7–3.4 s, static 5 s, starquake 18 s | compact · extreme field that scrambles the prediction |
 | `blackHole` | Black hole | `black-hole.svg` · `#blackHole` · `bh*` | 22 (horizon) | 22 | disk 24 s | compact · star-class gravity, horizon-size crash |
+| `comet` | Comet (WP10) | `comet.svg` · `#comet` · `cm*` | 5 (nucleus) | 5 | ion flow 2.2–3.1 s, knot 9 s, coma 5 s, dust sparkles 9–14 s | small · a moving body to ride or harvest ice from; tails always point away from the star |
 | `moonIcy` | Icy moon (v1.4) | `moon-icy.svg` · `#moonIcy` · `mi*` | 12 | 12 | surface 150 s | moon · a bright cracked-ice nudge body |
 | `moonVolcanic` | Volcanic moon (v1.4) | `moon-volcanic.svg` · `#moonVolcanic` · `mv*` | 13 | 13 | surface 120 s; hot spots 6 s | moon · an Io-like sulphur moon |
 | `moonCaptured` | Captured asteroid moon (v1.4) | `moon-captured.svg` · `#moonCaptured` · `mc*` | 9 (equal-area mean; outline 6.7–11.9) | 9 (circle; a polygon test is an optional refinement) | tumble 70 s | moon · the only non-circular body |
@@ -787,6 +788,47 @@ The ramp is violet → magenta → hot pink, kept clear of the gravity map's blu
 | `path.ghost` | `#E9DCFF` | Ghost dots r 1.1, α 0.45 / 0.10 alternating |
 
 **HUD.** The map toggles sit at (40, 124): "Gravity off" (the game's panel button) and "Magnetism" (pressed: `accent` fill, `ink` text), 96 / 100 × 32, radius 10, 8 px apart. While M is on, a legend panel sits under them at (40, 172): label "MAGNETIC FIELD", the key hint "M", five 54 × 10 swatches (Safe outline only; zones at fill α 2.6 × zone fill + 0.2 with the zone edge on top) and 10 px labels Safe · Fuzzy · Scrambled · Damaging · Lethal.
+
+### WP10 additions (v2.2): comet, solar recharge indicator
+
+**Comet** (`bodies/comet.svg`, ids `cm*`, nucleus crash radius 5). Realistic anatomy, drawn crisp: a dark peanut-shaped nucleus lit from the star, a bright core, a **green coma** (real comae glow green from C2 gas), a straight **blue ion tail** pointing exactly away from the star, and a wider **golden dust tail** of fine strands curving behind the comet's motion. Solar-wind streaks flow out along the ion tail, a brighter "disconnection" knot drifts down it every 9 s, and a few sparkles drift along the dust strands.
+
+- **Orientation.** The asset is drawn with the star to the left. The game rotates the whole group so its +x axis points away from the star. The lighting turns with it (lit side and jets always toward the star), so this is the one body that rotates as a whole.
+- **Tail length.** The tails scale by `s = clamp(Rperi / d, 0.35, 1)` along the tail (and `0.6 + 0.4 s` across it), so they are longest at perihelion. The head never scales.
+- **Dust side.** The dust tail curves to the asset's +y. Mirror the group's y when the comet circles the star the other way, so the dust always lags the motion.
+- **Harvest ring.** A dashed ring at r 30 marks the coma, where ice can be harvested (planning and pause only).
+- **Orbit.** Comets need eccentric orbits, which the level format does not have yet (orbits are circles). Suggested shape: `orbit { kind: "ellipse", centerId, a, e, periapsisAngle, phase }`, Kepler-timed so the comet speeds up near the star.
+
+| Token | Hex | Used for |
+|---|---|---|
+| `comet.nucleus` | `#F0E2CC` → `#A88466` → `#4A362A` → `#2A1E18` | Nucleus, lit from the star; sunward rim `#FFF1DC` 0.6 px α 0.85 |
+| `comet.core` | `#FFFFFF` / `#F2FFFA` / `#C8FFE9` | Core r 11 (1 · 0.85 · 0.25 · 0) |
+| `comet.coma` | `#E6FFF4` / `#9DF7D6` / `#5CEDBA` / `#3FD6A8` | Coma rx 50 ry 42 (α 0.85 · 0.60 · 0.30 · 0.10 · 0.03 · 0), breathes ×1.04 / 5 s |
+| `comet.jet` | `#E6FFF4` → `#7CF5C8` | Two sunward jets (α 0.75 → 0) |
+| `comet.harvest` | `#7CF5C8` | Ice-harvest ring r 30, 1 px α 0.45, dash 4 4 crawling 8 px/s |
+| `comet.ion` | `#E6FAFF` / `#7FD8FF` / `#3D9BFF` / `#2E62FF` | 7 ion rays (α 0.95 · 0.75 · 0.35 · 0 along the tail); base wedge `#8FE0FF` α 0.45 → 0 |
+| `comet.ionFlow` | `#F2FCFF` / `#BFEFFF` | Solar-wind dashes (α 0.6 → 0 by 80 %) |
+| `comet.ionKnot` | `#BFEFFF` → `#5EC8FF` | Disconnection knot 24 × 10, every 9 s |
+| `comet.dust` | `#FFFBF0` / `#FFEBC0` / `#FFD890` / `#FFC266` | 24 dust strands (α 1 · 0.8 · 0.38 · 0.08 · 0); base fill `#FFF1D0` / `#FFE0A0` / `#FFCC7A` (α 0.50 · 0.24 · 0.07, gone by 74 %) |
+| `comet.sparkle` | `#FFF4D6` | Dust sparkles r 0.9–1.1 |
+
+The dust stops stay pale gold to cream: at low alpha, deeper oranges read brown over navy.
+
+**Solar recharge indicator** (`solar-recharge.svg`, ids `rc*`; mockup `mockups/comet-recharge.svg`). The design for recharge near stars, which the roadmap builds in the ship systems package. The rate model is `rate = rateMax · L · min(1, (Rref / d)²)` with Rref 85 world px for the yellow sun and L the star's luminance (red dwarf 0.4, blue giant 2.5, red giant 1.5, white dwarf 0.2, compact objects and black holes 0). Below 8 % of `rateMax` the panels count as off. The Solar panels upgrade raises `rateMax`.
+
+- **Predicted path.** Dots where the panels would charge turn solid gold and grow: colour `mix(#DCE4FF, #FFD86E, min(1, √(1.6 t)))`, radius `1.5 + 1.3 · min(1, 1.4 t)`, α 1, with t = rate / rateMax. No band or glow under them, because low-alpha gold over navy turns olive-grey. The total gain sits next to the end ring ("+5 % fuel").
+- **Fuel block, flight.** A sun glyph at (label x + 44, baseline − 4): an empty `ui.textDim` ring when off; when charging, a `#FFD27A` disc with 8 rays, a 40 px white-gold shimmer sweeping the fill every 1.8 s, a 3 px pulsing sliver past the fill, and the rate ("+0.4 %/s") under the bar. On a close pass the rays lengthen and turn, and the shimmer speeds up to 0.9 s.
+- **Fuel block, planning.** Glyph lit but still; a ghost segment shows the fuel this plan ends with, and "+5 % on this path" sits under the bar.
+- **Ship, flight.** A gold ring pulses out from the ship every 1.2 s while charging.
+
+| Token | Hex | Used for |
+|---|---|---|
+| `solar.glyph` | `#FFD27A` | Sun glyph disc and rays (= `sun.limb`) |
+| `solar.charge` | `#FFE08A` | Rate text, gain labels, sliver, planning ghost (α 0.9), ship pulse (= `thrust.core`) |
+| `solar.shimmer` | `#FFF6D6` | Fuel-bar shimmer (α 0 → 0.85 → 0) |
+| `solar.path` | `#FFD86E` | Gold end of the path-dot ramp |
+
+Recharge never uses `fuel.low #FFC857`, so a low, gold fuel bar still reads clearly as charging.
 
 ### Deviations and open points (recorded in the asset headers)
 
