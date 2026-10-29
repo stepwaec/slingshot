@@ -18,6 +18,21 @@
           <span class="hud-label">Level</span>
           <select id="level"></select>
         </label>
+        <section id="clocks" aria-label="Clocks">
+          <div class="clock-head">
+            <span class="hud-label" id="clock-title">Clocks</span>
+          </div>
+          <p id="clock-rate">1 ship s = 1.00 outside s</p>
+          <p id="clock-ship">Ship 0.00 s</p>
+          <p id="clock-out">Outside 0.00 s</p>
+          <p id="clock-gap">Gap 0.00 s</p>
+          <div class="deadline-track" aria-hidden="true">
+            <div id="deadline-fill"></div>
+          </div>
+          <p id="clock-limit">Deadline</p>
+          <p id="clock-stars" hidden></p>
+          <p id="clock-points" hidden></p>
+        </section>
         <div class="fuel-block">
           <div class="fuel-head">
             <span class="hud-label">Fuel</span>
@@ -37,6 +52,10 @@
             <button type="button" data-clear>Clear plan</button>
           </div>
           <div id="planning-actions">
+            <div id="route-actions" hidden>
+              <button type="button" id="route-safe">Safe arc</button>
+              <button type="button" id="route-deep">Deep dive</button>
+            </div>
             <button id="launch" type="button" disabled>Launch</button>
           </div>
           <div id="flight-actions" hidden>
@@ -56,6 +75,12 @@
         <div class="card" data-result="win">
           <h2 id="overlay-title"></h2>
           <p id="overlay-detail"></p>
+          <p id="overlay-score" hidden></p>
+          <div id="overlay-stars" class="stars" hidden>
+            <span data-star="deadline">Deadline</span>
+            <span data-star="crew">Crew</span>
+            <span data-star="fuel">Fuel</span>
+          </div>
           <button type="button" class="primary" data-reset>Fly again</button>
         </div>
       </div>

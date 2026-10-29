@@ -25,7 +25,7 @@ npm run build
 - The dotted line is the coast the ship will fly. Click it to add a burn node at that sim step. Step 0, on the ship, is the launch node.
 - Drag a node's handle to set direction and strength. Drag the node marker to slide it along the path. Delete (button or the Delete key) removes the selected node. Clear plan removes every node.
 - The readout shows the plan total, the selected node's burn and fuel cost, and the fuel left. A node that costs more than the fuel remaining when the ship reaches it is marked in red. That plan cannot launch.
-- The path after each node is the trajectory that burn produces. Green, with a closed ellipse, means the plan ends in orbit around Planet X. Blue means a flyby. Red means a crash.
+- The path after each node is the trajectory that burn produces. Where the clock runs normally the line stays cool. Where time slows it glows orange. The ring at the end of the line, and the closed ellipse, still show the outcome: green for an orbit around Planet X, blue for a flyby, red for a crash.
 - Launch flies the plan. Burns fire at their steps. 1× / 2× / 4× run more fixed steps per frame. Slow runs one fixed step every other frame. The time step never changes, so the path does not change.
 - Pause freezes the ship so you can add or edit burns that have not fired yet, then resume. Passage can pause without limit. A level may instead allow a fixed number of pauses, or charge a score each time. The step does not advance while paused, so the trajectory stays the same.
 - A captured orbit is bound to Planet X, clears the surface, and stays inside the dashed ring. Missing that and leaving the ring is lost in space. Hitting a body is a crash. Leaving the chart or running out of time is also lost in space.
@@ -42,7 +42,31 @@ Leave Home with a departure burn aimed toward Planet X's path, and put a small c
 
 Launch, then pause once Planet X is inside the horizon (the capture step in the reference solution is 2605, and step 2300 can already see it). Click the line to add the third burn, drag it until the path closes into a green orbit, and resume. Slow motion makes that approach easier to time. The fuel budget is **50**. The reference departure, correction, and capture together cost **48.87**.
 
-The fuel budget is **60**. A slingshot launch plus its capture node costs **38.91** (22.00 + 16.91). The direct route costs **95.18** (76.00 + 19.18), which is over budget, so it cannot launch. A modest burn along the ship's orbital motion is the one that fits.
+### Rescue
+
+Choose Rescue in the level menu. A black hole, drawn as a dark disc with a bright ring, sits between Home and Planet X. Its surface is the horizon. The speed of light on this level is a lowered constant, `c = 42`.
+
+Ship time and outside time are different clocks. Outside time is the coordinate time Home and Planet X share. Ship time is the crew's proper time:
+
+```
+Φ_depth = Σ GM / r
+dτ/dt = sqrt(1 - 2 Φ_depth / c² - v² / c²)
+```
+
+The value under the square root is clamped at 0, so the rate is 0 on a horizon or at `v ≥ c` and never becomes imaginary. Each fixed step adds `dt` to outside time and `(dτ/dt) * dt` to ship time, using the rate at the start of the step. Prediction and flight both do this inside `step`.
+
+The clock panel shows both clocks, the rate as `1 ship s = N outside s`, the gap (outside minus ship), and a deadline bar in outside time. The bar turns red in the last fifth of the window and when the window is already gone. While you are still planning, the panel shows the predicted arrival. In flight the clocks tick with the ship. The predicted line is tinted by the same rate. Aberration and colour shift appear only while flying; planning and pause stay on the clean chart.
+
+Arrival is still a stable orbit around Planet X. Missing the outside-time deadline is a hard fail even if that orbit is captured: no points and no stars. Under the deadline, ship time saved against the crew budget is a bonus and leftover fuel adds points. The three stars are deadline, crew time, and fuel. Passage weights crew time (a generation ship) and can pause for free. Rescue weights the deadline and charges 8 score points per pause. That pause cost, the WP4 score rule, is subtracted from the mission points.
+
+Safe arc and Deep dive load the two reference plans.
+
+- Safe arc stays wide of the hole. It arrives inside the 26.4 s deadline, spends more fuel, and ages the crew more. One star: the deadline. Crew and fuel stars are missed.
+- Deep dive swings inside two horizon radii. Proper time stalls (the rate hits 0), so the crew ages less and the burn is cheaper, but outside time runs past 26.4 s. The orbit is real and the mission is a hard fail.
+
+The fuel budget is **50**. Pausing spends the score budget and comes off the points if you do make the deadline.
+
+The fuel budget on Passage is **60**. A slingshot launch plus its capture node costs **38.91** (22.00 + 16.91). The direct route costs **95.18** (76.00 + 19.18), which is over budget, so it cannot launch. A modest burn along the ship's orbital motion is the one that fits.
 
 ![Three burn nodes on the predicted path](docs/nodes-on-path.png)
 
@@ -50,9 +74,11 @@ The fuel budget is **60**. A slingshot launch plus its capture node costs **38.9
 
 ## Layout
 
-- `src/sim/physics.ts` — Newtonian gravity, fixed-step velocity Verlet, burn nodes, analytic orbits, the planning horizon, and the cached prediction. No DOM. Prediction and flight both call `advancePlan`. The horizon stops the predicted line only.
-- `src/level/passage.ts` — Passage: fixed bodies, fuel, and the reference slingshot and direct plans. Up to eight burns can be queued, and pausing is free.
+- `src/sim/physics.ts` — Newtonian gravity, fixed-step velocity Verlet, burn nodes, analytic orbits, the planning horizon, the two clocks, and the cached prediction. No DOM. Prediction and flight both call `advancePlan`. The horizon stops the predicted line only. `c` does not change the motion.
+- `src/sim/score.ts` — arrival, the outside-time deadline, crew and fuel stars, and the WP4 pause charge. No DOM.
+- `src/level/passage.ts` — Passage: fixed bodies, fuel, and the reference slingshot and direct plans. Up to eight burns can be queued, and pausing is free. `c` is high, so the clocks stay close. Crew time is weighted above fuel.
 - `src/level/relay.ts` — Relay: Planet X and its moon on rails, a short horizon, two queued burns, three pauses, and the reference mid-flight capture.
+- `src/level/rescue.ts` — Rescue: a black hole, a 26.4 s outside-time deadline, score-priced pauses, and the safe and deep reference plans.
 - `src/render/` — orthographic Three.js view (WebGL). The HUD and result cards are HTML over the canvas. A parked perspective camera sits on the same world group for a later tilted view.
 
 ## Swapping a visual
@@ -70,10 +96,11 @@ Colors, sizes, and asset paths live in `src/render/theme.ts`. Each element is bu
 | Trail | `createTrail` | `assets.trail`, `trail` | Another ribbon. Read `game.trail`; do not trim it in the sim. |
 | Path | `createPath` | `assets.predictedPath`, `path` | Another dotted or meshed look-ahead. Read `game.prediction` only. |
 | Nodes | `createNodes` | `assets.dragArrow`, `nodes` | Another handle. The tip must stay on `burnHandleOffset`, which is what clicking and dragging hit-test. |
+| Relativity | `createRelativity` | flight ship pose and `level.c` | Aberration and colour shift. It hides itself unless the mode is flying. |
 
 Replace the factory in `visualFactories` and, if the new file path differs, the matching `theme.assets` entry. Leave `src/sim`, `src/game`, and the other factories alone.
 - `src/game/` — the plan, flight, and pointer input.
-- `tests/` — prediction matches flight at 1×, 2×, and 4× with three nodes; the same match with orbiting bodies; editing a later node leaves the earlier path unchanged; the slingshot captures inside the budget and the direct plan is over it; an over-budget plan cannot launch; pausing and slow motion do not change a trajectory; pause rules are enforced; Relay's opening plan does not win and the mid-flight capture does.
+- `tests/` — prediction matches flight at 1×, 2×, and 4× with three nodes; the same match with orbiting bodies; editing a later node leaves the earlier path unchanged; the slingshot captures inside the budget and the direct plan is over it; an over-budget plan cannot launch; pausing and slow motion do not change a trajectory; pause rules are enforced; Relay's opening plan does not win and the mid-flight capture does; clock rates match the dilation formula; prediction and flight share proper time; the deadline is a hard fail; Rescue's deep route saves fuel and crew time and spends outside time.
 
 ## Continuous integration
 

@@ -139,6 +139,7 @@ describe("orbiting bodies", () => {
       maxSteps: 20_000,
       targetId: star.id,
       periapsisMargin: 4,
+      c: 1_000_000,
       horizon: { seconds: 40, oneOrbit: false, shorten: 1, ref: 2 },
     };
     const far = makeState(8_000, 0, 0, 1, base);

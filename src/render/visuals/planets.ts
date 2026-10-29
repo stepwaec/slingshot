@@ -7,6 +7,7 @@ import { shader, srgbVec } from "./materials";
 
 /**
  * v1 planets: one lit disc each, plus Planet X's halo and capture ring.
+ * A black hole is a dark disc with a photon ring. Its radius is the horizon.
  * Swap this factory for textured meshes. Keep them in world space and light
  * them from the star's position so a later material can use the same vector.
  */
@@ -76,6 +77,28 @@ void main() {
 }
 `;
 
+const holeFrag = /* glsl */ `
+varying vec2 vLocal;
+uniform vec3 uRing;
+uniform float uHorizon;
+void main() {
+  float r = length(vLocal);
+  float fw = fwidth(r);
+  float hole = 1.0 - smoothstep(uHorizon - fw, uHorizon + fw, r);
+  float ringR = uHorizon * 1.22;
+  float ring = 1.0 - smoothstep(0.012, 0.012 + fw * 2.0, abs(r - ringR));
+  if (hole <= 0.0 && ring <= 0.0) discard;
+  vec3 col = mix(vec3(0.01, 0.012, 0.02), uRing, ring);
+  float alpha = max(hole, ring * 0.85);
+  gl_FragColor = vec4(col, alpha);
+}
+`;
+
+interface HoleView {
+  body: Body;
+  mesh: THREE.Mesh;
+}
+
 interface PlanetView {
   body: Body;
   mesh: THREE.Mesh;
@@ -100,6 +123,7 @@ class PlanetsVisual implements Visual {
   readonly object = new THREE.Group();
   private readonly theme: Theme;
   private readonly planets: PlanetView[] = [];
+  private readonly holes: HoleView[] = [];
   private readonly rings: RingView[] = [];
 
   constructor(theme: Theme, level: Parameters<VisualFactory>[1]) {
@@ -109,6 +133,23 @@ class PlanetsVisual implements Visual {
     let order = 1;
     for (const body of level.bodies) {
       if (body.kind === "star") continue;
+      if (body.kind === "blackhole") {
+        const mesh = new THREE.Mesh(
+          new THREE.PlaneGeometry(2, 2),
+          shader(holeFrag, {
+            uRing: { value: srgbVec(theme.colors.starCorona) },
+            uHorizon: { value: 1 / 2.4 },
+          }),
+        );
+        const span = body.radius * 2.4;
+        mesh.position.set(body.x, body.y, 0);
+        mesh.scale.set(span, span, 1);
+        mesh.renderOrder = order++;
+        mesh.name = body.id;
+        this.object.add(mesh);
+        this.holes.push({ body, mesh });
+        continue;
+      }
       const target = body.kind === "target";
       this.object.userData.asset = target ? theme.assets.planetX : theme.assets.planetStart;
       let halo: THREE.Mesh | null = null;
@@ -183,6 +224,10 @@ class PlanetsVisual implements Visual {
     const bodies = frame.game.level.bodies;
     const star = bodies.find((body) => body.kind === "star");
     const starPose = star ? bodyPose(star, time, bodies) : null;
+    for (const hole of this.holes) {
+      const pose = bodyPose(hole.body, time, bodies);
+      hole.mesh.position.set(pose.x, pose.y, 0);
+    }
     for (const planet of this.planets) {
       planet.radiusPx.value = planet.body.radius * zoom;
       const pose = bodyPose(planet.body, time, bodies);
