@@ -5,6 +5,7 @@ import {
   clearPlan,
   deleteSelected,
   isEditing,
+  applyGravityKey,
   cycleGravity,
   launch,
   moveNodeAlong,
@@ -187,9 +188,8 @@ export function bindInput(
       deleteSelected(game);
     } else if (event.key === "Escape") {
       selectNode(game, null);
-    } else if (event.key === "g" || event.key === "G") {
-      if (event.repeat || event.metaKey || event.ctrlKey || event.altKey) return;
-      cycleGravity(game);
+    } else if (applyGravityKey(game, event)) {
+      event.preventDefault();
     } else if (event.key === "c" || event.key === "C") {
       if (event.repeat || event.metaKey || event.ctrlKey || event.altKey) return;
       if (game.gravity !== "grid") return;

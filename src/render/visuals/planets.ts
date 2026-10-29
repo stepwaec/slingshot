@@ -28,11 +28,16 @@ uniform vec3 uWarm;
 uniform vec3 uNight;
 
 void main() {
-  vec2 q = vLocal / 1.1;
-  float r = length(q);
-  float fw = fwidth(r);
-  vec3 n = vec3(q, sqrt(max(0.0, 1.0 - dot(q, q))));
-  float lon = atan(n.x, n.z);
+  // The mesh is scaled to 1.1 radii and the geometry is the unit square,
+  // so vLocal is −1…1. Multiply to put r = 1 on the real surface. Dividing
+  // left the whole square inside the disc: flat sides, striped like a cylinder.
+  vec2 q = vLocal * 1.1;
+  float r2 = dot(q, q);
+  float r = sqrt(r2);
+  float fw = max(fwidth(r), 1e-4);
+  float nz = sqrt(max(0.0, 1.0 - min(r2, 1.0)));
+  vec3 n = vec3(q, nz);
+  float lon = atan(q.x, max(nz, 1e-4));
   vec2 uv = vec2(fract((lon + uSpin) / 6.2831853), clamp(0.5 + 0.5 * n.y, 0.0, 1.0));
   vec3 col = texture2D(uSurface, uv).rgb;
   if (uCloudsOn > 0.5) {
@@ -467,8 +472,10 @@ function paintSurface(
   ice: boolean,
   bands: boolean,
 ): HTMLCanvasElement {
-  const w = 192;
-  const h = 96;
+  // Power of two. A 192×96 canvas with RepeatWrapping is an incomplete
+  // texture on WebGL1, and Safari samples that as stretched stripes.
+  const w = 256;
+  const h = 128;
   const canvas = document.createElement("canvas");
   canvas.width = w;
   canvas.height = h;
@@ -506,8 +513,8 @@ function paintSurface(
 }
 
 function paintClouds(seed: number, on: boolean): HTMLCanvasElement {
-  const w = 192;
-  const h = 96;
+  const w = 256;
+  const h = 128;
   const canvas = document.createElement("canvas");
   canvas.width = w;
   canvas.height = h;
