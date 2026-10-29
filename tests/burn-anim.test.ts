@@ -13,7 +13,6 @@ import { theme, type Theme } from "../src/render/theme";
 import { syncTopDown } from "../src/render/camera";
 import { createNodes } from "../src/render/visuals/nodes";
 import { createShip } from "../src/render/visuals/ship";
-import { createTrail } from "../src/render/visuals/trail";
 import type { Visual, VisualFrame } from "../src/render/visual";
 import {
   createGame,
@@ -27,7 +26,8 @@ import {
   tick,
   type Game,
 } from "../src/game/state";
-import { passage, slingshotCapture, slingshotLaunch, slingshotPlan } from "../src/level/passage";
+import { passage } from "../src/level/catalog";
+import { slingshotCapture, slingshotLaunch, slingshotPlan } from "../src/level/solutions";
 import type { BurnNode } from "../src/sim/physics";
 
 const dt = 1 / 60;
@@ -229,27 +229,24 @@ function expectTrace(actual: readonly Trace[], expected: readonly Trace[], label
 interface Draw {
   ship: Visual | null;
   nodes: Visual | null;
-  trail: Visual | null;
   now: number;
 }
 
 function draw(game: Game, view: Draw): void {
-  if (!view.ship || !view.nodes || !view.trail) return;
+  if (!view.ship || !view.nodes) return;
   syncTopDown(game.camera, 1280, 720);
   const frame: VisualFrame = { game, width: 1280, height: 720, now: view.now, dpr: 1 };
   view.ship.update(frame);
   view.nodes.update(frame);
-  view.trail.update(frame);
   view.now += 16;
 }
 
 function viewFor(kind: "none" | "on" | "off"): Draw {
-  if (kind === "none") return { ship: null, nodes: null, trail: null, now: 0 };
+  if (kind === "none") return { ship: null, nodes: null, now: 0 };
   const look = kind === "on" ? theme : themeWith(0, { base: 0, perDv: 0, max: 0 });
   return {
     ship: createShip(look, passage),
     nodes: createNodes(look, passage),
-    trail: createTrail(look, passage),
     now: 0,
   };
 }
@@ -281,7 +278,6 @@ function flySlingshot(kind: "none" | "on" | "off"): Trace[] {
   }
   view.ship?.dispose();
   view.nodes?.dispose();
-  view.trail?.dispose();
   expect(paused).toBe(true);
   expect(trace.length).toBeGreaterThan(slingshotCapture.step);
   return trace;
@@ -322,7 +318,6 @@ function flyEdited(kind: "none" | "on" | "off"): Trace[] {
   }
   view.ship?.dispose();
   view.nodes?.dispose();
-  view.trail?.dispose();
   expect(edited).toBe(true);
   expect(game.ship.step).toBeGreaterThanOrEqual(280);
   expect(trace[trace.length - 1].nodes).toContain("180:1.5:-0.15");

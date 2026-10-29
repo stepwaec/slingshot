@@ -7,7 +7,6 @@ import { createRelativity } from "./relativity";
 import { createShip } from "./ship";
 import { createStar } from "./star";
 import { createStarfield } from "./starfield";
-import { createTrail } from "./trail";
 
 /**
  * One factory per element. Replace a single value to swap that visual
@@ -22,7 +21,6 @@ export const visualFactories = {
   gravity: createGravity,
   star: createStar,
   planets: createPlanets,
-  trail: createTrail,
   path: createPath,
   ship: createShip,
   nodes: createNodes,

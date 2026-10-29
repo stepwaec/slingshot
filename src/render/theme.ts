@@ -4,7 +4,6 @@ import planetStartUrl from "../../design/assets/planet-start.svg?url";
 import planetXUrl from "../../design/assets/planet-x.svg?url";
 import starUrl from "../../design/assets/star.svg?url";
 import starfieldUrl from "../../design/assets/starfield.svg?url";
-import trailUrl from "../../design/assets/trail.svg?url";
 import predictedPathUrl from "../../design/assets/predicted-path.svg?url";
 import dragArrowUrl from "../../design/assets/drag-arrow.svg?url";
 import { palette } from "./palette";
@@ -23,7 +22,6 @@ export const theme = {
     planetX: planetXUrl,
     star: starUrl,
     starfield: starfieldUrl,
-    trail: trailUrl,
     predictedPath: predictedPathUrl,
     dragArrow: dragArrowUrl,
   },
@@ -114,24 +112,6 @@ export const theme = {
     pulseHz: 3.5,
   },
   burst: { frames: 12 },
-  /**
-   * Flown trail, in the plume's colours. Narrower than the burn plume.
-   * A sample fades out by age (`ageSec` of sim time) and by screen length.
-   * The sim does not read this.
-   */
-  trail: {
-    /** Newest samples considered. Older ones are already faded. */
-    samples: 480,
-    ageSec: 8,
-    lengthPx: 640,
-    /** Bright core half-width in screen pixels. */
-    halfWidthPx: 2.6,
-    /** Soft halo drawn past the core, as a multiple of `halfWidthPx`. */
-    glowScale: 1.85,
-    turbulence: 0.28,
-    core: "#F7FBFF",
-    edge: "#A06BFF",
-  },
   path: {
     spacingPx: 10,
     maxDots: 400,
