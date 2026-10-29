@@ -11,6 +11,11 @@ import redGiantUrl from "../../design/assets/bodies/red-giant.svg?url";
 import whiteDwarfUrl from "../../design/assets/bodies/white-dwarf.svg?url";
 import gasBandedUrl from "../../design/assets/bodies/gas-banded.svg?url";
 import moonChainUrl from "../../design/assets/bodies/moon-chain.svg?url";
+import neutronStarUrl from "../../design/assets/bodies/neutron-star.svg?url";
+import pulsarUrl from "../../design/assets/bodies/pulsar.svg?url";
+import magnetarUrl from "../../design/assets/bodies/magnetar.svg?url";
+import blackHoleUrl from "../../design/assets/bodies/black-hole.svg?url";
+import magnetismUrl from "../../design/assets/overlays/magnetism-heatmap.svg?url";
 import { palette } from "./palette";
 
 /**
@@ -31,6 +36,11 @@ export const theme = {
     whiteDwarf: whiteDwarfUrl,
     gasGiant: gasBandedUrl,
     moonChain: moonChainUrl,
+    neutronStar: neutronStarUrl,
+    pulsar: pulsarUrl,
+    magnetar: magnetarUrl,
+    blackHole: blackHoleUrl,
+    magnetism: magnetismUrl,
     starfield: starfieldUrl,
     predictedPath: predictedPathUrl,
     dragArrow: dragArrowUrl,

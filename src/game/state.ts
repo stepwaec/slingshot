@@ -65,6 +65,8 @@ export interface Game {
   gravity: GravityView;
   /** Rest-frame clock-rate contours drawn over the flat grid. */
   gravityClock: boolean;
+  /** Planning magnetism map. Does not affect prediction or flight. */
+  magnetism: boolean;
 }
 
 /** Planning, or a tactical pause mid-flight. Burns can be edited in both. */
@@ -107,6 +109,7 @@ export function createGame(level: Level = passage, camera: Camera = { x: 0, y: 0
     spentNodes: 0,
     gravity: "off",
     gravityClock: false,
+    magnetism: false,
   };
 }
 
@@ -121,6 +124,15 @@ export function cycleGravity(game: Game): GravityView {
 /** Clock-rate overlay for the flat grid. Ignored by the sim. */
 export function setGravityClock(game: Game, on: boolean): void {
   game.gravityClock = on;
+}
+
+/** Magnetism heatmap. Ignored by the sim and by prediction. */
+export function setMagnetism(game: Game, on: boolean): void {
+  game.magnetism = on;
+}
+
+export function toggleMagnetism(game: Game): void {
+  game.magnetism = !game.magnetism;
 }
 
 export function loadLevel(game: Game, level: Level): void {

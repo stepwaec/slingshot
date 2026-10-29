@@ -1,0 +1,91 @@
+{
+  "id": "needle",
+  "name": "Needle",
+  "g": 1,
+  "dt": 0.016666666666666666,
+  "bodies": [
+    {
+      "id": "home",
+      "name": "Home",
+      "kind": "home",
+      "x": 0,
+      "y": 0,
+      "mass": 8000,
+      "radius": 16
+    },
+    {
+      "id": "giant",
+      "name": "the gas giant",
+      "kind": "planet",
+      "look": "gas-giant",
+      "x": 140,
+      "y": 220,
+      "mass": 6000,
+      "radius": 44,
+      "magnet": {
+        "b1Reach": 120,
+        "tilt": 0.17453292519943295
+      }
+    },
+    {
+      "id": "neutron",
+      "name": "the neutron star",
+      "kind": "star",
+      "look": "neutron",
+      "x": 300,
+      "y": 40,
+      "mass": 45000,
+      "radius": 8,
+      "magnet": {
+        "b1Reach": 60,
+        "tilt": 0.5235987755982988
+      },
+      "beam": {
+        "reach": 36,
+        "period": 6,
+        "damage": 0
+      }
+    },
+    {
+      "id": "x",
+      "name": "Planet X",
+      "kind": "target",
+      "x": 520,
+      "y": 90,
+      "mass": 9000,
+      "radius": 18,
+      "captureRadius": 84
+    }
+  ],
+  "targetId": "x",
+  "ship": {
+    "x": 40,
+    "y": 0,
+    "vx": 0,
+    "vy": 14.142135623730951
+  },
+  "orbit": {
+    "bodyId": "home",
+    "radius": 40
+  },
+  "fuel": 140,
+  "fuelPerDv": 1,
+  "bounds": {
+    "minX": -5000,
+    "maxX": 5000,
+    "minY": -5000,
+    "maxY": 5000
+  },
+  "maxSteps": 7000,
+  "dvPerPixel": 0.25,
+  "periapsisMargin": 6,
+  "maxPlannedBurns": 4,
+  "c": 1000000,
+  "mission": {
+    "deadline": 400,
+    "crewLimit": 400,
+    "fuelStarMin": 0,
+    "crewWeight": 1,
+    "fuelWeight": 1
+  }
+}

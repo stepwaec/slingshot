@@ -188,6 +188,7 @@ class StarVisual implements Visual {
     let order = 0;
     for (const body of level.bodies) {
       if (body.kind !== "star") continue;
+      if (body.look === "neutron" || body.look === "pulsar" || body.look === "magnetar") continue;
       const look = recipeFor(body.look, theme);
       const atmo = body.atmosphereRadius;
       let atmosphere: THREE.Mesh | null = null;

@@ -23,7 +23,21 @@
         <div id="gravity-controls">
           <button type="button" id="gravity" aria-pressed="false" title="Cycle the gravity map (G)">Gravity off</button>
           <button type="button" id="gravity-clock" hidden aria-pressed="false" title="Rest-frame clock rate on the grid (C)">Clock rate</button>
+          <button type="button" id="magnetism" hidden aria-pressed="false" title="Magnetic danger map (M)">Magnetism</button>
         </div>
+        <aside id="mag-legend" hidden>
+          <div class="mag-head">
+            <span class="hud-label">Magnetic field</span>
+            <span class="mag-key">M</span>
+          </div>
+          <ul>
+            <li><i class="mag-swatch" data-zone="safe"></i>Safe</li>
+            <li><i class="mag-swatch" data-zone="fuzzy"></i>Fuzzy</li>
+            <li><i class="mag-swatch" data-zone="scrambled"></i>Scrambled</li>
+            <li><i class="mag-swatch" data-zone="damaging"></i>Damaging</li>
+            <li><i class="mag-swatch" data-zone="lethal"></i>Lethal</li>
+          </ul>
+        </aside>
         <section id="clocks" aria-label="Clocks">
           <div class="clock-head">
             <span class="hud-label" id="clock-title">Clocks</span>
