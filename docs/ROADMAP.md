@@ -27,7 +27,7 @@ Note on numbering: Brainstormer's first draft called the flight loop "WP2" and r
 | Visual restyle v2 | Done, 2026-10-29 in [PR #23](https://github.com/stepwaec/slingshot/pull/23) | Claude's v2 look on every level: a plasma sun, planet surfaces with clouds and a day/night terminator, a tinted starfield with nebulae, an asteroid field, wreck debris, and rings on gas giants. Moons keep the WP8 looks and gain surfaces. The nozzle plume stays. The flown trail stays gone. Visual only; prediction still matches flight. |
 | Ship systems package (after WP8; number not assigned yet) | Planned | Hull health. Damage from collisions, close passes and tidal stress (the gravity gradient across the ship, strongest near white dwarfs, neutron stars and black holes), with a HUD stress warning and a red zone on the gravity grid. Solar recharge near stars (moved here from WP10). A basic upgrade screen, with upgrades bought with stars or points. Wires up the tidal damage knob from WP7c. |
 | WP9: compact objects plus magnetism layer | Planned | Neutron stars and pulsars (small and very heavy; beams damage on a rhythm), magnetars (fields scramble instruments so the prediction gets fuzzy), black holes with event horizons and lensing. Magnetism layer: a magnetic field model per body (dipole falling off with distance cubed), a danger heatmap from safe to dangerous for magnetars, neutron stars and gas giants, with its own toggle (M key and a HUD button, separate from G); the same field drives the magnetar fuzziness. Tests check field values and that the toggle never changes the sim. |
-| WP10: environment and resources | Planned | Nebulae (scoop fuel; they hide what is inside) and comets (ride them or harvest ice). Solar recharge was originally here and moved to the ship systems package. |
+| WP10: environment and resources | Planned | Nebulae (scoop fuel; they hide what is inside) and comets (ride them or harvest ice). Solar recharge was originally here and moved to the ship systems package. Support elliptical orbits in levels, needed for comets per `design/threejs-notes.md` §12. The orbits must be deterministic, and the prediction must keep matching the flight. |
 | WP11: hazards plus radiation | Planned | Asteroid and Kuiper belts in density tiers, rogue planets, stray asteroids, solar flares. Radiation: sources are stars and flares, magnetic radiation belts, pulsars and magnetars, accretion disks and quasars, and background cosmic rays. Crew dose meter (too much fails the mission, a low dose earns a bonus), shielding as an upgrade that costs mass, hiding in a planet's shadow during flares, and a radiation heatmap toggle next to gravity and magnetism. |
 | WP12: dramatic events | Planned | Supernova countdowns (get out before the star explodes), shockwaves from supernova remnants, quasars. |
 | WP13: three-body chaos | Planned | Multi-sun systems (Trisolaran style) where three-body chaos means planning uses widening probability cones instead of exact lines. |
@@ -153,13 +153,14 @@ Stephan points Claude at this section for the next visual pack.
 
 **WP9:** fully designed in [PR #19](https://github.com/stepwaec/slingshot/pull/19): pulsar, magnetar, magnetism heatmap, quiet neutron star.
 
+**WP10:** fully designed in [PR #22](https://github.com/stepwaec/slingshot/pull/22) (comet, solar recharge indicator).
+
 **Open requests**, in priority order:
 
 1. **Ship systems:** hull health bar, tidal-stress warning, and upgrade screen. These are being built now with placeholder UI, so the designs should match those UI slots. Also a spacecraft redesign with visible upgrade parts: a modular base hull, and each upgrade visibly changes the ship (hull plating or structural strength, shielding, engines — chemical, ion and pulse, each with its own nozzle and plume — larger fuel tanks, solar panels, a gas scoop, sensors, and a cryosleep module). Include damage states that match the hull health bar. Keep the blue-to-violet plume. It must read well at game scale.
-2. **WP10:** comet, solar recharge indicator.
-3. **WP11:** sparse, medium and dense asteroid belts; Kuiper belt; rogue planet; radiation heatmap; dose meter.
-4. **Ship and planning view:** blue-to-violet plume with no trailing halo; burn node; gravity grid styling.
-5. **Late game:** stellar engine, Dyson swarm, ringworld, Shkadov thruster, space elevator, wormhole.
+2. **WP11:** sparse, medium and dense asteroid belts; Kuiper belt; rogue planet; radiation heatmap; dose meter.
+3. **Ship and planning view:** blue-to-violet plume with no trailing halo; burn node; gravity grid styling.
+4. **Late game:** stellar engine, Dyson swarm, ringworld, Shkadov thruster, space elevator, wormhole.
 
 **Guidelines:** a realistic and vibrant style matching v1.5 and v2; SVG files under `design/assets/`; easter eggs only as hints, never logos or characters.
 
