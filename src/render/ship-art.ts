@@ -164,7 +164,7 @@ export function shipBuild(
     solar: owned.has("solar"),
     tanks: owned.has("tanks"),
     plating: owned.has("hull"),
-    shield: look.shield,
+    shield: look.shield || owned.has("shield"),
     scoop: look.scoop,
     sensors: look.sensors,
     cryo: look.cryo,

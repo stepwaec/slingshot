@@ -446,6 +446,49 @@ html, body, #app {
 
 #recharge[hidden] { display: none; }
 
+#radiation[hidden],
+#dose[hidden] { display: none; }
+
+#radiation[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--ink);
+  border-color: transparent;
+}
+
+#dose {
+  position: absolute;
+  top: 400px;
+  right: 40px;
+  width: 220px;
+}
+
+#dose-value,
+#dose-rate {
+  margin: 0;
+  font: 400 12px/1 var(--mono);
+  color: var(--text);
+}
+
+#dose-rate { margin-top: 6px; font-size: 11px; color: #9be15d; }
+#dose-rate[data-source="shadow"] { color: var(--muted); }
+#dose-value[data-band="critical"],
+#dose-rate[data-band="critical"] { color: #ff5a5f; }
+#dose-value[data-band="warn"] { color: #ffe83a; }
+
+#dose-fill { height: 100%; width: 0; border-radius: 4px; background: #9be15d; }
+#dose-fill[data-band="warn"] { background: #ffe83a; }
+#dose-fill[data-band="critical"] { background: #ff5a5f; }
+
+#dose .fuel-track { position: relative; }
+#dose-mark {
+  position: absolute;
+  left: 25%;
+  top: -3px;
+  width: 1px;
+  height: 14px;
+  background: #ecf0fa;
+}
+
 .hull-block {
   position: absolute;
   top: 64px;

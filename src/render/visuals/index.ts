@@ -8,7 +8,9 @@ import { createMagnetism } from "./magnetism";
 import { createNodes } from "./nodes";
 import { createPath } from "./path";
 import { createPlanets } from "./planets";
+import { createRadiation } from "./radiation";
 import { createRecharge } from "./recharge";
+import { createRogue } from "./rogue";
 import { createRelativity } from "./relativity";
 import { createShip } from "./ship";
 import { createStar } from "./star";
@@ -27,10 +29,12 @@ export const visualFactories = {
   relativity: createRelativity,
   gravity: createGravity,
   magnetism: createMagnetism,
+  radiation: createRadiation,
   star: createStar,
   scenery: createScenery,
   gallery: createGallery,
   planets: createPlanets,
+  rogue: createRogue,
   compact: createCompact,
   comet: createComet,
   clouds: createClouds,

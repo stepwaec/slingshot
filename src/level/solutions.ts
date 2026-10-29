@@ -152,3 +152,15 @@ export const driftPlan: readonly BurnNode[] = [
   { step: 0, dvx: -2.070552360820167, dvy: 7.7274066103125465 },
   { step: 6569, dvx: -11.486484390049283, dvy: 1.1946888427665865 },
 ];
+
+/** Shade: cross the flare's shadow and capture, under the dose limit. */
+export const shadePlan: readonly BurnNode[] = [
+  { step: 0, dvx: 8.090169943749475, dvy: 5.877852522924732 },
+  { step: 4033, dvx: -9.806446279988112, dvy: 12.258069153910647 },
+];
+
+/** Wander: pass the drifting rogue and capture at Planet X. */
+export const wanderPlan: readonly BurnNode[] = [
+  { step: 0, dvx: 9.781476007338057, dvy: 2.079116908177593 },
+  { step: 4403, dvx: -5.819954789359722, dvy: -4.06238700271758 },
+];

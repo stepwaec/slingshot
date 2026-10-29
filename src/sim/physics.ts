@@ -36,7 +36,7 @@ export interface Vec2 {
   y: number;
 }
 
-export type BodyKind = "home" | "star" | "target" | "moon" | "blackhole" | "planet";
+export type BodyKind = "home" | "star" | "target" | "moon" | "blackhole" | "planet" | "rogue";
 
 /**
  * Visual recipe for a body. Omitted looks use the kind's original disc.
@@ -159,6 +159,13 @@ export interface Body {
   harvest?: number;
   /** Coma where ice can be harvested. Omitted or not past the surface harvests nothing. */
   harvestRadius?: number;
+  /** Straight-line motion. Rogue planets use this and never an orbit. */
+  drift?: { vx: number; vy: number };
+  /**
+   * Directed flare. `angle` is the cone axis in radians.
+   * The cone is on while `(time % period)` is inside `[start, start + duration)`.
+   */
+  flare?: { angle: number; period: number; start: number; duration: number };
 }
 
 /** World position and velocity of one body at an instant. */
@@ -254,6 +261,12 @@ export interface SimConfig {
   fuelPerDv?: number;
   /** Fuel clouds. Omitted leaves scoop at 0, so stock levels stay bit-identical. */
   nebulae?: readonly Nebula[];
+  /** mSv added per second per unit of dose rate D. Omitted or 0 leaves dose at 0. */
+  dosePerD1?: number;
+  /** Crew dose that fails the mission. Omitted means dose never fails a flight. */
+  doseLimit?: number;
+  /** Multiplier on crew dose. 1 is unshielded. Shielding uses 0.5. */
+  shield?: number;
 }
 
 /** How many times a flight may freeze so the player can edit burns. */
@@ -269,7 +282,10 @@ export interface PauseBudget {
 
 export type FlightStatus = "flying" | "won" | "crashed" | "lost";
 
-export type LostReason = "bounds" | "timeout" | "flyby" | "hull";
+export type LostReason = "bounds" | "timeout" | "flyby" | "hull" | "dose";
+
+/** What the dose meter names as the strongest source at a point. */
+export type DoseSource = "star" | "flare" | "belt" | "pulsar" | "disk" | "cosmic" | "shadow";
 
 export interface SimState {
   x: number;
@@ -302,6 +318,11 @@ export interface SimState {
   tank: number;
   /** Fuel added by solar recharge. */
   recharged: number;
+  /** Accumulated crew dose in mSv. */
+  dose: number;
+  /** Crew dose rate in mSv per second, after shielding. */
+  doseRate: number;
+  doseSource: DoseSource;
 }
 
 /** One impulsive burn at an exact sim step. Nodes are ordered by `step`. */
@@ -431,6 +452,14 @@ function findBody(bodies: readonly Body[], id: string): Body | undefined {
  * stays on today's rail.
  */
 export function bodyPose(body: Body, time: number, bodies: readonly Body[], g = 1): Pose {
+  if (body.drift && !body.orbit) {
+    return {
+      x: body.x + body.drift.vx * time,
+      y: body.y + body.drift.vy * time,
+      vx: body.drift.vx,
+      vy: body.drift.vy,
+    };
+  }
   if (!body.orbit) return { x: body.x, y: body.y, vx: 0, vy: 0 };
   return poseFromOrbit(body, time, bodies, 0, g);
 }
@@ -527,7 +556,6 @@ export function gravityConstant(config: SimConfig): number {
 }
 
 function bodyPoint(body: Body, time: number, bodies: readonly Body[], g: number): { x: number; y: number } {
-  if (!body.orbit) return { x: body.x, y: body.y };
   const pose = bodyPose(body, time, bodies, g);
   return { x: pose.x, y: pose.y };
 }
@@ -841,6 +869,9 @@ export function makeState(
     peakStress: 0,
     tank: config.fuelStart ?? 0,
     recharged: 0,
+    dose: 0,
+    doseRate: 0,
+    doseSource: "cosmic",
   };
 }
 
@@ -957,7 +988,7 @@ interface RelativePose {
 
 /** Ship position and velocity relative to a body. Static bodies keep the absolute velocity. */
 function relativePose(state: SimState, body: Body, time: number, bodies?: readonly Body[]): RelativePose {
-  if (!body.orbit) {
+  if (!body.orbit && !body.drift) {
     return { rx: state.x - body.x, ry: state.y - body.y, vx: state.vx, vy: state.vy, cx: body.x, cy: body.y };
   }
   const pose = bodyPose(body, time, bodies ?? []);
@@ -1335,7 +1366,7 @@ function closePassRate(x: number, y: number, config: SimConfig, time: number): n
   for (let i = 0; i < bodies.length; i++) {
     const body = bodies[i];
     if (isCompactBody(body) || !(body.radius > 0)) continue;
-    const pose = body.orbit ? bodyPose(body, time, bodies) : { x: body.x, y: body.y, vx: 0, vy: 0 };
+    const pose = bodyPose(body, time, bodies);
     const r = Math.hypot(x - pose.x, y - pose.y);
     const outer = body.radius * CLOSE_FACTOR;
     if (!(r > body.radius) || !(r < outer)) continue;
@@ -1371,6 +1402,147 @@ export const SOLAR_RREF = 85;
 
 /** Below this fraction of `rateMax` the panels count as off. */
 export const SOLAR_CUTOFF = 0.08;
+
+/**
+ * Dose-rate constants from `radiation-map.svg`. D is in units of D1.
+ * The header does not number a pulsar beam or an accretion disk. Those two
+ * use D = 8 inside the beam, and a Gaussian of peak 6 at 2.4 radii on a
+ * black-hole disk.
+ */
+export const DOSE_STAR_K = 2.2;
+export const DOSE_STAR_R0 = 170;
+export const DOSE_FLARE_K = 3.2;
+export const DOSE_FLARE_R = 420;
+export const DOSE_FLARE_CONE = (20 * Math.PI) / 180;
+export const DOSE_COSMIC = 0.35;
+export const DOSE_PULSAR = 8;
+export const DOSE_DISK = 6;
+
+export interface DoseReading {
+  d: number;
+  source: DoseSource;
+}
+
+function wrapAngle(angle: number): number {
+  const turn = Math.PI * 2;
+  let value = angle % turn;
+  if (value > Math.PI) value -= turn;
+  if (value < -Math.PI) value += turn;
+  return value;
+}
+
+/** True when a body's disc sits between the point and the star, blocking starlight and the flare. */
+export function starShadowed(
+  x: number,
+  y: number,
+  starX: number,
+  starY: number,
+  starId: string,
+  bodies: readonly Body[],
+  time: number,
+  g = 1,
+): boolean {
+  const dx = starX - x;
+  const dy = starY - y;
+  const len2 = dx * dx + dy * dy;
+  if (!(len2 > 1e-8)) return false;
+  for (let i = 0; i < bodies.length; i++) {
+    const body = bodies[i];
+    if (body.id === starId || !(body.radius > 0)) continue;
+    const pose = bodyPose(body, time, bodies, g);
+    const along = ((pose.x - x) * dx + (pose.y - y) * dy) / len2;
+    if (!(along > 0.02) || !(along < 0.98)) continue;
+    const px = x + along * dx;
+    const py = y + along * dy;
+    if (Math.hypot(pose.x - px, pose.y - py) < body.radius) return true;
+  }
+  return false;
+}
+
+function flareOn(flare: NonNullable<Body["flare"]>, time: number): boolean {
+  if (!(flare.period > 0) || !(flare.duration > 0)) return false;
+  let phase = time % flare.period;
+  if (phase < 0) phase += flare.period;
+  const end = flare.start + flare.duration;
+  return phase >= flare.start && phase < end;
+}
+
+/**
+ * Environmental dose rate in units of D1. Stars fall as L/r², a flare is a
+ * 20° cone on sim time, belts are annuli, and a body in front of a star
+ * removes that star and its flare. The map and the crew dose both read this.
+ */
+export function doseAt(x: number, y: number, time: number, bodies: readonly Body[], g = 1): DoseReading {
+  let total = DOSE_COSMIC;
+  let best = DOSE_COSMIC;
+  let source: DoseSource = "cosmic";
+  let blockedStar = false;
+  const add = (value: number, name: DoseSource) => {
+    if (!(value > 0)) return;
+    total += value;
+    if (value > best) {
+      best = value;
+      source = name;
+    }
+  };
+  for (let i = 0; i < bodies.length; i++) {
+    const body = bodies[i];
+    const pose = bodyPose(body, time, bodies, g);
+    const distance = Math.max(1, Math.hypot(x - pose.x, y - pose.y));
+    if (body.kind === "star") {
+      const luminosity = starLuminosity(body);
+      const shadowed = starShadowed(x, y, pose.x, pose.y, body.id, bodies, time, g);
+      if (shadowed) blockedStar = true;
+      if (!shadowed && luminosity > 0) {
+        const fall = (DOSE_STAR_R0 / distance) * (DOSE_STAR_R0 / distance);
+        add(DOSE_STAR_K * luminosity * fall, "star");
+        const flare = body.flare;
+        if (flare && flareOn(flare, time)) {
+          const delta = Math.abs(wrapAngle(Math.atan2(y - pose.y, x - pose.x) - flare.angle));
+          if (delta < DOSE_FLARE_CONE) {
+            const unit = delta / DOSE_FLARE_CONE;
+            const reach = Math.pow(DOSE_FLARE_R / distance, 1.1);
+            add(DOSE_FLARE_K * reach * (1 - unit * unit), "flare");
+          }
+        }
+      }
+    }
+    if (body.look === "gas-giant" || body.look === "magnetar") {
+      const radius = body.radius;
+      const inner = (distance - 2.1 * radius) / (0.45 * radius);
+      const outer = (distance - 3.2 * radius) / (0.5 * radius);
+      add(12 * Math.exp(-inner * inner) + 4 * Math.exp(-outer * outer), "belt");
+    }
+    if (body.look === "pulsar" && (body.beam?.damage ?? 0) > 0) {
+      if (beamDamageRate(x, y, time, bodies) > 0) add(DOSE_PULSAR, "pulsar");
+    }
+    if (body.kind === "blackhole") {
+      const radius = body.radius;
+      const ring = (distance - 2.4 * radius) / (0.4 * radius);
+      add(DOSE_DISK * Math.exp(-ring * ring), "disk");
+    }
+  }
+  if (blockedStar && source === "cosmic") source = "shadow";
+  return { d: total, source };
+}
+
+function applyDose(state: SimState, config: SimConfig, time: number): void {
+  if (state.status !== "flying") return;
+  const per = config.dosePerD1 ?? 0;
+  const limit = config.doseLimit ?? 0;
+  if (!(per > 0) || !(limit > 0)) return;
+  const reading = doseAt(state.x, state.y, time, config.bodies, gravityConstant(config));
+  const shield = config.shield ?? 1;
+  const rate = reading.d * per * shield;
+  state.doseRate = rate;
+  state.doseSource = reading.source;
+  state.dose += rate * config.dt;
+  if (state.dose >= limit) {
+    state.dose = limit;
+    state.status = "lost";
+    state.lostReason = "dose";
+  }
+}
 
 /**
  * Fuel per second from stars. The HUD, the gold path dots and the tank all
@@ -1488,6 +1660,8 @@ function applyShipSystems(state: SimState, config: SimConfig, time: number): voi
       state.lostReason = "hull";
     }
   }
+  applyDose(state, config, time);
+  if (state.status !== "flying") return;
   const g = gravityConstant(config);
   const solar = solarRate(state.x, state.y, config, time);
   const scoop = nebulaScoopRate(state.x, state.y, config.nebulae);
@@ -1536,7 +1710,8 @@ export function step(state: SimState, config: SimConfig): void {
   const bodies = config.bodies;
   for (let i = 0; i < bodies.length; i++) {
     const body = bodies[i];
-    const hit = body.orbit
+    const moving = body.orbit !== undefined || body.drift !== undefined;
+    const hit = moving
       ? movingCircleEntry(x0, y0, x1, y1, body, t0, t1, bodies, body.radius)
       : circleEntry(x0, y0, x1, y1, body.x, body.y, body.radius);
     if (hit !== null && hit < crashT) {
@@ -1552,7 +1727,7 @@ export function step(state: SimState, config: SimConfig): void {
     if (body) {
       let cx = body.x;
       let cy = body.y;
-      if (body.orbit) {
+      if (body.orbit || body.drift) {
         const pose = bodyPose(body, t0 + crashT * dt, bodies);
         cx = pose.x;
         cy = pose.y;

@@ -24,7 +24,7 @@ import { createClockLatches, readClocks, type ClockLatches } from "./hud/readout
 import type { MissionScore } from "./sim/score";
 import { frameLevel, worldToScreen } from "./render/camera";
 import { SpaceView } from "./render/view";
-import { hasMagneticBody, horizonSteps, iceHarvestRate, nebulaScoopRate, solarRechargeRate, spreadAlong } from "./sim/physics";
+import { doseAt, hasMagneticBody, horizonSteps, iceHarvestRate, nebulaScoopRate, solarRechargeRate, spreadAlong } from "./sim/physics";
 import { shipLoadout } from "./game/upgrades";
 import { mountShipyard, syncShipyard } from "./hud/shipyard";
 import { resetShipLook } from "./render/appearance";
@@ -91,6 +91,11 @@ const routeDeep = required<HTMLButtonElement>("#route-deep");
 const gravityButton = required<HTMLButtonElement>("#gravity");
 const gravityClockButton = required<HTMLButtonElement>("#gravity-clock");
 const magnetismButton = required<HTMLButtonElement>("#magnetism");
+const radiationButton = required<HTMLButtonElement>("#radiation");
+const doseBlock = required<HTMLElement>("#dose");
+const doseValue = required<HTMLElement>("#dose-value");
+const doseFill = required<HTMLElement>("#dose-fill");
+const doseRate = required<HTMLElement>("#dose-rate");
 const magLegend = required<HTMLElement>("#mag-legend");
 
 const game = createGame();
@@ -155,6 +160,7 @@ bindInput(
     gravityButton,
     gravityClockButton,
     magnetismButton,
+    radiationButton,
   },
   () => ({ width: canvas.clientWidth, height: canvas.clientHeight }),
   () => frameLevel(game.camera, canvas.clientWidth, canvas.clientHeight, game.level),
@@ -236,6 +242,31 @@ function syncRecharge(current: Game): void {
   }
 }
 
+function syncDose(current: Game): void {
+  const limit = current.level.physics?.doseLimit ?? 0;
+  const per = current.level.physics?.dosePerD1 ?? 0;
+  const armed = per > 0 && limit > 0;
+  doseBlock.hidden = !armed;
+  radiationButton.hidden = !armed;
+  const on = armed && current.radiation;
+  radiationButton.setAttribute("aria-pressed", on ? "true" : "false");
+  if (!armed) return;
+  const pose = current.mode === "flying" ? current.ship : current.initial;
+  const dose = current.mode === "flying" ? current.ship.dose : current.prediction.final.dose;
+  const ratio = Math.max(0, Math.min(1, dose / limit));
+  const band = ratio >= 0.75 ? "critical" : ratio >= 0.25 ? "warn" : "ok";
+  doseFill.style.width = `${Math.round(ratio * 100)}%`;
+  doseFill.dataset.band = band;
+  doseValue.dataset.band = band;
+  doseValue.textContent = `${dose.toFixed(1)} mSv`;
+  const reading = doseAt(pose.x, pose.y, pose.t, current.level.bodies, current.level.g);
+  const shield = shipLoadout(current.upgrades).shield;
+  const rate = reading.d * per * shield;
+  doseRate.dataset.band = band;
+  doseRate.dataset.source = reading.source;
+  doseRate.textContent = reading.source === "shadow" ? "0.0 mSv/s · shadow" : `+${rate.toFixed(1)} mSv/s · ${reading.source}`;
+}
+
 function syncMagnetism(current: Game): void {
   const show = hasMagneticBody(current.level.bodies);
   magnetismButton.hidden = !show;
@@ -268,6 +299,7 @@ function syncHud(current: Game): void {
   app.dataset.mode = current.mode;
   syncGravity(current);
   syncMagnetism(current);
+  syncDose(current);
   modeLabel.textContent = planning ? "Planning" : current.mode === "paused" ? "Paused" : "In flight";
   planningActions.hidden = !planning;
   flightActions.hidden = planning;

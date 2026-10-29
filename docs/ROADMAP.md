@@ -32,7 +32,7 @@ Note on numbering: Brainstormer's first draft called the flight loop "WP2" and r
 | Art motion | Done, merged 2026-10-29 in [PR #33](https://github.com/stepwaec/slingshot/pull/33) | Sun prominences and the flare follow the timelines in `star.svg` instead of sitting at the rest frame. The comet tail is its own sprite: it points away from the star and shortens with `clamp(Rperi / d, 0.35, 1)`. Pulse's painted beams end on the level's damage reach. Planet sprites still turn their lit side toward the brightest star. Visual only. |
 | Implementation review | Done, merged 2026-10-29 in [PR #35](https://github.com/stepwaec/slingshot/pull/35) | Follows `design/IMPLEMENTING.md` through the visual items in `design/IMPLEMENTATION-REVIEW.md`. The sun's haze breathes and its flame and wisp rings turn. The ship frame is centred on the ship, and the longer plume still starts at the engine throat. SVG rasters bake at DPR × zoom bucket with mipmaps. The comet's dust tail mirrors with its orbit. Nebulae draw behind bodies. Prediction is unchanged. |
 | Remaining visual review | In progress, opened 2026-10-29 in [PR #38](https://github.com/stepwaec/slingshot/pull/38) | Home, Planet X and gas giants scroll their strips under a separate light layer. The comet's ion wind, knot and coma move. The magnetar's dashes, grain and starquake run. The red giant's drag edge crawls. The recharge HUD and the shipyard follow their SVG headers. The recharge cutoff, Kepler speeds and every other physics note stay unchanged. |
-| WP11: hazards plus radiation | Planned | Asteroid and Kuiper belts in density tiers, rogue planets, stray asteroids, solar flares. Radiation: sources are stars and flares, magnetic radiation belts, pulsars and magnetars, accretion disks and quasars, and background cosmic rays. Crew dose meter (too much fails the mission, a low dose earns a bonus), shielding as an upgrade that costs mass, hiding in a planet's shadow during flares, and a radiation heatmap toggle next to gravity and magnetism. |
+| WP11: hazards plus radiation | In progress, opened 2026-10-29 in [PR #42](https://github.com/stepwaec/slingshot/pull/42) | Radiation slice: stars, flares, magnetic belts, pulsar beams, black-hole disks and cosmic background feed one dose field. Crew dose integrates in the sim step (the limit fails the mission), shielding halves it and adds mass, a planet's disc shadows a star and its flare, and a Radiation button draws the halftone map in planning and pause. Levels Shade and Wander. Rogue planets drift in a straight line and still pull. Asteroid and Kuiper rock fields are still planned. |
 | WP12: dramatic events | Planned | Supernova countdowns (get out before the star explodes), shockwaves from supernova remnants, quasars. |
 | WP13: three-body chaos | Planned | Multi-sun systems (Trisolaran style) where three-body chaos means planning uses widening probability cones instead of exact lines. |
 | WP14: world builder | Planned | Build and share levels, using the JSON level format from WP7c. |
@@ -64,9 +64,11 @@ Physics stays game-like but true to its real shape, and prediction always matche
 - A gas giant with a chain of four moons (WP8, level Chain). Needle adds a gas giant with a magnetic field.
 - A quiet neutron star (Needle), a pulsar whose beams damage on a rhythm (Pulse), and a magnetar whose field fuzzes the predicted path (Quake). The magnetism map toggles with M.
 - Comets on elliptical orbits, with ice harvest (Ice, Drift). Nebulae that scoop fuel; a dark cloud hides what is inside (Veil, Drift).
+- Radiation (Shade, Wander): starlight, solar flares, gas-giant and magnetar belts, pulsar beams, black-hole disks and a cosmic background. The dose meter names the dominant source. A planet disc blocks a star and its flare. Shielding halves crew dose and adds mass. The Radiation button toggles a halftone map.
+- A rogue planet (Wander) that drifts in a straight line, has gravity, and gives no recharge.
 
 **Planned, by package**
-- WP11: asteroid belts and the Kuiper belt (density tiers: sparse, medium, dense), rogue planets, stray asteroids, solar flares, radiation belts.
+- WP11 remainder: asteroid belts and the Kuiper belt (density tiers: sparse, medium, dense) and stray asteroids. Radiation belts on gas giants are already in the dose field.
 - WP12: supernovae, supernova remnant shockwaves, quasars.
 - WP13: multi-sun (three-body) systems.
 - WP15: star clusters, galaxies and galaxy clusters as the zooming mission map; supermassive black holes as the anchor of a galaxy-level map.
@@ -85,7 +87,7 @@ Every upgrade is visible on the modular ship: hull plating or structural strengt
 | Upgrade | What it does | Trade-off |
 | --- | --- | --- |
 | Hull strength | Resists tidal stress and impacts. | Mass. |
-| Shielding | Radiation, magnetic and impact protection (for example for dense asteroid belts). | Mass (stated explicitly for radiation shielding). |
+| Shielding | Halves crew dose. Magnetic and impact protection (for example for dense asteroid belts) are still open. | Mass. |
 | Engines | Chemical, then ion (efficient but weak), then pulse (powerful but thirsty). | Ion: low thrust. Pulse: high fuel use. Mass otherwise. |
 | Fuel tanks | More capacity. | Heavier. |
 | Solar panels | Faster recharge near stars. | Mass. |
@@ -174,7 +176,7 @@ Stephan points Claude at this section for the next visual pack.
 
 **Ship systems:** fully designed in [PR #26](https://github.com/stepwaec/slingshot/pull/26). That pack includes the hull bar, the tidal-stress warning, and the upgrade screen, and the modular spacecraft redesign: a base hull with visible hull plating, shielding, chemical, ion and pulse engines, larger fuel tanks, solar panels, a gas scoop, sensors, a cryosleep module, and damage states that match the hull bar.
 
-**WP11:** done in [PR #34](https://github.com/stepwaec/slingshot/pull/34) (sparse, medium and dense asteroid belts, Kuiper belt, rogue planet, radiation heatmap, dose meter).
+**WP11:** designed in [PR #34](https://github.com/stepwaec/slingshot/pull/34) (sparse, medium and dense asteroid belts, Kuiper belt, rogue planet, radiation heatmap, dose meter). The radiation slice (rogue planets, flares, dose, shielding, shadows, heatmap) is in the game in [PR #42](https://github.com/stepwaec/slingshot/pull/42). Asteroid and Kuiper rock fields are still open.
 
 **Burn plume, burn node and gravity grid styling:** done in [PR #36](https://github.com/stepwaec/slingshot/pull/36). The plume is blue-to-violet, with no trailing halo.
 

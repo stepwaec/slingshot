@@ -35,6 +35,9 @@ const DOWN_LEFT = { x: -1, y: -1 };
 
 export function artForBody(body: Body, theme: Theme): ArtFit | null {
   const assets = theme.assets;
+  if (body.kind === "rogue") {
+    return { ...fit(assets.rogue, 260, 200, 36, "none", null), ox: 100 - 130, oy: 0, hide: ["rpDrift"] };
+  }
   if (body.kind === "blackhole") return fit(assets.blackHole, 320, 320, 22, "none", null);
   if (body.look === "comet") {
     return {
