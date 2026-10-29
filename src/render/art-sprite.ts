@@ -147,10 +147,25 @@ export function artMesh(fit: ArtFit, name: string): THREE.Mesh {
   return mesh;
 }
 
-/** Put the SVG's body centre on (x, y). `radius` is the sim crash radius, or rx for a cloud. */
-export function poseArt(mesh: THREE.Mesh, fit: ArtFit, x: number, y: number, radius: number, rot: number, ry?: number): void {
-  const sx = radius / fit.svgRadius;
-  const sy = ry !== undefined && fit.svgRy ? ry / fit.svgRy : sx;
+/**
+ * Put the SVG's body centre on (x, y). `radius` is the sim crash radius, or rx for a cloud.
+ * `along` and `across` multiply that scale after the rotation's local axes: +x is along
+ * for a comet tail, +y is along for a pulsar beam baked upward.
+ */
+export function poseArt(
+  mesh: THREE.Mesh,
+  fit: ArtFit,
+  x: number,
+  y: number,
+  radius: number,
+  rot: number,
+  ry?: number,
+  along = 1,
+  across = 1,
+): void {
+  const base = radius / fit.svgRadius;
+  const sx = base * (fit.spin === "beam" ? across : along);
+  const sy = (ry !== undefined && fit.svgRy ? ry / fit.svgRy : base) * (fit.spin === "beam" ? along : across);
   mesh.scale.set(sx, sy, 1);
   mesh.rotation.z = rot;
   const c = Math.cos(rot);
