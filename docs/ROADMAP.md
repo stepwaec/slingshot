@@ -49,6 +49,8 @@ Physics stays game-like but true to its real shape, and prediction always matche
 | LU3: scripted collisions and consumption | Planned | Timed, deterministic events: a comet hits a planet, a planet spirals into a star and burns up, a star is pulled into a black hole's accretion disk. Debris and changing gravity become gameplay (escape windows, narrowing gaps). |
 | LU4: level design that uses motion | Planned | Launch windows, catching up with a moving target, and moon slingshots. |
 
+**Showcase level:** the target planet spirals into its star, and the player must arrive and settle into a stable orbit before it burns up. It uses LU2 and LU3.
+
 ## Full object list
 
 **In the game today**
@@ -171,18 +173,20 @@ Stephan points Claude at this section for the next visual pack.
 
 **Ship systems:** fully designed in [PR #26](https://github.com/stepwaec/slingshot/pull/26). That pack includes the hull bar, the tidal-stress warning, and the upgrade screen, and the modular spacecraft redesign: a base hull with visible hull plating, shielding, chemical, ion and pulse engines, larger fuel tanks, solar panels, a gas scoop, sensors, a cryosleep module, and damage states that match the hull bar.
 
-**WP11:** fully designed in [PR #34](https://github.com/stepwaec/slingshot/pull/34) (sparse, medium and dense asteroid belts, Kuiper belt, rogue planet, radiation heatmap, dose meter). Not in the game yet.
+**WP11:** done in [PR #34](https://github.com/stepwaec/slingshot/pull/34) (sparse, medium and dense asteroid belts, Kuiper belt, rogue planet, radiation heatmap, dose meter).
 
-**Burn plume:** blue-to-violet, with no trailing halo. Already in the game.
+**Burn plume, burn node and gravity grid styling:** done in [PR #36](https://github.com/stepwaec/slingshot/pull/36). The plume is blue-to-violet, with no trailing halo.
 
 **Open requests**, in priority order:
 
-1. **Burn node.**
-2. **Gravity grid** styling.
-3. **Late game:** stellar engine, Dyson swarm, ringworld, Shkadov thruster, space elevator, wormhole.
-4. **Living universe:** surface-animation guidance (star granulation and flares, drifting gas-giant bands, moving cloud layers, rotating planets), and collision and consumption visuals (impact flash, a planet's tidal-disruption stream, the accretion swirl).
+1. **Surface animation:** guidance per body type (granulation, flares, band drift, clouds, rotation).
+2. **Collisions and consumption:** impact flash, debris, a planet's tidal-disruption stream, burning up in a star, accretion disk.
+3. **Ghost markers** for a body's future position.
+4. **Late game:** stellar engine, Dyson swarm, ringworld, Shkadov thruster, space elevator, wormhole.
 
 **Guidelines:** a realistic and vibrant style matching v1.5 and v2; SVG files under `design/assets/`; easter eggs only as hints, never logos or characters.
+
+**Rules:** [design/IMPLEMENTING.md](../design/IMPLEMENTING.md) and [design/IMPLEMENTATION-REVIEW.md](../design/IMPLEMENTATION-REVIEW.md) are rules every design implementation must follow.
 
 **For the implementing agents (Cursor, Grok):** before building any design pack, read [design/IMPLEMENTING.md](../design/IMPLEMENTING.md). It sets the order of precedence (the asset header is canon), the fidelity rules (exact tokens, crisp edges, no grey, hazards on sim time) and the realism rules for the engine (field laws, determinism, seeded placement). Claude reviewed `main` against the designs, including PR #32, in [design/IMPLEMENTATION-REVIEW.md](../design/IMPLEMENTATION-REVIEW.md), which lists each gap with its file, line and fix. Top fixes, in priority order:
 
