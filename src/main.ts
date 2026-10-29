@@ -24,7 +24,8 @@ import { createClockLatches, readClocks, type ClockLatches } from "./hud/readout
 import type { MissionScore } from "./sim/score";
 import { frameLevel, worldToScreen } from "./render/camera";
 import { SpaceView } from "./render/view";
-import { hasMagneticBody, horizonSteps, spreadAlong } from "./sim/physics";
+import { hasMagneticBody, horizonSteps, iceHarvestRate, nebulaScoopRate, solarRechargeRate, spreadAlong } from "./sim/physics";
+import { shipLoadout } from "./game/upgrades";
 import { mountShipyard, syncShipyard } from "./hud/shipyard";
 import { resetShipLook } from "./render/appearance";
 import { hullRatio, hullSegmentsLit, hullTone, stressLevel } from "./render/ship-art";
@@ -45,6 +46,7 @@ const nodeRemove = required<HTMLButtonElement>("#node-x");
 const fuelValue = required<HTMLElement>("#fuel-value");
 const fuelFill = required<HTMLElement>("#fuel-fill");
 const hullValue = required<HTMLElement>("#hull-value");
+const recharge = required<HTMLElement>("#recharge");
 const hullBar = required<HTMLElement>("#hull-bar");
 const stressChip = required<HTMLElement>("#stress-chip");
 const upgradeToggle = required<HTMLButtonElement>("#upgrade-toggle");
@@ -178,6 +180,20 @@ function loop(now: number): void {
   requestAnimationFrame(loop);
 }
 
+function syncRecharge(current: Game): void {
+  const solar = shipLoadout(current.upgrades).solar;
+  const pose = current.mode === "planning" ? current.initial : current.ship;
+  const stars = solarRechargeRate(pose.x, pose.y, pose.t, current.level.bodies, solar, current.level.g);
+  const inflow = stars + nebulaScoopRate(pose.x, pose.y, current.level.nebulae) + iceHarvestRate(pose.x, pose.y, pose.t, current.level.bodies, current.level.g);
+  const gained = Math.max(0, current.prediction.final.recharged);
+  const charging = current.mode === "flying" && inflow >= 0.05;
+  const planned = current.mode !== "flying" && gained > 0.05;
+  recharge.hidden = !(charging || planned);
+  if (recharge.hidden) return;
+  recharge.dataset.close = solar > 0 && stars >= solar * 0.6 ? "true" : "false";
+  recharge.textContent = charging ? `+${inflow.toFixed(1)}/s` : `+${gained.toFixed(1)} fuel`;
+}
+
 function syncMagnetism(current: Game): void {
   const show = hasMagneticBody(current.level.bodies);
   magnetismButton.hidden = !show;
@@ -225,6 +241,7 @@ function syncHud(current: Game): void {
   fuelFill.style.width = clamped <= 0 ? "0px" : `${Math.max(8, Math.round(220 * clamped))}px`;
   fuelFill.dataset.band = clamped >= 0.3 ? "full" : clamped >= 0.1 ? "low" : "critical";
   fuelValue.textContent = `${Math.round(ratio * 100)} %`;
+  syncRecharge(current);
   fuelValue.dataset.band = ratio < -1e-6 ? "critical" : "ok";
   syncHull(current);
   syncUpgrades(current);

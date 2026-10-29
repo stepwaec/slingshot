@@ -58,24 +58,49 @@ export const BODY_LOOKS = [
   "neutron",
   "pulsar",
   "magnetar",
+  "comet",
 ] as const;
 
 export type BodyLook = (typeof BODY_LOOKS)[number];
 
 /**
- * Circular orbit. Position at time t is the center plus
+ * Circular orbit, or a Kepler ellipse when `kind` is `"ellipse"`.
+ * A circle at time t is the center plus
  * `radius * (cos(phase + omega t), sin(phase + omega t))`.
+ * An ellipse solves `M = E − e sin E` and is fast at periapsis.
  * `centerId` orbits another body. Otherwise the center is fixed at `cx`, `cy`.
  */
 export interface BodyOrbit {
   centerId?: string;
   cx?: number;
   cy?: number;
+  /** Circle radius. For an ellipse this is the periapsis distance, unused by the solver. */
   radius: number;
-  /** Radians at t = 0. 0 sits on the center's +x side. */
+  /** Radians at t = 0. On a circle, 0 sits on the center's +x side. On an ellipse this is the mean anomaly. */
   phase: number;
-  /** Radians per second. Positive is counterclockwise. */
+  /** Radians per second. Positive is counterclockwise. Unused by an ellipse. */
   omega: number;
+  /** Omitted is the circular rail, bit for bit. */
+  kind?: "ellipse";
+  /** Semi-major axis of an ellipse. */
+  a?: number;
+  /** Eccentricity, from 0 up to but not including 1. */
+  e?: number;
+  /** Periapsis direction, radians from +x. */
+  periapsisAngle?: number;
+}
+
+/** A fuel cloud. `scoop` is fuel per second at the centre. A dark cloud hides what is inside. */
+export interface Nebula {
+  id: string;
+  x: number;
+  y: number;
+  rx: number;
+  ry: number;
+  /** Radians. 0 leaves `rx` along +x. */
+  angle: number;
+  scoop: number;
+  look: "emission" | "reflection" | "dark";
 }
 
 /**
@@ -130,6 +155,10 @@ export interface Body {
   magnet?: Magnet;
   /** Sweeping beams. Damage, when set, is applied in `step`. */
   beam?: Beam;
+  /** Fuel per second harvested at the surface, falling off out to `harvestRadius`. */
+  harvest?: number;
+  /** Coma where ice can be harvested. Omitted or not past the surface harvests nothing. */
+  harvestRadius?: number;
 }
 
 /** World position and velocity of one body at an instant. */
@@ -223,6 +252,8 @@ export interface SimConfig {
   fuelMax?: number;
   /** Fuel spent per unit of commanded delta-v. Already includes ship mass. */
   fuelPerDv?: number;
+  /** Fuel clouds. Omitted leaves scoop at 0, so stock levels stay bit-identical. */
+  nebulae?: readonly Nebula[];
 }
 
 /** How many times a flight may freeze so the player can edit burns. */
@@ -396,28 +427,72 @@ function findBody(bodies: readonly Body[], id: string): Body | undefined {
 /**
  * Analytic pose at `time` seconds. Static bodies return their fixed point and
  * zero velocity. Nested orbits resolve the center at the same time.
+ * `g` is only read by an ellipse. Circles ignore it, so a call without `g`
+ * stays on today's rail.
  */
-export function bodyPose(body: Body, time: number, bodies: readonly Body[]): Pose {
+export function bodyPose(body: Body, time: number, bodies: readonly Body[], g = 1): Pose {
   if (!body.orbit) return { x: body.x, y: body.y, vx: 0, vy: 0 };
-  return poseFromOrbit(body, time, bodies, 0);
+  return poseFromOrbit(body, time, bodies, 0, g);
 }
 
-function poseFromOrbit(body: Body, time: number, bodies: readonly Body[], depth: number): Pose {
+/** Six Newton steps. Fixed count keeps the same mean anomaly on the same ellipse. */
+function solveKepler(meanAnomaly: number, eccentricity: number): number {
+  const turn = Math.PI * 2;
+  let mean = meanAnomaly % turn;
+  if (mean > Math.PI) mean -= turn;
+  if (mean < -Math.PI) mean += turn;
+  let eccentric = eccentricity < 0.8 ? mean : Math.PI * Math.sign(mean);
+  for (let i = 0; i < 6; i++) {
+    const residual = eccentric - eccentricity * Math.sin(eccentric) - mean;
+    const slope = 1 - eccentricity * Math.cos(eccentric);
+    if (slope === 0) break;
+    eccentric -= residual / slope;
+  }
+  return eccentric;
+}
+
+function poseFromOrbit(body: Body, time: number, bodies: readonly Body[], depth: number, g: number): Pose {
   const orbit = body.orbit;
   if (!orbit || depth > 4) return { x: body.x, y: body.y, vx: 0, vy: 0 };
   let cx = orbit.cx ?? 0;
   let cy = orbit.cy ?? 0;
   let cvx = 0;
   let cvy = 0;
+  let centerMass = 0;
   if (orbit.centerId) {
     const center = findBody(bodies, orbit.centerId);
     if (center) {
-      const pose = center.orbit ? poseFromOrbit(center, time, bodies, depth + 1) : { x: center.x, y: center.y, vx: 0, vy: 0 };
+      const pose = center.orbit ? poseFromOrbit(center, time, bodies, depth + 1, g) : { x: center.x, y: center.y, vx: 0, vy: 0 };
       cx = pose.x;
       cy = pose.y;
       cvx = pose.vx;
       cvy = pose.vy;
+      centerMass = center.mass;
     }
+  }
+  if (orbit.kind === "ellipse") {
+    const a = orbit.a ?? orbit.radius;
+    const eccentricity = orbit.e ?? 0;
+    const mu = g * centerMass;
+    const meanMotion = mu > 0 && a > 0 ? Math.sqrt(mu / (a * a * a)) : 0;
+    const eccentric = solveKepler(orbit.phase + meanMotion * time, eccentricity);
+    const cosE = Math.cos(eccentric);
+    const sinE = Math.sin(eccentric);
+    const denom = 1 - eccentricity * cosE;
+    const semiMinor = Math.sqrt(Math.max(0, 1 - eccentricity * eccentricity));
+    const xLocal = a * (cosE - eccentricity);
+    const yLocal = a * semiMinor * sinE;
+    const vxLocal = denom !== 0 ? (-a * meanMotion * sinE) / denom : 0;
+    const vyLocal = denom !== 0 ? (a * meanMotion * semiMinor * cosE) / denom : 0;
+    const turn = orbit.periapsisAngle ?? 0;
+    const cos = Math.cos(turn);
+    const sin = Math.sin(turn);
+    return {
+      x: cx + xLocal * cos - yLocal * sin,
+      y: cy + xLocal * sin + yLocal * cos,
+      vx: cvx + vxLocal * cos - vyLocal * sin,
+      vy: cvy + vxLocal * sin + vyLocal * cos,
+    };
   }
   const angle = orbit.phase + orbit.omega * time;
   const cos = Math.cos(angle);
@@ -440,9 +515,9 @@ export function gravityConstant(config: SimConfig): number {
   return config.g * scale;
 }
 
-function bodyPoint(body: Body, time: number, bodies: readonly Body[]): { x: number; y: number } {
+function bodyPoint(body: Body, time: number, bodies: readonly Body[], g: number): { x: number; y: number } {
   if (!body.orbit) return { x: body.x, y: body.y };
-  const pose = bodyPose(body, time, bodies);
+  const pose = bodyPose(body, time, bodies, g);
   return { x: pose.x, y: pose.y };
 }
 
@@ -459,7 +534,7 @@ function newtonAcceleration(
   const bodies = config.bodies;
   for (let i = 0; i < bodies.length; i++) {
     const body = bodies[i];
-    const point = bodyPoint(body, time, bodies);
+    const point = bodyPoint(body, time, bodies, g);
     const dx = point.x - x;
     const dy = point.y - y;
     const r2 = dx * dx + dy * dy;
@@ -491,7 +566,7 @@ function shapedAcceleration(
   const eps2 = eps * eps;
   for (let i = 0; i < bodies.length; i++) {
     const body = bodies[i];
-    const point = bodyPoint(body, time, bodies);
+    const point = bodyPoint(body, time, bodies, g);
     const dx = point.x - x;
     const dy = point.y - y;
     const r2 = dx * dx + dy * dy;
@@ -524,7 +599,7 @@ function newtonPotential(x: number, y: number, g: number, config: SimConfig, tim
   const bodies = config.bodies;
   for (let i = 0; i < bodies.length; i++) {
     const body = bodies[i];
-    const point = bodyPoint(body, time, bodies);
+    const point = bodyPoint(body, time, bodies, g);
     const dx = point.x - x;
     const dy = point.y - y;
     const r2 = dx * dx + dy * dy;
@@ -611,7 +686,7 @@ function shapedPotential(x: number, y: number, g: number, eps: number, p: number
   const bodies = config.bodies;
   for (let i = 0; i < bodies.length; i++) {
     const body = bodies[i];
-    const point = bodyPoint(body, time, bodies);
+    const point = bodyPoint(body, time, bodies, g);
     const dx = point.x - x;
     const dy = point.y - y;
     const r2 = dx * dx + dy * dy;
@@ -1259,20 +1334,95 @@ function closePassRate(x: number, y: number, config: SimConfig, time: number): n
   return rate;
 }
 
-function solarRate(x: number, y: number, config: SimConfig, time: number): number {
-  const solar = config.solarStrength ?? 0;
-  if (!(solar > 0)) return 0;
+/**
+ * Fuel per second from stars. The HUD, the gold path dots and the tank all
+ * read this. Compact objects and black holes contribute nothing. Omitted
+ * solar strength, or 0, returns 0 so a stock ship does not gain fuel.
+ */
+export function solarRechargeRate(
+  x: number,
+  y: number,
+  time: number,
+  bodies: readonly Body[],
+  solarStrength: number,
+  g = 1,
+): number {
+  if (!(solarStrength > 0)) return 0;
   let rate = 0;
-  const bodies = config.bodies;
   for (let i = 0; i < bodies.length; i++) {
     const body = bodies[i];
     if (body.kind !== "star" || !(body.radius > 0)) continue;
     if (body.look === "neutron" || body.look === "pulsar" || body.look === "magnetar") continue;
-    const pose = body.orbit ? bodyPose(body, time, bodies) : { x: body.x, y: body.y, vx: 0, vy: 0 };
+    const pose = body.orbit ? bodyPose(body, time, bodies, g) : { x: body.x, y: body.y, vx: 0, vy: 0 };
     const r = Math.hypot(x - pose.x, y - pose.y);
     if (!(r > 1e-6) || r > body.radius * 12) continue;
     const ratio = body.radius / r;
-    rate += solar * ratio * ratio;
+    rate += solarStrength * ratio * ratio;
+  }
+  return rate;
+}
+
+function solarRate(x: number, y: number, config: SimConfig, time: number): number {
+  return solarRechargeRate(x, y, time, config.bodies, config.solarStrength ?? 0, gravityConstant(config));
+}
+
+/** Distance from a cloud centre in ellipse radii. 1 sits on the rim. */
+export function nebulaRadius(x: number, y: number, cloud: Nebula): number {
+  const dx = x - cloud.x;
+  const dy = y - cloud.y;
+  const cos = Math.cos(cloud.angle);
+  const sin = Math.sin(cloud.angle);
+  const localX = dx * cos + dy * sin;
+  const localY = -dx * sin + dy * cos;
+  return Math.hypot(localX / cloud.rx, localY / cloud.ry);
+}
+
+/** Fuel per second scooped from nebulae. Dark, emission and reflection clouds all scoop. */
+export function nebulaScoopRate(x: number, y: number, clouds: readonly Nebula[] | undefined): number {
+  if (!clouds || clouds.length === 0) return 0;
+  let rate = 0;
+  for (let i = 0; i < clouds.length; i++) {
+    const cloud = clouds[i];
+    if (!(cloud.scoop > 0)) continue;
+    const radius = nebulaRadius(x, y, cloud);
+    if (!(radius < 1)) continue;
+    const depth = 1 - radius;
+    rate += cloud.scoop * depth * depth;
+  }
+  return rate;
+}
+
+/**
+ * How fully a dark cloud hides this point. 1 is the centre, 0 is outside.
+ * Emission and reflection clouds do not hide. The value is not applied to the trajectory.
+ */
+export function nebulaCover(x: number, y: number, clouds: readonly Nebula[] | undefined): number {
+  if (!clouds) return 0;
+  let cover = 0;
+  for (let i = 0; i < clouds.length; i++) {
+    const cloud = clouds[i];
+    if (cloud.look !== "dark") continue;
+    const radius = nebulaRadius(x, y, cloud);
+    if (!(radius < 1)) continue;
+    const hide = 1 - radius;
+    if (hide > cover) cover = hide;
+  }
+  return cover;
+}
+
+/** Fuel per second from comet ice inside `harvestRadius`. */
+export function iceHarvestRate(x: number, y: number, time: number, bodies: readonly Body[], g = 1): number {
+  let rate = 0;
+  for (let i = 0; i < bodies.length; i++) {
+    const body = bodies[i];
+    const harvest = body.harvest ?? 0;
+    const reach = body.harvestRadius ?? 0;
+    if (!(harvest > 0) || !(reach > body.radius)) continue;
+    const pose = body.orbit ? bodyPose(body, time, bodies, g) : { x: body.x, y: body.y, vx: 0, vy: 0 };
+    const r = Math.hypot(x - pose.x, y - pose.y);
+    if (!(r > body.radius) || !(r < reach)) continue;
+    const depth = (reach - r) / (reach - body.radius);
+    rate += harvest * depth * depth;
   }
   return rate;
 }
@@ -1297,12 +1447,16 @@ function applyShipSystems(state: SimState, config: SimConfig, time: number): voi
       state.lostReason = "hull";
     }
   }
+  const g = gravityConstant(config);
   const solar = solarRate(state.x, state.y, config, time);
-  if (!(solar > 0)) return;
+  const scoop = nebulaScoopRate(state.x, state.y, config.nebulae);
+  const ice = iceHarvestRate(state.x, state.y, time, config.bodies, g);
+  const inflow = solar + scoop + ice;
+  if (!(inflow > 0)) return;
   const cap = config.fuelMax ?? state.tank;
   const room = cap - state.tank;
   if (!(room > 0)) return;
-  const gain = Math.min(solar * config.dt, room);
+  const gain = Math.min(inflow * config.dt, room);
   state.tank += gain;
   state.recharged += gain;
 }

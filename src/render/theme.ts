@@ -30,6 +30,11 @@ import pulsarUrl from "../../design/assets/bodies/pulsar.svg?url";
 import magnetarUrl from "../../design/assets/bodies/magnetar.svg?url";
 import blackHoleUrl from "../../design/assets/bodies/black-hole.svg?url";
 import magnetismUrl from "../../design/assets/overlays/magnetism-heatmap.svg?url";
+import cometUrl from "../../design/assets/bodies/comet.svg?url";
+import solarRechargeUrl from "../../design/assets/solar-recharge.svg?url";
+import nebulaEmissionUrl from "../../design/assets/space/nebula-emission.svg?url";
+import nebulaReflectionUrl from "../../design/assets/space/nebula-reflection.svg?url";
+import nebulaDarkUrl from "../../design/assets/space/nebula-dark.svg?url";
 import { palette } from "./palette";
 
 /**
@@ -55,6 +60,11 @@ export const theme = {
     magnetar: magnetarUrl,
     blackHole: blackHoleUrl,
     magnetism: magnetismUrl,
+    comet: cometUrl,
+    solarRecharge: solarRechargeUrl,
+    nebulaEmission: nebulaEmissionUrl,
+    nebulaReflection: nebulaReflectionUrl,
+    nebulaDark: nebulaDarkUrl,
     starfield: starfieldUrl,
     predictedPath: predictedPathUrl,
     dragArrow: dragArrowUrl,

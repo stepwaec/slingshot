@@ -8,6 +8,7 @@ import {
   type Bounds,
   type Horizon,
   type Magnet,
+  type Nebula,
   type PauseRule,
 } from "../sim/physics";
 
@@ -95,6 +96,8 @@ export interface Level {
   pause?: PauseRule;
   /** Knobs. Omitted, or with fields omitted, this is today's physics. */
   physics?: LevelPhysics;
+  /** Fuel clouds. Omitted means the level has none. */
+  nebulae?: readonly Nebula[];
 }
 
 /** A level file failed to parse or failed the schema. `issues` names each field. */
@@ -132,6 +135,7 @@ const LEVEL_KEYS = [
   "horizon",
   "pause",
   "physics",
+  "nebulae",
 ] as const;
 
 const BODY_KEYS = [
@@ -148,10 +152,14 @@ const BODY_KEYS = [
   "atmosphereRadius",
   "magnet",
   "beam",
+  "harvest",
+  "harvestRadius",
 ] as const;
 const MAGNET_KEYS = ["b1Reach", "tilt", "averaged"] as const;
 const BEAM_KEYS = ["reach", "period", "base", "tip", "damage"] as const;
-const BODY_ORBIT_KEYS = ["centerId", "cx", "cy", "radius", "phase", "omega"] as const;
+const BODY_ORBIT_KEYS = ["centerId", "cx", "cy", "radius", "phase", "omega", "kind", "a", "e", "periapsisAngle"] as const;
+const NEBULA_KEYS = ["id", "x", "y", "rx", "ry", "angle", "scoop", "look"] as const;
+const NEBULA_LOOKS = ["emission", "reflection", "dark"] as const;
 const SHIP_KEYS = ["x", "y", "vx", "vy"] as const;
 const SHIP_ORBIT_KEYS = ["bodyId", "radius"] as const;
 const BOUNDS_KEYS = ["minX", "maxX", "minY", "maxY"] as const;
@@ -269,11 +277,26 @@ function readBodyOrbit(value: unknown, path: string, issues: string[]): BodyOrbi
     return undefined;
   }
   rejectUnknown(value, BODY_ORBIT_KEYS, path, issues);
-  const radius = readFinite(value, "radius", path, issues, { min: 0, exclusiveMin: true });
+  const ellipse = value.kind === "ellipse";
+  if (Object.prototype.hasOwnProperty.call(value, "kind") && value.kind !== "ellipse") {
+    issues.push(`${path}.kind must be "ellipse" when set`);
+  }
   const phase = readFinite(value, "phase", path, issues, {});
-  const omega = readFinite(value, "omega", path, issues, {});
-  if (radius === undefined || phase === undefined || omega === undefined) return undefined;
-  const orbit: BodyOrbit = { radius, phase, omega };
+  if (phase === undefined) return undefined;
+  let orbit: BodyOrbit;
+  if (ellipse) {
+    const a = readFinite(value, "a", path, issues, { min: 0, exclusiveMin: true });
+    const eccentricity = readFinite(value, "e", path, issues, { min: 0 });
+    const periapsisAngle = readFinite(value, "periapsisAngle", path, issues, {});
+    if (a === undefined || eccentricity === undefined || periapsisAngle === undefined) return undefined;
+    if (!(eccentricity < 1)) issues.push(`${path}.e must be less than 1`);
+    orbit = { kind: "ellipse", a, e: eccentricity, periapsisAngle, phase, radius: a * (1 - eccentricity), omega: 0 };
+  } else {
+    const radius = readFinite(value, "radius", path, issues, { min: 0, exclusiveMin: true });
+    const omega = readFinite(value, "omega", path, issues, {});
+    if (radius === undefined || omega === undefined) return undefined;
+    orbit = { radius, phase, omega };
+  }
   if (Object.prototype.hasOwnProperty.call(value, "centerId")) {
     const centerId = value.centerId;
     if (typeof centerId !== "string" || centerId.length === 0) issues.push(`${path}.centerId must be a non-empty string`);
@@ -284,6 +307,30 @@ function readBodyOrbit(value: unknown, path: string, issues: string[]): BodyOrbi
   if (cx !== undefined) orbit.cx = cx;
   if (cy !== undefined) orbit.cy = cy;
   return orbit;
+}
+
+function readNebula(value: unknown, path: string, issues: string[]): Nebula | undefined {
+  if (!isObject(value)) {
+    issues.push(`${path} must be an object`);
+    return undefined;
+  }
+  rejectUnknown(value, NEBULA_KEYS, path, issues);
+  const id = readString(value, "id", path, issues);
+  const x = readFinite(value, "x", path, issues, {});
+  const y = readFinite(value, "y", path, issues, {});
+  const rx = readFinite(value, "rx", path, issues, { min: 0, exclusiveMin: true });
+  const ry = readFinite(value, "ry", path, issues, { min: 0, exclusiveMin: true });
+  const angle = readFinite(value, "angle", path, issues, {});
+  const scoop = readFinite(value, "scoop", path, issues, { min: 0 });
+  const look = value.look;
+  if (!NEBULA_LOOKS.includes(look as (typeof NEBULA_LOOKS)[number])) {
+    issues.push(`${path}.look must be one of ${NEBULA_LOOKS.join(", ")}`);
+  }
+  if (id === undefined || x === undefined || y === undefined || rx === undefined || ry === undefined || angle === undefined || scoop === undefined) {
+    return undefined;
+  }
+  if (typeof look !== "string" || !NEBULA_LOOKS.includes(look as (typeof NEBULA_LOOKS)[number])) return undefined;
+  return { id, x, y, rx, ry, angle, scoop, look: look as Nebula["look"] };
 }
 
 function readMagnet(value: unknown, path: string, issues: string[]): Magnet | undefined {
@@ -341,6 +388,8 @@ function readBody(value: unknown, path: string, issues: string[]): Body | undefi
   const radius = readFinite(value, "radius", path, issues, { min: 0, exclusiveMin: true });
   const captureRadius = readOptionalFinite(value, "captureRadius", path, issues, { min: 0, exclusiveMin: true });
   const atmosphereRadius = readOptionalFinite(value, "atmosphereRadius", path, issues, { min: 0, exclusiveMin: true });
+  const harvest = readOptionalFinite(value, "harvest", path, issues, { min: 0 });
+  const harvestRadius = readOptionalFinite(value, "harvestRadius", path, issues, { min: 0, exclusiveMin: true });
   let look: BodyLook | undefined;
   if (Object.prototype.hasOwnProperty.call(value, "look")) {
     const raw = value.look;
@@ -368,6 +417,11 @@ function readBody(value: unknown, path: string, issues: string[]): Body | undefi
   if (orbit) body.orbit = orbit;
   if (magnet) body.magnet = magnet;
   if (beam) body.beam = beam;
+  if (harvest !== undefined) body.harvest = harvest;
+  if (harvestRadius !== undefined) body.harvestRadius = harvestRadius;
+  if (harvestRadius !== undefined && radius !== undefined && !(harvestRadius > radius)) {
+    issues.push(`${path}.harvestRadius must be greater than radius`);
+  }
   return body;
 }
 
@@ -542,6 +596,17 @@ export function loadLevelData(data: unknown, source = "level"): Level {
   let physics: LevelPhysics | undefined;
   if (Object.prototype.hasOwnProperty.call(data, "physics")) physics = readPhysics(data.physics, "level.physics", issues);
 
+  const nebulae: Nebula[] = [];
+  if (Object.prototype.hasOwnProperty.call(data, "nebulae")) {
+    if (!Array.isArray(data.nebulae)) issues.push("level.nebulae must be an array");
+    else {
+      for (let i = 0; i < data.nebulae.length; i++) {
+        const cloud = readNebula(data.nebulae[i], `level.nebulae[${i}]`, issues);
+        if (cloud) nebulae.push(cloud);
+      }
+    }
+  }
+
   if (targetId !== undefined && bodies.length > 0 && !bodies.some((body) => body.id === targetId)) {
     issues.push(`level.targetId "${targetId}" does not match a body`);
   }
@@ -597,6 +662,7 @@ export function loadLevelData(data: unknown, source = "level"): Level {
   if (horizon) level.horizon = horizon;
   if (pause) level.pause = pause;
   if (physics) level.physics = physics;
+  if (nebulae.length > 0) level.nebulae = nebulae;
   return level;
 }
 

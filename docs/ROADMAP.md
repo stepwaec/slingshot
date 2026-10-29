@@ -27,7 +27,7 @@ Note on numbering: Brainstormer's first draft called the flight loop "WP2" and r
 | Visual restyle v2 | Done, 2026-10-29 in [PR #23](https://github.com/stepwaec/slingshot/pull/23) | Claude's v2 look on every level: a plasma sun, planet surfaces with clouds and a day/night terminator, a tinted starfield with nebulae, an asteroid field, wreck debris, and rings on gas giants. Moons keep the WP8 looks and gain surfaces. The nozzle plume stays. The flown trail stays gone. Visual only; prediction still matches flight. |
 | Ship systems package (after WP8; number not assigned yet) | Done, 2026-10-29 in [PR #25](https://github.com/stepwaec/slingshot/pull/25) | Hull bar. Collisions empty the hull. Close passes and tidal stress (white dwarfs, neutron stars, black holes, scaled by `tidalStrength`) drain it, and 0 hull fails the mission. A red zone marks that stress on the gravity grid while G is on. Solar recharge refills fuel near stars, scaled by distance, and only when the solar upgrade is fit. Upgrade screen spends points on hull, tanks, solar and engines; each adds mass, which scales burn delta-v. Placeholder bars until Claude's art. |
 | WP9: compact objects plus magnetism layer | Done, 2026-10-29 in [PR #27](https://github.com/stepwaec/slingshot/pull/27) | Quiet neutron star (Needle), pulsar (Pulse) and magnetar (Quake) use the WP9 SVGs. Pulsar beams spin on sim time and damage the hull; the prediction matches that flight. Magnetars scramble the drawn path by a deterministic dipole spread that never changes the trajectory. Rescue's black hole gains a tilted disk, Doppler shift, an Einstein ring and lensed arcs. Magnetism map: M or the Magnetism button, separate from G, colours safe through lethal for magnetars, neutron stars and gas giants. The toggle does not change the sim. |
-| WP10: environment and resources | Planned | Nebulae (scoop fuel; they hide what is inside) and comets (ride them or harvest ice). Solar recharge was originally here and moved to the ship systems package. Support elliptical orbits in levels, needed for comets per `design/threejs-notes.md` §12. The orbits must be deterministic, and the prediction must keep matching the flight. |
+| WP10: environment and resources | Done, 2026-10-29 in [PR #31](https://github.com/stepwaec/slingshot/pull/31) | Comets (Ice, Drift) ride Kepler ellipses in `bodyPose`, fast at periapsis, and the ship harvests ice inside the coma. Nebulae (Veil, Drift) scoop fuel; a dark cloud hides the bodies under it. The solar recharge indicator, gold path dots and the `+fuel` line all read the same rate the tank integrates. Prediction matches the flight, including the moving comet and the scooped fuel. |
 | WP11: hazards plus radiation | Planned | Asteroid and Kuiper belts in density tiers, rogue planets, stray asteroids, solar flares. Radiation: sources are stars and flares, magnetic radiation belts, pulsars and magnetars, accretion disks and quasars, and background cosmic rays. Crew dose meter (too much fails the mission, a low dose earns a bonus), shielding as an upgrade that costs mass, hiding in a planet's shadow during flares, and a radiation heatmap toggle next to gravity and magnetism. |
 | WP12: dramatic events | Planned | Supernova countdowns (get out before the star explodes), shockwaves from supernova remnants, quasars. |
 | WP13: three-body chaos | Planned | Multi-sun systems (Trisolaran style) where three-body chaos means planning uses widening probability cones instead of exact lines. |
@@ -46,9 +46,9 @@ Note on numbering: Brainstormer's first draft called the flight loop "WP2" and r
 - Binary stars, a white dwarf, and a red giant with a drag atmosphere (WP8, levels Pair and Ember).
 - A gas giant with a chain of four moons (WP8, level Chain). Needle adds a gas giant with a magnetic field.
 - A quiet neutron star (Needle), a pulsar whose beams damage on a rhythm (Pulse), and a magnetar whose field fuzzes the predicted path (Quake). The magnetism map toggles with M.
+- Comets on elliptical orbits, with ice harvest (Ice, Drift). Nebulae that scoop fuel; a dark cloud hides what is inside (Veil, Drift).
 
 **Planned, by package**
-- WP10: nebulae, comets.
 - WP11: asteroid belts and the Kuiper belt (density tiers: sparse, medium, dense), rogue planets, stray asteroids, solar flares, radiation belts.
 - WP12: supernovae, supernova remnant shockwaves, quasars.
 - WP13: multi-sun (three-body) systems.
@@ -153,7 +153,7 @@ Stephan points Claude at this section for the next visual pack.
 
 **WP9:** fully designed in [PR #19](https://github.com/stepwaec/slingshot/pull/19) (pulsar, magnetar, magnetism heatmap, quiet neutron star) and in the game in [PR #27](https://github.com/stepwaec/slingshot/pull/27). Nothing from that pack is still open.
 
-**WP10:** fully designed in [PR #22](https://github.com/stepwaec/slingshot/pull/22) (comet, solar recharge indicator).
+**WP10:** fully designed in [PR #22](https://github.com/stepwaec/slingshot/pull/22) (comet, solar recharge indicator) and in the game in [PR #31](https://github.com/stepwaec/slingshot/pull/31). Nothing from that pack is still open.
 
 **Ship systems:** fully designed in [PR #26](https://github.com/stepwaec/slingshot/pull/26). That pack includes the hull bar, the tidal-stress warning, and the upgrade screen, and the modular spacecraft redesign: a base hull with visible hull plating, shielding, chemical, ion and pulse engines, larger fuel tanks, solar panels, a gas scoop, sensors, a cryosleep module, and damage states that match the hull bar.
 

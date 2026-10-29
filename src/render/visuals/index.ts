@@ -1,10 +1,13 @@
 import type { VisualFactory } from "../visual";
+import { createClouds } from "./clouds";
+import { createComet } from "./comet";
 import { createCompact } from "./compact";
 import { createGravity } from "./gravity";
 import { createMagnetism } from "./magnetism";
 import { createNodes } from "./nodes";
 import { createPath } from "./path";
 import { createPlanets } from "./planets";
+import { createRecharge } from "./recharge";
 import { createRelativity } from "./relativity";
 import { createShip } from "./ship";
 import { createStar } from "./star";
@@ -27,7 +30,10 @@ export const visualFactories = {
   scenery: createScenery,
   planets: createPlanets,
   compact: createCompact,
+  comet: createComet,
+  clouds: createClouds,
   path: createPath,
+  recharge: createRecharge,
   ship: createShip,
   nodes: createNodes,
 } as const satisfies Record<string, VisualFactory>;
