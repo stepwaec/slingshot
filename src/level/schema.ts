@@ -10,6 +10,7 @@ import {
   type Magnet,
   type Nebula,
   type PauseRule,
+  keplerMeanMotion,
 } from "../sim/physics";
 
 /**
@@ -290,6 +291,9 @@ function readBodyOrbit(value: unknown, path: string, issues: string[]): BodyOrbi
     const periapsisAngle = readFinite(value, "periapsisAngle", path, issues, {});
     if (a === undefined || eccentricity === undefined || periapsisAngle === undefined) return undefined;
     if (!(eccentricity < 1)) issues.push(`${path}.e must be less than 1`);
+    if (!Object.prototype.hasOwnProperty.call(value, "centerId")) {
+      issues.push(`${path}.centerId is required for an ellipse`);
+    }
     orbit = { kind: "ellipse", a, e: eccentricity, periapsisAngle, phase, radius: a * (1 - eccentricity), omega: 0 };
   } else {
     const radius = readFinite(value, "radius", path, issues, { min: 0, exclusiveMin: true });
@@ -307,6 +311,40 @@ function readBodyOrbit(value: unknown, path: string, issues: string[]): BodyOrbi
   if (cx !== undefined) orbit.cx = cx;
   if (cy !== undefined) orbit.cy = cy;
   return orbit;
+}
+
+function centralMass(body: Body, bodies: readonly Body[]): number | undefined {
+  const orbit = body.orbit;
+  if (!orbit) return undefined;
+  if (orbit.centerId) {
+    const center = bodies.find((item) => item.id === orbit.centerId);
+    return center && center.mass > 0 ? center.mass : undefined;
+  }
+  if (orbit.cx === undefined || orbit.cy === undefined) return undefined;
+  const host = bodies.find(
+    (item) => item.id !== body.id && item.mass > 0 && Math.hypot(item.x - (orbit.cx ?? 0), item.y - (orbit.cy ?? 0)) < 1e-3,
+  );
+  return host?.mass;
+}
+
+/** Store each ellipse's mean motion, and reject a circular moon that is not Kepler. */
+function stampOrbits(bodies: Body[], g: number, issues: string[]): void {
+  for (let i = 0; i < bodies.length; i++) {
+    const orbit = bodies[i].orbit;
+    if (!orbit) continue;
+    if (orbit.kind === "ellipse") {
+      const center = orbit.centerId ? bodies.find((item) => item.id === orbit.centerId) : undefined;
+      orbit.omega = keplerMeanMotion(g, center?.mass ?? 0, orbit.a ?? orbit.radius);
+      continue;
+    }
+    const mass = centralMass(bodies[i], bodies);
+    if (mass === undefined) continue;
+    const expected = keplerMeanMotion(g, mass, orbit.radius);
+    if (!(expected > 0)) continue;
+    if (Math.abs(orbit.omega / expected - 1) > 0.01) {
+      issues.push(`level.bodies[${i}].orbit.omega must be within 1% of √(GM/r³) (${expected})`);
+    }
+  }
 }
 
 function readNebula(value: unknown, path: string, issues: string[]): Nebula | undefined {
@@ -619,6 +657,8 @@ export function loadLevelData(data: unknown, source = "level"): Level {
       issues.push(`level.bodies[${i}].orbit.centerId "${centerId}" does not match a body`);
     }
   }
+  const orbitScale = g !== undefined && physics?.gravityScale !== undefined ? g * physics.gravityScale : g;
+  if (orbitScale !== undefined) stampOrbits(bodies, orbitScale, issues);
 
   if (
     issues.length > 0 ||

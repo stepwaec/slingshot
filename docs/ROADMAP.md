@@ -179,8 +179,8 @@ Stephan points Claude at this section for the next visual pack.
 3. The SVG rasters soften above zoom 1 and alias when zoomed out: bake by DPR × zoom bucket, or use mips.
 4. The pulsar's drawn beams (228) are longer than its damage reach (180): draw the beams as their own quad scaled to `beam.reach`.
 5. The comet's tails don't scale with distance, and its dust tail isn't mirrored to trail the motion.
-6. Solar recharge: add the 8 % cutoff and luminosity term on the path, and build the HUD glyph, shimmer and ghost (`path.ts`, `main.ts`).
-7. Relay's moon orbits 6.8× faster than Kepler allows: set ω to 0.1607, and add an orbit lint.
+6. Solar recharge cutoff and luminosity are in the sim (`rateMax · L · min(1, (85/d)²)`, off below 8 %), landed in [PR #37](https://github.com/stepwaec/slingshot/pull/37). The HUD glyph, shimmer and ghost are still open.
+7. Relay's moon, Pair's binary and Chain's moons now follow Kepler, with a loader lint. Done in [PR #37](https://github.com/stepwaec/slingshot/pull/37).
 8. The shipyard cards lack thumbnails, tiers, mass and cost: follow `upgrade-screen.svg`.
 9. Nebulae draw above the bodies: give them a negative renderOrder.
 
