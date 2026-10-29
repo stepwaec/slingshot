@@ -21,6 +21,7 @@ import {
   type Vec2,
 } from "../sim/physics";
 import type { Camera } from "../render/camera";
+import { scoreMission, type MissionScore } from "../sim/score";
 
 export type GameMode = "planning" | "flying" | "paused" | "finished";
 
@@ -104,6 +105,35 @@ export function loadLevel(game: Game, level: Level): void {
   game.mode = "planning";
   restoreShip(game);
   recompute(game, 0, "coast");
+}
+
+/** Points already paid to a WP4 score-pause rule. Free and unlimited pauses pay 0. */
+export function pauseSpent(game: Game): number {
+  const rule = game.level.pause;
+  if (!rule || rule.kind !== "score") return 0;
+  return Math.max(0, rule.budget - game.score);
+}
+
+/**
+ * Score the plan (while planning) or the flight (otherwise).
+ * A captured orbit is still required. The deadline is judged on outside time.
+ */
+export function missionResult(game: Game): MissionScore {
+  const preview = game.mode === "planning";
+  const pose = preview ? game.prediction.final : game.ship;
+  const profile = game.level.mission;
+  return scoreMission({
+    arrived: pose.status === "won",
+    outsideTime: pose.t,
+    shipTime: pose.tau,
+    fuelLeft: preview ? planFuel(game).left : game.fuel,
+    pauseSpent: pauseSpent(game),
+    deadline: profile.deadline,
+    crewLimit: profile.crewLimit,
+    fuelStarMin: profile.fuelStarMin,
+    crewWeight: profile.crewWeight,
+    fuelWeight: profile.fuelWeight,
+  });
 }
 
 export function planFuel(game: Game): PlanFuel {
@@ -263,7 +293,7 @@ export function moveNodeAlong(game: Game, index: number, rail: readonly RailSamp
   for (let i = 0; i < rail.length; i++) {
     const item = rail[i];
     if (item.step > prevStep && item.step <= sample.step) {
-      approach.push({ x: item.x, y: item.y, step: item.step });
+      approach.push({ x: item.x, y: item.y, step: item.step, rate: item.state.rate });
     }
   }
   node.step = sample.step;

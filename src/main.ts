@@ -8,6 +8,7 @@ import {
   isEditing,
   launch,
   loadLevel,
+  missionResult,
   nodeIncoming,
   nodePosition,
   outcomeCopy,
@@ -20,11 +21,13 @@ import {
 } from "./game/state";
 import { burnLimit, passage, pauseRuleOf, simConfigFromLevel, type Level } from "./level/passage";
 import { relay } from "./level/relay";
+import { deepPlan, rescue, safePlan } from "./level/rescue";
+import type { MissionScore } from "./sim/score";
 import { frameLevel, worldToScreen } from "./render/camera";
 import { SpaceView } from "./render/view";
 import { horizonSteps, type BurnNode } from "./sim/physics";
 
-const levels: readonly Level[] = [passage, relay];
+const levels: readonly Level[] = [passage, relay, rescue];
 
 function required<T extends Element>(selector: string): T {
   const element = document.querySelector<T>(selector);
@@ -56,6 +59,20 @@ const overlay = required<HTMLElement>("#overlay");
 const card = required<HTMLElement>(".card");
 const overlayTitle = required<HTMLElement>("#overlay-title");
 const overlayDetail = required<HTMLElement>("#overlay-detail");
+const overlayScore = required<HTMLElement>("#overlay-score");
+const overlayStars = required<HTMLElement>("#overlay-stars");
+const clockTitle = required<HTMLElement>("#clock-title");
+const clockRate = required<HTMLElement>("#clock-rate");
+const clockShip = required<HTMLElement>("#clock-ship");
+const clockOut = required<HTMLElement>("#clock-out");
+const clockGap = required<HTMLElement>("#clock-gap");
+const clockLimit = required<HTMLElement>("#clock-limit");
+const clockStars = required<HTMLElement>("#clock-stars");
+const clockPoints = required<HTMLElement>("#clock-points");
+const deadlineFill = required<HTMLElement>("#deadline-fill");
+const routeActions = required<HTMLElement>("#route-actions");
+const routeSafe = required<HTMLButtonElement>("#route-safe");
+const routeDeep = required<HTMLButtonElement>("#route-deep");
 
 const game = createGame();
 const view = new SpaceView(canvas, game);
@@ -76,6 +93,9 @@ for (const level of levels) {
   option.textContent = level.name;
   levelSelect.append(option);
 }
+routeSafe.addEventListener("click", () => setPlan(game, safePlan));
+routeDeep.addEventListener("click", () => setPlan(game, deepPlan));
+
 levelSelect.addEventListener("change", () => {
   const next = levels.find((level) => level.id === levelSelect.value) ?? passage;
   loadLevel(game, next);
@@ -164,6 +184,7 @@ function syncHud(current: Game): void {
   fpsValue.textContent = `${Math.round(fps)} fps`;
 
   launchButton.disabled = !canLaunch(current);
+  routeActions.hidden = !(planning && current.level.id === rescue.id);
   deleteButton.disabled = !editing || current.selected === null;
   for (const button of clearButtons) button.disabled = current.mode === "flying";
   syncPlanNote(current);
@@ -183,6 +204,7 @@ function syncHud(current: Game): void {
   }
 
   syncMarkers(current, width, height, fuel);
+  syncClocks(current);
   syncOverlay(current, budget);
 }
 
@@ -241,6 +263,82 @@ function syncMarkers(
   aimLabel.style.top = `${Math.round(tipY + (Math.sin(Math.atan2(offset.y, offset.x)) > 0 ? -14 : 25))}px`;
 }
 
+function syncClocks(current: Game): void {
+  const planning = current.mode === "planning";
+  const pose = planning ? current.prediction.final : current.ship;
+  const outside = pose.t;
+  const ship = pose.tau;
+  const rate = planning ? slowestRate(current) : current.ship.rate;
+  const deadline = current.level.mission.deadline;
+  const ratio = deadline > 0 ? outside / deadline : 0;
+  const band = ratio >= 1 ? "over" : ratio >= 0.8 ? "near" : "ok";
+  clockTitle.textContent = planning ? "Predicted" : "Clocks";
+  clockRate.textContent = rateLabel(rate);
+  clockShip.textContent = `Ship ${ship.toFixed(2)} s`;
+  clockOut.textContent = `Outside ${outside.toFixed(2)} s`;
+  const gap = outside - ship;
+  clockGap.textContent = `Gap ${gap >= 0 ? "+" : ""}${gap.toFixed(2)} s`;
+  clockGap.dataset.band = band;
+  clockLimit.textContent = `Deadline ${deadline.toFixed(1)} s`;
+  clockLimit.dataset.band = band;
+  const clamped = Math.max(0, Math.min(1, ratio));
+  deadlineFill.style.width = `${Math.round(clamped * 100)}%`;
+  deadlineFill.dataset.band = band;
+  if (planning) {
+    const mission = missionResult(current);
+    clockStars.hidden = false;
+    clockPoints.hidden = false;
+    clockStars.textContent = missionLine(mission);
+    clockPoints.textContent = mission.hardFail ? "0 pts" : `${Math.round(mission.points)} pts`;
+  } else {
+    clockStars.hidden = true;
+    clockPoints.hidden = true;
+    clockStars.textContent = "";
+    clockPoints.textContent = "";
+  }
+}
+
+function slowestRate(current: Game): number {
+  let rate = current.initial.rate;
+  const path = current.prediction.path;
+  for (let i = 0; i < path.length; i++) {
+    if (path[i].rate < rate) rate = path[i].rate;
+  }
+  return rate;
+}
+
+function rateLabel(rate: number): string {
+  if (!(rate > 1e-4)) return "time stopped";
+  const outsidePerShip = 1 / rate;
+  const digits = outsidePerShip >= 10 ? 1 : 2;
+  return `1 ship s = ${outsidePerShip.toFixed(digits)} outside s`;
+}
+
+function missionLine(mission: MissionScore): string {
+  if (mission.hardFail === "arrival") return "No capture";
+  if (mission.hardFail === "deadline") return "Misses the deadline";
+  const mark = (name: string, on: boolean) => `${on ? "★" : "☆"} ${name}`;
+  const stars = mission.stars;
+  return `${mark("Deadline", stars.deadline)} · ${mark("Crew", stars.crew)} · ${mark("Fuel", stars.fuel)}`;
+}
+
+function showStars(mission: MissionScore): void {
+  overlayStars.hidden = false;
+  overlayScore.hidden = false;
+  const stars = overlayStars.querySelectorAll<HTMLElement>("[data-star]");
+  for (const star of stars) {
+    const key = star.dataset.star;
+    const on =
+      key === "deadline" ? mission.stars.deadline : key === "crew" ? mission.stars.crew : mission.stars.fuel;
+    star.dataset.on = on ? "true" : "false";
+  }
+  if (mission.hardFail) {
+    overlayScore.textContent = "Hard fail · 0 pts";
+    return;
+  }
+  overlayScore.textContent = `${Math.round(mission.points)} pts · gap +${mission.gap.toFixed(1)} s`;
+}
+
 function syncOverlay(current: Game, budget: number): void {
   const outcome = outcomeCopy(current);
   if (!outcome) {
@@ -251,18 +349,29 @@ function syncOverlay(current: Game, budget: number): void {
     }
     return;
   }
-  const kind = current.ship.status === "won" ? "win" : current.ship.status === "crashed" ? "crash" : "lost";
+  const mission = missionResult(current);
+  const late = current.ship.status === "won" && mission.hardFail === "deadline";
+  const kind = late ? "late" : current.ship.status === "won" ? "win" : current.ship.status === "crashed" ? "crash" : "lost";
   card.dataset.result = kind;
-  if (kind === "win") {
+  if (late) {
+    overlayTitle.textContent = "Deadline missed";
+    overlayDetail.textContent = `In orbit after ${mission.outsideTime.toFixed(1)} s outside. The crew aged ${mission.shipTime.toFixed(1)} s. The window closed at ${current.level.mission.deadline.toFixed(1)} s.`;
+    showStars(mission);
+  } else if (kind === "win") {
     const spare = Math.max(0, Math.round((current.fuel / budget) * 100));
     overlayTitle.textContent = "Planet X reached";
-    overlayDetail.textContent = `Captured with ${spare} % fuel to spare.`;
+    overlayDetail.textContent = `Captured with ${spare} % fuel to spare. Crew time ${mission.shipTime.toFixed(1)} s, outside ${mission.outsideTime.toFixed(1)} s.`;
+    showStars(mission);
   } else if (kind === "crash") {
     overlayTitle.textContent = "Crashed";
     overlayDetail.textContent = outcome.detail;
+    overlayStars.hidden = true;
+    overlayScore.hidden = true;
   } else {
     overlayTitle.textContent = "Lost in space";
     overlayDetail.textContent = outcome.detail;
+    overlayStars.hidden = true;
+    overlayScore.hidden = true;
   }
   if (!overlayOpen) {
     overlay.hidden = false;

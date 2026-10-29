@@ -13,8 +13,13 @@
  *
  * `predictPlan` caches the state at each node. Editing node k recomputes from
  * k onward and reuses the path before it. A configured horizon stops the
- * predicted line early; the live flight does not. This module does not touch
- * the DOM.
+ * predicted line early; the live flight does not.
+ *
+ * Each step also advances two clocks. Outside time is coordinate time
+ * (`step * dt`): Home and Planet X share that one frame. Ship time is the
+ * proper time along the trajectory,
+ * `dτ/dt = sqrt(1 - 2 Φ_depth / c² - v² / c²)`, clamped at 0.
+ * This module does not touch the DOM.
  */
 
 export interface Vec2 {
@@ -22,7 +27,7 @@ export interface Vec2 {
   y: number;
 }
 
-export type BodyKind = "home" | "star" | "target" | "moon";
+export type BodyKind = "home" | "star" | "target" | "moon" | "blackhole";
 
 /**
  * Circular orbit. Position at time t is the center plus
@@ -100,6 +105,11 @@ export interface SimConfig {
   targetId: string;
   /** Captured periapsis must clear the surface by this much. */
   periapsisMargin: number;
+  /**
+   * Lowered speed of light, in world units per second. Per level.
+   * Time dilation uses this; it does not change the Newtonian motion.
+   */
+  c: number;
   /** When set, `predictPlan` stops at this look-ahead. Flight does not. */
   horizon?: Horizon;
 }
@@ -132,6 +142,12 @@ export interface SimState {
   lostReason: LostReason | null;
   /** True once the trajectory has touched the target's capture sphere. */
   enteredCapture: boolean;
+  /** Outside time in seconds. Home and Planet X share this frame. */
+  t: number;
+  /** Ship proper time in seconds. */
+  tau: number;
+  /** dτ/dt at the current pose. 1 is flat space at rest. 0 is a horizon. */
+  rate: number;
 }
 
 /** One impulsive burn at an exact sim step. Nodes are ordered by `step`. */
@@ -147,6 +163,8 @@ export interface PathSample {
   y: number;
   /** Sim step that produced this position. */
   step: number;
+  /** dτ/dt at this sample. The planning line tints by it. */
+  rate: number;
 }
 
 export interface Prediction {
@@ -158,6 +176,10 @@ export interface Prediction {
   steps: number;
   /** Closed orbit around the target when the flight ends captured. */
   orbit: Vec2[] | null;
+  /** Outside time at the end of this run. Same frame as `shipTime`. */
+  outsideTime: number;
+  /** Ship proper time at the end of this run. */
+  shipTime: number;
 }
 
 /** Cached coast into one node. Reused when a later node is the one being edited. */
@@ -316,6 +338,73 @@ export function acceleration(
   return { ax, ay };
 }
 
+/**
+ * Positive gravitational potential depth, Σ GM / r.
+ * A black hole's horizon is r_s = 2GM/c², so Φ_depth = c²/2 there.
+ */
+export function potentialDepth(x: number, y: number, config: SimConfig, time = 0): number {
+  let phi = 0;
+  const g = config.g;
+  const bodies = config.bodies;
+  for (let i = 0; i < bodies.length; i++) {
+    const body = bodies[i];
+    let bx = body.x;
+    let by = body.y;
+    if (body.orbit) {
+      const pose = bodyPose(body, time, bodies);
+      bx = pose.x;
+      by = pose.y;
+    }
+    const dx = bx - x;
+    const dy = by - y;
+    const r2 = dx * dx + dy * dy;
+    if (r2 < 1e-12) return Number.POSITIVE_INFINITY;
+    phi += (g * body.mass) / Math.sqrt(r2);
+  }
+  return phi;
+}
+
+/** Schwarzschild radius 2GM/c². A black hole body uses this as its surface. */
+export function horizonRadius(mass: number, g: number, c: number): number {
+  if (!(c > 0)) return Number.POSITIVE_INFINITY;
+  return (2 * g * mass) / (c * c);
+}
+
+/**
+ * Weak-field combined time dilation.
+ *
+ * Φ_depth = Σ GM / r
+ * dτ/dt = sqrt(1 - 2 Φ_depth / c² - v² / c²)
+ *
+ * The radicand is clamped at 0. At a horizon, or at v ≥ c, the rate is 0
+ * instead of becoming imaginary. The rate is never above 1 in this form.
+ */
+export function properTimeRate(
+  x: number,
+  y: number,
+  vx: number,
+  vy: number,
+  config: SimConfig,
+  time = 0,
+): number {
+  return rateFrom(potentialDepth(x, y, config, time), vx, vy, config.c);
+}
+
+/** dτ/dt from a depth and a velocity. Same clamp as `properTimeRate`. */
+export function rateFrom(phi: number, vx: number, vy: number, c: number): number {
+  if (!(c > 0) || !Number.isFinite(c) || !Number.isFinite(phi)) return 0;
+  const depth = phi > 0 ? phi : 0;
+  const c2 = c * c;
+  const arg = 1 - (2 * depth) / c2 - (vx * vx + vy * vy) / c2;
+  if (!(arg > 0)) return 0;
+  return Math.sqrt(arg);
+}
+
+function accrueClocks(state: SimState, rate: number, dt: number): void {
+  state.t += dt;
+  state.tau += rate * dt;
+}
+
 export function makeState(
   x: number,
   y: number,
@@ -336,6 +425,9 @@ export function makeState(
     crashedBodyId: null,
     lostReason: null,
     enteredCapture: false,
+    t: 0,
+    tau: 0,
+    rate: properTimeRate(x, y, vx, vy, config, 0),
   };
 }
 
@@ -595,6 +687,7 @@ export function step(state: SimState, config: SimConfig): void {
   const dt = config.dt;
   const t0 = state.step * dt;
   const t1 = t0 + dt;
+  const rateThen = properTimeRate(state.x, state.y, state.vx, state.vy, config, t0);
   const x0 = state.x;
   const y0 = state.y;
   const x1 = x0 + state.vx * dt + 0.5 * state.ax * dt * dt;
@@ -646,10 +739,15 @@ export function step(state: SimState, config: SimConfig): void {
     const impact = acceleration(state.x, state.y, config, t0 + crashT * dt);
     state.ax = impact.ax;
     state.ay = impact.ay;
+    accrueClocks(state, rateThen, crashT * dt);
+    state.rate = properTimeRate(state.x, state.y, state.vx, state.vy, config, t0 + crashT * dt);
     state.status = "crashed";
     state.crashedBodyId = crashBody;
     return;
   }
+
+  accrueClocks(state, rateThen, dt);
+  state.rate = properTimeRate(state.x, state.y, state.vx, state.vy, config, t1);
 
   const target = targetBody(config);
   const captureRadius = target?.captureRadius;
@@ -745,7 +843,7 @@ export function advanceFrame(
     if (state.status !== "flying") return;
     const stepBefore = state.step;
     advancePlan(state, config, nodes, cursor);
-    if (state.step !== stepBefore) samples.push({ x: state.x, y: state.y, step: state.step });
+    if (state.step !== stepBefore) samples.push({ x: state.x, y: state.y, step: state.step, rate: state.rate });
   }
 }
 
@@ -762,6 +860,8 @@ function predictionFrom(state: SimState, config: SimConfig, path: PathSample[]):
     lostReason: state.lostReason,
     steps: state.step,
     orbit,
+    outsideTime: state.t,
+    shipTime: state.tau,
   };
 }
 
@@ -939,7 +1039,7 @@ export function predictPlan(
           approach = approach.slice();
           approachOwned = true;
         }
-        approach.push({ x: integrated.x, y: integrated.y, step: integrated.step });
+        approach.push({ x: integrated.x, y: integrated.y, step: integrated.step, rate: integrated.rate });
       },
     };
     const end = config.horizon ? from.step + horizonSteps(from, config) : Number.POSITIVE_INFINITY;

@@ -106,6 +106,14 @@ export const relay: Level = {
   maxPlannedBurns: 2,
   horizon: { seconds: 8, oneOrbit: false, shorten: 0.4, ref: 6 },
   pause: { kind: "free", count: 3 },
+  c: 1_000_000,
+  mission: {
+    deadline: 200,
+    crewLimit: 160,
+    fuelStarMin: 0,
+    crewWeight: 1,
+    fuelWeight: 1,
+  },
 };
 
 /** Departure burn, placed on the pad. */

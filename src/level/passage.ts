@@ -1,6 +1,25 @@
 import type { Body, Bounds, BurnNode, Horizon, PauseRule, SimConfig } from "../sim/physics";
 
 /**
+ * How a level turns clocks and fuel into points.
+ * A generation ship weights crew time. A rescue weights the outside deadline
+ * and treats crew time and fuel as bonuses. `pause` on the level is separate:
+ * a score-pause rule deducts from these points.
+ */
+export interface MissionProfile {
+  /** Outside-time limit in seconds. Missing it is a hard fail. */
+  deadline: number;
+  /** Ship proper time at or under this earns the crew star. */
+  crewLimit: number;
+  /** Fuel remaining at or over this earns the fuel star. */
+  fuelStarMin: number;
+  /** Points per ship-second saved under `crewLimit`. */
+  crewWeight: number;
+  /** Points per unit of fuel left. */
+  fuelWeight: number;
+}
+
+/**
  * Passage.
  *
  * Home is at the origin. The ship starts in a counterclockwise circular orbit
@@ -31,6 +50,10 @@ export interface Level {
   dvPerPixel: number;
   /** Captured periapsis must clear the surface by this much. */
   periapsisMargin: number;
+  /** Lowered speed of light, world units per second. */
+  c: number;
+  /** Deadline, crew-time star, and fuel star. Weights are per level. */
+  mission: MissionProfile;
   /**
    * Future burns the player may queue at once. Omitted levels allow 2.
    * Passage keeps room for the extra nodes in the original lessons.
@@ -105,6 +128,15 @@ export const passage: Level = {
   dvPerPixel: 0.2,
   periapsisMargin: 8,
   maxPlannedBurns: 8,
+  // High c: dilation on Passage is negligible. Crew time is what the score pays for.
+  c: 1_000_000,
+  mission: {
+    deadline: 240,
+    crewLimit: 180,
+    fuelStarMin: 12,
+    crewWeight: 5,
+    fuelWeight: 1,
+  },
 };
 
 /** Close flyby of the star, then a bend into Planet X. */
@@ -168,6 +200,7 @@ export function simConfigFromLevel(level: Level): SimConfig {
     maxSteps: level.maxSteps,
     targetId: level.targetId,
     periapsisMargin: level.periapsisMargin,
+    c: level.c,
     horizon: level.horizon,
   };
 }
