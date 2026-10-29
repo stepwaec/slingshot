@@ -23,6 +23,11 @@
  * `gravityScale`, `eps`, and `p` reshape the force. Φ is the integral of the
  * force, so dilation and the gravity map stay on the same field.
  * Prediction and flight both read these knobs off `SimConfig`.
+ *
+ * Magnetic bodies carry a dipole. `fieldAt` is the summed field, in the same
+ * units the magnetism map and the fuzzy path use. Pulsar beams damage the hull
+ * on sim time, so a predicted hit is the hit the flight takes. Neither the
+ * map toggle nor the path spread changes the trajectory.
  * This module does not touch the DOM.
  */
 
@@ -36,6 +41,7 @@ export type BodyKind = "home" | "star" | "target" | "moon" | "blackhole" | "plan
 /**
  * Visual recipe for a body. Omitted looks use the kind's original disc.
  * Stars: `sun`, `binary-hot`, `binary-cool`, `white-dwarf`, `red-giant`.
+ * Compact objects: `neutron`, `pulsar`, `magnetar`.
  * Planets and moons: `gas-giant`, `moon`, `moon-icy`, `moon-volcanic`, `dwarf`.
  */
 export const BODY_LOOKS = [
@@ -50,6 +56,8 @@ export const BODY_LOOKS = [
   "moon-volcanic",
   "dwarf",
   "neutron",
+  "pulsar",
+  "magnetar",
 ] as const;
 
 export type BodyLook = (typeof BODY_LOOKS)[number];
@@ -68,6 +76,31 @@ export interface BodyOrbit {
   phase: number;
   /** Radians per second. Positive is counterclockwise. */
   omega: number;
+}
+
+/**
+ * Dipole magnet. `b1Reach` is R1, the polar reach of the Fuzzy zone (|B| = B1).
+ * `tilt` is the axis angle in radians, clockwise from +y. A pulsar sets
+ * `averaged` so the map uses a circular, rotation-averaged magnitude.
+ */
+export interface Magnet {
+  b1Reach: number;
+  tilt: number;
+  averaged?: boolean;
+}
+
+/**
+ * Lighthouse beams in the plane of the system. They spin clockwise once per
+ * `period` seconds of sim time, starting along the body's magnetic axis.
+ * `base` and `tip` are the full width at the centre and at `reach`.
+ * `damage` is hull per second inside a beam. Omitted or 0 draws the beam only.
+ */
+export interface Beam {
+  reach: number;
+  period: number;
+  base?: number;
+  tip?: number;
+  damage?: number;
 }
 
 export interface Body {
@@ -93,6 +126,10 @@ export interface Body {
    * acts only inside this radius and outside the surface. Omitted means no drag.
    */
   atmosphereRadius?: number;
+  /** Dipole field for the magnetism map and the fuzzy prediction. */
+  magnet?: Magnet;
+  /** Sweeping beams. Damage, when set, is applied in `step`. */
+  beam?: Beam;
 }
 
 /** World position and velocity of one body at an instant. */
@@ -1007,9 +1044,167 @@ export function burnScale(config: SimConfig): number {
   return engine / mass;
 }
 
-/** White dwarfs, neutron stars and black holes. Tides are strongest here. */
+/** White dwarfs, neutron stars, pulsars, magnetars and black holes. Tides are strongest here. */
 export function isCompactBody(body: Body): boolean {
-  return body.kind === "blackhole" || body.look === "white-dwarf" || body.look === "neutron";
+  return (
+    body.kind === "blackhole" ||
+    body.look === "white-dwarf" ||
+    body.look === "neutron" ||
+    body.look === "pulsar" ||
+    body.look === "magnetar"
+  );
+}
+
+/** |B| / B1 at the edge of each magnetism zone, safe through lethal. */
+export const MAG_ZONE_EDGES = [1, 2.5, 6, 15] as const;
+
+/** B1, the field strength at R1 on a dipole's axis. Ratios use this unit. */
+export const MAG_B1 = 1;
+
+/**
+ * Radius factor for a pulsar's rotation-averaged field. The circular Fuzzy
+ * edge sits at `0.894 * R1`, which is the design's average of the dipole oval.
+ */
+const MAG_AVERAGED = 0.894;
+
+/** `k` such that |B| = B1 at r = R1 on the dipole axis. */
+export function magneticMoment(reach: number): number {
+  return (MAG_B1 * reach * reach * reach) / 2;
+}
+
+function magnetOf(body: Body): Magnet | undefined {
+  const magnet = body.magnet;
+  if (!magnet || !(magnet.b1Reach > 0)) return undefined;
+  return magnet;
+}
+
+/** True when the level has a body the magnetism map can draw. */
+export function hasMagneticBody(bodies: readonly Body[]): boolean {
+  for (let i = 0; i < bodies.length; i++) {
+    if (magnetOf(bodies[i])) return true;
+  }
+  return false;
+}
+
+/**
+ * Summed dipole field at a point. Averaged magnets (pulsars) contribute the
+ * circular magnitude `k · 0.894³ · 2 / r³` along the outward radial, so the
+ * zones stay round while the beams spin. Other magnets use the static dipole.
+ */
+export function fieldAt(x: number, y: number, time: number, bodies: readonly Body[]): Vec2 {
+  let bx = 0;
+  let by = 0;
+  for (let i = 0; i < bodies.length; i++) {
+    const magnet = magnetOf(bodies[i]);
+    if (!magnet) continue;
+    const body = bodies[i];
+    const pose = body.orbit ? bodyPose(body, time, bodies) : { x: body.x, y: body.y, vx: 0, vy: 0 };
+    const dx = x - pose.x;
+    const dy = y - pose.y;
+    const r = Math.max(Math.hypot(dx, dy), 1);
+    const invR = 1 / r;
+    const k = magneticMoment(magnet.b1Reach);
+    const falloff = k / (r * r * r);
+    if (magnet.averaged) {
+      const mag = falloff * (MAG_AVERAGED * MAG_AVERAGED * MAG_AVERAGED) * 2;
+      bx += dx * invR * mag;
+      by += dy * invR * mag;
+      continue;
+    }
+    const mx = Math.sin(magnet.tilt);
+    const my = Math.cos(magnet.tilt);
+    const nx = dx * invR;
+    const ny = dy * invR;
+    const cos = mx * nx + my * ny;
+    bx += falloff * (3 * cos * nx - mx);
+    by += falloff * (3 * cos * ny - my);
+  }
+  return { x: bx, y: by };
+}
+
+/** |B| / B1. The Fuzzy zone starts at 1. */
+export function fieldRatio(x: number, y: number, time: number, bodies: readonly Body[]): number {
+  const field = fieldAt(x, y, time, bodies);
+  return Math.hypot(field.x, field.y) / MAG_B1;
+}
+
+/**
+ * Beam axis at `time`. Angle is clockwise about the magnetic axis, which at
+ * tilt 0 points along +y. The visual rotates by the same angle.
+ */
+export function beamAxis(body: Body, time: number): Vec2 | null {
+  const beam = body.beam;
+  if (!beam || !(beam.period > 0)) return null;
+  const tilt = body.magnet?.tilt ?? 0;
+  const angle = Math.PI / 2 - tilt - (2 * Math.PI * time) / beam.period;
+  return { x: Math.cos(angle), y: Math.sin(angle) };
+}
+
+/** Hull per second from every beam the ship is inside. */
+export function beamDamageRate(x: number, y: number, time: number, bodies: readonly Body[]): number {
+  let rate = 0;
+  for (let i = 0; i < bodies.length; i++) {
+    const body = bodies[i];
+    const beam = body.beam;
+    const damage = beam?.damage ?? 0;
+    if (!beam || !(damage > 0) || !(beam.reach > 0) || !(beam.period > 0)) continue;
+    const axis = beamAxis(body, time);
+    if (!axis) continue;
+    const pose = body.orbit ? bodyPose(body, time, bodies) : { x: body.x, y: body.y, vx: 0, vy: 0 };
+    const dx = x - pose.x;
+    const dy = y - pose.y;
+    const r = Math.hypot(dx, dy);
+    if (!(r > 1e-6) || !(r <= beam.reach)) continue;
+    const cross = Math.abs(dx * axis.y - dy * axis.x);
+    const base = beam.base ?? 4;
+    const tip = beam.tip ?? 18;
+    const full = base + (tip - base) * (r / beam.reach);
+    if (cross <= full * 0.5) rate += damage;
+  }
+  return rate;
+}
+
+export interface SpreadPoint {
+  x: number;
+  y: number;
+  sigma: number;
+}
+
+/**
+ * Instrument spread along a path. Inside the Fuzzy zone,
+ * `σ += 6 · log2(|B| / B1) · distance / 100`. It never shrinks.
+ * The same samples always produce the same σ. Drawing uses it; the sim does not.
+ */
+export function spreadAlong(
+  samples: readonly { x: number; y: number; step: number }[],
+  dt: number,
+  bodies: readonly Body[],
+): SpreadPoint[] {
+  const out: SpreadPoint[] = [];
+  if (samples.length === 0) return out;
+  let sigma = 0;
+  out.push({ x: samples[0].x, y: samples[0].y, sigma: 0 });
+  for (let i = 1; i < samples.length; i++) {
+    const prev = samples[i - 1];
+    const next = samples[i];
+    const dx = next.x - prev.x;
+    const dy = next.y - prev.y;
+    const len = Math.hypot(dx, dy);
+    if (len > 1e-6) {
+      const pieces = Math.max(1, Math.round(len / 10));
+      const piece = len / pieces;
+      for (let s = 1; s <= pieces; s++) {
+        const t = s / pieces;
+        const x = prev.x + dx * t;
+        const y = prev.y + dy * t;
+        const step = prev.step + (next.step - prev.step) * t;
+        const ratio = fieldRatio(x, y, step * dt, bodies);
+        if (ratio > 1) sigma += 6 * Math.log2(ratio) * (piece / 100);
+      }
+    }
+    out.push({ x: next.x, y: next.y, sigma });
+  }
+  return out;
 }
 
 const SHIP_LENGTH = 6;
@@ -1072,6 +1267,7 @@ function solarRate(x: number, y: number, config: SimConfig, time: number): numbe
   for (let i = 0; i < bodies.length; i++) {
     const body = bodies[i];
     if (body.kind !== "star" || !(body.radius > 0)) continue;
+    if (body.look === "neutron" || body.look === "pulsar" || body.look === "magnetar") continue;
     const pose = body.orbit ? bodyPose(body, time, bodies) : { x: body.x, y: body.y, vx: 0, vy: 0 };
     const r = Math.hypot(x - pose.x, y - pose.y);
     if (!(r > 1e-6) || r > body.radius * 12) continue;
@@ -1089,9 +1285,10 @@ function solarRate(x: number, y: number, config: SimConfig, time: number): numbe
 function applyShipSystems(state: SimState, config: SimConfig, time: number): void {
   const stress = tidalStressAt(state.x, state.y, config, time);
   const pass = closePassRate(state.x, state.y, config, time);
+  const beam = beamDamageRate(state.x, state.y, time, config.bodies);
   state.stress = stress;
   if (stress > state.peakStress) state.peakStress = stress;
-  const damage = (stress + pass) * config.dt;
+  const damage = (stress + pass + beam) * config.dt;
   if (damage > 0) {
     state.hull -= damage;
     if (!(state.hull > 0)) {

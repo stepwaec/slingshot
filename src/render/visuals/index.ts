@@ -1,5 +1,7 @@
 import type { VisualFactory } from "../visual";
+import { createCompact } from "./compact";
 import { createGravity } from "./gravity";
+import { createMagnetism } from "./magnetism";
 import { createNodes } from "./nodes";
 import { createPath } from "./path";
 import { createPlanets } from "./planets";
@@ -20,9 +22,11 @@ export const visualFactories = {
   starfield: createStarfield,
   relativity: createRelativity,
   gravity: createGravity,
+  magnetism: createMagnetism,
   star: createStar,
   scenery: createScenery,
   planets: createPlanets,
+  compact: createCompact,
   path: createPath,
   ship: createShip,
   nodes: createNodes,

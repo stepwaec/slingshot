@@ -13,14 +13,19 @@ import { bodyPose, potentialDepth, rateFrom, type SimConfig } from "../sim/physi
  *
  * The flat view also pinches the grid in the plane. Each vertex moves toward
  * the masses along ∇Φ (samples of `potentialDepth`) by
- * `distance * PINCH_REACH * scale`. The step grows with depth, stays finite
- * on a singularity, and packs the lines tighter near a deep well.
+ * `distance * PINCH_REACH * scale`, then `clampPinch` keeps that slide inside
+ * the cell so neighbours cannot cross or fold into a spike.
  */
 
 export const WELL_SOFTNESS = 1.5;
 export const KNEE_RADII = 3;
 /** Largest fraction of the distance to a mass a vertex may slide. */
 export const PINCH_REACH = 0.55;
+/**
+ * Largest fraction of a grid cell a sample may leave its rest point.
+ * Half a cell would let neighbours meet; staying under that keeps order.
+ */
+export const PINCH_CELL = 0.45;
 
 export interface GridBounds {
   minX: number;
@@ -188,6 +193,21 @@ export function pinchTowardMasses(
   return { dx, dy };
 }
 
+/**
+ * Keep a slide inside its cell. `stepX` and `stepY` are the rest spacing.
+ * A vertex that moves at most `PINCH_CELL` of that spacing cannot pass
+ * the neighbour on either side, so the quad cannot fold or spike across it.
+ */
+export function clampPinch(dx: number, dy: number, stepX: number, stepY: number): Pinch {
+  const limitX = Math.abs(stepX) * PINCH_CELL;
+  const limitY = Math.abs(stepY) * PINCH_CELL;
+  let x = Number.isFinite(dx) ? dx : 0;
+  let y = Number.isFinite(dy) ? dy : 0;
+  if (limitX > 0) x = Math.max(-limitX, Math.min(limitX, x));
+  if (limitY > 0) y = Math.max(-limitY, Math.min(limitY, y));
+  return { dx: x, dy: y };
+}
+
 function depthSlope(
   x: number,
   y: number,
@@ -270,8 +290,9 @@ export function sampleGravityGrid(
         config.dilationCap ?? Number.POSITIVE_INFINITY,
       );
       const pinch = pinchTowardMasses(x, y, config, time, knee);
-      grid.pinchX[i] = x + pinch.dx;
-      grid.pinchY[i] = y + pinch.dy;
+      const shown = clampPinch(pinch.dx, pinch.dy, grid.stepX, grid.stepY);
+      grid.pinchX[i] = x + shown.dx;
+      grid.pinchY[i] = y + shown.dy;
     }
   }
   return grid;

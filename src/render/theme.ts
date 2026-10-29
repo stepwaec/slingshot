@@ -25,6 +25,11 @@ import enginePulseUrl from "../../design/assets/ship/engine-pulse.svg?url";
 import damage75Url from "../../design/assets/ship/damage-75.svg?url";
 import damage45Url from "../../design/assets/ship/damage-45.svg?url";
 import damage15Url from "../../design/assets/ship/damage-15.svg?url";
+import neutronStarUrl from "../../design/assets/bodies/neutron-star.svg?url";
+import pulsarUrl from "../../design/assets/bodies/pulsar.svg?url";
+import magnetarUrl from "../../design/assets/bodies/magnetar.svg?url";
+import blackHoleUrl from "../../design/assets/bodies/black-hole.svg?url";
+import magnetismUrl from "../../design/assets/overlays/magnetism-heatmap.svg?url";
 import { palette } from "./palette";
 
 /**
@@ -45,6 +50,11 @@ export const theme = {
     whiteDwarf: whiteDwarfUrl,
     gasGiant: gasBandedUrl,
     moonChain: moonChainUrl,
+    neutronStar: neutronStarUrl,
+    pulsar: pulsarUrl,
+    magnetar: magnetarUrl,
+    blackHole: blackHoleUrl,
+    magnetism: magnetismUrl,
     starfield: starfieldUrl,
     predictedPath: predictedPathUrl,
     dragArrow: dragArrowUrl,
@@ -153,10 +163,10 @@ export const theme = {
   path: {
     spacingPx: 10,
     maxDots: 400,
-    /** Quad the dot is drawn into; the visible radius stays ~1.5 px. */
-    dotSpanPx: 5,
-    sureAlpha: 0.7,
-    dimAlpha: 0.35,
+    /** Quad the dot is drawn into. The visible radius is ~2.4 px, still a dot at the 10 px spacing. */
+    dotSpanPx: 8,
+    sureAlpha: 0.95,
+    dimAlpha: 0.62,
     dimAfter: 0.8,
     endRingInner: 5.25,
     endRingOuter: 6.75,

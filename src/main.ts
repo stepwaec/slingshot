@@ -5,9 +5,8 @@ import {
   canLaunch,
   canPause,
   createGame,
-  cycleGravity,
+  gravityLabel,
   isEditing,
-  launch,
   loadLevel,
   missionResult,
   nodeIncoming,
@@ -15,8 +14,6 @@ import {
   outcomeCopy,
   planFuel,
   queuedBurns,
-  selectNode,
-  setGravityClock,
   setPlan,
   tick,
   type Game,
@@ -27,7 +24,7 @@ import { createClockLatches, readClocks, type ClockLatches } from "./hud/readout
 import type { MissionScore } from "./sim/score";
 import { frameLevel, worldToScreen } from "./render/camera";
 import { SpaceView } from "./render/view";
-import { horizonSteps, type BurnNode } from "./sim/physics";
+import { hasMagneticBody, horizonSteps, spreadAlong } from "./sim/physics";
 import { mountShipyard, syncShipyard } from "./hud/shipyard";
 import { resetShipLook } from "./render/appearance";
 import { hullRatio, hullSegmentsLit, hullTone, stressLevel } from "./render/ship-art";
@@ -86,6 +83,8 @@ const routeSafe = required<HTMLButtonElement>("#route-safe");
 const routeDeep = required<HTMLButtonElement>("#route-deep");
 const gravityButton = required<HTMLButtonElement>("#gravity");
 const gravityClockButton = required<HTMLButtonElement>("#gravity-clock");
+const magnetismButton = required<HTMLButtonElement>("#magnetism");
+const magLegend = required<HTMLElement>("#mag-legend");
 
 const game = createGame();
 const view = new SpaceView(canvas, game);
@@ -99,6 +98,8 @@ let fpsFrames = 0;
 let fpsStamp = performance.now();
 let framed = false;
 let overlayOpen = false;
+let spreadFor: Game["prediction"] | null = null;
+let spreadSigma = 0;
 
 for (const level of levels) {
   const option = document.createElement("option");
@@ -143,6 +144,7 @@ bindInput(
     slowButton,
     gravityButton,
     gravityClockButton,
+    magnetismButton,
   },
   () => ({ width: canvas.clientWidth, height: canvas.clientHeight }),
   () => frameLevel(game.camera, canvas.clientWidth, canvas.clientHeight, game.level),
@@ -176,12 +178,26 @@ function loop(now: number): void {
   requestAnimationFrame(loop);
 }
 
+function syncMagnetism(current: Game): void {
+  const show = hasMagneticBody(current.level.bodies);
+  magnetismButton.hidden = !show;
+  const on = show && current.magnetism;
+  magnetismButton.setAttribute("aria-pressed", on ? "true" : "false");
+  magLegend.hidden = !(on && isEditing(current));
+}
+
 function syncGravity(current: Game): void {
-  const label = current.gravity === "grid" ? "Gravity grid" : current.gravity === "sheet" ? "Gravity sheet" : "Gravity off";
-  gravityButton.textContent = label;
-  gravityButton.setAttribute("aria-pressed", current.gravity === "off" ? "false" : "true");
+  const label = gravityLabel(current.gravity);
+  // Rewriting the text node every frame makes Safari drop the next click:
+  // mousedown and mouseup land on different nodes, so the map stays on.
+  if (gravityButton.textContent !== label) gravityButton.textContent = label;
+  const pressed = current.gravity === "off" ? "false" : "true";
+  if (gravityButton.getAttribute("aria-pressed") !== pressed) gravityButton.setAttribute("aria-pressed", pressed);
   gravityClockButton.hidden = current.gravity !== "grid";
-  gravityClockButton.setAttribute("aria-pressed", current.gravityClock ? "true" : "false");
+  const clockPressed = current.gravityClock ? "true" : "false";
+  if (gravityClockButton.getAttribute("aria-pressed") !== clockPressed) {
+    gravityClockButton.setAttribute("aria-pressed", clockPressed);
+  }
 }
 
 function syncHud(current: Game): void {
@@ -193,6 +209,7 @@ function syncHud(current: Game): void {
   const editing = isEditing(current);
   app.dataset.mode = current.mode;
   syncGravity(current);
+  syncMagnetism(current);
   modeLabel.textContent = planning ? "Planning" : current.mode === "paused" ? "Paused" : "In flight";
   planningActions.hidden = !planning;
   flightActions.hidden = planning;
@@ -218,7 +235,16 @@ function syncHud(current: Game): void {
   const speed = Math.hypot(pose.vx, pose.vy);
   const vText = planning ? "  —" : speed.toFixed(2).padStart(5, " ");
   const dText = Math.round(distance).toString().padStart(4, " ");
-  telemetry.textContent = `v ${vText}  ·  dX ${dText}`;
+  let line = `v ${vText}  ·  dX ${dText}`;
+  if (editing && hasMagneticBody(current.level.bodies) && current.prediction.path.length > 1) {
+    if (spreadFor !== current.prediction) {
+      const spread = spreadAlong(current.prediction.path, current.level.dt, current.level.bodies);
+      spreadSigma = spread.length === 0 ? 0 : spread[spread.length - 1].sigma;
+      spreadFor = current.prediction;
+    }
+    if (spreadSigma >= 0.6) line += `  ·  spread ±${Math.round(spreadSigma)} px`;
+  }
+  telemetry.textContent = line;
   fpsValue.textContent = `${Math.round(fps)} fps`;
 
   launchButton.disabled = !canLaunch(current);
@@ -491,28 +517,4 @@ function nodeLine(current: Game, index: number, fuel: ReturnType<typeof planFuel
   const base = `Node ${index + 1} of ${current.nodes.length} · ${where} · Δv ${magnitude.toFixed(1)} · cost ${cost.cost.toFixed(1)}`;
   if (cost.exceeds) return { text: `${base} · exceeds fuel`, over: true };
   return { text: `${base} · ${cost.remainingBefore.toFixed(1)} left`, over: false };
-}
-
-declare global {
-  interface Window {
-    __slingshot?: {
-      game: Game;
-      setPlan: (nodes: readonly BurnNode[]) => void;
-      launch: () => void;
-      select: (index: number | null) => void;
-      cycleGravity: () => void;
-      setGravityClock: (on: boolean) => void;
-    };
-  }
-}
-
-if (import.meta.env.DEV) {
-  window.__slingshot = {
-    game,
-    setPlan: (nodes) => setPlan(game, nodes),
-    launch: () => launch(game),
-    select: (index) => selectNode(game, index),
-    cycleGravity: () => cycleGravity(game),
-    setGravityClock: (on) => setGravityClock(game, on),
-  };
 }

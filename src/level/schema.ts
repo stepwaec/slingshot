@@ -1,11 +1,13 @@
 import {
   BODY_LOOKS,
+  type Beam,
   type Body,
   type BodyKind,
   type BodyLook,
   type BodyOrbit,
   type Bounds,
   type Horizon,
+  type Magnet,
   type PauseRule,
 } from "../sim/physics";
 
@@ -46,6 +48,8 @@ export interface MissionProfile {
  *   white dwarf, neutron star or black hole. Omitted or 0 deals none.
  * - `dragStrength` — scales drag inside a body's `atmosphereRadius`. Omitted
  *   or 0 is no drag. The force only slows the ship relative to that body.
+ *
+ * A body may carry `magnet` and `beam`. See those objects on `Body`.
  */
 export interface LevelPhysics {
   c?: number;
@@ -142,7 +146,11 @@ const BODY_KEYS = [
   "orbit",
   "look",
   "atmosphereRadius",
+  "magnet",
+  "beam",
 ] as const;
+const MAGNET_KEYS = ["b1Reach", "tilt", "averaged"] as const;
+const BEAM_KEYS = ["reach", "period", "base", "tip", "damage"] as const;
 const BODY_ORBIT_KEYS = ["centerId", "cx", "cy", "radius", "phase", "omega"] as const;
 const SHIP_KEYS = ["x", "y", "vx", "vy"] as const;
 const SHIP_ORBIT_KEYS = ["bodyId", "radius"] as const;
@@ -278,6 +286,42 @@ function readBodyOrbit(value: unknown, path: string, issues: string[]): BodyOrbi
   return orbit;
 }
 
+function readMagnet(value: unknown, path: string, issues: string[]): Magnet | undefined {
+  if (!isObject(value)) {
+    issues.push(`${path} must be an object`);
+    return undefined;
+  }
+  rejectUnknown(value, MAGNET_KEYS, path, issues);
+  const b1Reach = readFinite(value, "b1Reach", path, issues, { min: 0, exclusiveMin: true });
+  const tilt = readFinite(value, "tilt", path, issues, {});
+  if (b1Reach === undefined || tilt === undefined) return undefined;
+  const magnet: Magnet = { b1Reach, tilt };
+  if (Object.prototype.hasOwnProperty.call(value, "averaged")) {
+    const averaged = readBoolean(value, "averaged", path, issues);
+    if (averaged !== undefined) magnet.averaged = averaged;
+  }
+  return magnet;
+}
+
+function readBeam(value: unknown, path: string, issues: string[]): Beam | undefined {
+  if (!isObject(value)) {
+    issues.push(`${path} must be an object`);
+    return undefined;
+  }
+  rejectUnknown(value, BEAM_KEYS, path, issues);
+  const reach = readFinite(value, "reach", path, issues, { min: 0, exclusiveMin: true });
+  const period = readFinite(value, "period", path, issues, { min: 0, exclusiveMin: true });
+  if (reach === undefined || period === undefined) return undefined;
+  const beam: Beam = { reach, period };
+  const base = readOptionalFinite(value, "base", path, issues, { min: 0, exclusiveMin: true });
+  const tip = readOptionalFinite(value, "tip", path, issues, { min: 0, exclusiveMin: true });
+  const damage = readOptionalFinite(value, "damage", path, issues, { min: 0 });
+  if (base !== undefined) beam.base = base;
+  if (tip !== undefined) beam.tip = tip;
+  if (damage !== undefined) beam.damage = damage;
+  return beam;
+}
+
 function readBody(value: unknown, path: string, issues: string[]): Body | undefined {
   if (!isObject(value)) {
     issues.push(`${path} must be an object`);
@@ -306,6 +350,10 @@ function readBody(value: unknown, path: string, issues: string[]): Body | undefi
   }
   let orbit: BodyOrbit | undefined;
   if (Object.prototype.hasOwnProperty.call(value, "orbit")) orbit = readBodyOrbit(value.orbit, `${path}.orbit`, issues);
+  let magnet: Magnet | undefined;
+  if (Object.prototype.hasOwnProperty.call(value, "magnet")) magnet = readMagnet(value.magnet, `${path}.magnet`, issues);
+  let beam: Beam | undefined;
+  if (Object.prototype.hasOwnProperty.call(value, "beam")) beam = readBeam(value.beam, `${path}.beam`, issues);
   if (atmosphereRadius !== undefined && radius !== undefined && !(atmosphereRadius > radius)) {
     issues.push(`${path}.atmosphereRadius must be greater than radius`);
   }
@@ -318,6 +366,8 @@ function readBody(value: unknown, path: string, issues: string[]): Body | undefi
   if (atmosphereRadius !== undefined) body.atmosphereRadius = atmosphereRadius;
   if (look) body.look = look;
   if (orbit) body.orbit = orbit;
+  if (magnet) body.magnet = magnet;
+  if (beam) body.beam = beam;
   return body;
 }
 

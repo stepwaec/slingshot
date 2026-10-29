@@ -116,3 +116,21 @@ export const chainPlan: readonly BurnNode[] = [
   { step: 0, dvx: 12.855752193730787, dvy: 15.32088886237956 },
   { step: 1505, dvx: -24.761929237626404, dvy: -0.9891972743133151 },
 ];
+
+/** Pulse: leave Home, cross the pulsar's beams, capture at Planet X. */
+export const pulsePlan: readonly BurnNode[] = [
+  { step: 0, dvx: 8.660254037844387, dvy: 4.999999999999999 },
+  { step: 4115, dvx: 4.866939482433775, dvy: 4.26668569885533 },
+];
+
+/** Quake: swing past the magnetar, through the fuzzy field, and capture. */
+export const quakePlan: readonly BurnNode[] = [
+  { step: 0, dvx: 8.660254037844387, dvy: 4.999999999999999 },
+  { step: 2405, dvx: -6.630515982354261, dvy: 3.836439778773629 },
+];
+
+/** Needle: bend past the neutron star, with the gas giant's field off to the side. */
+export const needlePlan: readonly BurnNode[] = [
+  { step: 0, dvx: -11.817693036146496, dvy: -2.0837781320031654 },
+  { step: 5029, dvx: -11.074885332370972, dvy: 5.022153209325186 },
+];
