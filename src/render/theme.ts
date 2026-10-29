@@ -115,7 +115,7 @@ export const theme = {
   },
   burst: { frames: 12 },
   /**
-   * Flown trail, in the plume's colours. Narrower than the burn plume.
+   * Flown trail: a narrow line in the plume's colours, with no halo.
    * A sample fades out by age (`ageSec` of sim time) and by screen length.
    * The sim does not read this.
    */
@@ -124,10 +124,8 @@ export const theme = {
     samples: 480,
     ageSec: 8,
     lengthPx: 640,
-    /** Bright core half-width in screen pixels. */
+    /** Half-width of the line, in screen pixels. */
     halfWidthPx: 2.6,
-    /** Soft halo drawn past the core, as a multiple of `halfWidthPx`. */
-    glowScale: 1.85,
     turbulence: 0.28,
     core: "#F7FBFF",
     edge: "#A06BFF",
