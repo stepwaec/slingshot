@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { ghostSteps, movingBodies } from "../../game/ghosts";
 import { isEditing } from "../../game/state";
-import { bodyPose } from "../../sim/physics";
+import { bodyPose, bodyPresent } from "../../sim/physics";
 import { disposeObject, type Visual, type VisualFactory, type VisualFrame } from "../visual";
 import { shader, srgbVec } from "./materials";
 
@@ -51,6 +51,7 @@ class GhostsVisual implements Visual {
       const cursor = step === game.cursorStep;
       for (let b = 0; b < bodies.length; b++) {
         const body = bodies[b];
+        if (!bodyPresent(body, time)) continue;
         const pose = bodyPose(body, time, game.level.bodies, game.level.g);
         const ring = this.ensure(count);
         count += 1;

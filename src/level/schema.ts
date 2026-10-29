@@ -167,11 +167,14 @@ const BODY_KEYS = [
   "flare",
   "supernova",
   "quasar",
+  "script",
 ] as const;
 const DRIFT_KEYS = ["vx", "vy"] as const;
 const FLARE_KEYS = ["angle", "period", "start", "duration"] as const;
 const SUPERNOVA_KEYS = ["at", "blast", "speed", "damage"] as const;
 const QUASAR_KEYS = ["angle", "cone", "reach", "damage", "period", "sweep"] as const;
+const SCRIPT_CONSUME_KEYS = ["kind", "centerId", "start", "end", "radius"] as const;
+const SCRIPT_IMPACT_KEYS = ["kind", "at", "into"] as const;
 const MAGNET_KEYS = ["b1Reach", "tilt", "averaged"] as const;
 const BEAM_KEYS = ["reach", "period", "base", "tip", "damage"] as const;
 const BODY_ORBIT_KEYS = ["centerId", "cx", "cy", "radius", "phase", "omega", "kind", "a", "e", "periapsisAngle"] as const;
@@ -484,6 +487,8 @@ function readBody(value: unknown, path: string, issues: string[]): Body | undefi
   }
   let quasar: Body["quasar"];
   if (Object.prototype.hasOwnProperty.call(value, "quasar")) quasar = readQuasar(value.quasar, `${path}.quasar`, issues);
+  let script: Body["script"];
+  if (Object.prototype.hasOwnProperty.call(value, "script")) script = readScript(value.script, `${path}.script`, issues);
   let look: BodyLook | undefined;
   if (Object.prototype.hasOwnProperty.call(value, "look")) {
     const raw = value.look;
@@ -519,6 +524,7 @@ function readBody(value: unknown, path: string, issues: string[]): Body | undefi
   if (flare) body.flare = flare;
   if (supernova) body.supernova = supernova;
   if (quasar) body.quasar = quasar;
+  if (script) body.script = script;
   if (harvestRadius !== undefined && radius !== undefined && !(harvestRadius > radius)) {
     issues.push(`${path}.harvestRadius must be greater than radius`);
   }
@@ -556,6 +562,37 @@ function readQuasar(value: unknown, path: string, issues: string[]): Body["quasa
   if (period !== undefined) jet.period = period;
   if (sweep !== undefined) jet.sweep = sweep;
   return jet;
+}
+
+function readScript(value: unknown, path: string, issues: string[]): Body["script"] | undefined {
+  if (!isObject(value)) {
+    issues.push(`${path} must be an object`);
+    return undefined;
+  }
+  if (value.kind === "consume") {
+    rejectUnknown(value, SCRIPT_CONSUME_KEYS, path, issues);
+    const centerId = readString(value, "centerId", path, issues);
+    const start = readFinite(value, "start", path, issues, { min: 0 });
+    const end = readFinite(value, "end", path, issues, { min: 0, exclusiveMin: true });
+    const radius = readFinite(value, "radius", path, issues, { min: 0, exclusiveMin: true });
+    if (centerId === undefined || start === undefined || end === undefined || radius === undefined) return undefined;
+    if (!(end > start)) issues.push(`${path}.end must be after start`);
+    return { kind: "consume", centerId, start, end, radius };
+  }
+  if (value.kind === "impact") {
+    rejectUnknown(value, SCRIPT_IMPACT_KEYS, path, issues);
+    const at = readFinite(value, "at", path, issues, { min: 0 });
+    const into = readOptionalString(value, "into", path, issues);
+    if (at === undefined) return undefined;
+    return into !== undefined ? { kind: "impact", at, into } : { kind: "impact", at };
+  }
+  issues.push(`${path}.kind must be "consume" or "impact"`);
+  return undefined;
+}
+
+function readOptionalString(value: Record<string, unknown>, key: string, path: string, issues: string[]): string | undefined {
+  if (!Object.prototype.hasOwnProperty.call(value, key)) return undefined;
+  return readString(value, key, path, issues);
 }
 
 function readPhysics(value: unknown, path: string, issues: string[]): LevelPhysics | undefined {
@@ -754,6 +791,13 @@ export function loadLevelData(data: unknown, source = "level"): Level {
     const centerId = bodies[i].orbit?.centerId;
     if (centerId !== undefined && !bodies.some((body) => body.id === centerId)) {
       issues.push(`level.bodies[${i}].orbit.centerId "${centerId}" does not match a body`);
+    }
+    const script = bodies[i].script;
+    if (script?.kind === "consume" && !bodies.some((body) => body.id === script.centerId)) {
+      issues.push(`level.bodies[${i}].script.centerId "${script.centerId}" does not match a body`);
+    }
+    if (script?.kind === "impact" && script.into !== undefined && !bodies.some((body) => body.id === script.into)) {
+      issues.push(`level.bodies[${i}].script.into "${script.into}" does not match a body`);
     }
   }
   const orbitScale = g !== undefined && physics?.gravityScale !== undefined ? g * physics.gravityScale : g;
