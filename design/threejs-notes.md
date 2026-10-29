@@ -8,7 +8,7 @@ Sections: §0 how the renderer is put together · §1 rules for the realistic vi
 
 ---
 
-## 0. How the renderer is put together (as of `main` 80af7e2)
+## 0. How the renderer is put together (as of `main` a376eee)
 
 - **`SpaceView`** (`src/render/view.ts`) renders three scenes per frame with `autoClear = false`: `background` (screen camera), `world` (top-down orthographic camera, or the tilted perspective camera for the gravity sheet) and `screen` (screen camera, stroke widths do not zoom). `WebGLRenderer` with `antialias: true`, `NoToneMapping`, `outputColorSpace = SRGBColorSpace`.
 - **Visuals** implement `Visual { object, space, resize?, update(frame), dispose }` and are created only through `visualFactories` in `src/render/visuals/index.ts`. Swapping one factory swaps one element. Order in that map is draw order within a space.
@@ -167,4 +167,4 @@ One quad as today (`span 400`, scaled `r / 46`), with layers back to front match
 | `bodies/neutron-star.svg` | — | rotating beams (WP9) |
 | `space/*` nebulae, asteroid field, wreck | — | WP10 / WP11 layers (§7) |
 | `starfield.svg` | `createStarfield` (canvas texture) | add the v1.1 magnitude tints and the faint band when the sky is next touched |
-| ship, thrust, trail, path, arrow, HUD | existing factories | unchanged by this design update (the game's own plume and trail already moved past v1) |
+| ship, thrust, path, arrow, HUD | existing factories | unchanged by this design update (the game's own plume already moved past v1). The flown trail was removed from the game in PR #16; `trail.svg` stays as a design reference only |
