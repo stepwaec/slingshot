@@ -80,9 +80,9 @@
     <g id="starBreathe">
       <animateTransform attributeName="transform" type="scale" values="1;1.03;1;0.97;1" keyTimes="0;0.25;0.5;0.75;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1" dur="6s" repeatCount="indefinite"/>
       <circle r="200" fill="url(#starHaze)"/>
-      <g><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="300s" repeatCount="indefinite"/>
+      <g id="starWispRing"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="300s" repeatCount="indefinite"/>
         <circle r="78" fill="url(#starWispFill)" filter="url(#starWisp)"/></g>
-      <g><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="200s" repeatCount="indefinite"/>
+      <g id="starFlameRing"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="200s" repeatCount="indefinite"/>
         <circle r="62" fill="url(#starFlameFill)" filter="url(#starFlame)"/></g>
     </g>
     <g id="starProminences" fill="none" stroke-linecap="round">

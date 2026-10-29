@@ -69,9 +69,9 @@
         <g id="rgStarBreathe">
           <animateTransform attributeName="transform" type="scale" values="1;1.03;1;0.97;1" keyTimes="0;0.25;0.5;0.75;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1" dur="9s" repeatCount="indefinite"/>
           <circle r="112" fill="url(#rgStarHaze)"/>
-          <g><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="300s" repeatCount="indefinite"/>
+          <g id="rgStarWispRing"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="300s" repeatCount="indefinite"/>
             <circle r="78" fill="url(#rgStarWispFill)" filter="url(#rgStarWisp)" opacity="0.7"/></g>
-          <g><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="200s" repeatCount="indefinite"/>
+          <g id="rgStarFlameRing"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="200s" repeatCount="indefinite"/>
             <circle r="62" fill="url(#rgStarFlameFill)" filter="url(#rgStarFlame)" opacity="0.55"/></g>
         </g>
         <g id="rgStarProminences" fill="none" stroke-linecap="round">

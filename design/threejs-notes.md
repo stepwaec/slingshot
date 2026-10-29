@@ -4,7 +4,7 @@ How to build the v1.5 realistic look in the game's actual renderer: the orthogra
 
 Read with: `style.md` (tokens and rules), `assets.md` (one row per asset), the asset SVG header comments (the canon for every number), and in the code `src/render/visual.ts`, `src/render/visuals/index.ts`, `src/render/theme.ts`, `src/render/palette.ts`.
 
-Sections: §0 how the renderer is put together · §1 rules for the realistic visuals · §2 translating SVG filter recipes to GLSL · §3 planets · §4 stars · §5 compact objects · §6 moons and moon chains · §7 environment (nebulae, debris, rings) · §8 palette and colour · §9 budget · §10 asset → factory map, with what WP8 needs · §11 the magnetism map and fuzzy prediction (WP9) · §12 comets and the solar recharge indicator (WP10) · §13 the modular ship, damage, hull HUD and upgrade screen (ship systems).
+Sections: §0 how the renderer is put together · §1 rules for the realistic visuals · §2 translating SVG filter recipes to GLSL · §3 planets · §4 stars · §5 compact objects · §6 moons and moon chains · §7 environment (nebulae, debris, rings) · §8 palette and colour · §9 budget · §10 asset → factory map, with what WP8 needs · §11 the magnetism map and fuzzy prediction (WP9) · §12 comets and the solar recharge indicator (WP10) · §13 the modular ship, damage, hull HUD and upgrade screen (ship systems) · §14 belts, Kuiper belt, rogue planet, radiation map and dose (WP11). Coding agents: `IMPLEMENTING.md` is the rulebook; `IMPLEMENTATION-REVIEW.md` lists fixes for what is already built.
 
 ---
 
@@ -143,6 +143,7 @@ One quad as today (`span 400`, scaled `r / 46`), with layers back to front match
 - New WP9 tokens are listed in `style.md` §8 WP9 (pulsar, magnetar, `magmap.*` zones, `path.ghost`).
 - New WP10 tokens are listed in `style.md` §8 WP10 (`comet.*`, `solar.*`).
 - Ship systems tokens are in `style.md` §10 (`ship.*`, `plume.*`, `damage.*`, `hull.*`, `stress.*`).
+- WP11 tokens are in `style.md` §11 (`belt.*`, `kuiper.*`, `rogue.*`, `rad.*`).
 
 ## 9. Budget (targets for an integrated GPU, 1440×900 at DPR 2)
 
@@ -177,6 +178,9 @@ One quad as today (`span 400`, scaled `r / 46`), with layers back to front match
 | `solar-recharge.svg` (new, WP10) | path visual, HUD | gold path dots, fuel-block glyph and shimmer, ship pulse (§12) |
 | `ship/*.svg` (new, ship systems) | `createShip` (v1 polygons) | layered part sprites per build, one plume per engine, damage overlay by hull % (§13) |
 | `hud-hull.svg` (new, ship systems) | HUD (DOM) | hull bar, tidal-stress chip; tidal chevrons as a screen-space visual (§13) |
+| `space/belt-*.svg`, `space/kuiper-belt.svg` (new, WP11) | `scenery.ts` (circle rocks) | instanced rock atlas lit toward the star, seeded placement, edges in planning (§14) |
+| `bodies/rogue-planet.svg` (new, WP11) | — | dark disc, thermal bands, cold rim, drift arrow (§14) |
+| `overlays/radiation-map.svg`, `hud-dose.svg` (new, WP11) | — | halftone dose shader on R; dose meter in the status stack (§14) |
 | `space/*` nebulae, asteroid field, wreck | — | WP10 / WP11 layers (§7) |
 | `starfield.svg` | `createStarfield` (canvas texture) | add the v1.1 magnitude tints and the faint band when the sky is next touched |
 | ship, thrust, path, arrow, HUD | existing factories | unchanged by this design update (the game's own plume already moved past v1). The flown trail was removed from the game in PR #16; `trail.svg` stays as a design reference only |
@@ -265,3 +269,19 @@ The burn wind-up and tail timings (`theme.burn`) apply to all three. No separate
 **Upgrade screen.** DOM over a dimmed sky. The ship preview reuses the same baked part textures at 5.8×, so the shipyard and the game always show the same build. Cards are plain DOM with the thumbnails baked from the module SVGs.
 
 **Budget.** At most 10 small quads plus one plume for the ship: well under 0.1 ms. Part rebakes are under 5 ms total, on build or zoom-bucket change only.
+
+## 14. Belts, Kuiper belt, rogue planet, radiation map and dose (WP11)
+
+Designs: `space/belt-sparse|medium|dense.svg`, `space/kuiper-belt.svg`, `bodies/rogue-planet.svg`, `overlays/radiation-map.svg`, `hud-dose.svg`, `mockups/belts-radiation.svg`. Values in `style.md` §11.
+
+**Belts.** Level data: `belt { centerId, radius, width, tier, seed, arc? }`. Bake a rock atlas once: 6 silhouettes × the tier's types (S, C, M; K for the Kuiper belt), each drawn lit from −x exactly as the asset headers describe, at DPR × zoom bucket. Draw every rock with one `InstancedMesh` of quads: per instance a position (polar about the star from the seed), a scale (radius / 10) and a rotation `atan2(star − rock) − π`, so its lit side faces the star. The drift is one rotation of the whole instanced mesh about the star. Dust specks go into a second instanced mesh of plain discs. Edges are two dashed ring quads (px-space dashes, like the capture ring) in planning and pause.
+
+**Collisions.** Generate the solid rocks (r ≥ 7) from the same seed in the sim, not in the renderer, so prediction sees them. For the dense tier, an optional `dustDamage` rate applies inside the band. Shielding reduces it.
+
+**Kuiper belt.** The same pipeline with the K type, a wider band and mostly frost-coloured dust. The dwarf planet is an ordinary small body with the airless planet shader and the header's colours.
+
+**Rogue planet.** `kind: "rogue"` with `velocity { vx, vy }`: position = start + v·t in `bodyPose`, so it stays deterministic. Draw it with its own small shader: dark radial body, the band strip scrolling west (no light vector), hot spots on `frame.now`, rim and airglow rings. It writes depth-free but opaque, so it covers the starfield. No `rechargeRate` contribution.
+
+**Radiation map.** One full-screen pass in screen space, toggled by R. For each 12 px cell, find the cell centre, convert to world, evaluate `doseAt(p)` (the same pure function the sim uses: stars with luminosity, flare cone, belts, pulsar beam, disks, background, and a line-of-sight shadow test against up to 8 body discs), pick the zone, and draw an anti-aliased dot of the zone radius with `fwidth`. Skip cells inside bodies and inside HUD rectangles. Cost: ≈ 9 000 cells × a few sources, well under 0.3 ms; skip the pass when R is off.
+
+**Dose.** In the sim step: `dose += doseAt(ship) · dosePerD1 · dt`, reduced by shielding. The prediction integrates the same, which gives the planning ghost and "+N mSv on this path". Ending below 25 % of the limit earns the bonus; reaching the limit fails the mission. The HUD block is DOM, as `assets/hud-dose.svg` specifies.

@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="420" viewBox="0 0 520 420" font-family="-apple-system, 'Segoe UI', Inter, Roboto, 'Helvetica Neue', Arial, sans-serif">
+  <!-- Crew dose meter (WP11). ONE group #hudDose at translate(0 0) (a sample sheet). Ids: hd* (none needed).
+       Placement: the third block of the right-hand ship-status stack (style.md §6, §10): FUEL baseline 48 · HULL baseline 96 · DOSE baseline 144, x 1180-1400.
+       Status chips (tidal stress) move below the stack, to y 170, when the dose meter is shown.
+       Block: "DOSE" 11 px uppercase muted weight 500 · trefoil r 6 at (x + 50, baseline - 4) in the bar colour · total "46 mSv" 12 px mono right-aligned at
+       x 1400 (red #FF5A5F at >= 75 %) · bar 220 x 8 at y + 8, track #FFFFFF a0.08, CONTINUOUS (like fuel; the hull bar is the segmented one).
+       Fill: rad.doseOk #9BE15D below the bonus mark, rad.doseWarn #FFE83A from 25 % to 75 %, rad.doseCrit #FF5A5F from 75 % (bar pulses a1 -> 0.45, 1 s).
+       Bonus mark at 25 % of the limit: a 1.2 px #ECF0FA tick through the bar and a gold star (#FFD27A, the star currency) under it - finish below it for the bonus.
+       Limit at 100 %: a 1.6 px #FF5A5F tick at the bar's end - reaching it fails the mission.
+       Rate line (11 px mono, right-aligned at y + 34): "+2.4 mSv/s · belt" with the dominant source (belt / flare / star / pulsar / disk / cosmic), coloured by
+       the rate's map zone (#9BE15D / #D4F03C / #FFE83A / #FFF4B8 -> shown #FF5A5F when the total is >= 75 %); "0.0 mSv/s · shadow" in #8B95B5 when a body
+       shields the ship. Planning: a ghost segment #D4F03C a0.9 from the current dose to the dose this plan ends with, and "+18 mSv on this path".
+       Tokens: style.md §11 WP11 (rad.*). -->
+  <rect width="520" height="420" fill="#050710"/>
+  <g id="hudDose">
+  <text x="20" y="22" font-size="11" fill="#8B95B5">Low: under the bonus mark</text>
+  <text x="20" y="44" font-size="11" font-weight="500" letter-spacing="1.54" fill="#8B95B5">DOSE</text>
+    <g transform="translate(70 40)" fill="#9BE15D"><circle r="1.32"/><path d="M-1.05 -1.82 L-3.00 -5.20 A6 6 0 0 1 3.00 -5.20 L1.05 -1.82 A2.0999999999999996 2.0999999999999996 0 0 0 -1.05 -1.82 Z"/><path d="M2.10 0.00 L6.00 0.00 A6 6 0 0 1 3.00 5.20 L1.05 1.82 A2.0999999999999996 2.0999999999999996 0 0 0 2.10 0.00 Z"/><path d="M-1.05 1.82 L-3.00 5.20 A6 6 0 0 1 -6.00 0.00 L-2.10 0.00 A2.0999999999999996 2.0999999999999996 0 0 0 -1.05 1.82 Z"/></g>
+    <text x="240" y="44" text-anchor="end" font-size="12" fill="#ECF0FA" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace">12 mSv</text>
+    <rect x="20" y="52" width="220" height="8" rx="4" fill="#FFFFFF" fill-opacity="0.08"/>
+    <rect x="20" y="52" width="26.4" height="8" rx="4" fill="#9BE15D"></rect>
+    <line x1="75" y1="49" x2="75" y2="63" stroke="#ECF0FA" stroke-width="1.2"/><polygon points="75.00,66.50 76.18,69.38 79.28,69.61 76.90,71.62 77.65,74.64 75.00,73.00 72.35,74.64 73.10,71.62 70.72,69.61 73.82,69.38" fill="#FFD27A"/>
+    <line x1="239" y1="49" x2="239" y2="63" stroke="#FF5A5F" stroke-width="1.6"/>
+    <text x="240" y="78" text-anchor="end" font-size="11" fill="#9BE15D" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace">+0.1 mSv/s · cosmic</text>
+  <text x="20" y="98" font-size="11" fill="#8B95B5">Rising: crossing a radiation belt</text>
+  <text x="20" y="120" font-size="11" font-weight="500" letter-spacing="1.54" fill="#8B95B5">DOSE</text>
+    <g transform="translate(70 116)" fill="#FFE83A"><circle r="1.32"/><path d="M-1.05 -1.82 L-3.00 -5.20 A6 6 0 0 1 3.00 -5.20 L1.05 -1.82 A2.0999999999999996 2.0999999999999996 0 0 0 -1.05 -1.82 Z"/><path d="M2.10 0.00 L6.00 0.00 A6 6 0 0 1 3.00 5.20 L1.05 1.82 A2.0999999999999996 2.0999999999999996 0 0 0 2.10 0.00 Z"/><path d="M-1.05 1.82 L-3.00 5.20 A6 6 0 0 1 -6.00 0.00 L-2.10 0.00 A2.0999999999999996 2.0999999999999996 0 0 0 -1.05 1.82 Z"/></g>
+    <text x="240" y="120" text-anchor="end" font-size="12" fill="#ECF0FA" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace">46 mSv</text>
+    <rect x="20" y="128" width="220" height="8" rx="4" fill="#FFFFFF" fill-opacity="0.08"/>
+    <rect x="20" y="128" width="101.2" height="8" rx="4" fill="#FFE83A"></rect>
+    <line x1="75" y1="125" x2="75" y2="139" stroke="#ECF0FA" stroke-width="1.2"/><polygon points="75.00,142.50 76.18,145.38 79.28,145.61 76.90,147.62 77.65,150.64 75.00,149.00 72.35,150.64 73.10,147.62 70.72,145.61 73.82,145.38" fill="#FFD27A"/>
+    <line x1="239" y1="125" x2="239" y2="139" stroke="#FF5A5F" stroke-width="1.6"/>
+    <text x="240" y="154" text-anchor="end" font-size="11" fill="#FFE83A" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace">+2.4 mSv/s · belt</text>
+  <text x="20" y="174" font-size="11" fill="#8B95B5">Danger: near the limit (pulses)</text>
+  <text x="20" y="196" font-size="11" font-weight="500" letter-spacing="1.54" fill="#8B95B5">DOSE</text>
+    <g transform="translate(70 192)" fill="#FF5A5F"><circle r="1.32"/><path d="M-1.05 -1.82 L-3.00 -5.20 A6 6 0 0 1 3.00 -5.20 L1.05 -1.82 A2.0999999999999996 2.0999999999999996 0 0 0 -1.05 -1.82 Z"/><path d="M2.10 0.00 L6.00 0.00 A6 6 0 0 1 3.00 5.20 L1.05 1.82 A2.0999999999999996 2.0999999999999996 0 0 0 2.10 0.00 Z"/><path d="M-1.05 1.82 L-3.00 5.20 A6 6 0 0 1 -6.00 0.00 L-2.10 0.00 A2.0999999999999996 2.0999999999999996 0 0 0 -1.05 1.82 Z"/></g>
+    <text x="240" y="196" text-anchor="end" font-size="12" fill="#FF5A5F" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace">84 mSv</text>
+    <rect x="20" y="204" width="220" height="8" rx="4" fill="#FFFFFF" fill-opacity="0.08"/>
+    <rect x="20" y="204" width="184.8" height="8" rx="4" fill="#FF5A5F"><animate attributeName="opacity" values="1;0.45;1" dur="1s" repeatCount="indefinite"/></rect>
+    <line x1="75" y1="201" x2="75" y2="215" stroke="#ECF0FA" stroke-width="1.2"/><polygon points="75.00,218.50 76.18,221.38 79.28,221.61 76.90,223.62 77.65,226.64 75.00,225.00 72.35,226.64 73.10,223.62 70.72,221.61 73.82,221.38" fill="#FFD27A"/>
+    <line x1="239" y1="201" x2="239" y2="215" stroke="#FF5A5F" stroke-width="1.6"/>
+    <text x="240" y="230" text-anchor="end" font-size="11" fill="#FF5A5F" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace">+6.0 mSv/s · flare</text>
+  <text x="20" y="250" font-size="11" fill="#8B95B5">Hiding in a planet's shadow during a flare</text>
+  <text x="20" y="272" font-size="11" font-weight="500" letter-spacing="1.54" fill="#8B95B5">DOSE</text>
+    <g transform="translate(70 268)" fill="#FFE83A"><circle r="1.32"/><path d="M-1.05 -1.82 L-3.00 -5.20 A6 6 0 0 1 3.00 -5.20 L1.05 -1.82 A2.0999999999999996 2.0999999999999996 0 0 0 -1.05 -1.82 Z"/><path d="M2.10 0.00 L6.00 0.00 A6 6 0 0 1 3.00 5.20 L1.05 1.82 A2.0999999999999996 2.0999999999999996 0 0 0 2.10 0.00 Z"/><path d="M-1.05 1.82 L-3.00 5.20 A6 6 0 0 1 -6.00 0.00 L-2.10 0.00 A2.0999999999999996 2.0999999999999996 0 0 0 -1.05 1.82 Z"/></g>
+    <text x="240" y="272" text-anchor="end" font-size="12" fill="#ECF0FA" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace">46 mSv</text>
+    <rect x="20" y="280" width="220" height="8" rx="4" fill="#FFFFFF" fill-opacity="0.08"/>
+    <rect x="20" y="280" width="101.2" height="8" rx="4" fill="#FFE83A"></rect>
+    <line x1="75" y1="277" x2="75" y2="291" stroke="#ECF0FA" stroke-width="1.2"/><polygon points="75.00,294.50 76.18,297.38 79.28,297.61 76.90,299.62 77.65,302.64 75.00,301.00 72.35,302.64 73.10,299.62 70.72,297.61 73.82,297.38" fill="#FFD27A"/>
+    <line x1="239" y1="277" x2="239" y2="291" stroke="#FF5A5F" stroke-width="1.6"/>
+    <text x="240" y="306" text-anchor="end" font-size="11" fill="#8B95B5" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace">0.0 mSv/s · shadow</text>
+  <text x="20" y="326" font-size="11" fill="#8B95B5">Planning: what the plan will add</text>
+  <text x="20" y="348" font-size="11" font-weight="500" letter-spacing="1.54" fill="#8B95B5">DOSE</text>
+    <g transform="translate(70 344)" fill="#9BE15D"><circle r="1.32"/><path d="M-1.05 -1.82 L-3.00 -5.20 A6 6 0 0 1 3.00 -5.20 L1.05 -1.82 A2.0999999999999996 2.0999999999999996 0 0 0 -1.05 -1.82 Z"/><path d="M2.10 0.00 L6.00 0.00 A6 6 0 0 1 3.00 5.20 L1.05 1.82 A2.0999999999999996 2.0999999999999996 0 0 0 2.10 0.00 Z"/><path d="M-1.05 1.82 L-3.00 5.20 A6 6 0 0 1 -6.00 0.00 L-2.10 0.00 A2.0999999999999996 2.0999999999999996 0 0 0 -1.05 1.82 Z"/></g>
+    <text x="240" y="348" text-anchor="end" font-size="12" fill="#ECF0FA" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace">10 mSv</text>
+    <rect x="20" y="356" width="220" height="8" rx="4" fill="#FFFFFF" fill-opacity="0.08"/>
+    <rect x="38.0" y="356" width="43.6" height="8" rx="4" fill="#D4F03C" fill-opacity="0.9"/>
+    <rect x="20" y="356" width="22.0" height="8" rx="4" fill="#9BE15D"></rect>
+    <line x1="75" y1="353" x2="75" y2="367" stroke="#ECF0FA" stroke-width="1.2"/><polygon points="75.00,370.50 76.18,373.38 79.28,373.61 76.90,375.62 77.65,378.64 75.00,377.00 72.35,378.64 73.10,375.62 70.72,373.61 73.82,373.38" fill="#FFD27A"/>
+    <line x1="239" y1="353" x2="239" y2="367" stroke="#FF5A5F" stroke-width="1.6"/>
+    <text x="240" y="382" text-anchor="end" font-size="11" fill="#D4F03C" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace">+18 mSv on this path</text>
+  <text x="290" y="40" font-size="11" fill="#8B95B5">The star mark: finish below it</text>
+  <text x="290" y="56" font-size="11" fill="#8B95B5">for the dose bonus.</text>
+  <text x="290" y="72" font-size="11" fill="#8B95B5"></text>
+  <text x="290" y="88" font-size="11" fill="#8B95B5">The red mark: the crew limit;</text>
+  <text x="290" y="104" font-size="11" fill="#8B95B5">reaching it fails the mission.</text>
+  <rect x="290" y="150" width="200" height="34" rx="9" fill="#0A0D1A" stroke="#FFFFFF" stroke-opacity="0.1"/><text x="300" y="172" font-size="11" font-weight="500" letter-spacing="1.54" fill="#8B95B5">MAP</text>
+  <circle cx="345" cy="167" r="1.5" fill="#9BE15D"/>
+  <text x="345" y="200" text-anchor="middle" font-size="10" fill="#ECF0FA">Low</text>
+  <circle cx="383" cy="167" r="2.1" fill="#D4F03C"/>
+  <text x="383" y="200" text-anchor="middle" font-size="10" fill="#ECF0FA">Raised</text>
+  <circle cx="421" cy="167" r="2.8" fill="#FFE83A"/>
+  <text x="421" y="200" text-anchor="middle" font-size="10" fill="#ECF0FA">High</text>
+  <circle cx="459" cy="167" r="3.5" fill="#FFF4B8"/>
+  <text x="459" y="200" text-anchor="middle" font-size="10" fill="#ECF0FA">Severe</text>
+  <text x="290" y="222" font-size="11" fill="#8B95B5">Radiation map legend (under the map toggles)</text>
+  </g>
+</svg>

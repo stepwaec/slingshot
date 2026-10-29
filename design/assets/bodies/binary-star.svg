@@ -101,9 +101,9 @@
           <g id="bnBStarBreathe">
             <animateTransform attributeName="transform" type="scale" values="1;1.03;1;0.97;1" keyTimes="0;0.25;0.5;0.75;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1" dur="6s" repeatCount="indefinite"/>
             <circle r="200" fill="url(#bnBStarHaze)"/>
-            <g><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="300s" repeatCount="indefinite"/>
+            <g id="bnBStarWispRing"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="300s" repeatCount="indefinite"/>
               <circle r="78" fill="url(#bnBStarWispFill)" filter="url(#bnBStarWisp)"/></g>
-            <g><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="200s" repeatCount="indefinite"/>
+            <g id="bnBStarFlameRing"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="200s" repeatCount="indefinite"/>
               <circle r="62" fill="url(#bnBStarFlameFill)" filter="url(#bnBStarFlame)"/></g>
           </g>
           <g id="bnBStarProminences" fill="none" stroke-linecap="round">
@@ -149,9 +149,9 @@
           <g id="bnAStarBreathe">
             <animateTransform attributeName="transform" type="scale" values="1;1.03;1;0.97;1" keyTimes="0;0.25;0.5;0.75;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1" dur="6s" repeatCount="indefinite"/>
             <circle r="200" fill="url(#bnAStarHaze)"/>
-            <g><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="300s" repeatCount="indefinite"/>
+            <g id="bnAStarWispRing"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="300s" repeatCount="indefinite"/>
               <circle r="78" fill="url(#bnAStarWispFill)" filter="url(#bnAStarWisp)"/></g>
-            <g><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="200s" repeatCount="indefinite"/>
+            <g id="bnAStarFlameRing"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="200s" repeatCount="indefinite"/>
               <circle r="62" fill="url(#bnAStarFlameFill)" filter="url(#bnAStarFlame)"/></g>
           </g>
           <g id="bnAStarProminences" fill="none" stroke-linecap="round">
