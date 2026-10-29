@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import type { Vec2 } from "../../sim/physics";
-import { sampleBurnAnim, windupFlicker, type BurnSample } from "../burn-anim";
+import { sampleBurnAnim, tailFromBurn, windupFlicker, type BurnSample } from "../burn-anim";
 import { projectToScreen } from "../camera";
 import { srgbVec, shader } from "./materials";
 import type { Theme } from "../theme";
@@ -134,7 +134,7 @@ class ShipVisual implements Visual {
     } else {
       const burn = this.theme.burn;
       this.poseThrust(
-        sampleBurnAnim(game.ship.step, game.level.dt, game.nodes, burn.windup, burn.tail),
+        sampleBurnAnim(game.ship.step, game.level.dt, game.nodes, burn.windup, tailFromBurn(burn)),
         k,
       );
     }
@@ -169,8 +169,9 @@ class ShipVisual implements Visual {
     this.thrust.rotation.z = this.angle;
     this.thrust.scale.set(scale, scale, 1);
     const wobble = 0.94 + 0.06 * Math.sin(anim.time * burn.flickerHz * Math.PI * 2);
+    const stretch = thrust > 0 ? anim.thrustStretch : 1;
     const extent =
-      thrust > 0 ? (0.72 + 0.28 * thrust) * wobble : (0.2 + 0.32 * windup) * (0.75 + 0.25 * flicker);
+      thrust > 0 ? thrust * stretch * wobble : (0.2 + 0.32 * windup) * (0.75 + 0.25 * flicker);
     const alpha = thrust > 0 ? 0.45 + 0.55 * thrust : windup * flicker * 0.7;
     posePlume(this.plumeUniforms, anim.time, extent, alpha);
     posePlume(this.bloomUniforms, anim.time, Math.min(1, extent * 1.05), alpha * 0.55);

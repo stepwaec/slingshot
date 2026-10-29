@@ -19,6 +19,8 @@ export interface BurnWindow {
 
 export interface BurnCue extends BurnWindow {
   index: number;
+  /** Sim seconds this burn's thrust stays lit. `min(max, base + perDv * |dv|)`. */
+  tail: number;
 }
 
 export interface BurnSample {
@@ -28,12 +30,42 @@ export interface BurnSample {
   windup: number;
   /** Strongest burn or tail among burns at or behind the ship. */
   thrust: number;
+  /**
+   * Length of that thrust cue relative to the clamped maximum.
+   * 1 is a burn at the cap; a small correction is shorter.
+   */
+  thrustStretch: number;
   cues: BurnCue[];
+}
+
+/** Tail length in sim seconds. `base + perDv * |dv|`, clamped to `max`. */
+export interface ThrustTail {
+  base: number;
+  perDv: number;
+  max: number;
+}
+
+export function tailFromBurn(burn: { tailBase: number; tailPerDv: number; tailMax: number }): ThrustTail {
+  return { base: burn.tailBase, perDv: burn.tailPerDv, max: burn.tailMax };
 }
 
 /** Sim seconds for an integer step. `dt` is the fixed integration step. */
 export function simSeconds(step: number, dt: number): number {
   return step * (dt > 0 ? dt : 0);
+}
+
+/**
+ * How long the plume stays lit after a burn of this delta-v magnitude.
+ * Larger `|dv|` never shortens it. Past `max` it stays at `max`.
+ * The result is sim seconds, so pause and slow motion do not rescale it.
+ */
+export function thrustDuration(magnitude: number, tail: ThrustTail): number {
+  const mag = Number.isFinite(magnitude) ? Math.abs(magnitude) : 0;
+  const base = tail.base > 0 ? tail.base : 0;
+  const per = tail.perDv > 0 ? tail.perDv : 0;
+  const cap = tail.max > 0 ? tail.max : 0;
+  if (cap <= 0) return 0;
+  return Math.min(cap, base + per * mag);
 }
 
 /**
@@ -65,26 +97,38 @@ export function burnWindow(
   return { offset, phase: "tail", amount: 1 - delta / tailSteps };
 }
 
-/** Active windows for every node in the current plan. Pure. */
+/** Active windows for every node in the current plan. Each tail follows that node's `|dv|`. Pure. */
 export function sampleBurnAnim(
   step: number,
   dt: number,
-  nodes: readonly { step: number }[],
+  nodes: readonly { step: number; dvx?: number; dvy?: number }[],
   windup: number,
-  tail: number,
+  tail: ThrustTail,
 ): BurnSample {
   const time = simSeconds(step, dt);
   const cues: BurnCue[] = [];
   let windupAmount = 0;
   let thrustAmount = 0;
+  let thrustStretch = 0;
+  const cap = tail.max > 0 ? tail.max : 0;
   for (let i = 0; i < nodes.length; i++) {
-    const window = burnWindow(step, nodes[i].step, dt, windup, tail);
+    const node = nodes[i];
+    const mag = Math.hypot(node.dvx ?? 0, node.dvy ?? 0);
+    const tailSec = thrustDuration(mag, tail);
+    const window = burnWindow(step, node.step, dt, windup, tailSec);
     if (window.phase === "idle") continue;
-    cues.push({ index: i, ...window });
-    if (window.phase === "windup") windupAmount = Math.max(windupAmount, window.amount);
-    else thrustAmount = Math.max(thrustAmount, window.amount);
+    cues.push({ index: i, tail: tailSec, ...window });
+    if (window.phase === "windup") {
+      windupAmount = Math.max(windupAmount, window.amount);
+      continue;
+    }
+    const stretch = cap > 0 ? tailSec / cap : 0;
+    if (window.amount > thrustAmount || (window.amount === thrustAmount && stretch > thrustStretch)) {
+      thrustAmount = window.amount;
+      thrustStretch = stretch;
+    }
   }
-  return { time, windup: windupAmount, thrust: thrustAmount, cues };
+  return { time, windup: windupAmount, thrust: thrustAmount, thrustStretch, cues };
 }
 
 /**
