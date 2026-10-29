@@ -16,7 +16,6 @@ import {
   queuedBurns,
   setPlan,
   tick,
-  buyUpgrade,
   type Game,
 } from "./game/state";
 import { burnLimit, LEVELS, passage, pauseRuleOf, rescue, simConfigFromLevel, type Level } from "./level/catalog";
@@ -25,8 +24,10 @@ import { createClockLatches, readClocks, type ClockLatches } from "./hud/readout
 import type { MissionScore } from "./sim/score";
 import { frameLevel, worldToScreen } from "./render/camera";
 import { SpaceView } from "./render/view";
-import { hasMagneticBody, horizonSteps, spreadAlong, STRESS_WARN } from "./sim/physics";
-import { shipLoadout, UPGRADES } from "./game/upgrades";
+import { hasMagneticBody, horizonSteps, spreadAlong } from "./sim/physics";
+import { mountShipyard, syncShipyard } from "./hud/shipyard";
+import { resetShipLook } from "./render/appearance";
+import { hullRatio, hullSegmentsLit, hullTone, stressLevel } from "./render/ship-art";
 
 const levels: readonly Level[] = LEVELS;
 
@@ -44,13 +45,10 @@ const nodeRemove = required<HTMLButtonElement>("#node-x");
 const fuelValue = required<HTMLElement>("#fuel-value");
 const fuelFill = required<HTMLElement>("#fuel-fill");
 const hullValue = required<HTMLElement>("#hull-value");
-const hullFill = required<HTMLElement>("#hull-fill");
-const hullWarning = required<HTMLElement>("#hull-warning");
+const hullBar = required<HTMLElement>("#hull-bar");
+const stressChip = required<HTMLElement>("#stress-chip");
 const upgradeToggle = required<HTMLButtonElement>("#upgrade-toggle");
 const upgradePanel = required<HTMLElement>("#upgrades");
-const upgradePoints = required<HTMLElement>("#upgrade-points");
-const upgradeMass = required<HTMLElement>("#upgrade-mass");
-const upgradeList = required<HTMLElement>("#upgrade-list");
 const modeLabel = required<HTMLElement>("#mode-label");
 const telemetry = required<HTMLElement>("#telemetry");
 const nodeRow = required<HTMLElement>("#node-row");
@@ -114,27 +112,18 @@ routeDeep.addEventListener("click", () => setPlan(game, deepPlan));
 upgradeToggle.addEventListener("click", () => {
   upgradePanel.hidden = !upgradePanel.hidden;
 });
-for (const spec of UPGRADES) {
-  const row = document.createElement("div");
-  row.className = "upgrade-row";
-  const copy = document.createElement("p");
-  const title = document.createElement("strong");
-  title.textContent = spec.name;
-  copy.append(title, document.createTextNode(spec.detail));
-  const button = document.createElement("button");
-  button.type = "button";
-  button.textContent = `${spec.cost} pts`;
-  button.addEventListener("click", () => {
-    buyUpgrade(game, spec.id);
-    syncHud(game);
-  });
-  row.append(copy, button);
-  upgradeList.append(row);
+const hullSegments: HTMLElement[] = [];
+for (let i = 0; i < 10; i++) {
+  const segment = document.createElement("i");
+  hullBar.append(segment);
+  hullSegments.push(segment);
 }
+mountShipyard();
 
 levelSelect.addEventListener("change", () => {
   const next = levels.find((level) => level.id === levelSelect.value) ?? passage;
   loadLevel(game, next);
+  resetShipLook();
   view.reload(next);
   frameLevel(game.camera, canvas.clientWidth, canvas.clientHeight, next);
   framed = true;
@@ -285,32 +274,21 @@ function syncHud(current: Game): void {
 
 function syncHull(current: Game): void {
   const pose = current.mode === "planning" ? current.initial : current.ship;
-  const max = pose.hullMax > 0 ? pose.hullMax : 1;
-  const ratio = Math.max(0, Math.min(1, pose.hull / max));
-  hullFill.style.width = `${Math.round(ratio * 100)}%`;
-  hullFill.dataset.band = ratio <= 0.15 ? "critical" : ratio <= 0.4 ? "low" : "ok";
-  hullValue.textContent = String(Math.max(0, Math.round(pose.hull)));
+  const tone = hullTone(pose.hull, pose.hullMax);
+  const lit = hullSegmentsLit(pose.hull, pose.hullMax);
+  hullBar.dataset.band = tone;
+  hullValue.dataset.band = tone;
+  hullValue.textContent = `${Math.round(hullRatio(pose.hull, pose.hullMax) * 100)}%`;
+  hullSegments.forEach((segment, index) => segment.classList.toggle("on", index < lit));
   const stress = current.mode === "planning" ? current.prediction.final.peakStress : current.ship.stress;
-  const warn = stress >= STRESS_WARN;
-  hullWarning.hidden = !warn;
-  hullWarning.textContent = warn ? "Tidal stress" : "";
+  const level = stressLevel(stress);
+  stressChip.hidden = level === 0;
+  stressChip.dataset.level = String(level);
 }
 
 function syncUpgrades(current: Game): void {
-  const planning = current.mode === "planning";
-  upgradeToggle.hidden = !planning;
-  if (!planning) upgradePanel.hidden = true;
-  const load = shipLoadout(current.upgrades);
-  upgradePoints.textContent = `${current.points} pts`;
-  upgradeMass.textContent = `Mass ${load.mass.toFixed(2)}`;
-  const buttons = upgradeList.querySelectorAll("button");
-  UPGRADES.forEach((spec, index) => {
-    const button = buttons[index];
-    if (!button) return;
-    const owned = current.upgrades.includes(spec.id);
-    button.disabled = owned || current.points < spec.cost;
-    button.textContent = owned ? "Fit" : `${spec.cost} pts`;
-  });
+  const yard = syncShipyard(current);
+  upgradeToggle.hidden = yard.hideToggle;
 }
 
 function syncMarkers(

@@ -1,6 +1,7 @@
 /**
- * Placeholder ship upgrades. Each one adds mass. The screen is a stand-in
- * until Claude draws the real hull bar, tidal warning and upgrade screen.
+ * Ship upgrades that change mass, hull, fuel or thrust.
+ * The shipyard draws them; shield, scoop, sensors, cryosleep and the
+ * engine picture are cosmetic and do not pass through here.
  */
 
 export const UPGRADE_POINTS = 4;

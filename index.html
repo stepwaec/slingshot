@@ -65,12 +65,14 @@
         <div class="hull-block">
           <div class="fuel-head">
             <span class="hud-label">Hull</span>
-            <span id="hull-value">100</span>
+            <span id="hull-value">100%</span>
           </div>
-          <div class="fuel-track" aria-hidden="true">
-            <div id="hull-fill"></div>
+          <div id="hull-bar" class="hull-bar" data-band="ok" aria-hidden="true"></div>
+          <div id="stress-chip" class="stress-chip" hidden data-level="0">
+            <span class="stress-mark" aria-hidden="true"></span>
+            <span>Tidal stress</span>
+            <span class="stress-pips" aria-hidden="true"><i></i><i></i><i></i></span>
           </div>
-          <p id="hull-warning" hidden>Tidal stress</p>
         </div>
         <p id="telemetry">v   —  ·  dX    0</p>
         <p id="plan-note" hidden></p>
@@ -86,7 +88,7 @@
               <button type="button" id="route-safe">Safe arc</button>
               <button type="button" id="route-deep">Deep dive</button>
             </div>
-            <button id="upgrade-toggle" type="button">Upgrades</button>
+            <button id="upgrade-toggle" type="button">Shipyard</button>
             <button id="launch" type="button" disabled>Launch</button>
           </div>
           <div id="flight-actions" hidden>
@@ -102,13 +104,30 @@
           </div>
         </div>
       </div>
-      <section id="upgrades" hidden aria-label="Upgrades">
-        <div class="upgrade-head">
-          <span class="hud-label">Upgrades</span>
-          <span id="upgrade-points">4 pts</span>
+      <section id="upgrades" hidden aria-label="Shipyard">
+        <div class="yard">
+          <header class="yard-head">
+            <div>
+              <p class="wordmark">Slingshot</p>
+              <h2>Shipyard</h2>
+            </div>
+            <p id="upgrade-points" class="yard-points">4</p>
+          </header>
+          <div class="yard-body">
+            <div class="yard-preview">
+              <div id="yard-ship" class="yard-ship"></div>
+              <dl class="yard-stats">
+                <div><dt>Mass</dt><dd id="upgrade-mass">1.00</dd></div>
+                <div><dt>Fuel</dt><dd id="yard-fuel">100%</dd></div>
+                <div><dt>Recharge</dt><dd id="yard-solar">None</dd></div>
+              </dl>
+            </div>
+            <div id="upgrade-list" class="yard-cards"></div>
+          </div>
+          <footer class="yard-foot">
+            <button type="button" id="yard-close">Back</button>
+          </footer>
         </div>
-        <p id="upgrade-mass">Mass 1.00</p>
-        <div id="upgrade-list"></div>
       </section>
       <div id="overlay" hidden>
         <div class="card" data-result="win">
