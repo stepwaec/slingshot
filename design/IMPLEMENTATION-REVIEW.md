@@ -43,6 +43,13 @@ It also creates new gaps, now at the top of the priority list:
 - **E. Nebulae draw over the bodies.** Nebula sprites use renderOrder 6, while body sprites use 0. Nebulae are background gas (`style.md` §9): give them a negative renderOrder.
 - **F. Lighting.** Planets rotate as whole sprites so that their baked light faces the brightest source. That is acceptable for still pictures. Once surfaces scroll again (fix A), keep the lighting overlay separate from the strip, so only the light turns and the surface doesn't spin with it.
 
+## Update after PRs #33–#37: surfaces still don't move
+
+PRs #33 and #35 brought back the sun's turning rings and breathing haze, rebaked the rasters by zoom with mipmaps, and fixed the ship anchor, comet dust side and nebula order. Thank you. One gap from fix A is still open and is now the top visual item:
+
+- **The sun's disc is a still raster** (`gallery.ts`, the `starDisc` layer), so the surface looks dead. **The planet surfaces** (Planet X, the home planet, moons) **and the gas-giant bands** don't move either: nothing scrolls `#pxSurfaceAnim`, `#pxWispAnim` or `#gbAnimA`–`C`.
+- **Fix:** follow `style.md` §13 "Living surfaces" and `threejs-notes.md` §4.6. Use two counter-flowing plasma layers, three cross-fading cell layers, faculae, and a limb shimmer for stars; scroll the surface strips under fixed lighting for planets; flow the band groups for gas giants. The animated reference is `assets/star-surface-motion.svg`.
+
 ## Priority fixes
 
 Do these first. They are the biggest visible or gameplay gaps after #32.
