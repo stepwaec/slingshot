@@ -45,6 +45,11 @@ const deleteButton = required<HTMLButtonElement>("#delete");
 const nodeRemove = required<HTMLButtonElement>("#node-x");
 const fuelValue = required<HTMLElement>("#fuel-value");
 const fuelFill = required<HTMLElement>("#fuel-fill");
+const fuelGlyph = required<HTMLElement>("#fuel-glyph");
+const fuelGhost = required<HTMLElement>("#fuel-ghost");
+const fuelSliver = required<HTMLElement>("#fuel-sliver");
+const fuelTrack = required<HTMLElement>(".fuel-track");
+const pathGain = required<HTMLElement>("#path-gain");
 const hullValue = required<HTMLElement>("#hull-value");
 const recharge = required<HTMLElement>("#recharge");
 const hullBar = required<HTMLElement>("#hull-bar");
@@ -185,16 +190,50 @@ function loop(now: number): void {
 
 function syncRecharge(current: Game): void {
   const solar = shipLoadout(current.upgrades).solar;
-  const pose = current.mode === "planning" ? current.initial : current.ship;
+  const editing = isEditing(current);
+  const pose = editing ? current.initial : current.ship;
   const stars = solarRechargeRate(pose.x, pose.y, pose.t, current.level.bodies, solar, current.level.g);
-  const inflow = stars + nebulaScoopRate(pose.x, pose.y, current.level.nebulae) + iceHarvestRate(pose.x, pose.y, pose.t, current.level.bodies, current.level.g);
+  const scoop = nebulaScoopRate(pose.x, pose.y, current.level.nebulae);
+  const ice = iceHarvestRate(pose.x, pose.y, pose.t, current.level.bodies, current.level.g);
   const gained = Math.max(0, current.prediction.final.recharged);
-  const charging = current.mode === "flying" && inflow >= 0.05;
-  const planned = current.mode !== "flying" && gained > 0.05;
+  const budget = Math.max(1, current.level.fuel);
+  const fraction = solar > 0 ? stars / solar : 0;
+  let state = "off";
+  if (!editing && fraction >= 0.6) state = "close";
+  else if (!editing && fraction >= 0.08) state = "charge";
+  else if (editing && solar > 0 && gained > 0.05) state = "plan";
+  if (fuelGlyph.dataset.state !== state) fuelGlyph.dataset.state = state;
+  fuelTrack.classList.toggle("is-charging", state === "charge" || state === "close");
+  fuelTrack.classList.toggle("is-close", state === "close");
+
+  const shown = editing ? planFuel(current).left : current.fuel;
+  const ratio = Math.max(0, Math.min(1, shown / budget));
+  const end = Math.max(0, Math.min(1, current.prediction.final.tank / budget));
+  const ghost = editing && end > ratio + 0.005 ? Math.round(220 * end) : 0;
+  fuelGhost.style.width = ghost > 0 ? `${ghost}px` : "0px";
+  const fill = Number.parseFloat(fuelFill.style.width) || 0;
+  fuelSliver.style.left = `${Math.max(0, fill - 1)}px`;
+
+  const charging = state === "charge" || state === "close";
+  const planned = state === "plan";
   recharge.hidden = !(charging || planned);
-  if (recharge.hidden) return;
-  recharge.dataset.close = solar > 0 && stars >= solar * 0.6 ? "true" : "false";
-  recharge.textContent = charging ? `+${inflow.toFixed(1)}/s` : `+${gained.toFixed(1)} fuel`;
+  if (charging) {
+    const percent = ((stars + scoop + ice) / budget) * 100;
+    recharge.textContent = `+${percent.toFixed(1)} %/s`;
+  } else if (planned) {
+    recharge.textContent = `+${Math.round((gained / budget) * 100)} % on this path`;
+  }
+
+  const path = current.prediction.path;
+  const last = path[path.length - 1];
+  const showGain = editing && gained > 0.05 && last;
+  pathGain.hidden = !showGain;
+  if (showGain && last) {
+    const screen = worldToScreen(current.camera, canvas.clientWidth, canvas.clientHeight, last.x, last.y);
+    pathGain.style.left = `${screen.x + 10}px`;
+    pathGain.style.top = `${screen.y - 8}px`;
+    pathGain.textContent = `+${Math.round((gained / budget) * 100)} %`;
+  }
 }
 
 function syncMagnetism(current: Game): void {

@@ -56,13 +56,40 @@
         <div class="fuel-block">
           <div class="fuel-head">
             <span class="hud-label">Fuel</span>
+            <svg id="fuel-glyph" class="fuel-glyph" data-state="off" viewBox="-8 -8 16 16" aria-hidden="true">
+              <circle class="glyph-ring" r="3" fill="none" stroke="#4B5470" stroke-width="1.2"></circle>
+              <circle class="glyph-core" r="3" fill="#FFD27A"></circle>
+              <g class="glyph-rays" stroke="#FFD27A" stroke-width="1.2" stroke-linecap="round">
+                <line x1="4.6" y1="0" x2="6.2" y2="0"></line>
+                <line x1="3.25" y1="3.25" x2="4.38" y2="4.38"></line>
+                <line x1="0" y1="4.6" x2="0" y2="6.2"></line>
+                <line x1="-3.25" y1="3.25" x2="-4.38" y2="4.38"></line>
+                <line x1="-4.6" y1="0" x2="-6.2" y2="0"></line>
+                <line x1="-3.25" y1="-3.25" x2="-4.38" y2="-4.38"></line>
+                <line x1="0" y1="-4.6" x2="0" y2="-6.2"></line>
+                <line x1="3.25" y1="-3.25" x2="4.38" y2="-4.38"></line>
+              </g>
+              <g class="glyph-rays-long" stroke="#FFD27A" stroke-width="1.2" stroke-linecap="round">
+                <line x1="4.6" y1="0" x2="7.5" y2="0"></line>
+                <line x1="3.25" y1="3.25" x2="5.3" y2="5.3"></line>
+                <line x1="0" y1="4.6" x2="0" y2="7.5"></line>
+                <line x1="-3.25" y1="3.25" x2="-5.3" y2="5.3"></line>
+                <line x1="-4.6" y1="0" x2="-7.5" y2="0"></line>
+                <line x1="-3.25" y1="-3.25" x2="-5.3" y2="-5.3"></line>
+                <line x1="0" y1="-4.6" x2="0" y2="-7.5"></line>
+                <line x1="3.25" y1="-3.25" x2="5.3" y2="-5.3"></line>
+              </g>
+            </svg>
             <span id="fuel-value">100 %</span>
           </div>
           <div class="fuel-track" aria-hidden="true">
-            <div id="fuel-fill"></div>
+            <div id="fuel-ghost"></div>
+            <div id="fuel-fill"><div id="fuel-shimmer"></div></div>
+            <div id="fuel-sliver"></div>
           </div>
+          <p id="recharge" hidden></p>
         </div>
-        <p id="recharge" hidden></p>
+        <p id="path-gain" hidden></p>
         <div class="hull-block">
           <div class="fuel-head">
             <span class="hud-label">Hull</span>
@@ -112,21 +139,26 @@
               <p class="wordmark">Slingshot</p>
               <h2>Shipyard</h2>
             </div>
-            <p id="upgrade-points" class="yard-points">4</p>
+            <div>
+              <p class="yard-spend">Stars to spend</p>
+              <p id="upgrade-points" class="yard-points">4</p>
+            </div>
           </header>
           <div class="yard-body">
             <div class="yard-preview">
               <div id="yard-ship" class="yard-ship"></div>
               <dl class="yard-stats">
                 <div><dt>Mass</dt><dd id="upgrade-mass">1.00</dd></div>
-                <div><dt>Fuel</dt><dd id="yard-fuel">100%</dd></div>
-                <div><dt>Recharge</dt><dd id="yard-solar">None</dd></div>
+                <div><dt></dt><dd id="yard-mass-note" class="yard-note">base hull</dd></div>
+                <div><dt>Fuel range</dt><dd id="yard-fuel">100%</dd></div>
+                <div><dt>Solar recharge</dt><dd id="yard-solar">None</dd></div>
               </dl>
             </div>
             <div id="upgrade-list" class="yard-cards"></div>
           </div>
           <footer class="yard-foot">
             <button type="button" id="yard-close">Back</button>
+            <button type="button" id="yard-launch">Launch</button>
           </footer>
         </div>
       </section>

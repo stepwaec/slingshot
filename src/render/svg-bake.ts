@@ -34,29 +34,39 @@ function editSvg(svg: string, ids: readonly string[], prep?: (doc: Document) => 
 
 const rasters = new Map<string, Promise<HTMLCanvasElement>>();
 
+/** Draw an SVG document string. Not cached: callers animate attributes between draws. */
+export function rasterMarkup(markup: string, width: number, height: number): Promise<HTMLCanvasElement> {
+  const url = URL.createObjectURL(new Blob([markup], { type: "image/svg+xml" }));
+  return drawSvg(url, width, height).finally(() => URL.revokeObjectURL(url));
+}
+
 /** Draw an SVG URL into a canvas of the given pixel size. Cached per URL and size. */
 export function rasterSvg(url: string, width: number, height: number): Promise<HTMLCanvasElement> {
   const key = `${url}@${width}x${height}`;
   let pending = rasters.get(key);
   if (!pending) {
-    pending = new Promise((resolve, reject) => {
-      const image = new Image();
-      image.onload = () => {
-        const canvas = document.createElement("canvas");
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-          reject(new Error("no canvas"));
-          return;
-        }
-        ctx.drawImage(image, 0, 0, width, height);
-        resolve(canvas);
-      };
-      image.onerror = () => reject(new Error("svg raster"));
-      image.src = url;
-    });
+    pending = drawSvg(url, width, height);
     rasters.set(key, pending);
   }
   return pending;
+}
+
+function drawSvg(url: string, width: number, height: number): Promise<HTMLCanvasElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        reject(new Error("no canvas"));
+        return;
+      }
+      ctx.drawImage(image, 0, 0, width, height);
+      resolve(canvas);
+    };
+    image.onerror = () => reject(new Error("svg raster"));
+    image.src = url;
+  });
 }
