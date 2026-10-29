@@ -1,6 +1,6 @@
 # Slingshot — visual style v1.5
 
-Calm, cinematic space for Slingshot. This file is the look; `canvas-notes.md` is the pixel-exact drawing reference (how each SVG recipe looks and what it costs, written for Canvas 2D); `threejs-notes.md` maps it onto the game's Three.js renderer (WP3); `assets.md` indexes every file. Sections: §1 mood · §2 palette (background, sky, the sun, the two original planets, the shared lighting tokens, UI) · §3 typography · §4 glow and blur rules, with **§4.1 Realism, vibrancy and crispness rules** · §5 motion · §6 layout · §7 asset index · §8 the **body library** (28 bodies: 12 planets, 6 stars and compact objects, 4 moons, 3 ringed planets, and the 3 WP8 objects: binary star, red giant, moon chain) · §9 the **space environment** (nebulae, asteroid field, wreck debris). Assets live in `design/assets` (bodies in `design/assets/bodies`, the environment in `design/assets/space`), mockups (1440×900, PNG = 2× render) in `design/mockups`, animated previews in `design/preview/planets.html`, `bodies.html` and `space.html`.
+Calm, cinematic space for Slingshot. This file is the look; `canvas-notes.md` is the pixel-exact drawing reference (how each SVG recipe looks and what it costs, written for Canvas 2D); `threejs-notes.md` maps it onto the game's Three.js renderer (WP3); `assets.md` indexes every file. Sections: §1 mood · §2 palette (background, sky, the sun, the two original planets, the shared lighting tokens, UI) · §3 typography · §4 glow and blur rules, with **§4.1 Realism, vibrancy and crispness rules** · §5 motion · §6 layout · §7 asset index · §8 the **body library** (30 bodies: 12 planets, 6 stars and compact objects, 4 moons, 3 ringed planets, the 3 WP8 objects: binary star, red giant, moon chain, and the 2 WP9 compact objects: pulsar, magnetar) plus the WP9 **magnetism map** · §9 the **space environment** (nebulae, asteroid field, wreck debris). Assets live in `design/assets` (bodies in `design/assets/bodies`, the environment in `design/assets/space`, map overlays in `design/assets/overlays`), mockups (1440×900, PNG = 2× render) in `design/mockups`, animated previews in `design/preview/planets.html`, `bodies.html` and `space.html`.
 
 **History in one paragraph.** v1 set the layout, UI and the two-glow rule. v1.1 was the first realism pass (limb-darkened star, planets with a terminator and a rim, a tinted starfield with a Milky Way). v1.2 made the planets rotate: a seamless texture strip slides under a lighting overlay that never moves. v1.3 built the body library (12 planets, 6 stars and compact objects) and gave the stars prominences and a flare. v1.4 adds moons, ringed planets, nebulae and debris fields (§8, §9). **v1.5 (revised) is the realism, vibrancy and crispness pass**, agreed with the client on two approved reference assets — the ocean world "variant F" and the sun "variant J" — and applied to every body: vivid multi-zone surfaces with crisp edges, elongated clouds with cast shadows, a warm terminator band, a lit-side haze and rim, a fiery plasma sun with ragged flame rings and an irregular rim, and no untinted grey anywhere. The earlier v1.5 "crispness pass" numbers (halve blurs, ±12 % lightness, limb line at α 0.30) were rejected as indistinguishable from v1.2 and are **not** used; §4.1 holds the rules that replaced them.
 
@@ -369,7 +369,7 @@ One row per top-level file in `design/assets`; the 23 library bodies in `design/
 
 ## 8. Body library (v1.3 set, v1.4 moons and rings, all built to the v1.5 rules)
 
-**28 bodies**: 12 planets, 6 stars and compact objects (v1.3), 4 moons and 3 ringed planets (v1.4), and 3 WP8 objects (v2): a binary star, a red giant and a gas giant with a resonant moon chain. Each lives in `design/assets/bodies/<name>.svg` (the ocean world is `bodies/ocean.svg`, a copy of `planet-start.svg` with ids `ps*` → `oc*`; planet X stays `planet-x.svg`; the sun stays `star.svg`). Each = `<defs>` with ids prefixed by the body's short code + **one** top-level group with geometry relative to (0, 0), a header comment listing every parameter (the canon), and its SMIL inside. Prefixes, unique across all assets because galleries inline them together: `rk ic lv tx cr oc gb gr mn dw db rd bg wd ns bh mi mv mc ms rs dr sh bn rg mk` + `star* px*` (`ps*` only in `planet-start.svg`).
+**30 bodies**: 12 planets, 6 stars and compact objects (v1.3), 4 moons and 3 ringed planets (v1.4), 3 WP8 objects (v2): a binary star, a red giant and a gas giant with a resonant moon chain, and 2 WP9 compact objects (v2.1): a pulsar and a magnetar. Each lives in `design/assets/bodies/<name>.svg` (the ocean world is `bodies/ocean.svg`, a copy of `planet-start.svg` with ids `ps*` → `oc*`; planet X stays `planet-x.svg`; the sun stays `star.svg`). Each = `<defs>` with ids prefixed by the body's short code + **one** top-level group with geometry relative to (0, 0), a header comment listing every parameter (the canon), and its SMIL inside. Prefixes, unique across all assets because galleries inline them together: `rk ic lv tx cr oc gb gr mn dw db rd bg wd ns bh mi mv mc ms rs dr sh bn rg mk pu mg` + `star* px*` (`ps*` only in `planet-start.svg`).
 
 **Direction (client decision, unchanged): stay realistic**, now also **vibrant and crisp** (§4.1). Kurzgesagt is inspiration only, for colour harmony on deep navy and bold silhouettes; nothing of theirs is copied.
 
@@ -395,7 +395,9 @@ r is the radius at zoom 1. **`crashRadius`** is the contact radius: the solid di
 | `redDwarf` | Red dwarf | `red-dwarf.svg` · `#redDwarf` · `rd*` | 40 | 40 | breathe 6 s; flames 260 s, wisps 390 s; loops; flare | star · a dim, calm star |
 | `blueGiant` | Blue giant | `blue-giant.svg` · `#blueGiant` · `bg*` | 54 | 54 | breathe 6 s; flames 200 s, wisps 300 s; loops; flare | star · a hot, wide-glow star |
 | `whiteDwarf` | White dwarf | `white-dwarf.svg` · `#whiteDwarf` · `wd*` | 16 | 16 | glow breathe 4 s | compact · small, hot, dangerous |
-| `neutronStar` | Neutron star | `neutron-star.svg` · `#neutronStar` · `ns*` | 8 | 8 | beams 6 s | compact · a tiny heavy mass with sweeping beams |
+| `neutronStar` | Neutron star (quiet) | `neutron-star.svg` · `#neutronStar` · `ns*` | 8 | 8 | beams 6 s | compact · a tiny heavy mass with short, faint beams (no beam damage) |
+| `pulsar` | Pulsar (WP9) | `pulsar.svg` · `#pulsar` · `pu*` | 8 | 8 | sweep 4 s (a point is hit every 2 s) | compact · long lighthouse beams that damage on a rhythm |
+| `magnetar` | Magnetar (WP9) | `magnetar.svg` · `#magnetar` · `mg*` | 9 | 9 | field flicker 1.7–3.4 s, static 5 s, starquake 18 s | compact · extreme field that scrambles the prediction |
 | `blackHole` | Black hole | `black-hole.svg` · `#blackHole` · `bh*` | 22 (horizon) | 22 | disk 24 s | compact · star-class gravity, horizon-size crash |
 | `moonIcy` | Icy moon (v1.4) | `moon-icy.svg` · `#moonIcy` · `mi*` | 12 | 12 | surface 150 s | moon · a bright cracked-ice nudge body |
 | `moonVolcanic` | Volcanic moon (v1.4) | `moon-volcanic.svg` · `#moonVolcanic` · `mv*` | 13 | 13 | surface 120 s; hot spots 6 s | moon · an Io-like sulphur moon |
@@ -736,6 +738,55 @@ Built for WP8 (stellar variety) from approved constructions, so they match the r
 | `redGiant.atmoEdge` | `#FFB07A` | Drag boundary ring at 1.6 r: 1.2 px, α 0.30, dash 10 6, crawling −8 px/s, so players can read where drag starts |
 
 **Gas giant with a resonant moon chain** (`bodies/moon-chain.svg`, ids `mk*`). The banded gas giant (r 44) unchanged, with four library moons scaled down: volcanic r 6.5, icy r 6, barren r 7, dwarf r 4.5. Their orbits are in a 1:2:3:4 mean-motion resonance (neighbours 2:1, 3:2, 4:3), radii from Kepler's third law a_n = 68 n^(2/3) = 68 / 107.9 / 141.4 / 171.3, preview periods 18 / 36 / 54 / 72 s, start phases 0 / 95 / 205 / 300°. No new colours: each moon keeps its library tokens. Orbit guides `#ECF0FA` α 0.07, dash 2 6, preview only.
+
+### WP9 additions (v2.1): pulsar, magnetar, magnetism map
+
+Built for WP9 (compact objects plus magnetism layer) to the v1.5 rules: crisp bodies, emissive, no terminator, no blur above 0.5 except glow gradients. The quiet `neutron-star.svg` stays as it is (violet, short faint cones); the two new objects are kept apart by hue so players never mix them up: **cyan = pulsar (beams hurt)**, **magenta = magnetar (field scrambles)**, violet = quiet neutron star.
+
+**Pulsar** (`bodies/pulsar.svg`, ids `pu*`, r 8, crash radius 8). A cyan-white body with two long, narrow lighthouse beams to r 228 (28.5 r) that sweep clockwise 360° per 4 s, so every point within reach is crossed every 2.0 s. Each beam trails an afterglow fan (8 sectors × 5°, α 0.22 · (1 − k/8)^1.6, radial fade) so the turning direction reads at a glance. In the game the reach and period are level data; the visual turns at the same angular speed, so what the player sees is what hurts.
+
+| Token | Hex | Used for |
+|---|---|---|
+| `pulsar.core` | `#FFFFFF` | Body 0–0.5; beam base α 0.85; 1 px core line α 0.9 → 0 at 70 % |
+| `pulsar.body` | `#DCF6FF` | Body 0.8 |
+| `pulsar.beam` | `#7FDBFF` | Beam 30 % (α 0.40) → tip α 0; afterglow sectors; body 0.93 |
+| `pulsar.glow` | `#4FC3F7` | Glow gradient around the body; body 1.0 |
+| `pulsar.limb` | `#A8ECFF` | Hard thin limb |
+
+**Magnetar** (`bodies/magnetar.svg`, ids `mg*`, r 9, crash radius 9). A white-pink body in a magenta-violet glow with its dipole field drawn as six glowing field lines `r = L sin²θ` (L = 20, 30, 44, 62, 86, 116; axis tilted 20° clockwise from vertical). The lines are static, the same dipole the magnetism map shows; white energy dashes flow pole to pole along them and each line flickers unevenly (1.7–3.4 s). A sparse pink grain from r 24 to r 120 reads as radio static (instruments scrambled). Every 18 s a starquake ring runs from the surface to r 150 in 1.2 s and the body flashes.
+
+| Token | Hex | Used for |
+|---|---|---|
+| `magnetar.core` | `#FFFFFF` | Body 0–0.5; flowing field dashes; starquake ring start |
+| `magnetar.body` | `#FFE0FA` | Body 0.8 |
+| `magnetar.limb` | `#FF7AE6` | Limb; body 1.0; starquake ring end |
+| `magnetar.field` | `#FF7AE6` / `#C77DFF` | Inner field lines (L 20–44) / outer (L 62–116); α 0.75 → 0.25, width 1.5 → 0.8 px |
+| `magnetar.glow` | `#D946EF` | Glow and pole glows |
+| `magnetar.interference` | `#FF9BEF` | Static grain (colour matrix of the noise, about 3 % cover, layer α 0.26) |
+
+**Magnetism map** (`overlays/magnetism-heatmap.svg`, one body's overlay; mockup `mockups/magnetism-map.svg`). The danger heatmap from WP9: shown with the **M key** or the **Magnetism** button, independent of the gravity map (G), in planning and pause only. Draw order: gravity grid → magnetism map → bodies → predicted path → ship → HUD.
+
+- **Field model.** One magnetic dipole per magnetic body, `|B| = k · √(1 + 3 cos²θ) / r³` (θ from the magnetic axis); fields add as vectors. The map draws contours of |B|, so each zone is an oval 1.26× (2^(1/3)) longer along the axis than across it.
+- **Zones are stepped, never a blur.** Each zone is a flat tint between two contours with a crisp edge line. Thresholds are multiples of B1, the edge of the outermost zone; a zone reaches R1 · (B / B1)^(−1/3) along the axis.
+- **Per body (design defaults; tune in level data).** Magnetar R1 210 (all four zones). Pulsar R1 80, rotation-averaged, so its zones are circles. Quiet neutron star R1 60. Gas giants R1 120 at a 10° tilt; their Lethal ring sits under the disc, so gas giants are never lethal. Rocky planets, stars, white dwarfs and black holes have no field.
+
+| Zone | B / B1 | Reach (axis) | Token | Hex | Fill α | Edge |
+|---|---|---|---|---|---|---|
+| Safe | < 1 | — | — | — | none | — |
+| Fuzzy | ≥ 1 | 1.000 R1 | `magmap.fuzzy` | `#7C5CFF` | 0.10 | 1 px α 0.60, dash 6 5, crawling 11 px/s |
+| Scrambled | ≥ 2.5 | 0.737 R1 | `magmap.scrambled` | `#B14DFF` | 0.15 | 1 px α 0.70 |
+| Damaging | ≥ 6 | 0.550 R1 | `magmap.damaging` | `#E541C9` | 0.22 | 1 px α 0.80 |
+| Lethal | ≥ 15 | 0.405 R1 | `magmap.lethal` | `#FF3D7F` | 0.32 | 1.25 px, α 0.90 → 0.55 → 0.90 over 2.4 s |
+
+The ramp is violet → magenta → hot pink, kept clear of the gravity map's blue → mint → amber → orange so both can be on at once.
+
+**Fuzzy prediction (the same field).** Walking the predicted path in 10 px steps, the spread grows by σ += 6 px · log2(B / B1) per 100 px inside the Fuzzy zone (summed field) and never shrinks after leaving. While σ < 0.6 px the path is the normal dotted line. After that the centre dots fade (α 0.7 − σ / 40, floor 0.18), an envelope ±σ appears (`path` `#DCE4FF` fill α 0.06, dashed edges 2 4 at α 0.35), and two sets of ghost dots scatter inside it, swapping every 0.3 s like instrument flicker. The end ring grows to r 6 + σ. The telemetry line adds `path spread ±N px`. The Sensors upgrade can lower the 6 px factor.
+
+| Token | Hex | Used for |
+|---|---|---|
+| `path.ghost` | `#E9DCFF` | Ghost dots r 1.1, α 0.45 / 0.10 alternating |
+
+**HUD.** The map toggles sit at (40, 124): "Gravity off" (the game's panel button) and "Magnetism" (pressed: `accent` fill, `ink` text), 96 / 100 × 32, radius 10, 8 px apart. While M is on, a legend panel sits under them at (40, 172): label "MAGNETIC FIELD", the key hint "M", five 54 × 10 swatches (Safe outline only; zones at fill α 2.6 × zone fill + 0.2 with the zone edge on top) and 10 px labels Safe · Fuzzy · Scrambled · Damaging · Lethal.
 
 ### Deviations and open points (recorded in the asset headers)
 
