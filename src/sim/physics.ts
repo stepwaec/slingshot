@@ -435,20 +435,30 @@ export function bodyPose(body: Body, time: number, bodies: readonly Body[], g = 
   return poseFromOrbit(body, time, bodies, 0, g);
 }
 
-/** Six Newton steps. Fixed count keeps the same mean anomaly on the same ellipse. */
+/**
+ * Newton steps on `M = E − e sin E`. Six steps are enough below e 0.8.
+ * A fatter ellipse takes more, so the same anomaly still lands on the same point.
+ */
 function solveKepler(meanAnomaly: number, eccentricity: number): number {
   const turn = Math.PI * 2;
   let mean = meanAnomaly % turn;
   if (mean > Math.PI) mean -= turn;
   if (mean < -Math.PI) mean += turn;
   let eccentric = eccentricity < 0.8 ? mean : Math.PI * Math.sign(mean);
-  for (let i = 0; i < 6; i++) {
+  const steps = eccentricity >= 0.8 ? 15 : 6;
+  for (let i = 0; i < steps; i++) {
     const residual = eccentric - eccentricity * Math.sin(eccentric) - mean;
     const slope = 1 - eccentricity * Math.cos(eccentric);
     if (slope === 0) break;
     eccentric -= residual / slope;
   }
   return eccentric;
+}
+
+/** `ω = √(GM / r³)` for a circular orbit about a mass. */
+export function keplerMeanMotion(g: number, mass: number, radius: number): number {
+  if (!(g > 0) || !(mass > 0) || !(radius > 0)) return 0;
+  return Math.sqrt((g * mass) / (radius * radius * radius));
 }
 
 function poseFromOrbit(body: Body, time: number, bodies: readonly Body[], depth: number, g: number): Pose {
@@ -474,7 +484,8 @@ function poseFromOrbit(body: Body, time: number, bodies: readonly Body[], depth:
     const a = orbit.a ?? orbit.radius;
     const eccentricity = orbit.e ?? 0;
     const mu = g * centerMass;
-    const meanMotion = mu > 0 && a > 0 ? Math.sqrt(mu / (a * a * a)) : 0;
+    // A stored mean motion wins, so a caller that omits `g` still matches the level.
+    const meanMotion = orbit.omega !== 0 ? orbit.omega : mu > 0 && a > 0 ? Math.sqrt(mu / (a * a * a)) : 0;
     const eccentric = solveKepler(orbit.phase + meanMotion * time, eccentricity);
     const cosE = Math.cos(eccentric);
     const sinE = Math.sin(eccentric);
@@ -1335,9 +1346,37 @@ function closePassRate(x: number, y: number, config: SimConfig, time: number): n
 }
 
 /**
+ * Relative luminance from `style.md` §8 WP10. The yellow sun is 1.
+ * Red dwarf 0.4 and blue giant 2.5 are the design values; those looks are not in the game yet.
+ * Compact objects and black holes give nothing.
+ */
+export function starLuminosity(body: Body): number {
+  if (body.kind === "blackhole") return 0;
+  switch (body.look) {
+    case "white-dwarf":
+      return 0.2;
+    case "red-giant":
+      return 1.5;
+    case "neutron":
+    case "pulsar":
+    case "magnetar":
+      return 0;
+    default:
+      return body.kind === "star" ? 1 : 0;
+  }
+}
+
+/** World distance where a sun of luminance 1 is at full panel rate. `style.md` §8 WP10. */
+export const SOLAR_RREF = 85;
+
+/** Below this fraction of `rateMax` the panels count as off. */
+export const SOLAR_CUTOFF = 0.08;
+
+/**
  * Fuel per second from stars. The HUD, the gold path dots and the tank all
- * read this. Compact objects and black holes contribute nothing. Omitted
- * solar strength, or 0, returns 0 so a stock ship does not gain fuel.
+ * read this.
+ * `rate = rateMax · L · min(1, (Rref / d)²)`, and the whole rate is 0 when
+ * that is under 8 % of `rateMax`. Omitted solar strength, or 0, returns 0.
  */
 export function solarRechargeRate(
   x: number,
@@ -1351,14 +1390,16 @@ export function solarRechargeRate(
   let rate = 0;
   for (let i = 0; i < bodies.length; i++) {
     const body = bodies[i];
-    if (body.kind !== "star" || !(body.radius > 0)) continue;
-    if (body.look === "neutron" || body.look === "pulsar" || body.look === "magnetar") continue;
+    if (body.kind !== "star") continue;
+    const luminosity = starLuminosity(body);
+    if (!(luminosity > 0)) continue;
     const pose = body.orbit ? bodyPose(body, time, bodies, g) : { x: body.x, y: body.y, vx: 0, vy: 0 };
-    const r = Math.hypot(x - pose.x, y - pose.y);
-    if (!(r > 1e-6) || r > body.radius * 12) continue;
-    const ratio = body.radius / r;
-    rate += solarStrength * ratio * ratio;
+    const distance = Math.hypot(x - pose.x, y - pose.y);
+    if (!(distance > 1e-6)) continue;
+    const falloff = Math.min(1, (SOLAR_RREF / distance) * (SOLAR_RREF / distance));
+    rate += solarStrength * luminosity * falloff;
   }
+  if (rate < SOLAR_CUTOFF * solarStrength) return 0;
   return rate;
 }
 
