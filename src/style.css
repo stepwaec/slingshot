@@ -136,7 +136,7 @@ html, body, #app {
   position: absolute;
   right: 40px;
   top: 92px;
-  width: 248px;
+  width: 300px;
   padding: 10px 12px 12px;
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -169,6 +169,14 @@ html, body, #app {
 #clock-limit,
 #clock-stars,
 #clock-points { color: var(--muted); }
+
+#clock-rate[data-trend="rising"],
+#clock-gap[data-trend="rising"],
+#clock-limit[data-trend="rising"] { color: #8fd18a; }
+
+#clock-rate[data-trend="falling"],
+#clock-gap[data-trend="falling"],
+#clock-limit[data-trend="falling"] { color: #f0a35e; }
 
 #clock-stars,
 #clock-points {

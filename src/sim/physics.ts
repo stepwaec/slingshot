@@ -17,8 +17,12 @@
  *
  * Each step also advances two clocks. Outside time is coordinate time
  * (`step * dt`): Home and Planet X share that one frame. Ship time is the
- * proper time along the trajectory,
+ * proper time along the trajectory. With the default knobs,
  * `dτ/dt = sqrt(1 - 2 Φ_depth / c² - v² / c²)`, clamped at 0.
+ * A finite `dilationCap` replaces that hard floor with a smooth saturation.
+ * `gravityScale`, `eps`, and `p` reshape the force. Φ is the integral of the
+ * force, so dilation and the gravity map stay on the same field.
+ * Prediction and flight both read these knobs off `SimConfig`.
  * This module does not touch the DOM.
  */
 
@@ -112,6 +116,29 @@ export interface SimConfig {
   c: number;
   /** When set, `predictPlan` stops at this look-ahead. Flight does not. */
   horizon?: Horizon;
+  /**
+   * Multiplier on `g`. Omitted or 1 keeps `g` as authored, bit for bit.
+   * Motion, capture, and the horizon period all use `gravityConstant`.
+   */
+  gravityScale?: number;
+  /** Softening length. Omitted or 0 is a point mass. */
+  eps?: number;
+  /**
+   * Falloff exponent near 2. Omitted or 2 is inverse-square.
+   * `|a| = G M / (r² + ε²)^(p/2)`.
+   */
+  p?: number;
+  /** Scales `2Φ/c²` and `v²/c²`. Omitted or 1 is the standard dilation. */
+  dilationStrength?: number;
+  /**
+   * Maximum slowdown. Omitted or non-finite: the rate may reach 0.
+   * A finite value `>= 1` smoothly keeps `dτ/dt` above `1 / dilationCap`.
+   */
+  dilationCap?: number;
+  /** Stored for a later package. The integrator does not read this. */
+  tidalStrength?: number;
+  /** Stored for a later package. The integrator does not read this. */
+  dragStrength?: number;
 }
 
 /** How many times a flight may freeze so the player can edit burns. */
@@ -307,27 +334,38 @@ function poseFromOrbit(body: Body, time: number, bodies: readonly Body[], depth:
   };
 }
 
-export function acceleration(
+/**
+ * G actually integrated. Omitted `gravityScale`, or a scale of exactly 1,
+ * returns `config.g` so the stock arithmetic does not change.
+ */
+export function gravityConstant(config: SimConfig): number {
+  const scale = config.gravityScale;
+  if (scale === undefined || scale === 1) return config.g;
+  return config.g * scale;
+}
+
+function bodyPoint(body: Body, time: number, bodies: readonly Body[]): { x: number; y: number } {
+  if (!body.orbit) return { x: body.x, y: body.y };
+  const pose = bodyPose(body, time, bodies);
+  return { x: pose.x, y: pose.y };
+}
+
+/** Inverse-square acceleration. The operations match the pre-knob integrator. */
+function newtonAcceleration(
   x: number,
   y: number,
+  g: number,
   config: SimConfig,
-  time = 0,
+  time: number,
 ): { ax: number; ay: number } {
   let ax = 0;
   let ay = 0;
-  const g = config.g;
   const bodies = config.bodies;
   for (let i = 0; i < bodies.length; i++) {
     const body = bodies[i];
-    let bx = body.x;
-    let by = body.y;
-    if (body.orbit) {
-      const pose = bodyPose(body, time, bodies);
-      bx = pose.x;
-      by = pose.y;
-    }
-    const dx = bx - x;
-    const dy = by - y;
+    const point = bodyPoint(body, time, bodies);
+    const dx = point.x - x;
+    const dy = point.y - y;
     const r2 = dx * dx + dy * dy;
     if (r2 < 1e-12) continue;
     const invR = 1 / Math.sqrt(r2);
@@ -339,29 +377,165 @@ export function acceleration(
 }
 
 /**
- * Positive gravitational potential depth, Σ GM / r.
- * A black hole's horizon is r_s = 2GM/c², so Φ_depth = c²/2 there.
+ * |a| = G M / (r² + ε²)^(p/2), aimed along the separation.
+ * At the exact centre the direction is undefined and the contribution is 0.
  */
-export function potentialDepth(x: number, y: number, config: SimConfig, time = 0): number {
+function shapedAcceleration(
+  x: number,
+  y: number,
+  g: number,
+  eps: number,
+  p: number,
+  config: SimConfig,
+  time: number,
+): { ax: number; ay: number } {
+  let ax = 0;
+  let ay = 0;
+  const bodies = config.bodies;
+  const eps2 = eps * eps;
+  for (let i = 0; i < bodies.length; i++) {
+    const body = bodies[i];
+    const point = bodyPoint(body, time, bodies);
+    const dx = point.x - x;
+    const dy = point.y - y;
+    const r2 = dx * dx + dy * dy;
+    if (r2 < 1e-12 && eps === 0) continue;
+    const r = Math.sqrt(r2);
+    if (!(r > 0)) continue;
+    const scale = (g * body.mass) / (r * Math.pow(r2 + eps2, p / 2));
+    ax += dx * scale;
+    ay += dy * scale;
+  }
+  return { ax, ay };
+}
+
+export function acceleration(
+  x: number,
+  y: number,
+  config: SimConfig,
+  time = 0,
+): { ax: number; ay: number } {
+  const g = gravityConstant(config);
+  const eps = config.eps ?? 0;
+  const p = config.p ?? 2;
+  if (eps === 0 && p === 2) return newtonAcceleration(x, y, g, config, time);
+  return shapedAcceleration(x, y, g, eps, p, config, time);
+}
+
+/** Σ G M / r. Same operations as the pre-knob potential. */
+function newtonPotential(x: number, y: number, g: number, config: SimConfig, time: number): number {
   let phi = 0;
-  const g = config.g;
   const bodies = config.bodies;
   for (let i = 0; i < bodies.length; i++) {
     const body = bodies[i];
-    let bx = body.x;
-    let by = body.y;
-    if (body.orbit) {
-      const pose = bodyPose(body, time, bodies);
-      bx = pose.x;
-      by = pose.y;
-    }
-    const dx = bx - x;
-    const dy = by - y;
+    const point = bodyPoint(body, time, bodies);
+    const dx = point.x - x;
+    const dy = point.y - y;
     const r2 = dx * dx + dy * dy;
     if (r2 < 1e-12) return Number.POSITIVE_INFINITY;
     phi += (g * body.mass) / Math.sqrt(r2);
   }
   return phi;
+}
+
+/**
+ * Φ / (G M) for one body, the integral from r to infinity of
+ * (s² + ε²)^(-p/2). p = 2 and ε = 0 is 1/r, handled by `newtonPotential`.
+ */
+function depthPerMu(r: number, eps: number, p: number): number {
+  if (!(r > 0)) return eps > 0 ? depthAtCenter(eps, p) : Number.POSITIVE_INFINITY;
+  if (eps === 0) {
+    if (p === 2) return 1 / r;
+    return 1 / ((p - 1) * Math.pow(r, p - 1));
+  }
+  if (p === 2) return Math.atan2(eps, r) / eps;
+  if (r <= eps) return depthAtCenter(eps, p) - integralZeroToR(r, eps, p);
+  return hypergeometricDepth(r, eps, p);
+}
+
+/** ∫_0^∞ (u²+ε²)^(-p/2) du. */
+function depthAtCenter(eps: number, p: number): number {
+  if (p === 2) return Math.PI / (2 * eps);
+  return Math.pow(eps, 1 - p) * 0.5 * Math.sqrt(Math.PI) * gamma((p - 1) / 2) / gamma(p / 2);
+}
+
+/** ∫_0^r (u²+ε²)^(-p/2) du for r ≤ ε, via the binomial series in (r/ε)². */
+function integralZeroToR(r: number, eps: number, p: number): number {
+  const alpha = -p / 2;
+  const s = r / eps;
+  const s2 = s * s;
+  let binom = 1;
+  let power = s;
+  let sum = s;
+  for (let k = 1; k < 80; k++) {
+    binom *= (alpha - (k - 1)) / k;
+    power *= s2;
+    const term = (binom * power) / (2 * k + 1);
+    sum += term;
+    if (Math.abs(term) <= 1e-16 * Math.abs(sum)) break;
+  }
+  return Math.pow(eps, 1 - p) * sum;
+}
+
+/**
+ * ∫_r^∞ (u²+ε²)^(-p/2) du for r > ε.
+ * Equals 1 / ((p-1) ρ^(p-1)) · ₂F₁((p-1)/2, 1/2; (p+1)/2; ε²/ρ²).
+ */
+function hypergeometricDepth(r: number, eps: number, p: number): number {
+  const r2 = r * r;
+  const z = (eps * eps) / (r2 + eps * eps);
+  const b = (p - 1) / 2;
+  let term = 1;
+  let sum = 1;
+  for (let n = 1; n < 80; n++) {
+    term *= ((b + n - 1) / (b + n)) * ((n - 0.5) / n) * z;
+    sum += term;
+    if (Math.abs(term) <= 1e-16 * Math.abs(sum)) break;
+  }
+  const rho = Math.sqrt(r2 + eps * eps);
+  return sum / ((p - 1) * Math.pow(rho, p - 1));
+}
+
+/** Lanczos Γ(z) for z > 0. Coefficients are the g = 7, n = 9 set. */
+function gamma(z: number): number {
+  if (z < 0.5) return Math.PI / (Math.sin(Math.PI * z) * gamma(1 - z));
+  z -= 1;
+  let x = 0.99999999999980993;
+  const c = [
+    676.5203681218851, -1259.1392167224028, 771.32342877765313, -176.61502916214059, 12.507343278686905,
+    -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7,
+  ];
+  for (let i = 0; i < c.length; i++) x += c[i] / (z + i + 1);
+  const t = z + 7.5;
+  return Math.sqrt(2 * Math.PI) * Math.pow(t, z + 0.5) * Math.exp(-t) * x;
+}
+
+function shapedPotential(x: number, y: number, g: number, eps: number, p: number, config: SimConfig, time: number): number {
+  let phi = 0;
+  const bodies = config.bodies;
+  for (let i = 0; i < bodies.length; i++) {
+    const body = bodies[i];
+    const point = bodyPoint(body, time, bodies);
+    const dx = point.x - x;
+    const dy = point.y - y;
+    const r2 = dx * dx + dy * dy;
+    if (r2 < 1e-12 && eps === 0) return Number.POSITIVE_INFINITY;
+    phi += g * body.mass * depthPerMu(Math.sqrt(r2), eps, p);
+  }
+  return phi;
+}
+
+/**
+ * Positive gravitational potential depth.
+ * Default (ε = 0, p = 2): Σ G M / r. A black hole's horizon is r_s = 2GM/c²,
+ * so Φ_depth = c²/2 there. Other knobs use the integral of the shaped force.
+ */
+export function potentialDepth(x: number, y: number, config: SimConfig, time = 0): number {
+  const g = gravityConstant(config);
+  const eps = config.eps ?? 0;
+  const p = config.p ?? 2;
+  if (eps === 0 && p === 2) return newtonPotential(x, y, g, config, time);
+  return shapedPotential(x, y, g, eps, p, config, time);
 }
 
 /** Schwarzschild radius 2GM/c². A black hole body uses this as its surface. */
@@ -373,11 +547,13 @@ export function horizonRadius(mass: number, g: number, c: number): number {
 /**
  * Weak-field combined time dilation.
  *
- * Φ_depth = Σ GM / r
- * dτ/dt = sqrt(1 - 2 Φ_depth / c² - v² / c²)
+ * bare = 1 - strength · (2 Φ_depth / c² + v² / c²)
+ * dτ/dt = sqrt(max(bare, 0)) when `dilationCap` is omitted.
  *
- * The radicand is clamped at 0. At a horizon, or at v ≥ c, the rate is 0
- * instead of becoming imaginary. The rate is never above 1 in this form.
+ * That default is the old hard clamp: 0 at a horizon or at v ≥ c, and never
+ * above 1 when strength is 1. A finite cap saturates smoothly toward 1/cap
+ * instead of hitting 0. `strength` defaults to 1, which keeps the subtraction
+ * in the same order as the original formula.
  */
 export function properTimeRate(
   x: number,
@@ -387,17 +563,66 @@ export function properTimeRate(
   config: SimConfig,
   time = 0,
 ): number {
-  return rateFrom(potentialDepth(x, y, config, time), vx, vy, config.c);
+  return rateFrom(
+    potentialDepth(x, y, config, time),
+    vx,
+    vy,
+    config.c,
+    config.dilationStrength ?? 1,
+    config.dilationCap ?? Number.POSITIVE_INFINITY,
+  );
 }
 
-/** dτ/dt from a depth and a velocity. Same clamp as `properTimeRate`. */
-export function rateFrom(phi: number, vx: number, vy: number, c: number): number {
-  if (!(c > 0) || !Number.isFinite(c) || !Number.isFinite(phi)) return 0;
+/**
+ * dτ/dt from a depth and a velocity.
+ * `strength` scales both dilation terms. `cap` is the max slowdown; a
+ * non-finite cap (the default) is the hard floor at 0.
+ */
+export function rateFrom(
+  phi: number,
+  vx: number,
+  vy: number,
+  c: number,
+  strength = 1,
+  cap = Number.POSITIVE_INFINITY,
+): number {
+  if (!(c > 0) || !Number.isFinite(c)) return 0;
+  const capped = cap >= 1 && Number.isFinite(cap);
+  if (!Number.isFinite(phi)) return capped ? saturateBare(Number.NEGATIVE_INFINITY, cap) : 0;
+  if (!(strength >= 0) || !Number.isFinite(strength)) return capped ? saturateBare(Number.NEGATIVE_INFINITY, cap) : 0;
   const depth = phi > 0 ? phi : 0;
   const c2 = c * c;
-  const arg = 1 - (2 * depth) / c2 - (vx * vx + vy * vy) / c2;
-  if (!(arg > 0)) return 0;
-  return Math.sqrt(arg);
+  const gravitational = (2 * depth) / c2;
+  const kinetic = (vx * vx + vy * vy) / c2;
+  // strength === 1 keeps `1 - a - b`, which is the original expression.
+  const bare = strength === 1 ? 1 - gravitational - kinetic : 1 - strength * (gravitational + kinetic);
+  if (!capped) {
+    if (!(bare > 0)) return 0;
+    return Math.sqrt(bare);
+  }
+  return saturateBare(bare, cap);
+}
+
+/**
+ * Smooth floor on the dilation radicand.
+ *
+ * Let f = 1/cap and lo = f². The knee is min(1, 4 lo), so mild dilation
+ * (radicand at or above the knee) stays on sqrt(bare) exactly. Below the
+ * knee a hyperbola is tangent to y = bare at the knee and asymptotes to lo:
+ *
+ *   rad = lo + (knee - lo)² / ((knee - lo) + (knee - bare))
+ *
+ * The value and the first derivative match at the knee, so the rate never
+ * jumps. It is strictly above 1/cap and strictly increasing in `bare`.
+ */
+function saturateBare(bare: number, cap: number): number {
+  const floor = 1 / cap;
+  const lo = floor * floor;
+  const knee = lo * 4 < 1 ? lo * 4 : 1;
+  if (bare >= knee) return Math.sqrt(bare);
+  const span = knee - lo;
+  const rad = lo + (span * span) / (span + (knee - bare));
+  return Math.sqrt(rad);
 }
 
 function accrueClocks(state: SimState, rate: number, dt: number): void {
@@ -611,7 +836,7 @@ export function orbitAbout(
 export function isCapturedOrbit(state: SimState, config: SimConfig): boolean {
   const body = targetBody(config);
   if (!body?.captureRadius) return false;
-  const elements = orbitAbout(state, body, config.g, state.step * config.dt, config.bodies);
+  const elements = orbitAbout(state, body, gravityConstant(config), state.step * config.dt, config.bodies);
   if (!elements?.bound) return false;
   return (
     elements.energy < 0 &&
@@ -851,7 +1076,7 @@ function predictionFrom(state: SimState, config: SimConfig, path: PathSample[]):
   const target = targetBody(config);
   const orbit =
     state.status === "won" && target
-      ? sampleOrbit(state, target, config.g, 120, state.step * config.dt, config.bodies)
+      ? sampleOrbit(state, target, gravityConstant(config), 120, state.step * config.dt, config.bodies)
       : null;
   return {
     path,
@@ -961,7 +1186,7 @@ function dominantPeriod(state: SimState, config: SimConfig): number | null {
     const ry = pose.y - state.y;
     const r2 = rx * rx + ry * ry;
     if (r2 < 1e-12 || body.mass <= 0) continue;
-    const mu = config.g * body.mass;
+    const mu = gravityConstant(config) * body.mass;
     const accel = mu / r2;
     if (accel <= best) continue;
     best = accel;

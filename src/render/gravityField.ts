@@ -42,7 +42,7 @@ export interface GravityGrid {
   depth: Float64Array;
   /** `scaleWellDepth(depth, knee)` before any height multiply. */
   scale: Float64Array;
-  /** Rest-frame dτ/dt from `rateFrom(depth, 0, 0, c)`. */
+  /** Rest-frame dτ/dt from `rateFrom`, including dilation strength and cap. */
   rate: Float64Array;
   /** Display x after the in-plane pinch. Finite where `depth` is not. */
   pinchX: Float64Array;
@@ -261,7 +261,14 @@ export function sampleGravityGrid(
       const i = rowOff + col;
       grid.depth[i] = depth;
       grid.scale[i] = scaleWellDepth(depth, knee);
-      grid.rate[i] = rateFrom(depth, 0, 0, c);
+      grid.rate[i] = rateFrom(
+        depth,
+        0,
+        0,
+        c,
+        config.dilationStrength ?? 1,
+        config.dilationCap ?? Number.POSITIVE_INFINITY,
+      );
       const pinch = pinchTowardMasses(x, y, config, time, knee);
       grid.pinchX[i] = x + pinch.dx;
       grid.pinchY[i] = y + pinch.dy;

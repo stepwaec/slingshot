@@ -21,15 +21,15 @@ import {
   tick,
   type Game,
 } from "./game/state";
-import { burnLimit, passage, pauseRuleOf, simConfigFromLevel, type Level } from "./level/passage";
-import { relay } from "./level/relay";
-import { deepPlan, rescue, safePlan } from "./level/rescue";
+import { burnLimit, LEVELS, passage, pauseRuleOf, rescue, simConfigFromLevel, type Level } from "./level/catalog";
+import { deepPlan, safePlan } from "./level/solutions";
+import { createClockLatches, readClocks, type ClockLatches } from "./hud/readout";
 import type { MissionScore } from "./sim/score";
 import { frameLevel, worldToScreen } from "./render/camera";
 import { SpaceView } from "./render/view";
 import { horizonSteps, type BurnNode } from "./sim/physics";
 
-const levels: readonly Level[] = [passage, relay, rescue];
+const levels: readonly Level[] = LEVELS;
 
 function required<T extends Element>(selector: string): T {
   const element = document.querySelector<T>(selector);
@@ -290,6 +290,9 @@ function syncMarkers(
   aimLabel.style.top = `${Math.round(tipY + (Math.sin(Math.atan2(offset.y, offset.x)) > 0 ? -14 : 25))}px`;
 }
 
+let clockLatches: ClockLatches | null = null;
+let clockLatchKey = "";
+
 function syncClocks(current: Game): void {
   const planning = current.mode === "planning";
   const pose = planning ? current.prediction.final : current.ship;
@@ -299,15 +302,28 @@ function syncClocks(current: Game): void {
   const deadline = current.level.mission.deadline;
   const ratio = deadline > 0 ? outside / deadline : 0;
   const band = ratio >= 1 ? "over" : ratio >= 0.8 ? "near" : "ok";
+  const gap = outside - ship;
+  const margin = deadline - outside;
+  const latchKey = `${current.level.id}:${current.mode}`;
+  if (!clockLatches || clockLatchKey !== latchKey) {
+    clockLatches = createClockLatches(rate, gap, margin);
+    clockLatchKey = latchKey;
+  }
+  const clocks = readClocks(clockLatches, rate, gap, margin);
   clockTitle.textContent = planning ? "Predicted" : "Clocks";
-  clockRate.textContent = rateLabel(rate);
+  clockRate.textContent = clocks.rate;
+  clockRate.dataset.trend = clocks.rateTrend;
+  clockRate.title = clocks.rateTrend;
   clockShip.textContent = `Ship ${ship.toFixed(2)} s`;
   clockOut.textContent = `Outside ${outside.toFixed(2)} s`;
-  const gap = outside - ship;
-  clockGap.textContent = `Gap ${gap >= 0 ? "+" : ""}${gap.toFixed(2)} s`;
+  clockGap.textContent = clocks.gap;
   clockGap.dataset.band = band;
-  clockLimit.textContent = `Deadline ${deadline.toFixed(1)} s`;
+  clockGap.dataset.trend = clocks.gapTrend;
+  clockGap.title = clocks.gapTrend;
+  clockLimit.textContent = clocks.margin;
   clockLimit.dataset.band = band;
+  clockLimit.dataset.trend = clocks.marginTrend;
+  clockLimit.title = clocks.marginTrend;
   const clamped = Math.max(0, Math.min(1, ratio));
   deadlineFill.style.width = `${Math.round(clamped * 100)}%`;
   deadlineFill.dataset.band = band;
@@ -332,13 +348,6 @@ function slowestRate(current: Game): number {
     if (path[i].rate < rate) rate = path[i].rate;
   }
   return rate;
-}
-
-function rateLabel(rate: number): string {
-  if (!(rate > 1e-4)) return "time stopped";
-  const outsidePerShip = 1 / rate;
-  const digits = outsidePerShip >= 10 ? 1 : 2;
-  return `1 ship s = ${outsidePerShip.toFixed(digits)} outside s`;
 }
 
 function missionLine(mission: MissionScore): string {

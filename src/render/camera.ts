@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import type { Level } from "../level/passage";
+import type { Level } from "../level/catalog";
 import type { Vec2 } from "../sim/physics";
 
 export interface Camera {

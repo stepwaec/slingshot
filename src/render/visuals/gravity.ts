@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { isEditing, type Game } from "../../game/state";
-import { simConfigFromLevel } from "../../level/passage";
+import { simConfigFromLevel } from "../../level/catalog";
 import { potentialDepth, type SimConfig } from "../../sim/physics";
 import {
   fieldSpan,

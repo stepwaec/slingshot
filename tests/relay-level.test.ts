@@ -11,8 +11,8 @@ import {
   stepInHorizon,
   tick,
 } from "../src/game/state";
-import { burnLimit, simConfigFromLevel } from "../src/level/passage";
-import { relay, relayCapture, relayCorrection, relayFull, relayOpening, relayPauseAt } from "../src/level/relay";
+import { burnLimit, relay, simConfigFromLevel } from "../src/level/catalog";
+import { relayCapture, relayCorrection, relayFull, relayOpening, relayPauseAt } from "../src/level/solutions";
 import {
   assessPlan,
   flyPlan,

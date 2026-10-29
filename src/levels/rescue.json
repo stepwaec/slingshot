@@ -1,0 +1,72 @@
+{
+  "id": "rescue",
+  "name": "Rescue",
+  "g": 1,
+  "dt": 0.016666666666666666,
+  "bodies": [
+    {
+      "id": "home",
+      "name": "Home",
+      "kind": "home",
+      "x": -240,
+      "y": 180,
+      "mass": 0,
+      "radius": 16
+    },
+    {
+      "id": "hole",
+      "name": "the black hole",
+      "kind": "blackhole",
+      "x": 0,
+      "y": 0,
+      "mass": 38808,
+      "radius": 44
+    },
+    {
+      "id": "x",
+      "name": "Planet X",
+      "kind": "target",
+      "x": 360,
+      "y": -40,
+      "mass": 1400,
+      "radius": 18,
+      "captureRadius": 64
+    }
+  ],
+  "targetId": "x",
+  "ship": {
+    "x": -200,
+    "y": 170,
+    "vx": 0,
+    "vy": 0
+  },
+  "orbit": {
+    "bodyId": "home",
+    "radius": 36
+  },
+  "fuel": 50,
+  "fuelPerDv": 1,
+  "bounds": {
+    "minX": -4000,
+    "maxX": 4000,
+    "minY": -4000,
+    "maxY": 4000
+  },
+  "maxSteps": 7000,
+  "dvPerPixel": 0.25,
+  "periapsisMargin": 6,
+  "maxPlannedBurns": 4,
+  "c": 42,
+  "mission": {
+    "deadline": 26.4,
+    "crewLimit": 15.5,
+    "fuelStarMin": 11,
+    "crewWeight": 1,
+    "fuelWeight": 2
+  },
+  "pause": {
+    "kind": "score",
+    "cost": 8,
+    "budget": 24
+  }
+}

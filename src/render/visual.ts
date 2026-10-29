@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import type { Game } from "../game/state";
-import type { Level } from "../level/passage";
+import type { Level } from "../level/catalog";
 import type { Theme } from "./theme";
 
 /** Where the view parents this element. Factories pick one and stay there. */
