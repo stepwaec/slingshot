@@ -6,10 +6,13 @@ import { disposeObject, type Visual, type VisualFactory, type VisualFrame } from
 import { shader, srgbVec } from "./materials";
 
 /**
- * Where a moving body will be. One dashed ring per body at each maneuver
- * node's sim time, and one brighter ring at the path sample under the cursor.
+ * Where a moving body will be. One plain ring per body at each maneuver
+ * node's sim time, and a brighter ring at the path sample under the cursor.
  * Planning and pause only. The rings read `bodyPose`; they do not write the sim.
- * Colour is `path` `#DCE4FF` from style.md, not a grey.
+ *
+ * Placeholder until Claude designs the marker. The open request is in
+ * docs/ROADMAP.md: a future-position marker is not in `design/` yet.
+ * Colour is `path` `#DCE4FF`, so the stand-in is not grey.
  */
 export const createGhosts: VisualFactory = () => new GhostsVisual();
 
@@ -20,13 +23,9 @@ uniform float uAlpha;
 void main() {
   float r = length(vLocal);
   float fw = fwidth(r);
-  float ring = 1.0 - smoothstep(0.04, 0.04 + fw * 2.0, abs(r - 0.86));
-  float ang = atan(vLocal.y, vLocal.x);
-  float dash = step(0.45, fract((ang + 3.14159265) / 6.2831853 * 8.0));
-  float dot = 1.0 - smoothstep(0.12, 0.12 + fw * 2.0, r);
-  float a = max(ring * dash, dot) * uAlpha;
-  if (a < 0.02) discard;
-  gl_FragColor = vec4(uColor, a);
+  float ring = 1.0 - smoothstep(0.045, 0.045 + fw * 2.0, abs(r - 0.9));
+  if (ring < 0.02) discard;
+  gl_FragColor = vec4(uColor, ring * uAlpha);
 }
 `;
 
