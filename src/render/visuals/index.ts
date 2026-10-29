@@ -1,6 +1,7 @@
 import type { VisualFactory } from "../visual";
 import { createBelts } from "./belts";
 import { createGallery } from "./gallery";
+import { createGhosts } from "./ghosts";
 import { createClouds } from "./clouds";
 import { createComet } from "./comet";
 import { createCompact } from "./compact";
@@ -40,6 +41,7 @@ export const visualFactories = {
   compact: createCompact,
   comet: createComet,
   clouds: createClouds,
+  ghosts: createGhosts,
   path: createPath,
   recharge: createRecharge,
   ship: createShip,
