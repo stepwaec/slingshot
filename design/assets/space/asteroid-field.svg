@@ -1,0 +1,594 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="360" viewBox="0 0 720 360">
+  <!-- Asteroid field, v1.4 space environment, built to the v1.5 (revised) bar: crisp faceted rocks, tinted 2-tone shading, lit from the upper-right
+       L = (+0.7071, -0.7071) (library light; lighting NEVER rotates with the tumbling rocks). viewBox 0 0 720 360. ONE group #asteroidField at
+       translate(360 180); geometry relative to (0,0). Ids af*.
+
+       Belt: axis through (0,0) at -18 deg (a = (0.951, -0.309)), normal n = (0.309, 0.951). 88 rocks = 62 dust (r 1.5-3) / 20 small (r 4-7) /
+       6 large (r 9-14), placed by mulberry32 seed 0xA57E01D: u uniform along the axis (|u| <= 322 / 300 / 262), v = gaussian across it
+       (sigma 42 / 34 / 26, clipped at 2.2 sigma), rejected when closer than 1.45 (r1 + r2) + 3 (large-large >= 70). Each rock: 7-11 vertices at even
+       angles + jitter (+-0.3 step), radius r (1 +- 0.18) (seeded jitter 0.18 r), then a potato elongation (aspect 1.0-1.3, area-preserving,
+       random orientation). Tumble: SMIL rotate 360 deg, periods dust 20-50 s / small 35-70 s / large 55-90 s, random direction.
+       Belt drift: the whole field translates along the axis +-6 px (+-5.71, -+1.85) over 60 s (eased sine: 0 -> +6 -> 0 -> -6 -> 0).
+
+       Rock construction (all sizes; the silhouette polygon #afRnn carries the rotation and is reused through <use>):
+         clip    = the rotating polygon (#afRnnc).
+         1. lit rim   rotating polygon, fill rock.highlight #C9BBA8.
+         2. face      rotating polygon shifted by a STATIC (-s, +s) (s = 0.9 large / 0.6 small / 0.45 dust) -> the uncovered sliver along the
+                      upper-right edges is a crisp, always-sunward lit rim ~s*1.4 px wide. Face fill: dust flat rock.base #7E7468; small + large a
+                      tinted texture pattern (48 px tile, rotates with the rock):
+                        afTexA (S-type, warm) / afTexB (mixed) / afTexC (C-type, dark): base #7E7468 +
+                        rust    #B04A22 (rocky.rust, shared)  fractalNoise 0.07, 3 oct, alpha smoothstep(0.50, 0.60) x 0.70 / 0.40 / 0.16
+                        mottle  #3E3833 (rock.dark)           fractalNoise 0.16, 4 oct, alpha smoothstep(0.40, 0.52) x 0.50 / 0.60 / 0.72
+                        ochre   #D8B26E (desert, shared)      same noise as mottle, alpha smoothstep(0.58, 0.66) x 0.42 (pale dusty highs)
+                        speck   #C9BBA8 (rock.highlight)      fractalNoise 0.70, 1 oct, alpha smoothstep(0.64, 0.70) x 0.65
+                        merge order: base, rust, ochre, mottle, speck.
+                        seeds (mottle, rust, speck) A 3/8/12 · B 5/14/17 · C 9/21/23. Large rocks cycle A, B, C; small rocks seeded.
+         3. craters   (large 1-2, small r > 5.2: 50 % one) radius 0.16-0.24 rmean within 0.55 rmean of the centre, rotating with the rock:
+                      lit wall = circle #C9BBA8, bowl = circle 0.78 rc #3E3833 offset by a STATIC (+0.3 rc, -0.3 rc) toward the light, so the
+                      sunward inner wall is in shadow and the far wall is lit at every rotation.
+         4. light     STATIC circle r 1.5 rmean, radial #afLight (objectBoundingBox centre (0.924, 0.076), r 1.067): light centre 1.8 rmean
+                      outside the rock along L, gradient radius 3.2 rmean; stops 0.25 #FFF0DC a0.34 (on the sunward limb) | 0.50 a0.08 (sunlit bloom) |
+                      0.535 #FF9455 a0 | 0.575 #FF9455 a0.20 (warm terminator band) | 0.597 #3E3833 a0.80 (hard terminator, ~0.07 rmean wide) |
+                      0.72 #050B1E a0.86 | 1 #050B1E a0.92 (night). The terminator crosses the rock ~0.1 rmean past its centre and is only gently
+                      curved: a lit half and a shadow half split by one crisp line.
+       Dust haze: ellipse rx 380 ry 62 rotated -18 deg, radial #AAB8DD 0 a0.05 | 0.55 a0.035 | 1 a0, broken into streaks by #afDust
+                  (fractalNoise "0.006 0.03", 4 oct, seed 41, alpha 2.4 n - 0.6). Soft on purpose (dust is gas-like).
+       Draw order: haze -> dust rocks -> small rocks -> large rocks (near), all inside the drifting group.
+       Gameplay hook (optional, NOT in scope): each large rock = a circular crash body of radius rmean: afR83 r11.3 · afR84 r9.6 · afR85 r10.7 · afR86 r12.1 · afR87 r12 · afR88 r9.8.
+       Dust and small rocks are visual only.
+       Rock table (id class (x,y) rmean vertices period+dir texture craters):
+         afR01 D (-290.1,131.9) r1.6 8v 34s- - · afR02 D (-279.8,169.1) r2.3 10v 36s- - · afR03 D (-271.2,141.2) r2.6 8v 30s+ - · afR04 D (-258.5,122.2) r2.7 8v 22s+ -
+         afR05 D (-251.8,57.4) r2.7 7v 45s- - · afR06 D (-247.7,10.6) r2.4 10v 46s- - · afR07 D (-239.6,59) r2.6 11v 44s+ - · afR08 D (-226,72.4) r2.3 11v 25s+ -
+         afR09 D (-219.6,38.1) r2.3 9v 30s- - · afR10 D (-218.4,119.9) r1.8 10v 21s- - · afR11 D (-214.7,12.7) r1.9 11v 21s+ - · afR12 D (-202.8,-5.1) r2.7 10v 29s+ -
+         afR13 D (-201.8,97.9) r1.8 10v 33s+ - · afR14 D (-201.4,66.6) r1.6 7v 25s+ - · afR15 D (-192.8,116.4) r2.1 9v 43s- - · afR16 D (-190.9,103.4) r2.4 10v 28s+ -
+         afR17 D (-181.6,-14.4) r1.6 11v 27s+ - · afR18 D (-179.7,73.4) r2.8 7v 37s- - · afR19 D (-175.3,1.3) r2.1 7v 37s+ - · afR20 D (-167.8,33.2) r2.8 9v 42s+ -
+         afR21 D (-132,100.4) r2.8 11v 39s+ - · afR22 D (-127.3,36.1) r2.5 8v 25s+ - · afR23 D (-122.8,81.2) r2.8 7v 25s+ - · afR24 D (-120.4,-55.5) r2.4 7v 40s- -
+         afR25 D (-108.9,-35.4) r1.8 9v 49s+ - · afR26 D (-101.7,-64) r2.3 9v 37s+ - · afR27 D (-92.5,6.4) r2.7 11v 49s+ - · afR28 D (-88.8,53.2) r2.9 8v 49s+ -
+         afR29 D (-82.8,-16) r2.2 9v 20s- - · afR30 D (-67.3,-40.3) r2.9 8v 26s+ - · afR31 D (-64.9,51) r2.5 10v 49s- - · afR32 D (-56,-9.8) r2 11v 25s- -
+         afR33 D (-36.4,-7.7) r2.5 7v 21s+ - · afR34 D (-7.3,53.9) r2.3 11v 43s+ - · afR35 D (13.2,-29.2) r2.6 10v 27s+ - · afR36 D (27.5,-38.1) r2.5 11v 45s- -
+         afR37 D (36.8,-21) r2.5 7v 32s- - · afR38 D (44.1,64.7) r3.1 7v 46s- - · afR39 D (44.3,1.6) r2.1 8v 44s+ - · afR40 D (53.7,-44.4) r1.6 10v 37s- -
+         afR41 D (54.7,-54.5) r3 10v 32s+ - · afR42 D (64.9,-100.5) r2.3 9v 31s+ - · afR43 D (114.4,-46.1) r1.9 11v 30s- - · afR44 D (115.9,-25.1) r2.5 10v 42s+ -
+         afR45 D (137.4,-26.2) r2.9 7v 26s- - · afR46 D (150.5,-73.5) r2.3 11v 45s- - · afR47 D (173,-117.1) r2.1 11v 41s+ - · afR48 D (180,-124.5) r2.4 11v 30s- -
+         afR49 D (213,-153) r2 10v 41s- - · afR50 D (219.8,-105.5) r1.7 11v 29s+ - · afR51 D (225.5,-76.8) r2.6 7v 28s- - · afR52 D (231.2,-91.9) r2.4 9v 50s+ -
+         afR53 D (248.2,-13) r1.8 8v 27s+ - · afR54 D (249,-115) r1.7 10v 20s+ - · afR55 D (253.7,-98.3) r1.6 11v 50s+ - · afR56 D (254.6,-21.4) r2.9 11v 28s+ -
+         afR57 D (270.8,-63.2) r1.9 8v 21s+ - · afR58 D (285.9,-61.2) r2.1 11v 40s- - · afR59 D (286.2,-21.4) r2.4 11v 21s+ - · afR60 D (294.8,-32.9) r2.1 11v 45s- -
+         afR61 D (300.2,-85.7) r3.1 11v 39s- - · afR62 D (315.5,-54.5) r2.1 7v 21s+ - · afR63 S (-283.4,59.2) r6.7 10v 47s- B c1 · afR64 S (-262.1,78) r4.6 7v 52s+ B
+         afR65 S (-103.2,58.3) r4.7 10v 59s- C · afR66 S (-97.3,40.4) r4.9 7v 45s+ B · afR67 S (-73.9,26.5) r5.8 10v 58s- C c1 · afR68 S (-64.6,74.8) r4.9 10v 43s- B
+         afR69 S (-26,-18.4) r5.1 10v 68s- A · afR70 S (0.4,-3.5) r6.2 10v 58s+ C c1 · afR71 S (20.9,-58.7) r6.7 9v 45s+ C c1 · afR72 S (93,-83.5) r6 11v 44s+ B
+         afR73 S (99.6,27.2) r6.1 8v 44s+ A · afR74 S (107.5,-69.9) r5.1 8v 68s+ A · afR75 S (122.6,-60) r4.7 11v 49s- B · afR76 S (138.5,-106.4) r6.3 9v 53s- A c1
+         afR77 S (156.8,-54) r4.8 11v 70s+ A · afR78 S (184.5,-36.6) r4.2 8v 69s+ C · afR79 S (196.8,-109.3) r5.1 9v 42s+ A · afR80 S (233.1,-58.6) r5.8 7v 41s+ A c1
+         afR81 S (261.8,-47.6) r6.1 9v 36s+ B · afR82 S (284.2,-78.2) r6.6 11v 53s- A · afR83 L (-242.1,100.7) r11.3 11v 80s- C c2 · afR84 L (-184.9,49.2) r9.6 11v 83s+ B c1
+         afR85 L (-119,12.7) r10.7 9v 80s+ C c1 · afR86 L (-36,32.1) r12.1 8v 79s- B c1 · afR87 L (84.5,-44.9) r12 11v 71s+ A c2 · afR88 L (183.6,-72.7) r9.8 11v 72s+ A c1
+       Static renders show t = 0. -->
+  <defs>
+    <filter id="afNoiseA" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="0" y="0" width="48" height="48" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.16" numOctaves="4" seed="3" stitchTiles="stitch" result="m0"/>
+      <feColorMatrix in="m0" type="matrix" values="0 0 0 0 0.243  0 0 0 0 0.22  0 0 0 0 0.2  1 0 0 0 0" result="m1"/>
+      <feColorMatrix in="m0" type="matrix" values="0 0 0 0 0.847  0 0 0 0 0.698  0 0 0 0 0.431  1 0 0 0 0" result="o1"/>
+      <feComponentTransfer in="o1" result="ochre"><feFuncA type="table" tableValues="0 0 0 0 0 0 0 0 0 0 0 0 0.066 0.402 0.42 0.42 0.42 0.42 0.42 0.42 0.42"/></feComponentTransfer>
+      <feComponentTransfer in="m1" result="mottle"><feFuncA type="table" tableValues="0 0 0 0 0 0 0 0 0 0.188 0.463 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5"/></feComponentTransfer>
+      <feTurbulence type="fractalNoise" baseFrequency="0.07" numOctaves="3" seed="8" stitchTiles="stitch" result="r0"/>
+      <feColorMatrix in="r0" type="matrix" values="0 0 0 0 0.69  0 0 0 0 0.29  0 0 0 0 0.133  1 0 0 0 0" result="r1"/>
+      <feComponentTransfer in="r1" result="rust"><feFuncA type="table" tableValues="0 0 0 0 0 0 0 0 0 0 0 0.35 0.7 0.7 0.7 0.7 0.7 0.7 0.7 0.7 0.7"/></feComponentTransfer>
+      <feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="1" seed="12" stitchTiles="stitch" result="k0"/>
+      <feColorMatrix in="k0" type="matrix" values="0 0 0 0 0.788  0 0 0 0 0.733  0 0 0 0 0.659  1 0 0 0 0" result="k1"/>
+      <feComponentTransfer in="k1" result="speck"><feFuncA type="table" tableValues="0 0 0 0 0 0 0 0 0 0 0 0 0 0.048 0.65 0.65 0.65 0.65 0.65 0.65 0.65"/></feComponentTransfer>
+      <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="rust"/><feMergeNode in="ochre"/><feMergeNode in="mottle"/><feMergeNode in="speck"/></feMerge>
+    </filter>
+    <pattern id="afTexA" patternUnits="userSpaceOnUse" x="-24" y="-24" width="48" height="48"><rect width="48" height="48" fill="#7E7468" filter="url(#afNoiseA)"/></pattern>
+    <filter id="afNoiseB" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="0" y="0" width="48" height="48" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.16" numOctaves="4" seed="5" stitchTiles="stitch" result="m0"/>
+      <feColorMatrix in="m0" type="matrix" values="0 0 0 0 0.243  0 0 0 0 0.22  0 0 0 0 0.2  1 0 0 0 0" result="m1"/>
+      <feColorMatrix in="m0" type="matrix" values="0 0 0 0 0.847  0 0 0 0 0.698  0 0 0 0 0.431  1 0 0 0 0" result="o1"/>
+      <feComponentTransfer in="o1" result="ochre"><feFuncA type="table" tableValues="0 0 0 0 0 0 0 0 0 0 0 0 0.066 0.402 0.42 0.42 0.42 0.42 0.42 0.42 0.42"/></feComponentTransfer>
+      <feComponentTransfer in="m1" result="mottle"><feFuncA type="table" tableValues="0 0 0 0 0 0 0 0 0 0.226 0.556 0.6 0.6 0.6 0.6 0.6 0.6 0.6 0.6 0.6 0.6"/></feComponentTransfer>
+      <feTurbulence type="fractalNoise" baseFrequency="0.07" numOctaves="3" seed="14" stitchTiles="stitch" result="r0"/>
+      <feColorMatrix in="r0" type="matrix" values="0 0 0 0 0.69  0 0 0 0 0.29  0 0 0 0 0.133  1 0 0 0 0" result="r1"/>
+      <feComponentTransfer in="r1" result="rust"><feFuncA type="table" tableValues="0 0 0 0 0 0 0 0 0 0 0 0.2 0.4 0.4 0.4 0.4 0.4 0.4 0.4 0.4 0.4"/></feComponentTransfer>
+      <feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="1" seed="17" stitchTiles="stitch" result="k0"/>
+      <feColorMatrix in="k0" type="matrix" values="0 0 0 0 0.788  0 0 0 0 0.733  0 0 0 0 0.659  1 0 0 0 0" result="k1"/>
+      <feComponentTransfer in="k1" result="speck"><feFuncA type="table" tableValues="0 0 0 0 0 0 0 0 0 0 0 0 0 0.048 0.65 0.65 0.65 0.65 0.65 0.65 0.65"/></feComponentTransfer>
+      <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="rust"/><feMergeNode in="ochre"/><feMergeNode in="mottle"/><feMergeNode in="speck"/></feMerge>
+    </filter>
+    <pattern id="afTexB" patternUnits="userSpaceOnUse" x="-24" y="-24" width="48" height="48"><rect width="48" height="48" fill="#7E7468" filter="url(#afNoiseB)"/></pattern>
+    <filter id="afNoiseC" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="0" y="0" width="48" height="48" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.16" numOctaves="4" seed="9" stitchTiles="stitch" result="m0"/>
+      <feColorMatrix in="m0" type="matrix" values="0 0 0 0 0.243  0 0 0 0 0.22  0 0 0 0 0.2  1 0 0 0 0" result="m1"/>
+      <feColorMatrix in="m0" type="matrix" values="0 0 0 0 0.847  0 0 0 0 0.698  0 0 0 0 0.431  1 0 0 0 0" result="o1"/>
+      <feComponentTransfer in="o1" result="ochre"><feFuncA type="table" tableValues="0 0 0 0 0 0 0 0 0 0 0 0 0.066 0.402 0.42 0.42 0.42 0.42 0.42 0.42 0.42"/></feComponentTransfer>
+      <feComponentTransfer in="m1" result="mottle"><feFuncA type="table" tableValues="0 0 0 0 0 0 0 0 0 0.271 0.667 0.72 0.72 0.72 0.72 0.72 0.72 0.72 0.72 0.72 0.72"/></feComponentTransfer>
+      <feTurbulence type="fractalNoise" baseFrequency="0.07" numOctaves="3" seed="21" stitchTiles="stitch" result="r0"/>
+      <feColorMatrix in="r0" type="matrix" values="0 0 0 0 0.69  0 0 0 0 0.29  0 0 0 0 0.133  1 0 0 0 0" result="r1"/>
+      <feComponentTransfer in="r1" result="rust"><feFuncA type="table" tableValues="0 0 0 0 0 0 0 0 0 0 0 0.08 0.16 0.16 0.16 0.16 0.16 0.16 0.16 0.16 0.16"/></feComponentTransfer>
+      <feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="1" seed="23" stitchTiles="stitch" result="k0"/>
+      <feColorMatrix in="k0" type="matrix" values="0 0 0 0 0.788  0 0 0 0 0.733  0 0 0 0 0.659  1 0 0 0 0" result="k1"/>
+      <feComponentTransfer in="k1" result="speck"><feFuncA type="table" tableValues="0 0 0 0 0 0 0 0 0 0 0 0 0 0.048 0.65 0.65 0.65 0.65 0.65 0.65 0.65"/></feComponentTransfer>
+      <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="rust"/><feMergeNode in="ochre"/><feMergeNode in="mottle"/><feMergeNode in="speck"/></feMerge>
+    </filter>
+    <pattern id="afTexC" patternUnits="userSpaceOnUse" x="-24" y="-24" width="48" height="48"><rect width="48" height="48" fill="#7E7468" filter="url(#afNoiseC)"/></pattern>
+    <radialGradient id="afLight" cx="0.924" cy="0.076" r="1.067">
+      <stop offset="0.25" stop-color="#FFF0DC" stop-opacity="0.34"/><stop offset="0.5" stop-color="#FFF0DC" stop-opacity="0.08"/>
+      <stop offset="0.535" stop-color="#FF9455" stop-opacity="0"/><stop offset="0.575" stop-color="#FF9455" stop-opacity="0.20"/>
+      <stop offset="0.597" stop-color="#3E3833" stop-opacity="0.80"/><stop offset="0.72" stop-color="#050B1E" stop-opacity="0.86"/>
+      <stop offset="1" stop-color="#050B1E" stop-opacity="0.92"/>
+    </radialGradient>
+    <radialGradient id="afHaze" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#AAB8DD" stop-opacity="0.05"/><stop offset="0.55" stop-color="#AAB8DD" stop-opacity="0.035"/>
+      <stop offset="1" stop-color="#AAB8DD" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="afDust" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-400" y="-80" width="800" height="160" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.006 0.03" numOctaves="4" seed="41" result="n0"/>
+      <feColorMatrix in="n0" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  2.4 0 0 0 -0.6" result="n"/>
+      <feComposite in="SourceGraphic" in2="n" operator="in"/>
+    </filter>
+    <polygon id="afR01" points="-0.83,1.38 -1.48,0.52 -1.35,-0.88 -0.35,-1.35 1.24,-1.49 1.35,-0.25 1.37,0.89 0.3,1.56"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="34s" repeatCount="indefinite"/></polygon><clipPath id="afR01c"><use href="#afR01"/></clipPath>
+    <polygon id="afR02" points="-2.65,-0.05 -1.83,-1.22 -1.32,-2.2 0.67,-1.75 2.02,-1.55 2.09,0.25 2.31,0.99 1.14,1.76 -0.34,1.84 -2.55,1.32"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="36s" repeatCount="indefinite"/></polygon><clipPath id="afR02c"><use href="#afR02"/></clipPath>
+    <polygon id="afR03" points="-2.39,0.73 -1.52,-1.75 -0.38,-2.3 1.65,-1.79 2.89,0.29 2.33,1.53 0.32,2.76 -1.54,2"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="30s" repeatCount="indefinite"/></polygon><clipPath id="afR03c"><use href="#afR03"/></clipPath>
+    <polygon id="afR04" points="1.5,2.08 -0.21,2.47 -2.45,0.86 -3.04,-0.36 -0.81,-2.6 1.08,-2.37 2.3,-1.57 2.21,1.24"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="22s" repeatCount="indefinite"/></polygon><clipPath id="afR04c"><use href="#afR04"/></clipPath>
+    <polygon id="afR05" points="-2.52,1.33 -2.55,-1.12 -0.24,-2.36 1.36,-2.01 3.25,-0.74 1.89,1.73 -0.08,2.49"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="45s" repeatCount="indefinite"/></polygon><clipPath id="afR05c"><use href="#afR05"/></clipPath>
+    <polygon id="afR06" points="0.4,2.51 -0.55,2.49 -1.55,1.58 -2.04,-0.11 -2.08,-1.57 -0.91,-2.51 1.16,-2.32 1.6,-1.46 2.47,0.04 1.71,1.15"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="46s" repeatCount="indefinite"/></polygon><clipPath id="afR06c"><use href="#afR06"/></clipPath>
+    <polygon id="afR07" points="1.03,2.16 0.23,2.48 -1.67,2.4 -2.52,0.67 -2.52,-1.01 -1.69,-1.58 -0.64,-2.26 0.74,-2.82 1.58,-1.35 2.73,-0.58 2.23,1.46"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="44s" repeatCount="indefinite"/></polygon><clipPath id="afR07c"><use href="#afR07"/></clipPath>
+    <polygon id="afR08" points="-1.19,2.01 -2.07,1.42 -2.26,0.17 -1.42,-1.16 -0.46,-2.11 0.38,-2.55 1.65,-1.79 1.99,-0.64 2.07,0.78 1.2,1.64 -0.02,2.74"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="25s" repeatCount="indefinite"/></polygon><clipPath id="afR08c"><use href="#afR08"/></clipPath>
+    <polygon id="afR09" points="-2.57,0.1 -1.68,-1.63 -0.36,-1.98 0.7,-2.2 1.83,-1.16 2.66,0.25 1.31,1.54 -0.34,2.27 -1.66,2.12"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="30s" repeatCount="indefinite"/></polygon><clipPath id="afR09c"><use href="#afR09"/></clipPath>
+    <polygon id="afR10" points="0,1.84 -1.06,1.51 -2.02,0.48 -1.69,-0.29 -0.87,-1.23 -0.17,-1.53 1.15,-1.59 1.68,-0.45 1.53,0.42 1.19,1.58"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="21s" repeatCount="indefinite"/></polygon><clipPath id="afR10c"><use href="#afR10"/></clipPath>
+    <polygon id="afR11" points="-1.74,1.39 -1.85,0.25 -1.45,-0.86 -0.97,-1.61 -0.23,-1.96 1.27,-1.82 1.81,-0.93 1.85,0.45 1.27,1.26 0.63,1.78 -0.7,1.52"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="21s" repeatCount="indefinite"/></polygon><clipPath id="afR11c"><use href="#afR11"/></clipPath>
+    <polygon id="afR12" points="1.46,1.94 0.04,2.68 -1.96,2.04 -2.55,0.68 -2.8,-1.36 -1.37,-2.36 -0.08,-2.55 1.34,-1.79 2.6,-0.27 2.64,0.94"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="29s" repeatCount="indefinite"/></polygon><clipPath id="afR12c"><use href="#afR12"/></clipPath>
+    <polygon id="afR13" points="2.23,0.32 1.33,0.91 0.11,1.37 -1.31,1.3 -1.96,0.37 -2.18,-0.38 -1.44,-1.01 0.1,-1.82 0.84,-1.35 1.71,-0.63"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="33s" repeatCount="indefinite"/></polygon><clipPath id="afR13c"><use href="#afR13"/></clipPath>
+    <polygon id="afR14" points="1.48,1.19 0.45,1.24 -1.46,0.72 -1.52,-0.46 -1.03,-1.39 0.61,-1.16 1.36,-0.35"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="25s" repeatCount="indefinite"/></polygon><clipPath id="afR14c"><use href="#afR14"/></clipPath>
+    <polygon id="afR15" points="-1.01,1.67 -1.56,0.91 -1.9,-0.44 -0.99,-2.03 0.75,-2.3 1.61,-1.91 1.73,-0.09 1.3,0.93 0.13,2.53"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="43s" repeatCount="indefinite"/></polygon><clipPath id="afR15c"><use href="#afR15"/></clipPath>
+    <polygon id="afR16" points="-2.26,0.2 -1.8,-1.42 -0.81,-2.38 0.84,-2.38 2.04,-1.38 1.95,0.26 1.91,1.44 0.44,1.87 -0.46,2.58 -2.1,1.55"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="28s" repeatCount="indefinite"/></polygon><clipPath id="afR16c"><use href="#afR16"/></clipPath>
+    <polygon id="afR17" points="-1.33,1.11 -1.79,0.43 -1.34,-0.31 -0.86,-0.95 -0.05,-1.37 0.77,-1.32 1.79,-1.12 1.91,0.01 1.24,0.83 0.08,1.73 -0.59,1.45"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="27s" repeatCount="indefinite"/></polygon><clipPath id="afR17c"><use href="#afR17"/></clipPath>
+    <polygon id="afR18" points="2.41,1.35 0.96,2.56 -2.25,1.57 -2.44,-0.25 -2.17,-1.71 -0.52,-2.79 2.72,-1.15"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="37s" repeatCount="indefinite"/></polygon><clipPath id="afR18c"><use href="#afR18"/></clipPath>
+    <polygon id="afR19" points="-0.22,2.06 -1.61,1.08 -1.65,-0.84 -1.31,-1.83 1.26,-2.35 1.69,-0.69 1.36,1.59"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="37s" repeatCount="indefinite"/></polygon><clipPath id="afR19c"><use href="#afR19"/></clipPath>
+    <polygon id="afR20" points="0.94,2.61 -0.72,3.13 -1.98,1.3 -2.27,-0.33 -2.63,-2.18 -0.61,-2.87 1.4,-2.44 2.11,-0.45 2.94,1.1"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="42s" repeatCount="indefinite"/></polygon><clipPath id="afR20c"><use href="#afR20"/></clipPath>
+    <polygon id="afR21" points="-0.93,2.62 -1.8,2.11 -2.65,0.26 -2.8,-0.81 -1.57,-2.28 -0.15,-3.36 1.51,-2.76 2.39,-1.12 2.75,-0.39 1.88,2.04 0.84,2.43"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="39s" repeatCount="indefinite"/></polygon><clipPath id="afR21c"><use href="#afR21"/></clipPath>
+    <polygon id="afR22" points="1.88,1.96 0.39,2.34 -1.79,1.28 -2.13,0.4 -2.03,-1.82 0.33,-2.73 1.72,-1.59 2.31,0.4"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="25s" repeatCount="indefinite"/></polygon><clipPath id="afR22c"><use href="#afR22"/></clipPath>
+    <polygon id="afR23" points="0.56,3.36 -1.6,2.32 -2.57,-0.22 -1.58,-1.94 0.68,-2.88 1.98,-1.65 2.19,2.04"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="25s" repeatCount="indefinite"/></polygon><clipPath id="afR23c"><use href="#afR23"/></clipPath>
+    <polygon id="afR24" points="2.38,0.17 1.93,1.87 -0.17,2.18 -2.76,0.55 -1.85,-0.98 -0.62,-2.07 1.8,-1.48"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="40s" repeatCount="indefinite"/></polygon><clipPath id="afR24c"><use href="#afR24"/></clipPath>
+    <polygon id="afR25" points="1.66,0.69 0.71,1.6 -0.17,1.49 -1.53,1.07 -1.64,0 -1.75,-1.02 -0.1,-1.91 0.67,-1.29 1.92,-0.59"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="49s" repeatCount="indefinite"/></polygon><clipPath id="afR25c"><use href="#afR25"/></clipPath>
+    <polygon id="afR26" points="-1.8,0.85 -1.9,-0.3 -1.34,-1.29 0.01,-2.22 1.49,-1.47 2.55,-0.95 2.03,0.85 0.29,2.62 -1.04,2.42"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="37s" repeatCount="indefinite"/></polygon><clipPath id="afR26c"><use href="#afR26"/></clipPath>
+    <polygon id="afR27" points="-2.29,1.34 -2.71,-0.63 -1.59,-2.02 -0.85,-2.14 1.43,-2.83 2.66,-1.56 2.32,-0.59 2.3,1.28 1.63,2 0.15,2.24 -1.77,2.54"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="49s" repeatCount="indefinite"/></polygon><clipPath id="afR27c"><use href="#afR27"/></clipPath>
+    <polygon id="afR28" points="3.34,-0.05 2.36,1.65 0.4,2.59 -2.53,1.31 -3.25,0.21 -1.24,-2.08 -0.28,-2.53 2.7,-1.53"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="49s" repeatCount="indefinite"/></polygon><clipPath id="afR28c"><use href="#afR28"/></clipPath>
+    <polygon id="afR29" points="-0.34,2.04 -1.27,1.49 -1.87,0.45 -2.11,-1.01 -0.38,-2.33 0.39,-2.61 1.67,-1.16 2.08,0.93 1.29,1.79"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="20s" repeatCount="indefinite"/></polygon><clipPath id="afR29c"><use href="#afR29"/></clipPath>
+    <polygon id="afR30" points="1.48,3.13 -0.26,3.15 -2.3,1.61 -2.55,-0.94 -1.53,-2.13 0.41,-2.59 1.75,-1.91 2.86,0.74"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="26s" repeatCount="indefinite"/></polygon><clipPath id="afR30c"><use href="#afR30"/></clipPath>
+    <polygon id="afR31" points="-1.65,1.5 -2.73,-0.12 -2.09,-1.18 -0.62,-2.46 1.04,-2.38 2.15,-1.89 2.32,-0.06 1.95,1.45 0.42,2.73 -0.84,2.39"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="49s" repeatCount="indefinite"/></polygon><clipPath id="afR31c"><use href="#afR31"/></clipPath>
+    <polygon id="afR32" points="-1.12,1.99 -1.93,1.27 -1.65,-0.11 -1.23,-1 -0.11,-2.08 0.98,-1.97 1.66,-1.37 1.92,-0.27 1.51,0.93 0.68,1.98 -0.52,2.26"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="25s" repeatCount="indefinite"/></polygon><clipPath id="afR32c"><use href="#afR32"/></clipPath>
+    <polygon id="afR33" points="-1.43,2.02 -2.62,0.68 -1.93,-1.46 0.62,-2.36 1.57,-2.21 2.24,0.65 1.03,1.96"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="21s" repeatCount="indefinite"/></polygon><clipPath id="afR33c"><use href="#afR33"/></clipPath>
+    <polygon id="afR34" points="2.02,1.52 0.82,2.19 -0.22,2.05 -1.13,1.36 -2.05,0.17 -2.24,-1.06 -1.68,-2.28 -0.06,-2.38 0.89,-1.55 2.5,-0.33 2.51,0.82"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="43s" repeatCount="indefinite"/></polygon><clipPath id="afR34c"><use href="#afR34"/></clipPath>
+    <polygon id="afR35" points="-2.04,2.38 -2.28,1.41 -2.04,-0.65 -1.16,-1.74 0.54,-2.56 1.54,-2.58 2.7,-1.2 2.29,0.98 1.01,2.34 0.06,2.17"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="27s" repeatCount="indefinite"/></polygon><clipPath id="afR35c"><use href="#afR35"/></clipPath>
+    <polygon id="afR36" points="2.37,1.12 1.03,2.23 0.17,2.75 -1.32,1.64 -1.91,0.76 -2.3,-0.91 -1.45,-1.82 -0.84,-2.73 1.09,-2.49 2.07,-1.36 2.62,-0.41"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="45s" repeatCount="indefinite"/></polygon><clipPath id="afR36c"><use href="#afR36"/></clipPath>
+    <polygon id="afR37" points="2.24,1.99 1.06,2.13 -1.57,1.19 -2.88,0.43 -1.35,-1.86 0.87,-2.17 2.6,-0.86"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="32s" repeatCount="indefinite"/></polygon><clipPath id="afR37c"><use href="#afR37"/></clipPath>
+    <polygon id="afR38" points="-1.62,2.46 -3.27,0.87 -2.17,-1.67 -0.36,-3.04 2.16,-2.91 3.25,-0.15 1.71,2.52"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="46s" repeatCount="indefinite"/></polygon><clipPath id="afR38c"><use href="#afR38"/></clipPath>
+    <polygon id="afR39" points="0.88,2.28 -0.78,1.67 -2.25,0.81 -1.94,-0.13 -0.72,-1.98 0.58,-1.78 1.67,-0.88 2.11,0.75"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="44s" repeatCount="indefinite"/></polygon><clipPath id="afR39c"><use href="#afR39"/></clipPath>
+    <polygon id="afR40" points="0.71,1.34 -0.01,1.62 -1.3,1.38 -1.65,0.2 -1.22,-0.6 -0.97,-1.08 0.33,-1.75 0.97,-1.16 1.72,-0.75 1.42,0.51"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="37s" repeatCount="indefinite"/></polygon><clipPath id="afR40c"><use href="#afR40"/></clipPath>
+    <polygon id="afR41" points="1.26,3.35 -1.08,2.54 -2.6,1.95 -2.61,0.23 -1.76,-1.77 -0.36,-2.67 0.59,-3.16 2.4,-2.09 2.48,0.12 2.54,2.02"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="32s" repeatCount="indefinite"/></polygon><clipPath id="afR41c"><use href="#afR41"/></clipPath>
+    <polygon id="afR42" points="0.23,2.48 -0.7,2.1 -2.13,0.86 -2.52,-0.44 -1.11,-1.94 -0.06,-2.06 1.75,-1.29 2.38,-0.5 1.69,1.7"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="31s" repeatCount="indefinite"/></polygon><clipPath id="afR42c"><use href="#afR42"/></clipPath>
+    <polygon id="afR43" points="-0.89,1.82 -1.59,0.37 -1.98,-0.66 -1.32,-1.35 -0.33,-2.11 0.72,-2.14 1.61,-1.57 1.63,0.08 1.41,0.87 1.25,1.62 -0.34,1.66"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="30s" repeatCount="indefinite"/></polygon><clipPath id="afR43c"><use href="#afR43"/></clipPath>
+    <polygon id="afR44" points="-1.11,2.36 -1.63,1.63 -2.32,0.5 -2.02,-1.93 -0.56,-2.72 0.48,-2.35 2.18,-1.37 2.25,0.01 2.09,1.2 0.83,2.27"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="42s" repeatCount="indefinite"/></polygon><clipPath id="afR44c"><use href="#afR44"/></clipPath>
+    <polygon id="afR45" points="-3.53,-0.03 -2.21,-1.99 -0.61,-2.63 2.32,-2.01 2.57,0.63 1.66,2.31 -0.67,2.5"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="26s" repeatCount="indefinite"/></polygon><clipPath id="afR45c"><use href="#afR45"/></clipPath>
+    <polygon id="afR46" points="1.96,0.29 1.75,1.39 0.64,2.29 -0.65,1.93 -1.97,1.62 -1.92,0.67 -2.51,-0.88 -1.81,-1.75 -0.22,-2.34 1.14,-2.09 1.73,-1.21"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="45s" repeatCount="indefinite"/></polygon><clipPath id="afR46c"><use href="#afR46"/></clipPath>
+    <polygon id="afR47" points="0.24,2.38 -0.79,1.98 -1.59,1.04 -1.73,-0.06 -1.88,-1.01 -0.62,-2.35 -0.02,-2.36 1.26,-2.01 1.67,-0.63 1.76,0.32 1.35,2.08"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="41s" repeatCount="indefinite"/></polygon><clipPath id="afR47c"><use href="#afR47"/></clipPath>
+    <polygon id="afR48" points="2.84,0.7 1.73,1.2 0.17,2 -0.57,1.61 -2.2,1.03 -2.98,-0.1 -2.02,-0.82 -0.94,-2.23 -0.19,-2.19 1.92,-1.39 2.54,-0.38"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="30s" repeatCount="indefinite"/></polygon><clipPath id="afR48c"><use href="#afR48"/></clipPath>
+    <polygon id="afR49" points="1.72,-0.05 1.76,1.33 0.37,2.02 -0.74,1.52 -1.46,1.12 -1.95,0.1 -1.64,-1.42 -0.48,-1.94 1.25,-1.97 1.61,-1.01"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="41s" repeatCount="indefinite"/></polygon><clipPath id="afR49c"><use href="#afR49"/></clipPath>
+    <polygon id="afR50" points="-0.61,1.81 -1.38,1.05 -1.62,0.07 -1.47,-0.58 -0.88,-1.45 0.27,-1.98 0.81,-1.59 1.24,-0.91 1.69,0.56 1.56,1.06 0.51,1.43"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="29s" repeatCount="indefinite"/></polygon><clipPath id="afR50c"><use href="#afR50"/></clipPath>
+    <polygon id="afR51" points="1.45,1.95 -0.5,2.42 -2.38,0.85 -2.05,-1.91 -1.24,-3.05 0.86,-2.17 2.36,0.77"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="28s" repeatCount="indefinite"/></polygon><clipPath id="afR51c"><use href="#afR51"/></clipPath>
+    <polygon id="afR52" points="-2.53,0.36 -2.09,-1.24 -0.69,-1.89 1.01,-2.51 2.02,-1.61 2.48,0.21 1.42,1.31 -0.11,2.4 -1.7,1.83"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="50s" repeatCount="indefinite"/></polygon><clipPath id="afR52c"><use href="#afR52"/></clipPath>
+    <polygon id="afR53" points="-0.97,1.67 -1.68,0.78 -1.76,-0.45 -0.32,-1.61 1.12,-1.59 1.48,-0.21 1.5,0.92 0.61,1.47"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="27s" repeatCount="indefinite"/></polygon><clipPath id="afR53c"><use href="#afR53"/></clipPath>
+    <polygon id="afR54" points="0.62,1.41 -0.57,1.85 -1.16,1.12 -1.52,0.16 -1.75,-0.99 -0.57,-1.5 0.01,-1.75 1.49,-1.15 1.68,0.17 1.63,0.86"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="20s" repeatCount="indefinite"/></polygon><clipPath id="afR54c"><use href="#afR54"/></clipPath>
+    <polygon id="afR55" points="-1.45,0.2 -1.66,-0.71 -0.95,-1.13 -0.23,-1.33 1.26,-1.32 1.87,-0.61 1.71,0.3 1.24,0.92 0.37,1.24 -0.78,1.54 -1.27,0.98"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="50s" repeatCount="indefinite"/></polygon><clipPath id="afR55c"><use href="#afR55"/></clipPath>
+    <polygon id="afR56" points="-2.01,2.39 -2.5,1.3 -2.87,0.08 -1.74,-1.76 -0.79,-2.32 1.15,-3.03 2.59,-2.34 2.83,-0.61 2.69,1.21 1.39,1.77 -0.06,3.62"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="28s" repeatCount="indefinite"/></polygon><clipPath id="afR56c"><use href="#afR56"/></clipPath>
+    <polygon id="afR57" points="-1.58,1.32 -1.53,0.16 -1.34,-0.93 0.18,-1.94 1.41,-1.8 1.91,-0.66 1.49,1.21 0.24,1.86"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="21s" repeatCount="indefinite"/></polygon><clipPath id="afR57c"><use href="#afR57"/></clipPath>
+    <polygon id="afR58" points="-2.16,0.54 -2.06,-0.44 -1.27,-1.23 -0.42,-1.99 1.15,-2.04 1.57,-1.53 2.35,-0.32 1.76,0.81 0.76,1.9 0.1,2.21 -1.1,1.5"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="40s" repeatCount="indefinite"/></polygon><clipPath id="afR58c"><use href="#afR58"/></clipPath>
+    <polygon id="afR59" points="-0.25,2.06 -1.26,1.98 -2.28,0.47 -2.18,-0.4 -1.38,-1.57 -0.32,-2.41 1.1,-1.96 2.28,-1.16 2.61,0.08 1.91,1.57 1.22,2.2"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="21s" repeatCount="indefinite"/></polygon><clipPath id="afR59c"><use href="#afR59"/></clipPath>
+    <polygon id="afR60" points="0.97,1.73 -0.18,2.59 -0.88,1.88 -1.83,1.04 -1.84,-0.26 -1.56,-1.62 -0.66,-2.15 0.67,-1.72 1.5,-1.19 2.34,0 1.65,1.29"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="45s" repeatCount="indefinite"/></polygon><clipPath id="afR60c"><use href="#afR60"/></clipPath>
+    <polygon id="afR61" points="3.06,1.5 1.72,2.02 0.17,2.93 -1.07,2.82 -2.66,0.72 -3.71,-0.57 -2.67,-2.02 -1.32,-2.8 0.26,-2.57 1.73,-1.57 3.67,-0.04"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="39s" repeatCount="indefinite"/></polygon><clipPath id="afR61c"><use href="#afR61"/></clipPath>
+    <polygon id="afR62" points="0.47,1.86 -0.33,2.08 -1.82,1.04 -1.59,-1.49 -0.15,-2.29 1.66,-0.86 1.88,0.56"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="21s" repeatCount="indefinite"/></polygon><clipPath id="afR62c"><use href="#afR62"/></clipPath>
+    <polygon id="afR63" points="0.96,7.15 -2.08,6.81 -5.02,3.84 -6.4,-1 -4.99,-4.96 -1.96,-5.78 1.51,-6.63 5.91,-3.81 7.31,-0.84 4.47,2.93"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="47s" repeatCount="indefinite"/></polygon><clipPath id="afR63c"><use href="#afR63"/></clipPath>
+    <polygon id="afR64" points="-1.52,4.11 -3.87,2.13 -2.49,-3.79 -0.14,-4.16 4.24,-2.45 4.55,1.87 2.03,4.18"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="52s" repeatCount="indefinite"/></polygon><clipPath id="afR64c"><use href="#afR64"/></clipPath>
+    <polygon id="afR65" points="0.49,5.25 -2.18,3.58 -3.68,2.18 -4.25,-0.18 -2.54,-3.21 -0.55,-4.62 2.51,-5.18 4.31,-3.22 4.67,1.1 3.18,3.59"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="59s" repeatCount="indefinite"/></polygon><clipPath id="afR65c"><use href="#afR65"/></clipPath>
+    <polygon id="afR66" points="-2.78,4.18 -5.41,0.01 -2.06,-3.57 2.78,-5.29 5.01,-1.83 4.54,0.57 1.17,3.73"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="45s" repeatCount="indefinite"/></polygon><clipPath id="afR66c"><use href="#afR66"/></clipPath>
+    <polygon id="afR67" points="6.19,1.67 2.18,4.7 -0.53,5.91 -4.17,3.94 -4.7,1.75 -5.66,-2.38 -4.22,-5 0.8,-6.17 4.49,-3.43 5.31,-0.72"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="58s" repeatCount="indefinite"/></polygon><clipPath id="afR67c"><use href="#afR67"/></clipPath>
+    <polygon id="afR68" points="1.36,5.46 -2.57,3.78 -3.87,1.56 -4.89,-1.3 -3.64,-3.34 -0.09,-5.67 1.43,-3.95 3.73,-2.84 5.19,0.99 2.74,3.7"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="43s" repeatCount="indefinite"/></polygon><clipPath id="afR68c"><use href="#afR68"/></clipPath>
+    <polygon id="afR69" points="-2.85,5.11 -5.29,1.07 -5.42,-1.5 -3.05,-4.36 0.38,-4.44 3.78,-4.01 4.24,-1.61 5.34,0.95 2.58,3.53 -0.81,4.83"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="68s" repeatCount="indefinite"/></polygon><clipPath id="afR69c"><use href="#afR69"/></clipPath>
+    <polygon id="afR70" points="-2.84,5.31 -5.11,3.26 -7.08,-0.64 -3.26,-3.96 -0.51,-6.52 2.23,-5.26 6.04,-2.54 6.08,1.4 4.3,3.2 0.3,6.94"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="58s" repeatCount="indefinite"/></polygon><clipPath id="afR70c"><use href="#afR70"/></clipPath>
+    <polygon id="afR71" points="-0.41,7.83 -3.59,5.79 -5.25,1.26 -5.12,-4.32 -2.02,-5.9 1.97,-7.52 4.46,-5.69 5.4,0.14 4.65,4.71"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="45s" repeatCount="indefinite"/></polygon><clipPath id="afR71c"><use href="#afR71"/></clipPath>
+    <polygon id="afR72" points="2.81,6.29 -0.06,5.96 -2.65,5.48 -4.37,2.29 -4.83,-1.93 -4.21,-4.76 -1.16,-6.82 1.54,-5.35 4.52,-4.61 6.02,0.65 4.83,2.43"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="44s" repeatCount="indefinite"/></polygon><clipPath id="afR72c"><use href="#afR72"/></clipPath>
+    <polygon id="afR73" points="5.17,3.32 2.01,5.18 -4.32,3.57 -6.02,0.42 -5.81,-3.46 -0.97,-6.54 4.05,-3.61 6.85,1.29"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="44s" repeatCount="indefinite"/></polygon><clipPath id="afR73c"><use href="#afR73"/></clipPath>
+    <polygon id="afR74" points="1.19,5.4 -1.89,3.91 -4.98,2.41 -4.28,-2.54 -1.93,-5.28 3.52,-3.82 4.02,-0.86 4.54,2.65"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="68s" repeatCount="indefinite"/></polygon><clipPath id="afR74c"><use href="#afR74"/></clipPath>
+    <polygon id="afR75" points="-1,5.46 -2.79,2.95 -3.95,1.14 -3.76,-2.22 -2.07,-4.81 0.29,-5.12 1.79,-3.43 4.27,-3.04 4.21,1.36 3.03,3.67 1.47,4.93"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="49s" repeatCount="indefinite"/></polygon><clipPath id="afR75c"><use href="#afR75"/></clipPath>
+    <polygon id="afR76" points="-6.47,1.62 -6.33,-1.11 -2.67,-4.8 2.12,-5.55 6.11,-3.25 7.56,-0.46 5.66,3.49 0.64,5.16 -3.43,4.65"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="53s" repeatCount="indefinite"/></polygon><clipPath id="afR76c"><use href="#afR76"/></clipPath>
+    <polygon id="afR77" points="-0.84,5.54 -3.11,3.95 -3.95,1.54 -3.39,-1.25 -2.32,-3.25 0.87,-5.89 2.93,-4.66 3.95,-2.53 4.73,0.03 2.37,3.32 1.27,4.88"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="70s" repeatCount="indefinite"/></polygon><clipPath id="afR77c"><use href="#afR77"/></clipPath>
+    <polygon id="afR78" points="0.46,4.71 -2.1,4.06 -4.28,0.29 -4.11,-1.49 -1.74,-3.48 2.66,-3.45 3.37,-0.76 3.62,2.08"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="69s" repeatCount="indefinite"/></polygon><clipPath id="afR78c"><use href="#afR78"/></clipPath>
+    <polygon id="afR79" points="4.38,3.99 -0.03,5.78 -1.89,3.81 -4.7,0.65 -4.64,-1.34 -2.02,-4.38 -0.04,-5.52 3.27,-3.23 5.67,0.78"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="42s" repeatCount="indefinite"/></polygon><clipPath id="afR79c"><use href="#afR79"/></clipPath>
+    <polygon id="afR80" points="-2.42,4.87 -4.91,2.44 -5.17,-2.35 -0.44,-6.21 4.58,-4.16 5.46,1.83 1.12,5.79"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="41s" repeatCount="indefinite"/></polygon><clipPath id="afR80c"><use href="#afR80"/></clipPath>
+    <polygon id="afR81" points="-3.71,5.42 -5.59,2.87 -4.46,-2.04 -2.37,-4.98 2.46,-7.15 3.53,-5.18 6.57,-1.91 3.43,3.1 -0.3,6.64"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="36s" repeatCount="indefinite"/></polygon><clipPath id="afR81c"><use href="#afR81"/></clipPath>
+    <polygon id="afR82" points="-2.95,5.66 -5.34,4.05 -7.09,1.79 -4.42,-2.72 -2.27,-5.67 1.65,-7.31 4.89,-6.54 5.08,-1.31 6.5,2.19 3.83,5.73 1.13,5.92"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="53s" repeatCount="indefinite"/></polygon><clipPath id="afR82c"><use href="#afR82"/></clipPath>
+    <polygon id="afR83" points="11.57,4.38 8.53,7.18 0.9,9.59 -6.03,9.77 -7.74,6.1 -11.58,2.19 -10.72,-5.65 -3.7,-10.04 2.01,-10.15 8.39,-8.19 13,-3.01"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="80s" repeatCount="indefinite"/></polygon><clipPath id="afR83c"><use href="#afR83"/></clipPath>
+    <polygon id="afR84" points="9.01,3.83 4.93,8.28 -1.72,9.81 -4.77,6.23 -8.83,4.58 -10.61,-1.07 -6.95,-8.68 -3.46,-8.02 2.48,-9.43 7.61,-4.15 8.93,-0.43"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="83s" repeatCount="indefinite"/></polygon><clipPath id="afR84c"><use href="#afR84"/></clipPath>
+    <polygon id="afR85" points="-3.55,11.63 -8.4,5.84 -9.8,-3.57 -6.46,-8.76 0.11,-9.62 8.58,-6.9 11.7,-3.6 7.47,6.15 0.67,10.06"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="80s" repeatCount="indefinite"/></polygon><clipPath id="afR85c"><use href="#afR85"/></clipPath>
+    <polygon id="afR86" points="0.49,12.1 -7.92,9.97 -10.81,-2.65 -6.72,-11.59 -0.65,-14.16 9.87,-7.07 9.84,1.56 5.42,9.95"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="79s" repeatCount="indefinite"/></polygon><clipPath id="afR86c"><use href="#afR86"/></clipPath>
+    <polygon id="afR87" points="-12.05,6.15 -14.59,-0.04 -7.65,-5.15 -2.88,-9.65 5.65,-8.89 10.58,-7.42 14.48,-1.22 10.27,6.16 5.79,7.27 -2.28,11.83 -8.6,9.61"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="71s" repeatCount="indefinite"/></polygon><clipPath id="afR87c"><use href="#afR87"/></clipPath>
+    <polygon id="afR88" points="-11.05,0.5 -9.53,-5.56 -7.43,-8.39 0.48,-11.01 6.07,-6.13 8.73,-2.5 9.99,1.49 5.53,5.92 2.89,7.87 -2.35,10.13 -6.47,6.46"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="72s" repeatCount="indefinite"/></polygon><clipPath id="afR88c"><use href="#afR88"/></clipPath>
+  </defs>
+  <g id="asteroidField" transform="translate(360 180)">
+    <g><animateTransform attributeName="transform" type="translate" values="0 0;5.71 -1.85;0 0;-5.71 1.85;0 0" keyTimes="0;0.25;0.5;0.75;1" calcMode="spline" keySplines="0.37 0 0.63 1;0.37 0 0.63 1;0.37 0 0.63 1;0.37 0 0.63 1" dur="60s" repeatCount="indefinite"/>
+    <ellipse rx="380" ry="62" transform="rotate(-18)" fill="url(#afHaze)" filter="url(#afDust)"/>
+    <g transform="translate(-290.11 131.9)" clip-path="url(#afR01c)">
+      <use href="#afR01" fill="#C9BBA8"/><use href="#afR01" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="2.38" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(-279.81 169.09)" clip-path="url(#afR02c)">
+      <use href="#afR02" fill="#C9BBA8"/><use href="#afR02" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="3.49" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(-271.23 141.22)" clip-path="url(#afR03c)">
+      <use href="#afR03" fill="#C9BBA8"/><use href="#afR03" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="3.86" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(-258.5 122.23)" clip-path="url(#afR04c)">
+      <use href="#afR04" fill="#C9BBA8"/><use href="#afR04" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="4" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(-251.83 57.38)" clip-path="url(#afR05c)">
+      <use href="#afR05" fill="#C9BBA8"/><use href="#afR05" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="4.03" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(-247.74 10.58)" clip-path="url(#afR06c)">
+      <use href="#afR06" fill="#C9BBA8"/><use href="#afR06" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="3.59" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(-239.57 59.02)" clip-path="url(#afR07c)">
+      <use href="#afR07" fill="#C9BBA8"/><use href="#afR07" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="3.85" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(-226.01 72.38)" clip-path="url(#afR08c)">
+      <use href="#afR08" fill="#C9BBA8"/><use href="#afR08" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="3.44" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(-219.55 38.08)" clip-path="url(#afR09c)">
+      <use href="#afR09" fill="#C9BBA8"/><use href="#afR09" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="3.52" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(-218.37 119.86)" clip-path="url(#afR10c)">
+      <use href="#afR10" fill="#C9BBA8"/><use href="#afR10" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="2.67" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(-214.71 12.65)" clip-path="url(#afR11c)">
+      <use href="#afR11" fill="#C9BBA8"/><use href="#afR11" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="2.88" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(-202.8 -5.11)" clip-path="url(#afR12c)">
+      <use href="#afR12" fill="#C9BBA8"/><use href="#afR12" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="3.99" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(-201.78 97.88)" clip-path="url(#afR13c)">
+      <use href="#afR13" fill="#C9BBA8"/><use href="#afR13" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="2.74" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(-201.42 66.59)" clip-path="url(#afR14c)">
+      <use href="#afR14" fill="#C9BBA8"/><use href="#afR14" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="2.33" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(-192.79 116.45)" clip-path="url(#afR15c)">
+      <use href="#afR15" fill="#C9BBA8"/><use href="#afR15" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="3.13" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(-190.92 103.42)" clip-path="url(#afR16c)">
+      <use href="#afR16" fill="#C9BBA8"/><use href="#afR16" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="3.53" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(-181.61 -14.43)" clip-path="url(#afR17c)">
+      <use href="#afR17" fill="#C9BBA8"/><use href="#afR17" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="2.45" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(-179.73 73.38)" clip-path="url(#afR18c)">
+      <use href="#afR18" fill="#C9BBA8"/><use href="#afR18" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="4.13" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(-175.27 1.28)" clip-path="url(#afR19c)">
+      <use href="#afR19" fill="#C9BBA8"/><use href="#afR19" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="3.15" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(-167.76 33.22)" clip-path="url(#afR20c)">
+      <use href="#afR20" fill="#C9BBA8"/><use href="#afR20" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="4.18" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(-132.02 100.42)" clip-path="url(#afR21c)">
+      <use href="#afR21" fill="#C9BBA8"/><use href="#afR21" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="4.25" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(-127.26 36.06)" clip-path="url(#afR22c)">
+      <use href="#afR22" fill="#C9BBA8"/><use href="#afR22" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="3.68" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(-122.77 81.21)" clip-path="url(#afR23c)">
+      <use href="#afR23" fill="#C9BBA8"/><use href="#afR23" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="4.25" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(-120.36 -55.52)" clip-path="url(#afR24c)">
+      <use href="#afR24" fill="#C9BBA8"/><use href="#afR24" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="3.57" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(-108.9 -35.37)" clip-path="url(#afR25c)">
+      <use href="#afR25" fill="#C9BBA8"/><use href="#afR25" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="2.66" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(-101.71 -63.98)" clip-path="url(#afR26c)">
+      <use href="#afR26" fill="#C9BBA8"/><use href="#afR26" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="3.38" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(-92.48 6.37)" clip-path="url(#afR27c)">
+      <use href="#afR27" fill="#C9BBA8"/><use href="#afR27" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="4.02" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(-88.77 53.2)" clip-path="url(#afR28c)">
+      <use href="#afR28" fill="#C9BBA8"/><use href="#afR28" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="4.31" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(-82.8 -16.03)" clip-path="url(#afR29c)">
+      <use href="#afR29" fill="#C9BBA8"/><use href="#afR29" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="3.3" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(-67.3 -40.28)" clip-path="url(#afR30c)">
+      <use href="#afR30" fill="#C9BBA8"/><use href="#afR30" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="4.3" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(-64.86 51.04)" clip-path="url(#afR31c)">
+      <use href="#afR31" fill="#C9BBA8"/><use href="#afR31" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="3.81" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(-56.03 -9.8)" clip-path="url(#afR32c)">
+      <use href="#afR32" fill="#C9BBA8"/><use href="#afR32" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="3.05" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(-36.42 -7.67)" clip-path="url(#afR33c)">
+      <use href="#afR33" fill="#C9BBA8"/><use href="#afR33" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="3.71" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(-7.26 53.92)" clip-path="url(#afR34c)">
+      <use href="#afR34" fill="#C9BBA8"/><use href="#afR34" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="3.46" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(13.17 -29.2)" clip-path="url(#afR35c)">
+      <use href="#afR35" fill="#C9BBA8"/><use href="#afR35" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="3.87" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(27.51 -38.14)" clip-path="url(#afR36c)">
+      <use href="#afR36" fill="#C9BBA8"/><use href="#afR36" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="3.75" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(36.77 -21.04)" clip-path="url(#afR37c)">
+      <use href="#afR37" fill="#C9BBA8"/><use href="#afR37" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="3.78" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(44.11 64.71)" clip-path="url(#afR38c)">
+      <use href="#afR38" fill="#C9BBA8"/><use href="#afR38" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="4.72" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(44.29 1.59)" clip-path="url(#afR39c)">
+      <use href="#afR39" fill="#C9BBA8"/><use href="#afR39" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="3.14" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(53.71 -44.36)" clip-path="url(#afR40c)">
+      <use href="#afR40" fill="#C9BBA8"/><use href="#afR40" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="2.43" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(54.7 -54.48)" clip-path="url(#afR41c)">
+      <use href="#afR41" fill="#C9BBA8"/><use href="#afR41" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="4.43" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(64.91 -100.45)" clip-path="url(#afR42c)">
+      <use href="#afR42" fill="#C9BBA8"/><use href="#afR42" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="3.48" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(114.44 -46.13)" clip-path="url(#afR43c)">
+      <use href="#afR43" fill="#C9BBA8"/><use href="#afR43" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="2.91" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(115.88 -25.14)" clip-path="url(#afR44c)">
+      <use href="#afR44" fill="#C9BBA8"/><use href="#afR44" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="3.74" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(137.4 -26.16)" clip-path="url(#afR45c)">
+      <use href="#afR45" fill="#C9BBA8"/><use href="#afR45" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="4.36" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(150.49 -73.5)" clip-path="url(#afR46c)">
+      <use href="#afR46" fill="#C9BBA8"/><use href="#afR46" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="3.44" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(173.03 -117.11)" clip-path="url(#afR47c)">
+      <use href="#afR47" fill="#C9BBA8"/><use href="#afR47" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="3.21" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(179.97 -124.5)" clip-path="url(#afR48c)">
+      <use href="#afR48" fill="#C9BBA8"/><use href="#afR48" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="3.53" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(213.01 -153)" clip-path="url(#afR49c)">
+      <use href="#afR49" fill="#C9BBA8"/><use href="#afR49" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="2.98" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(219.76 -105.53)" clip-path="url(#afR50c)">
+      <use href="#afR50" fill="#C9BBA8"/><use href="#afR50" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="2.6" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(225.5 -76.76)" clip-path="url(#afR51c)">
+      <use href="#afR51" fill="#C9BBA8"/><use href="#afR51" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="3.93" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(231.21 -91.87)" clip-path="url(#afR52c)">
+      <use href="#afR52" fill="#C9BBA8"/><use href="#afR52" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="3.6" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(248.18 -12.96)" clip-path="url(#afR53c)">
+      <use href="#afR53" fill="#C9BBA8"/><use href="#afR53" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="2.63" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(249 -115)" clip-path="url(#afR54c)">
+      <use href="#afR54" fill="#C9BBA8"/><use href="#afR54" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="2.61" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(253.66 -98.33)" clip-path="url(#afR55c)">
+      <use href="#afR55" fill="#C9BBA8"/><use href="#afR55" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="2.43" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(254.56 -21.39)" clip-path="url(#afR56c)">
+      <use href="#afR56" fill="#C9BBA8"/><use href="#afR56" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="4.39" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(270.81 -63.24)" clip-path="url(#afR57c)">
+      <use href="#afR57" fill="#C9BBA8"/><use href="#afR57" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="2.87" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(285.89 -61.16)" clip-path="url(#afR58c)">
+      <use href="#afR58" fill="#C9BBA8"/><use href="#afR58" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="3.15" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(286.19 -21.43)" clip-path="url(#afR59c)">
+      <use href="#afR59" fill="#C9BBA8"/><use href="#afR59" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="3.53" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(294.79 -32.9)" clip-path="url(#afR60c)">
+      <use href="#afR60" fill="#C9BBA8"/><use href="#afR60" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="3.18" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(300.2 -85.72)" clip-path="url(#afR61c)">
+      <use href="#afR61" fill="#C9BBA8"/><use href="#afR61" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="4.58" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(315.47 -54.5)" clip-path="url(#afR62c)">
+      <use href="#afR62" fill="#C9BBA8"/><use href="#afR62" fill="#7E7468" transform="translate(-0.45 0.45)"/>
+      <circle r="3.09" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(-283.44 59.19)" clip-path="url(#afR63c)">
+      <use href="#afR63" fill="#C9BBA8"/><use href="#afR63" fill="url(#afTexB)" transform="translate(-0.6 0.6)"/>
+      <g transform="translate(-0.6 0.6)"><g><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="47s" repeatCount="indefinite"/><circle cx="1.09" cy="-0.16" r="1.14" fill="#C9BBA8"/></g></g>
+      <g transform="translate(-0.26 0.26)"><g><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="47s" repeatCount="indefinite"/><circle cx="1.09" cy="-0.16" r="0.89" fill="#3E3833"/></g></g>
+      <circle r="10.02" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(-262.1 78.05)" clip-path="url(#afR64c)">
+      <use href="#afR64" fill="#C9BBA8"/><use href="#afR64" fill="url(#afTexB)" transform="translate(-0.6 0.6)"/>
+      <circle r="6.85" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(-103.21 58.33)" clip-path="url(#afR65c)">
+      <use href="#afR65" fill="#C9BBA8"/><use href="#afR65" fill="url(#afTexC)" transform="translate(-0.6 0.6)"/>
+      <circle r="7.12" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(-97.34 40.43)" clip-path="url(#afR66c)">
+      <use href="#afR66" fill="#C9BBA8"/><use href="#afR66" fill="url(#afTexB)" transform="translate(-0.6 0.6)"/>
+      <circle r="7.36" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(-73.95 26.49)" clip-path="url(#afR67c)">
+      <use href="#afR67" fill="#C9BBA8"/><use href="#afR67" fill="url(#afTexC)" transform="translate(-0.6 0.6)"/>
+      <g transform="translate(-0.6 0.6)"><g><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="58s" repeatCount="indefinite"/><circle cx="-0.43" cy="-0.15" r="1.28" fill="#C9BBA8"/></g></g>
+      <g transform="translate(-0.22 0.22)"><g><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="58s" repeatCount="indefinite"/><circle cx="-0.43" cy="-0.15" r="1" fill="#3E3833"/></g></g>
+      <circle r="8.73" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(-64.61 74.78)" clip-path="url(#afR68c)">
+      <use href="#afR68" fill="#C9BBA8"/><use href="#afR68" fill="url(#afTexB)" transform="translate(-0.6 0.6)"/>
+      <circle r="7.32" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(-26 -18.44)" clip-path="url(#afR69c)">
+      <use href="#afR69" fill="#C9BBA8"/><use href="#afR69" fill="url(#afTexA)" transform="translate(-0.6 0.6)"/>
+      <circle r="7.71" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(0.39 -3.49)" clip-path="url(#afR70c)">
+      <use href="#afR70" fill="#C9BBA8"/><use href="#afR70" fill="url(#afTexC)" transform="translate(-0.6 0.6)"/>
+      <g transform="translate(-0.6 0.6)"><g><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="58s" repeatCount="indefinite"/><circle cx="-0.54" cy="-0.9" r="1.09" fill="#C9BBA8"/></g></g>
+      <g transform="translate(-0.27 0.27)"><g><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="58s" repeatCount="indefinite"/><circle cx="-0.54" cy="-0.9" r="0.85" fill="#3E3833"/></g></g>
+      <circle r="9.25" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(20.91 -58.74)" clip-path="url(#afR71c)">
+      <use href="#afR71" fill="#C9BBA8"/><use href="#afR71" fill="url(#afTexC)" transform="translate(-0.6 0.6)"/>
+      <g transform="translate(-0.6 0.6)"><g><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="45s" repeatCount="indefinite"/><circle cx="0.05" cy="1.1" r="1.3" fill="#C9BBA8"/></g></g>
+      <g transform="translate(-0.21 0.21)"><g><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="45s" repeatCount="indefinite"/><circle cx="0.05" cy="1.1" r="1.01" fill="#3E3833"/></g></g>
+      <circle r="10" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(93.04 -83.53)" clip-path="url(#afR72c)">
+      <use href="#afR72" fill="#C9BBA8"/><use href="#afR72" fill="url(#afTexB)" transform="translate(-0.6 0.6)"/>
+      <circle r="8.97" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(99.62 27.24)" clip-path="url(#afR73c)">
+      <use href="#afR73" fill="#C9BBA8"/><use href="#afR73" fill="url(#afTexA)" transform="translate(-0.6 0.6)"/>
+      <circle r="9.21" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(107.53 -69.91)" clip-path="url(#afR74c)">
+      <use href="#afR74" fill="#C9BBA8"/><use href="#afR74" fill="url(#afTexA)" transform="translate(-0.6 0.6)"/>
+      <circle r="7.61" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(122.62 -59.97)" clip-path="url(#afR75c)">
+      <use href="#afR75" fill="#C9BBA8"/><use href="#afR75" fill="url(#afTexB)" transform="translate(-0.6 0.6)"/>
+      <circle r="7.08" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(138.52 -106.44)" clip-path="url(#afR76c)">
+      <use href="#afR76" fill="#C9BBA8"/><use href="#afR76" fill="url(#afTexA)" transform="translate(-0.6 0.6)"/>
+      <g transform="translate(-0.6 0.6)"><g><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="53s" repeatCount="indefinite"/><circle cx="-0.03" cy="-0.01" r="1.2" fill="#C9BBA8"/></g></g>
+      <g transform="translate(-0.24 0.24)"><g><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="53s" repeatCount="indefinite"/><circle cx="-0.03" cy="-0.01" r="0.94" fill="#3E3833"/></g></g>
+      <circle r="9.44" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(156.79 -53.97)" clip-path="url(#afR77c)">
+      <use href="#afR77" fill="#C9BBA8"/><use href="#afR77" fill="url(#afTexA)" transform="translate(-0.6 0.6)"/>
+      <circle r="7.16" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(184.48 -36.57)" clip-path="url(#afR78c)">
+      <use href="#afR78" fill="#C9BBA8"/><use href="#afR78" fill="url(#afTexC)" transform="translate(-0.6 0.6)"/>
+      <circle r="6.34" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(196.8 -109.28)" clip-path="url(#afR79c)">
+      <use href="#afR79" fill="#C9BBA8"/><use href="#afR79" fill="url(#afTexA)" transform="translate(-0.6 0.6)"/>
+      <circle r="7.7" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(233.09 -58.58)" clip-path="url(#afR80c)">
+      <use href="#afR80" fill="#C9BBA8"/><use href="#afR80" fill="url(#afTexA)" transform="translate(-0.6 0.6)"/>
+      <g transform="translate(-0.6 0.6)"><g><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="41s" repeatCount="indefinite"/><circle cx="-0.37" cy="-0.72" r="1.01" fill="#C9BBA8"/></g></g>
+      <g transform="translate(-0.3 0.3)"><g><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="41s" repeatCount="indefinite"/><circle cx="-0.37" cy="-0.72" r="0.79" fill="#3E3833"/></g></g>
+      <circle r="8.72" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(261.82 -47.63)" clip-path="url(#afR81c)">
+      <use href="#afR81" fill="#C9BBA8"/><use href="#afR81" fill="url(#afTexB)" transform="translate(-0.6 0.6)"/>
+      <circle r="9.2" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(284.15 -78.16)" clip-path="url(#afR82c)">
+      <use href="#afR82" fill="#C9BBA8"/><use href="#afR82" fill="url(#afTexA)" transform="translate(-0.6 0.6)"/>
+      <circle r="9.87" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(-242.09 100.66)" clip-path="url(#afR83c)">
+      <use href="#afR83" fill="#C9BBA8"/><use href="#afR83" fill="url(#afTexC)" transform="translate(-0.9 0.9)"/>
+      <g transform="translate(-0.9 0.9)"><g><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="80s" repeatCount="indefinite"/><circle cx="1.13" cy="-1.83" r="2.4" fill="#C9BBA8"/><circle cx="-3.17" cy="1.99" r="2.1" fill="#C9BBA8"/></g></g>
+      <g transform="translate(-0.22 0.22)"><g><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="80s" repeatCount="indefinite"/><circle cx="1.13" cy="-1.83" r="1.87" fill="#3E3833"/><circle cx="-3.17" cy="1.99" r="1.64" fill="#3E3833"/></g></g>
+      <circle r="16.97" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(-184.93 49.23)" clip-path="url(#afR84c)">
+      <use href="#afR84" fill="#C9BBA8"/><use href="#afR84" fill="url(#afTexB)" transform="translate(-0.9 0.9)"/>
+      <g transform="translate(-0.9 0.9)"><g><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="83s" repeatCount="indefinite"/><circle cx="-0.32" cy="2.17" r="1.92" fill="#C9BBA8"/></g></g>
+      <g transform="translate(-0.32 0.32)"><g><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="83s" repeatCount="indefinite"/><circle cx="-0.32" cy="2.17" r="1.5" fill="#3E3833"/></g></g>
+      <circle r="14.33" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(-119.04 12.72)" clip-path="url(#afR85c)">
+      <use href="#afR85" fill="#C9BBA8"/><use href="#afR85" fill="url(#afTexC)" transform="translate(-0.9 0.9)"/>
+      <g transform="translate(-0.9 0.9)"><g><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="80s" repeatCount="indefinite"/><circle cx="-0.05" cy="1.31" r="2.43" fill="#C9BBA8"/></g></g>
+      <g transform="translate(-0.17 0.17)"><g><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="80s" repeatCount="indefinite"/><circle cx="-0.05" cy="1.31" r="1.9" fill="#3E3833"/></g></g>
+      <circle r="16.06" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(-36 32.1)" clip-path="url(#afR86c)">
+      <use href="#afR86" fill="#C9BBA8"/><use href="#afR86" fill="url(#afTexB)" transform="translate(-0.9 0.9)"/>
+      <g transform="translate(-0.9 0.9)"><g><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="79s" repeatCount="indefinite"/><circle cx="0" cy="-0.09" r="2.42" fill="#C9BBA8"/></g></g>
+      <g transform="translate(-0.17 0.17)"><g><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="79s" repeatCount="indefinite"/><circle cx="0" cy="-0.09" r="1.89" fill="#3E3833"/></g></g>
+      <circle r="18.18" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(84.54 -44.88)" clip-path="url(#afR87c)">
+      <use href="#afR87" fill="#C9BBA8"/><use href="#afR87" fill="url(#afTexA)" transform="translate(-0.9 0.9)"/>
+      <g transform="translate(-0.9 0.9)"><g><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="71s" repeatCount="indefinite"/><circle cx="-2.54" cy="-0.23" r="2.37" fill="#C9BBA8"/><circle cx="3.48" cy="0.2" r="1.94" fill="#C9BBA8"/></g></g>
+      <g transform="translate(-0.25 0.25)"><g><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="71s" repeatCount="indefinite"/><circle cx="-2.54" cy="-0.23" r="1.85" fill="#3E3833"/><circle cx="3.48" cy="0.2" r="1.51" fill="#3E3833"/></g></g>
+      <circle r="17.95" fill="url(#afLight)"/>
+    </g>
+    <g transform="translate(183.58 -72.71)" clip-path="url(#afR88c)">
+      <use href="#afR88" fill="#C9BBA8"/><use href="#afR88" fill="url(#afTexA)" transform="translate(-0.9 0.9)"/>
+      <g transform="translate(-0.9 0.9)"><g><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="72s" repeatCount="indefinite"/><circle cx="-0.41" cy="-0.27" r="1.74" fill="#C9BBA8"/></g></g>
+      <g transform="translate(-0.38 0.38)"><g><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="72s" repeatCount="indefinite"/><circle cx="-0.41" cy="-0.27" r="1.36" fill="#3E3833"/></g></g>
+      <circle r="14.75" fill="url(#afLight)"/>
+    </g>
+    </g>
+  </g>
+</svg>

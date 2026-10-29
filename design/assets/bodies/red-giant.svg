@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600">
+  <!-- Red giant (WP8), v1.5 rules. ONE group #redGiant at translate(300 300); geometry relative to (0,0). Photosphere r 120 (crash radius).
+       The approved sun construction (design/assets/star.svg, ids re-prefixed rg*) scaled 120/46 = 2.6087 and recoloured deep red-orange:
+         body #FF8A42 -> #F0602C -> #C8401E, filaments #FFB27A (alpha slope 0.62, gentler than the sun's 0.85), dark plasma #5A1406,
+         flames #FFB27A / #FF8A4A / #D8461E at opacity 0.55, wisps at 0.7 (diffuse, not a sharp corona), limb #FF9A62 / #FFC8A0 / #FFE0C8 at
+         alpha 0.35 / 0.55 / 0.6 (softer rim than the sun), rim stroke 1.2 local units at alpha 0.5, haze #FF6A3A -> #C83C1E -> #8A1E10 -> #4A0E08
+         drawn to local r 112 (292 px). Convection cells are about twice the sun's relative size: dark plasma baseFrequency 0.026 (sun 0.05),
+         filament turbulence 0.032 (sun 0.06). Rim wobble scale 4.5 (sun 6.5). Breathe +-3 % over 9 s (sun 6 s).
+       Drag atmosphere (gameplay: soft outer atmosphere with deterministic drag): circle r 192 = 1.6 r, radial gradient #FF8A4A
+         a0.30 at the photosphere -> a0.16 at 0.85 -> a0.08 at 0.985 -> 0, plus a boundary ring at r 192: #FFB07A, 1.2 px, a0.30, dash 10 6,
+         crawling -8 px/s, so the edge of the drag zone is readable. The atmosphere breathes +-2 % over 10 s. Ids: rg*. -->
+  <defs>
+    <radialGradient id="rgStarHaze" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#FF6A3A" stop-opacity="0.6"/><stop offset="0.23" stop-color="#FF6A3A" stop-opacity="0.52"/><stop offset="0.33" stop-color="#A8301A" stop-opacity="0.3"/><stop offset="0.55" stop-color="#8A1E10" stop-opacity="0.15"/><stop offset="0.8" stop-color="#4A0E08" stop-opacity="0.06"/><stop offset="1" stop-color="#4A0E08" stop-opacity="0"/></radialGradient>
+    <radialGradient id="rgStarFlameFill" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="62"><stop offset="0" stop-color="#FFB27A" stop-opacity="0.95"/><stop offset="0.74" stop-color="#FFB27A" stop-opacity="0.95"/><stop offset="0.82" stop-color="#FF8A4A" stop-opacity="0.8"/><stop offset="0.91" stop-color="#D8461E" stop-opacity="0.38"/><stop offset="1" stop-color="#A8301A" stop-opacity="0"/></radialGradient>
+    <radialGradient id="rgStarWispFill" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="78"><stop offset="0" stop-color="#FF8A4A" stop-opacity="0.55"/><stop offset="0.62" stop-color="#FF8A4A" stop-opacity="0.55"/><stop offset="0.8" stop-color="#D8461E" stop-opacity="0.22"/><stop offset="1" stop-color="#A8301A" stop-opacity="0"/></radialGradient>
+    <radialGradient id="rgStarBody" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#FF8A42"/><stop offset="0.65" stop-color="#F0602C"/><stop offset="1" stop-color="#C8401E"/></radialGradient>
+    <radialGradient id="rgStarLimb" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="46"><stop offset="0.8" stop-color="#FF9A62" stop-opacity="0"/><stop offset="0.93" stop-color="#FF9A62" stop-opacity="0.35"/><stop offset="0.97" stop-color="#FFC8A0" stop-opacity="0.55"/><stop offset="1" stop-color="#FFE0C8" stop-opacity="0.6"/></radialGradient>
+    <linearGradient id="rgStarFlareFill" gradientUnits="userSpaceOnUse" x1="46" y1="0" x2="86" y2="0"><stop offset="0" stop-color="#FFE0C8"/><stop offset="1" stop-color="#FF9A62" stop-opacity="0.15"/></linearGradient>
+    <filter id="rgStarFlame" filterUnits="userSpaceOnUse" x="-88" y="-88" width="176" height="176" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.08" numOctaves="4" seed="21" result="n0"/>
+      <feColorMatrix in="n0" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0 1" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="20" xChannelSelector="R" yChannelSelector="G" result="nd"/>
+      <feGaussianBlur in="nd" stdDeviation="0.4"/>
+    </filter>
+    <filter id="rgStarWisp" filterUnits="userSpaceOnUse" x="-107" y="-107" width="214" height="214" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="5" seed="33" result="w0"/>
+      <feColorMatrix in="w0" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0 1" result="w"/>
+      <feDisplacementMap in="SourceGraphic" in2="w" scale="34" xChannelSelector="R" yChannelSelector="G" result="wd"/>
+      <feGaussianBlur in="wd" stdDeviation="0.8"/>
+    </filter>
+    <filter id="rgStarSurf" filterUnits="userSpaceOnUse" x="-48" y="-48" width="96" height="96" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.026" numOctaves="5" seed="4" result="f"/>
+      <feColorMatrix in="f" type="matrix" values="0 0 0 0 0.353  0 0 0 0 0.078  0 0 0 0 0.024  3.4 0 0 0 -1.6" result="dk"/>
+      <feComponentTransfer in="dk" result="dark"><feFuncA type="linear" slope="0.55"/></feComponentTransfer>
+      <feTurbulence type="turbulence" baseFrequency="0.032" numOctaves="5" seed="9" result="t"/>
+      <feColorMatrix in="t" type="matrix" values="0 0 0 0 1  0 0 0 0 0.698  0 0 0 0 0.478  -6.5 0 0 0 1.25" result="fl"/>
+      <feComponentTransfer in="fl" result="fil"><feFuncA type="linear" slope="0.62"/></feComponentTransfer>
+      <feMerge result="m"><feMergeNode in="SourceGraphic"/><feMergeNode in="dark"/><feMergeNode in="fil"/></feMerge>
+      <feComposite in="m" in2="SourceGraphic" operator="in"/>
+    </filter>
+    <filter id="rgStarEdge" filterUnits="userSpaceOnUse" x="-60" y="-60" width="120" height="120" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.11" numOctaves="3" seed="44" result="e0"/>
+      <feColorMatrix in="e0" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0 1" result="e"/>
+      <feDisplacementMap in="SourceGraphic" in2="e" scale="4.5" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="rgStarRimRag" filterUnits="userSpaceOnUse" x="-60" y="-60" width="120" height="120" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.22" numOctaves="2" seed="57" result="g0"/>
+      <feColorMatrix in="g0" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0 1" result="g"/>
+      <feDisplacementMap in="SourceGraphic" in2="g" scale="5" xChannelSelector="R" yChannelSelector="G" result="gd"/>
+      <feGaussianBlur in="gd" stdDeviation="0.35"/>
+    </filter>
+    <radialGradient id="rgAtmo" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="192.0">
+      <stop offset="0" stop-color="#FF8A4A" stop-opacity="0.30"/>
+      <stop offset="0.6250" stop-color="#FF8A4A" stop-opacity="0.30"/>
+      <stop offset="0.85" stop-color="#FF8A4A" stop-opacity="0.16"/>
+      <stop offset="0.985" stop-color="#FF7A3A" stop-opacity="0.08"/>
+      <stop offset="1" stop-color="#FF7A3A" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <g id="redGiant" transform="translate(300 300)">
+    <g id="rgAtmosphere">
+      <animateTransform attributeName="transform" type="scale" values="1;1.02;1;0.98;1" keyTimes="0;0.25;0.5;0.75;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1" dur="10s" repeatCount="indefinite"/>
+      <circle r="192.0" fill="url(#rgAtmo)"/>
+      <circle r="192.0" fill="none" stroke="#FFB07A" stroke-opacity="0.30" stroke-width="1.2" stroke-dasharray="10 6">
+        <animate attributeName="stroke-dashoffset" from="0" to="-16" dur="2s" repeatCount="indefinite"/>
+      </circle>
+    </g>
+    <g id="rgStar" transform="scale(2.6087)">
+        <g id="rgStarBreathe">
+          <animateTransform attributeName="transform" type="scale" values="1;1.03;1;0.97;1" keyTimes="0;0.25;0.5;0.75;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1" dur="9s" repeatCount="indefinite"/>
+          <circle r="112" fill="url(#rgStarHaze)"/>
+          <g><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="300s" repeatCount="indefinite"/>
+            <circle r="78" fill="url(#rgStarWispFill)" filter="url(#rgStarWisp)" opacity="0.7"/></g>
+          <g><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="200s" repeatCount="indefinite"/>
+            <circle r="62" fill="url(#rgStarFlameFill)" filter="url(#rgStarFlame)" opacity="0.55"/></g>
+        </g>
+        <g id="rgStarProminences" fill="none" stroke-linecap="round">
+          <g transform="rotate(147.5) translate(46 0)">
+            <g id="rgStarProm1" transform="scale(0.6)" opacity="0">
+              <animateTransform attributeName="transform" type="scale" values="0.6;1;0.6" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="12s" begin="0s" repeatCount="indefinite"/>
+              <animate attributeName="opacity" values="0;1;0" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="12s" begin="0s" repeatCount="indefinite"/>
+              <path d="M-0.9 -9 C21 -7.2 21 7.2 -0.9 9" stroke="#FF6A3A" stroke-width="2.8" stroke-opacity="0.85"/>
+              <path d="M-0.9 -9 C21 -7.2 21 7.2 -0.9 9" stroke="#FFC8A0" stroke-width="1" stroke-opacity="0.9"/>
+            </g>
+          </g>
+          <g transform="rotate(243.6) translate(46 0)">
+            <g id="rgStarProm2" transform="scale(0.6)" opacity="0">
+              <animateTransform attributeName="transform" type="scale" values="0.6;1;0.6" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="16s" begin="5s" repeatCount="indefinite"/>
+              <animate attributeName="opacity" values="0;1;0" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="16s" begin="5s" repeatCount="indefinite"/>
+              <path d="M-1.3 -11 C23.5 -9 23.5 9 -1.3 11" stroke="#FF6A3A" stroke-width="2.8" stroke-opacity="0.85"/>
+              <path d="M-1.3 -11 C23.5 -9 23.5 9 -1.3 11" stroke="#FFC8A0" stroke-width="1" stroke-opacity="0.9"/>
+            </g>
+          </g>
+          <g transform="rotate(314.8) translate(46 0)">
+            <g id="rgStarProm3" transform="scale(0.6)" opacity="0">
+              <animateTransform attributeName="transform" type="scale" values="0.6;1;0.6" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="14s" begin="9s" repeatCount="indefinite"/>
+              <animate attributeName="opacity" values="0;1;0" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="14s" begin="9s" repeatCount="indefinite"/>
+              <path d="M-0.8 -8.5 C29 -6.8 29 6.8 -0.8 8.5" stroke="#FF6A3A" stroke-width="2.8" stroke-opacity="0.85"/>
+              <path d="M-0.8 -8.5 C29 -6.8 29 6.8 -0.8 8.5" stroke="#FFC8A0" stroke-width="1" stroke-opacity="0.9"/>
+            </g>
+          </g>
+        </g>
+        <g id="rgStarFlare" transform="rotate(25)" opacity="0">
+          <animate attributeName="opacity" values="0;0;1;0;0" keyTimes="0;0.5909;0.6318;0.6727;1" dur="22s" repeatCount="indefinite"/>
+          <path d="M46 -1.8 L86 0 L46 1.8 Z" fill="url(#rgStarFlareFill)"/>
+        </g>
+        <g id="rgStarDisc" filter="url(#rgStarEdge)">
+          <circle r="46" fill="url(#rgStarBody)" filter="url(#rgStarSurf)"/>
+          <circle r="46" fill="url(#rgStarLimb)"/>
+        </g>
+        <circle r="46.2" fill="none" stroke="#FFC8A0" stroke-width="1.2" stroke-opacity="0.5" filter="url(#rgStarRimRag)"/>
+      </g>
+  </g>
+</svg>

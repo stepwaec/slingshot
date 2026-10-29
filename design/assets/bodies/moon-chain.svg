@@ -1,0 +1,489 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">
+  <!-- Gas giant with a resonant moon chain (WP8), v1.5 rules. ONE group #moonChain at translate(200 200); geometry relative to (0,0).
+       Centre: the banded gas giant (design/assets/bodies/gas-banded.svg, r 44, ids re-prefixed mk*), unchanged.
+       Four moons on circular, coplanar orbits seen from above (the game's top-down plane), in a 1:2:3:4 mean-motion resonance
+       (neighbours in 2:1, 3:2 and 4:3), radii from Kepler's third law a_n = 68 n^(2/3):
+         moon 1: moon-volcanic.svg scaled to r 6.5, a = 68.0, P = 18 s, start phase 0 deg
+         moon 2: moon-icy.svg scaled to r 6.0, a = 107.9, P = 36 s, start phase 95 deg
+         moon 3: moon.svg scaled to r 7.0, a = 141.4, P = 54 s, start phase 205 deg
+         moon 4: dwarf.svg scaled to r 4.5, a = 171.3, P = 72 s, start phase 300 deg
+       Each moon is the library asset re-prefixed (mkA* volcanic, mkB* icy, mkC* barren, mkD* dwarf) and scaled; animateMotion moves it
+       without rotating it, so its lit side stays toward the scene's star (upper-right) at every orbit position. Their own surface strips keep
+       rotating as authored. In a level: kind "moon" bodies with orbit {centerId: the giant, radius: a_n, phase, omega: 2 pi / P_n}.
+       Orbit guides: #ECF0FA a0.07, 1 px, dash 2 6 (preview only). Crash radii = the moon radii above and r 44 for the giant. Ids: mk*. -->
+  <defs>
+    <clipPath id="mkGbClip"><circle r="44"/></clipPath>
+    <filter id="mkGbWaveC" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-8" y="-8" width="568" height="104" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.014 0.09" numOctaves="4" seed="31" stitchTiles="stitch" x="0" y="0" width="276" height="88" result="gbWaveCd1"/>
+      <feTile in="gbWaveCd1" x="-8" y="-8" width="568" height="104" result="gbWaveCd2"/>
+      <feComponentTransfer in="gbWaveCd2" result="gbWaveCd">
+        <feFuncR type="linear" slope="2" intercept="-0.5"/>
+        <feFuncG type="linear" slope="2" intercept="-0.5"/>
+        <feFuncA type="linear" slope="0" intercept="1"/>
+      </feComponentTransfer>
+      <feDisplacementMap in="SourceGraphic" in2="gbWaveCd" scale="9" xChannelSelector="G" yChannelSelector="R" result="gbWaveCw"/>
+      <feGaussianBlur in="gbWaveCw" stdDeviation="0.25" result="gbWaveCs"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.008 0.32" numOctaves="3" seed="5" stitchTiles="stitch" x="0" y="0" width="276" height="88" result="gbWaveCt1"/>
+      <feTile in="gbWaveCt1" x="-8" y="-8" width="568" height="104" result="gbWaveCt"/>
+      <feColorMatrix in="gbWaveCt" type="matrix" values="0 0 0 0 1.000  0 0 0 0 0.941  0 0 0 0 0.824  0 0 0 1 0" result="gbWaveClRGB"/>
+      <feComponentTransfer in="gbWaveClRGB" result="gbWaveClT"><feFuncA type="linear" slope="14" intercept="-8.54"/></feComponentTransfer>
+      <feComponentTransfer in="gbWaveClT" result="gbWaveClA"><feFuncA type="linear" slope="0.3"/></feComponentTransfer>
+      <feColorMatrix in="gbWaveCt" type="matrix" values="0 0 0 0 0.431  0 0 0 0 0.200  0 0 0 0 0.102  0 0 0 1 0" result="gbWaveCkRGB"/>
+      <feComponentTransfer in="gbWaveCkRGB" result="gbWaveCkT"><feFuncA type="linear" slope="-14" intercept="5.6"/></feComponentTransfer>
+      <feComponentTransfer in="gbWaveCkT" result="gbWaveCkA"><feFuncA type="linear" slope="0.32"/></feComponentTransfer>
+      <feMerge result="gbWaveCm"><feMergeNode in="gbWaveCs"/><feMergeNode in="gbWaveClA"/><feMergeNode in="gbWaveCkA"/></feMerge>
+      <feComposite in="gbWaveCm" in2="gbWaveCs" operator="in"/>
+    </filter>
+    <filter id="mkGbWaveB" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-8" y="-8" width="568" height="104" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.014 0.09" numOctaves="4" seed="37" stitchTiles="stitch" x="0" y="0" width="276" height="88" result="gbWaveBd1"/>
+      <feTile in="gbWaveBd1" x="-8" y="-8" width="568" height="104" result="gbWaveBd2"/>
+      <feComponentTransfer in="gbWaveBd2" result="gbWaveBd">
+        <feFuncR type="linear" slope="2" intercept="-0.5"/>
+        <feFuncG type="linear" slope="2" intercept="-0.5"/>
+        <feFuncA type="linear" slope="0" intercept="1"/>
+      </feComponentTransfer>
+      <feDisplacementMap in="SourceGraphic" in2="gbWaveBd" scale="9" xChannelSelector="G" yChannelSelector="R" result="gbWaveBw"/>
+      <feGaussianBlur in="gbWaveBw" stdDeviation="0.25" result="gbWaveBs"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.008 0.32" numOctaves="3" seed="13" stitchTiles="stitch" x="0" y="0" width="276" height="88" result="gbWaveBt1"/>
+      <feTile in="gbWaveBt1" x="-8" y="-8" width="568" height="104" result="gbWaveBt"/>
+      <feColorMatrix in="gbWaveBt" type="matrix" values="0 0 0 0 1.000  0 0 0 0 0.941  0 0 0 0 0.824  0 0 0 1 0" result="gbWaveBlRGB"/>
+      <feComponentTransfer in="gbWaveBlRGB" result="gbWaveBlT"><feFuncA type="linear" slope="14" intercept="-8.54"/></feComponentTransfer>
+      <feComponentTransfer in="gbWaveBlT" result="gbWaveBlA"><feFuncA type="linear" slope="0.3"/></feComponentTransfer>
+      <feColorMatrix in="gbWaveBt" type="matrix" values="0 0 0 0 0.431  0 0 0 0 0.200  0 0 0 0 0.102  0 0 0 1 0" result="gbWaveBkRGB"/>
+      <feComponentTransfer in="gbWaveBkRGB" result="gbWaveBkT"><feFuncA type="linear" slope="-14" intercept="5.6"/></feComponentTransfer>
+      <feComponentTransfer in="gbWaveBkT" result="gbWaveBkA"><feFuncA type="linear" slope="0.32"/></feComponentTransfer>
+      <feMerge result="gbWaveBm"><feMergeNode in="gbWaveBs"/><feMergeNode in="gbWaveBlA"/><feMergeNode in="gbWaveBkA"/></feMerge>
+      <feComposite in="gbWaveBm" in2="gbWaveBs" operator="in"/>
+    </filter>
+    <filter id="mkGbWaveA" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-8" y="-8" width="568" height="104" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.014 0.09" numOctaves="4" seed="41" stitchTiles="stitch" x="0" y="0" width="276" height="88" result="gbWaveAd1"/>
+      <feTile in="gbWaveAd1" x="-8" y="-8" width="568" height="104" result="gbWaveAd2"/>
+      <feComponentTransfer in="gbWaveAd2" result="gbWaveAd">
+        <feFuncR type="linear" slope="2" intercept="-0.5"/>
+        <feFuncG type="linear" slope="2" intercept="-0.5"/>
+        <feFuncA type="linear" slope="0" intercept="1"/>
+      </feComponentTransfer>
+      <feDisplacementMap in="SourceGraphic" in2="gbWaveAd" scale="9" xChannelSelector="G" yChannelSelector="R" result="gbWaveAw"/>
+      <feGaussianBlur in="gbWaveAw" stdDeviation="0.25" result="gbWaveAs"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.008 0.32" numOctaves="3" seed="17" stitchTiles="stitch" x="0" y="0" width="276" height="88" result="gbWaveAt1"/>
+      <feTile in="gbWaveAt1" x="-8" y="-8" width="568" height="104" result="gbWaveAt"/>
+      <feColorMatrix in="gbWaveAt" type="matrix" values="0 0 0 0 1.000  0 0 0 0 0.941  0 0 0 0 0.824  0 0 0 1 0" result="gbWaveAlRGB"/>
+      <feComponentTransfer in="gbWaveAlRGB" result="gbWaveAlT"><feFuncA type="linear" slope="14" intercept="-8.54"/></feComponentTransfer>
+      <feComponentTransfer in="gbWaveAlT" result="gbWaveAlA"><feFuncA type="linear" slope="0.3"/></feComponentTransfer>
+      <feColorMatrix in="gbWaveAt" type="matrix" values="0 0 0 0 0.431  0 0 0 0 0.200  0 0 0 0 0.102  0 0 0 1 0" result="gbWaveAkRGB"/>
+      <feComponentTransfer in="gbWaveAkRGB" result="gbWaveAkT"><feFuncA type="linear" slope="-14" intercept="5.6"/></feComponentTransfer>
+      <feComponentTransfer in="gbWaveAkT" result="gbWaveAkA"><feFuncA type="linear" slope="0.32"/></feComponentTransfer>
+      <feMerge result="gbWaveAm"><feMergeNode in="gbWaveAs"/><feMergeNode in="gbWaveAlA"/><feMergeNode in="gbWaveAkA"/></feMerge>
+      <feComposite in="gbWaveAm" in2="gbWaveAs" operator="in"/>
+    </filter>
+    <radialGradient id="mkGbShade" gradientUnits="userSpaceOnUse" cx="11.2" cy="-11.2" r="55">
+      <stop offset="0" stop-color="#FFF3DE" stop-opacity="0.2"/>
+      <stop offset="0.32" stop-color="#FFF3DE" stop-opacity="0"/>
+      <stop offset="0.64" stop-color="#FF9455" stop-opacity="0"/>
+      <stop offset="0.705" stop-color="#FF9455" stop-opacity="0.24"/>
+      <stop offset="0.76" stop-color="#08122E" stop-opacity="0.74"/>
+      <stop offset="0.84" stop-color="#050B1E" stop-opacity="0.97"/>
+      <stop offset="1" stop-color="#050B1E" stop-opacity="1"/>
+    </radialGradient>
+    <radialGradient id="mkGbHaze" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="44"><stop offset="0.78" stop-color="#F5D7B0" stop-opacity="0"/><stop offset="0.96" stop-color="#F5D7B0" stop-opacity="0.38"/><stop offset="1" stop-color="#FFE6C4" stop-opacity="0.6"/></radialGradient>
+    <radialGradient id="mkGbRim" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="47.37"><stop offset="0.90" stop-color="#FFE3BC" stop-opacity="0"/><stop offset="0.928" stop-color="#FFE3BC" stop-opacity="0.95"/><stop offset="0.955" stop-color="#F2B877" stop-opacity="0.4"/><stop offset="1" stop-color="#F2B877" stop-opacity="0"/></radialGradient>
+    <linearGradient id="mkGbLit" gradientUnits="userSpaceOnUse" x1="31.11" y1="-31.11" x2="-31.11" y2="31.11"><stop offset="0" stop-color="#FFFFFF"/><stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.45"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0.06"/></linearGradient>
+    <mask id="mkGbLitMask" mask-type="alpha" maskUnits="userSpaceOnUse" x="-51.92" y="-51.92" width="103.84" height="103.84"><rect x="-51.92" y="-51.92" width="103.84" height="103.84" fill="url(#mkGbLit)"/></mask>
+    <clipPath id="mkAMvClip"><circle r="13"/></clipPath>
+    <filter id="mkAMvSurface" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-2" y="-2" width="168" height="30" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.075" numOctaves="6" seed="61" stitchTiles="stitch" x="0" y="0" width="82" height="26" result="mvA1"/>
+      <feTile in="mvA1" x="-2" y="-2" width="168" height="30" result="mvA"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.055" numOctaves="6" seed="67" stitchTiles="stitch" x="0" y="0" width="82" height="26" result="mvB1"/>
+      <feTile in="mvB1" x="-2" y="-2" width="168" height="30" result="mvB"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.30" numOctaves="2" seed="71" stitchTiles="stitch" x="0" y="0" width="82" height="26" result="mvS1"/>
+      <feTile in="mvS1" x="-2" y="-2" width="168" height="30" result="mvS"/>
+      <feComponentTransfer in="mvA" result="mvFrostA"><feFuncA type="linear" slope="30" intercept="-17.4"/></feComponentTransfer>
+      <feColorMatrix in="mvFrostA" type="matrix" values="0 0 0 0 0.965  0 0 0 0 0.922  0 0 0 0 0.659  0 0 0 0.85 0" result="mvFrost"/>
+      <feComponentTransfer in="mvA" result="mvOrangeA"><feFuncA type="linear" slope="-30" intercept="12.9"/></feComponentTransfer>
+      <feColorMatrix in="mvOrangeA" type="matrix" values="0 0 0 0 0.878  0 0 0 0 0.537  0 0 0 0 0.18  0 0 0 0.8 0" result="mvOrange"/>
+      <feComponentTransfer in="mvB" result="mvDarkA"><feFuncA type="linear" slope="30" intercept="-18"/></feComponentTransfer>
+      <feColorMatrix in="mvDarkA" type="matrix" values="0 0 0 0 0.549  0 0 0 0 0.416  0 0 0 0 0.165  0 0 0 0.9 0" result="mvDark"/>
+      <feComponentTransfer in="mvB" result="mvBlackA"><feFuncA type="linear" slope="30" intercept="-20.1"/></feComponentTransfer>
+      <feColorMatrix in="mvBlackA" type="matrix" values="0 0 0 0 0.227  0 0 0 0 0.165  0 0 0 0 0.165  0 0 0 0.85 0" result="mvBlack"/>
+      <feComponentTransfer in="mvS" result="mvSpeckA"><feFuncA type="linear" slope="40" intercept="-27.2"/></feComponentTransfer>
+      <feColorMatrix in="mvSpeckA" type="matrix" values="0 0 0 0 0.227  0 0 0 0 0.165  0 0 0 0 0.165  0 0 0 0.75 0" result="mvSpeck"/>
+      <feMerge result="mvSurfaceAll"><feMergeNode in="SourceGraphic"/><feMergeNode in="mvFrost"/><feMergeNode in="mvOrange"/><feMergeNode in="mvDark"/><feMergeNode in="mvBlack"/><feMergeNode in="mvSpeck"/></feMerge>
+      <feComposite in="mvSurfaceAll" in2="SourceGraphic" operator="in"/>
+    </filter>
+    <linearGradient id="mkAMvPoleN" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#A0603A" stop-opacity="0.55"/><stop offset="1" stop-color="#A0603A" stop-opacity="0"/></linearGradient>
+    <linearGradient id="mkAMvPoleS" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#A0603A" stop-opacity="0.55"/><stop offset="1" stop-color="#A0603A" stop-opacity="0"/></linearGradient>
+    <radialGradient id="mkAMvPlume" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#D9622B" stop-opacity="0.15"/><stop offset="0.55" stop-color="#D9622B" stop-opacity="0.22"/><stop offset="0.8" stop-color="#C9502A" stop-opacity="0.62"/><stop offset="1" stop-color="#C9502A" stop-opacity="0"/></radialGradient>
+    <radialGradient id="mkAMvHot" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#FFC857"/><stop offset="0.3" stop-color="#FF6A2A" stop-opacity="0.95"/><stop offset="1" stop-color="#FF6A2A" stop-opacity="0"/></radialGradient>
+    <radialGradient id="mkAMvShade" gradientUnits="userSpaceOnUse" cx="3.31" cy="-3.31" r="16.25">
+      <stop offset="0" stop-color="#FFF6D8" stop-opacity="0.30"/>
+      <stop offset="0.30" stop-color="#FFF6D8" stop-opacity="0"/>
+      <stop offset="0.69" stop-color="#FF9455" stop-opacity="0"/>
+      <stop offset="0.73" stop-color="#FF9455" stop-opacity="0.18"/>
+      <stop offset="0.755" stop-color="#08122E" stop-opacity="0.82"/>
+      <stop offset="0.80" stop-color="#050B1E" stop-opacity="0.97"/>
+      <stop offset="1" stop-color="#050B1E" stop-opacity="1"/>
+    </radialGradient>
+    <radialGradient id="mkAMvRim" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="14">
+      <stop offset="0.90" stop-color="#FFE08A" stop-opacity="0"/>
+      <stop offset="0.928" stop-color="#FFE08A" stop-opacity="0.70"/>
+      <stop offset="0.955" stop-color="#FFE08A" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#FFE08A" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="mkAMvLit" gradientUnits="userSpaceOnUse" x1="9.75" y1="-9.75" x2="-9.75" y2="9.75">
+      <stop offset="0" stop-color="#FFFFFF"/><stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.45"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0.06"/>
+    </linearGradient>
+    <mask id="mkAMvLitMask" mask-type="alpha" maskUnits="userSpaceOnUse" x="-16" y="-16" width="32" height="32"><rect x="-16" y="-16" width="32" height="32" fill="url(#mkAMvLit)"/></mask>
+    <clipPath id="mkBMiClip"><circle r="12"/></clipPath>
+    <linearGradient id="mkBMiSSeamA" gradientUnits="userSpaceOnUse" x1="47.9" y1="0" x2="122.9" y2="0"><stop offset="0" stop-color="#FFFFFF" stop-opacity="0"/><stop offset="0.125" stop-color="#FFFFFF" stop-opacity="0.263"/><stop offset="0.25" stop-color="#FFFFFF" stop-opacity="0.53"/><stop offset="0.375" stop-color="#FFFFFF" stop-opacity="0.744"/><stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.828"/><stop offset="0.625" stop-color="#FFFFFF" stop-opacity="0.744"/><stop offset="0.75" stop-color="#FFFFFF" stop-opacity="0.53"/><stop offset="0.875" stop-color="#FFFFFF" stop-opacity="0.263"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/></linearGradient>
+    <linearGradient id="mkBMiSSeamB" gradientUnits="userSpaceOnUse" x1="-27.1" y1="0" x2="47.9" y2="0"><stop offset="0" stop-color="#FFFFFF" stop-opacity="0"/><stop offset="0.125" stop-color="#FFFFFF" stop-opacity="0.263"/><stop offset="0.25" stop-color="#FFFFFF" stop-opacity="0.53"/><stop offset="0.375" stop-color="#FFFFFF" stop-opacity="0.744"/><stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.828"/><stop offset="0.625" stop-color="#FFFFFF" stop-opacity="0.744"/><stop offset="0.75" stop-color="#FFFFFF" stop-opacity="0.53"/><stop offset="0.875" stop-color="#FFFFFF" stop-opacity="0.263"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/></linearGradient>
+    <linearGradient id="mkBMiSSeamR" gradientUnits="userSpaceOnUse" x1="-27.1" y1="0" x2="47.9" y2="0"><stop offset="0" stop-color="#FFFFFF" stop-opacity="0"/><stop offset="1" stop-color="#FFFFFF"/></linearGradient>
+    <mask id="mkBMiSSeamMask" mask-type="alpha" maskUnits="userSpaceOnUse" x="-29.1" y="4.7" width="80" height="28"><rect x="-29.1" y="4.7" width="80" height="28" fill="url(#mkBMiSSeamR)"/></mask>
+    <filter id="mkBMiSField" primitiveUnits="userSpaceOnUse" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.11" numOctaves="6" seed="41" result="t0"/>
+      <feColorMatrix in="t0" type="matrix" values="0 0 0 1 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0 1" result="c0"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.07" numOctaves="5" seed="47" result="t1"/>
+      <feColorMatrix in="t1" type="matrix" values="0 0 0 0 0  0 0 0 1 0  0 0 0 0 0  0 0 0 0 1" result="c1"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="4" seed="53" result="t2"/>
+      <feColorMatrix in="t2" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 1 0  0 0 0 0 1" result="c2"/>
+      <feComposite in="c0" in2="c1" operator="arithmetic" k2="1" k3="1" result="m1"/>
+      <feComposite in="m1" in2="c2" operator="arithmetic" k2="1" k3="1" result="m2"/>
+      <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 1 0  0 0 0 1 0  0 0 0 1 0  0 0 0 0 1" result="g"/>
+      <feComposite in="g" in2="m2" operator="arithmetic" k1="0.5" k2="-0.25" k3="1"/>
+    </filter>
+    <filter id="mkBMiSurface" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-2" y="-2" width="154" height="28" color-interpolation-filters="sRGB">
+      <feFlood flood-color="#DCE4FF" result="base"/>
+      <feGaussianBlur in="SourceGraphic" stdDeviation="0.25" result="f"/>
+      <feColorMatrix in="f" type="matrix" values="0 0 0 0 0.498  0 0 0 0 0.651  0 0 0 0 0.878  36 0 0 0 -20.88" result="miBlueC"/>
+      <feComponentTransfer in="miBlueC" result="miBlue"><feFuncA type="linear" slope="0.9"/></feComponentTransfer>
+      <feColorMatrix in="f" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  -36 0 0 0 14.4" result="miFrost"/>
+      <feColorMatrix in="f" type="matrix" values="0 0 0 0 0.769  0 0 0 0 0.596  0 0 0 0 0.486  0 0 30 0 -20.1" result="miChaosC"/>
+      <feComponentTransfer in="miChaosC" result="miChaos"><feFuncA type="linear" slope="0.78"/></feComponentTransfer>
+      <feColorMatrix in="f" type="matrix" values="0 0 0 0 0.498  0 0 0 0 0.651  0 0 0 0 0.788  0 1 0 0 0" result="miHaloT"/>
+      <feComponentTransfer in="miHaloT" result="miHaloC"><feFuncA type="table" tableValues="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.143 0.429 0.714 1 0.714 0.429 0.143 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"/></feComponentTransfer>
+      <feComponentTransfer in="miHaloC" result="miHalo"><feFuncA type="linear" slope="0.7"/></feComponentTransfer>
+      <feColorMatrix in="f" type="matrix" values="0 0 0 0 0.306  0 0 0 0 0.471  0 0 0 0 0.659  0 1 0 0 0" result="miCoreT"/>
+      <feComponentTransfer in="miCoreT" result="miCoreC"><feFuncA type="table" tableValues="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.286 1 0.286 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"/></feComponentTransfer>
+      <feComponentTransfer in="miCoreC" result="miCore"><feFuncA type="linear" slope="0.95"/></feComponentTransfer>
+      <feColorMatrix in="f" type="matrix" values="0 0 0 0 0.647  0 0 0 0 0.408  0 0 0 0 0.306  0 0 1 0 0" result="miLinT"/>
+      <feComponentTransfer in="miLinT" result="miLinC"><feFuncA type="table" tableValues="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"/></feComponentTransfer>
+      <feComponentTransfer in="miLinC" result="miLin"><feFuncA type="linear" slope="0.85"/></feComponentTransfer>
+      <feColorMatrix in="f" type="matrix" values="0 0 0 0 0.647  0 0 0 0 0.408  0 0 0 0 0.306  0 0 1 0 0" result="miLin2T"/>
+      <feComponentTransfer in="miLin2T" result="miLin2C"><feFuncA type="table" tableValues="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"/></feComponentTransfer>
+      <feComponentTransfer in="miLin2C" result="miLin2"><feFuncA type="linear" slope="0.85"/></feComponentTransfer>
+      <feMerge result="miSurfaceAll"><feMergeNode in="base"/><feMergeNode in="miBlue"/><feMergeNode in="miFrost"/><feMergeNode in="miChaos"/><feMergeNode in="miHalo"/><feMergeNode in="miCore"/><feMergeNode in="miLin"/><feMergeNode in="miLin2"/></feMerge>
+      <feComponentTransfer in="SourceAlpha" result="solid"><feFuncA type="linear" slope="50"/></feComponentTransfer>
+      <feComposite in="miSurfaceAll" in2="solid" operator="in"/>
+    </filter>
+    <radialGradient id="mkBMiShade" gradientUnits="userSpaceOnUse" cx="3.05" cy="-3.05" r="15">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.28"/>
+      <stop offset="0.30" stop-color="#FFFFFF" stop-opacity="0"/>
+      <stop offset="0.69" stop-color="#FF9455" stop-opacity="0"/>
+      <stop offset="0.73" stop-color="#FF9455" stop-opacity="0.18"/>
+      <stop offset="0.755" stop-color="#08122E" stop-opacity="0.82"/>
+      <stop offset="0.80" stop-color="#050B1E" stop-opacity="0.97"/>
+      <stop offset="1" stop-color="#050B1E" stop-opacity="1"/>
+    </radialGradient>
+    <radialGradient id="mkBMiRim" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="12.92">
+      <stop offset="0.90" stop-color="#BFE3FF" stop-opacity="0"/>
+      <stop offset="0.928" stop-color="#BFE3FF" stop-opacity="0.75"/>
+      <stop offset="0.955" stop-color="#BFE3FF" stop-opacity="0.30"/>
+      <stop offset="1" stop-color="#BFE3FF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="mkBMiLit" gradientUnits="userSpaceOnUse" x1="9" y1="-9" x2="-9" y2="9">
+      <stop offset="0" stop-color="#FFFFFF"/><stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.45"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0.06"/>
+    </linearGradient>
+    <mask id="mkBMiLitMask" mask-type="alpha" maskUnits="userSpaceOnUse" x="-15" y="-15" width="30" height="30"><rect x="-15" y="-15" width="30" height="30" fill="url(#mkBMiLit)"/></mask>
+    <clipPath id="mkCMnClip"><circle r="14"/></clipPath>
+    <filter id="mkCMnSurface" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="0" y="0" width="176" height="28" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.06" numOctaves="6" seed="7" stitchTiles="stitch" x="0" y="0" width="88" height="28" result="mnSurfaceN1"/>
+      <feTile in="mnSurfaceN1" x="0" y="0" width="176" height="28" result="mnSurfaceN"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.11" numOctaves="4" seed="11" stitchTiles="stitch" x="0" y="0" width="88" height="28" result="mnSurfaceH1"/>
+      <feTile in="mnSurfaceH1" x="0" y="0" width="176" height="28" result="mnSurfaceH"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.30" numOctaves="1" seed="9" stitchTiles="stitch" x="0" y="0" width="88" height="28" result="mnSurfaceP1"/>
+      <feTile in="mnSurfaceP1" x="0" y="0" width="176" height="28" result="mnSurfacePn"/>
+      <feColorMatrix in="mnSurfaceN" type="matrix" values="0 0 0 0 0.478  0 0 0 0 0.463  0 0 0 0 0.580  0 0 0 1 0" result="mnSurfaceShelfRGB"/>
+      <feComponentTransfer in="mnSurfaceShelfRGB" result="mnSurfaceShelfT"><feFuncA type="linear" slope="-36" intercept="18"/></feComponentTransfer>
+      <feComponentTransfer in="mnSurfaceShelfT" result="mnSurfaceShelf"><feFuncA type="linear" slope="0.5"/></feComponentTransfer>
+      <feColorMatrix in="mnSurfaceN" type="matrix" values="0 0 0 0 0.294  0 0 0 0 0.282  0 0 0 0 0.400  0 0 0 1 0" result="mnSurfaceDarkRGB"/>
+      <feComponentTransfer in="mnSurfaceDarkRGB" result="mnSurfaceDarkT"><feFuncA type="linear" slope="-40" intercept="18.2"/></feComponentTransfer>
+      <feComponentTransfer in="mnSurfaceDarkT" result="mnSurfaceDark"><feFuncA type="linear" slope="0.9"/></feComponentTransfer>
+      <feColorMatrix in="mnSurfaceH" type="matrix" values="0 0 0 0 0.867  0 0 0 0 0.851  0 0 0 0 0.925  0 0 0 1 0" result="mnSurfaceBriMRGB"/>
+      <feComponentTransfer in="mnSurfaceBriMRGB" result="mnSurfaceBriMT"><feFuncA type="linear" slope="28" intercept="-16.24"/></feComponentTransfer>
+      <feComponentTransfer in="mnSurfaceBriMT" result="mnSurfaceBriM"><feFuncA type="linear" slope="0.5"/></feComponentTransfer>
+      <feColorMatrix in="mnSurfaceN" type="matrix" values="0 0 0 0 1.000  0 0 0 0 1.000  0 0 0 0 1.000  0 0 0 1 0" result="mnSurfaceUpRGB"/>
+      <feComponentTransfer in="mnSurfaceUpRGB" result="mnSurfaceUp"><feFuncA type="linear" slope="14" intercept="-6.86"/></feComponentTransfer>
+      <feComposite in="mnSurfaceBriM" in2="mnSurfaceUp" operator="in" result="mnSurfaceBright"/>
+      <feColorMatrix in="mnSurfacePn" type="matrix" values="0 0 0 0 0.235  0 0 0 0 0.224  0 0 0 0 0.333  0 0 0 1 0" result="mnSurfacePitsRGB"/>
+      <feComponentTransfer in="mnSurfacePitsRGB" result="mnSurfacePitsT"><feFuncA type="linear" slope="30" intercept="-19.29"/></feComponentTransfer>
+      <feComponentTransfer in="mnSurfacePitsT" result="mnSurfacePits"><feFuncA type="linear" slope="0.6"/></feComponentTransfer>
+      <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="mnSurfaceShelf"/><feMergeNode in="mnSurfaceDark"/><feMergeNode in="mnSurfaceBright"/><feMergeNode in="mnSurfacePits"/></feMerge>
+    </filter>
+    <linearGradient id="mkCMnBowl" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3C3955" stop-opacity="0.95"/><stop offset="0.55" stop-color="#3C3955" stop-opacity="0.75"/><stop offset="1" stop-color="#3C3955" stop-opacity="0.5"/></linearGradient>
+    <radialGradient id="mkCMnShade" gradientUnits="userSpaceOnUse" cx="3.56" cy="-3.56" r="17.5">
+      <stop offset="0" stop-color="#F4F2FC" stop-opacity="0.24"/>
+      <stop offset="0.3" stop-color="#F4F2FC" stop-opacity="0"/>
+      <stop offset="0.69" stop-color="#FF9455" stop-opacity="0"/>
+      <stop offset="0.73" stop-color="#FF9455" stop-opacity="0.18"/>
+      <stop offset="0.755" stop-color="#08122E" stop-opacity="0.82"/>
+      <stop offset="0.8" stop-color="#050B1E" stop-opacity="0.97"/>
+      <stop offset="1" stop-color="#050B1E" stop-opacity="1"/>
+    </radialGradient>
+    <clipPath id="mkDDwClip"><circle r="10"/></clipPath>
+    <filter id="mkDDwSurface" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="0" y="0" width="126" height="20" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.09" numOctaves="6" seed="13" stitchTiles="stitch" x="0" y="0" width="63" height="20" result="dwSurfaceN1"/>
+      <feTile in="dwSurfaceN1" x="0" y="0" width="126" height="20" result="dwSurfaceN"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.07" numOctaves="3" seed="19" stitchTiles="stitch" x="0" y="0" width="63" height="20" result="dwSurfaceH1"/>
+      <feTile in="dwSurfaceH1" x="0" y="0" width="126" height="20" result="dwSurfaceH"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.28" numOctaves="1" seed="17" stitchTiles="stitch" x="0" y="0" width="63" height="20" result="dwSurfaceP1"/>
+      <feTile in="dwSurfaceP1" x="0" y="0" width="126" height="20" result="dwSurfacePn"/>
+      <feColorMatrix in="dwSurfaceN" type="matrix" values="0 0 0 0 0.659  0 0 0 0 0.455  0 0 0 0 0.298  0 0 0 1 0" result="dwSurfaceShelfRGB"/>
+      <feComponentTransfer in="dwSurfaceShelfRGB" result="dwSurfaceShelfT"><feFuncA type="linear" slope="-36" intercept="17.64"/></feComponentTransfer>
+      <feComponentTransfer in="dwSurfaceShelfT" result="dwSurfaceShelf"><feFuncA type="linear" slope="0.55"/></feComponentTransfer>
+      <feColorMatrix in="dwSurfaceN" type="matrix" values="0 0 0 0 0.416  0 0 0 0 0.251  0 0 0 0 0.165  0 0 0 1 0" result="dwSurfaceDarkRGB"/>
+      <feComponentTransfer in="dwSurfaceDarkRGB" result="dwSurfaceDarkT"><feFuncA type="linear" slope="-40" intercept="17.8"/></feComponentTransfer>
+      <feComponentTransfer in="dwSurfaceDarkT" result="dwSurfaceDark"><feFuncA type="linear" slope="0.85"/></feComponentTransfer>
+      <feColorMatrix in="dwSurfaceH" type="matrix" values="0 0 0 0 0.965  0 0 0 0 0.922  0 0 0 0 0.839  0 0 0 1 0" result="dwSurfaceBriMRGB"/>
+      <feComponentTransfer in="dwSurfaceBriMRGB" result="dwSurfaceBriMT"><feFuncA type="linear" slope="28" intercept="-15.68"/></feComponentTransfer>
+      <feComponentTransfer in="dwSurfaceBriMT" result="dwSurfaceBriM"><feFuncA type="linear" slope="0.9"/></feComponentTransfer>
+      <feColorMatrix in="dwSurfaceN" type="matrix" values="0 0 0 0 1.000  0 0 0 0 1.000  0 0 0 0 1.000  0 0 0 1 0" result="dwSurfaceUpRGB"/>
+      <feComponentTransfer in="dwSurfaceUpRGB" result="dwSurfaceUp"><feFuncA type="linear" slope="14" intercept="-6.58"/></feComponentTransfer>
+      <feComposite in="dwSurfaceBriM" in2="dwSurfaceUp" operator="in" result="dwSurfaceBright"/>
+      <feColorMatrix in="dwSurfacePn" type="matrix" values="0 0 0 0 0.341  0 0 0 0 0.208  0 0 0 0 0.133  0 0 0 1 0" result="dwSurfacePitsRGB"/>
+      <feComponentTransfer in="dwSurfacePitsRGB" result="dwSurfacePitsT"><feFuncA type="linear" slope="30" intercept="-19.29"/></feComponentTransfer>
+      <feComponentTransfer in="dwSurfacePitsT" result="dwSurfacePits"><feFuncA type="linear" slope="0.5"/></feComponentTransfer>
+      <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="dwSurfaceShelf"/><feMergeNode in="dwSurfaceDark"/><feMergeNode in="dwSurfaceBright"/><feMergeNode in="dwSurfacePits"/></feMerge>
+    </filter>
+    <linearGradient id="mkDDwBowl" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#573522" stop-opacity="0.95"/><stop offset="0.55" stop-color="#573522" stop-opacity="0.75"/><stop offset="1" stop-color="#573522" stop-opacity="0.5"/></linearGradient>
+    <radialGradient id="mkDDwShade" gradientUnits="userSpaceOnUse" cx="2.55" cy="-2.55" r="12.5">
+      <stop offset="0" stop-color="#FFF6E6" stop-opacity="0.18"/>
+      <stop offset="0.3" stop-color="#FFF6E6" stop-opacity="0"/>
+      <stop offset="0.69" stop-color="#FF9455" stop-opacity="0"/>
+      <stop offset="0.73" stop-color="#FF9455" stop-opacity="0.18"/>
+      <stop offset="0.755" stop-color="#08122E" stop-opacity="0.82"/>
+      <stop offset="0.8" stop-color="#050B1E" stop-opacity="0.97"/>
+      <stop offset="1" stop-color="#050B1E" stop-opacity="1"/>
+    </radialGradient>
+  </defs>
+  <g id="moonChain" transform="translate(200 200)">
+    <g fill="none" stroke="#ECF0FA" stroke-opacity="0.07" stroke-width="1" stroke-dasharray="2 6">
+      <circle r="68.00"/>
+      <circle r="107.94"/>
+      <circle r="141.45"/>
+      <circle r="171.35"/>
+    </g>
+    <g id="mkGasBanded">
+        <circle r="44" fill="#EBA75E"/>
+        <g clip-path="url(#mkGbClip)">
+          <g id="mkGbAnimC">
+            <animateTransform attributeName="transform" type="translate" from="0 0" to="276 0" dur="180s" repeatCount="indefinite"/>
+            <g id="mkGbStripC" transform="translate(-364 -44)">
+              <g filter="url(#mkGbWaveC)">
+                <rect y="-8" width="552" height="17" fill="#BE6830"/>
+                <rect y="9" width="552" height="45" fill="#EBA75E"/>
+                <rect y="54" width="552" height="15" fill="#F8DDB0"/>
+                <rect y="69" width="552" height="10" fill="#EBA75E"/>
+                <rect y="79" width="552" height="17" fill="#BE6830"/>
+              </g>
+            </g>
+          </g>
+          <g id="mkGbAnimB">
+            <animateTransform attributeName="transform" type="translate" from="0 0" to="-276 0" dur="110s" repeatCount="indefinite"/>
+            <g id="mkGbStripB" transform="translate(-88 -44)">
+              <g filter="url(#mkGbWaveB)">
+                <rect y="18" width="552" height="13" fill="#F8DDB0"/>
+                <rect y="31" width="552" height="15" fill="#7C3C1E"/>
+                <ellipse cx="98.6" cy="28.6" rx="6.16" ry="3.52" fill="#E4512A" stroke="#8E3518" stroke-width="0.8" stroke-opacity="0.7"/><ellipse cx="98.6" cy="28.6" rx="3.4" ry="1.8" fill="#F8DDB0" fill-opacity="0.45"/><ellipse cx="99.2" cy="28.3" rx="1.5" ry="0.8" fill="#FFF0D2" fill-opacity="0.6"/>
+                <ellipse cx="374.6" cy="28.6" rx="6.16" ry="3.52" fill="#E4512A" stroke="#8E3518" stroke-width="0.8" stroke-opacity="0.7"/><ellipse cx="374.6" cy="28.6" rx="3.4" ry="1.8" fill="#F8DDB0" fill-opacity="0.45"/><ellipse cx="375.2" cy="28.3" rx="1.5" ry="0.8" fill="#FFF0D2" fill-opacity="0.6"/>
+              </g>
+            </g>
+          </g>
+          <g id="mkGbAnimA">
+            <animateTransform attributeName="transform" type="translate" from="0 0" to="276 0" dur="150s" repeatCount="indefinite"/>
+            <g id="mkGbStripA" transform="translate(-364 -44)">
+              <g filter="url(#mkGbWaveA)">
+                <rect y="40" width="552" height="9" fill="#EBA75E"/>
+                <rect y="49" width="552" height="9" fill="#BE6830"/>
+              </g>
+            </g>
+          </g>
+        </g>
+        <circle r="44" fill="url(#mkGbShade)"/>
+        <circle r="44" fill="url(#mkGbHaze)" mask="url(#mkGbLitMask)"/>
+        <circle r="47.37" fill="url(#mkGbRim)" mask="url(#mkGbLitMask)"/>
+      </g>
+    <g id="mkMoon1">
+      <animateMotion path="M68.00 0.00 A68.00 68.00 0 1 0 -68.00 -0.00 A68.00 68.00 0 1 0 68.00 0.00" dur="18s" repeatCount="indefinite"/>
+      <g id="mkAMoonVolcanic" transform="scale(0.5000)">
+          <circle r="13" fill="#E0C25A"/>
+          <g clip-path="url(#mkAMvClip)">
+            <g id="mkAMvSurfaceAnim"><animateTransform attributeName="transform" type="translate" from="0 0" to="82 0" dur="120s" repeatCount="indefinite"/>
+              <g transform="translate(-119 -13)">
+                <rect width="164" height="26" fill="#E0C25A" filter="url(#mkAMvSurface)"/>
+                <rect width="164" height="4" fill="url(#mkAMvPoleN)"/>
+                <rect y="22" width="164" height="4" fill="url(#mkAMvPoleS)"/>
+                <circle cx="14" cy="9" r="3.4" fill="url(#mkAMvPlume)"/><circle cx="96" cy="9" r="3.4" fill="url(#mkAMvPlume)"/><circle cx="31" cy="21" r="2.2" fill="url(#mkAMvPlume)"/><circle cx="113" cy="21" r="2.2" fill="url(#mkAMvPlume)"/><circle cx="43" cy="14" r="2.8" fill="url(#mkAMvPlume)"/><circle cx="125" cy="14" r="2.8" fill="url(#mkAMvPlume)"/><circle cx="57" cy="20.5" r="1.8" fill="url(#mkAMvPlume)"/><circle cx="139" cy="20.5" r="1.8" fill="url(#mkAMvPlume)"/><circle cx="68" cy="6.5" r="2.4" fill="url(#mkAMvPlume)"/><circle cx="150" cy="6.5" r="2.4" fill="url(#mkAMvPlume)"/>
+                <circle cx="14" cy="9" r="1" fill="#3A2A2A"/><circle cx="96" cy="9" r="1" fill="#3A2A2A"/><circle cx="31" cy="21" r="1" fill="#3A2A2A"/><circle cx="113" cy="21" r="1" fill="#3A2A2A"/><circle cx="43" cy="14" r="1" fill="#3A2A2A"/><circle cx="125" cy="14" r="1" fill="#3A2A2A"/><circle cx="57" cy="20.5" r="1" fill="#3A2A2A"/><circle cx="139" cy="20.5" r="1" fill="#3A2A2A"/><circle cx="68" cy="6.5" r="1" fill="#3A2A2A"/><circle cx="150" cy="6.5" r="1" fill="#3A2A2A"/>
+              </g>
+            </g>
+          </g>
+          <circle r="13" fill="url(#mkAMvShade)"/>
+          <circle r="14" fill="url(#mkAMvRim)" mask="url(#mkAMvLitMask)"/>
+          <g clip-path="url(#mkAMvClip)">
+            <g id="mkAMvHotAnim"><animateTransform attributeName="transform" type="translate" from="0 0" to="82 0" dur="120s" repeatCount="indefinite"/>
+              <g transform="translate(-119 -13)">
+                <g opacity="0.55"><animate attributeName="opacity" values="0.55;1;0.55" dur="6s" begin="0s" repeatCount="indefinite"/><circle cx="14" cy="9" r="1.5" fill="url(#mkAMvHot)"/><circle cx="96" cy="9" r="1.5" fill="url(#mkAMvHot)"/></g>
+                <g opacity="0.55"><animate attributeName="opacity" values="0.55;1;0.55" dur="6s" begin="-2s" repeatCount="indefinite"/><circle cx="31" cy="21" r="1.5" fill="url(#mkAMvHot)"/><circle cx="113" cy="21" r="1.5" fill="url(#mkAMvHot)"/></g>
+                <g opacity="0.55"><animate attributeName="opacity" values="0.55;1;0.55" dur="6s" begin="-4s" repeatCount="indefinite"/><circle cx="43" cy="14" r="1.5" fill="url(#mkAMvHot)"/><circle cx="125" cy="14" r="1.5" fill="url(#mkAMvHot)"/></g>
+                <g opacity="0.55"><animate attributeName="opacity" values="0.55;1;0.55" dur="6s" begin="-6s" repeatCount="indefinite"/><circle cx="57" cy="20.5" r="1.5" fill="url(#mkAMvHot)"/><circle cx="139" cy="20.5" r="1.5" fill="url(#mkAMvHot)"/></g>
+                <g opacity="0.55"><animate attributeName="opacity" values="0.55;1;0.55" dur="6s" begin="-8s" repeatCount="indefinite"/><circle cx="68" cy="6.5" r="1.5" fill="url(#mkAMvHot)"/><circle cx="150" cy="6.5" r="1.5" fill="url(#mkAMvHot)"/></g>
+              </g>
+            </g>
+          </g>
+        </g>
+    </g>
+    <g id="mkMoon2">
+      <animateMotion path="M-9.41 107.53 A107.94 107.94 0 1 0 9.41 -107.53 A107.94 107.94 0 1 0 -9.41 107.53" dur="36s" repeatCount="indefinite"/>
+      <g id="mkBMoonIcy" transform="scale(0.5000)">
+          <circle r="12" fill="#DCE4FF"/>
+          <g clip-path="url(#mkBMiClip)">
+            <g id="mkBMiSurfaceAnim"><animateTransform attributeName="transform" type="translate" from="0 0" to="75 0" dur="150s" repeatCount="indefinite"/>
+              <g transform="translate(-107 -12)">
+                <g filter="url(#mkBMiSurface)">
+                  <g transform="translate(-47.9 -6.7)">
+                    <rect x="47.9" y="6.7" width="76" height="24" fill="url(#mkBMiSSeamA)" filter="url(#mkBMiSField)"/>
+                    <g transform="translate(75 0)"><rect x="-27.1" y="6.7" width="76" height="24" fill="url(#mkBMiSSeamB)" filter="url(#mkBMiSField)" mask="url(#mkBMiSSeamMask)"/></g>
+                    <g transform="translate(75 0)">
+                      <rect x="47.9" y="6.7" width="75" height="24" fill="url(#mkBMiSSeamA)" filter="url(#mkBMiSField)"/>
+                      <g transform="translate(75 0)"><rect x="-27.1" y="6.7" width="75" height="24" fill="url(#mkBMiSSeamB)" filter="url(#mkBMiSField)" mask="url(#mkBMiSSeamMask)"/></g>
+                    </g>
+                  </g>
+                </g>
+              </g>
+            </g>
+          </g>
+          <circle r="12" fill="url(#mkBMiShade)"/>
+          <circle r="12.92" fill="url(#mkBMiRim)" mask="url(#mkBMiLitMask)"/>
+        </g>
+    </g>
+    <g id="mkMoon3">
+      <animateMotion path="M-128.19 -59.78 A141.45 141.45 0 1 0 128.19 59.78 A141.45 141.45 0 1 0 -128.19 -59.78" dur="54s" repeatCount="indefinite"/>
+      <g id="mkCMoon" transform="scale(0.5000)">
+          <circle r="14" fill="#A6A2B6"/>
+          <g clip-path="url(#mkCMnClip)">
+            <g id="mkCMnSurfaceAnim">
+              <animateTransform attributeName="transform" type="translate" from="0 0" to="88 0" dur="180s" repeatCount="indefinite"/>
+              <g id="mkCMnSurfaceStrip" transform="translate(-132 -14)">
+                <rect width="176" height="28" fill="#A6A2B6" filter="url(#mkCMnSurface)"/>
+                <circle cx="60.4" cy="13.4" r="4.2" fill="#EFECF8" fill-opacity="0.75"/><circle cx="61.16" cy="12.64" r="3.44" fill="url(#mkCMnBowl)"/>
+                <circle cx="148.4" cy="13.4" r="4.2" fill="#EFECF8" fill-opacity="0.75"/><circle cx="149.16" cy="12.64" r="3.44" fill="url(#mkCMnBowl)"/>
+                <circle cx="43.3" cy="22.2" r="3.8" fill="#EFECF8" fill-opacity="0.75"/><circle cx="43.98" cy="21.52" r="3.12" fill="url(#mkCMnBowl)"/>
+                <circle cx="131.3" cy="22.2" r="3.8" fill="#EFECF8" fill-opacity="0.75"/><circle cx="131.98" cy="21.52" r="3.12" fill="url(#mkCMnBowl)"/>
+                <circle cx="10.7" cy="17.3" r="3.4" fill="#EFECF8" fill-opacity="0.75"/><circle cx="11.31" cy="16.69" r="2.79" fill="url(#mkCMnBowl)"/>
+                <circle cx="98.7" cy="17.3" r="3.4" fill="#EFECF8" fill-opacity="0.75"/><circle cx="99.31" cy="16.69" r="2.79" fill="url(#mkCMnBowl)"/>
+                <circle cx="51.2" cy="13.8" r="3" fill="#EFECF8" fill-opacity="0.75"/><circle cx="51.74" cy="13.26" r="2.46" fill="url(#mkCMnBowl)"/>
+                <circle cx="139.2" cy="13.8" r="3" fill="#EFECF8" fill-opacity="0.75"/><circle cx="139.74" cy="13.26" r="2.46" fill="url(#mkCMnBowl)"/>
+                <circle cx="50.9" cy="21.1" r="2.6" fill="#EFECF8" fill-opacity="0.75"/><circle cx="51.37" cy="20.63" r="2.13" fill="url(#mkCMnBowl)"/>
+                <circle cx="138.9" cy="21.1" r="2.6" fill="#EFECF8" fill-opacity="0.75"/><circle cx="139.37" cy="20.63" r="2.13" fill="url(#mkCMnBowl)"/>
+                <circle cx="77" cy="23.5" r="2.4" fill="#EFECF8" fill-opacity="0.75"/><circle cx="77.43" cy="23.07" r="1.97" fill="url(#mkCMnBowl)"/>
+                <circle cx="165" cy="23.5" r="2.4" fill="#EFECF8" fill-opacity="0.75"/><circle cx="165.43" cy="23.07" r="1.97" fill="url(#mkCMnBowl)"/>
+                <circle cx="34.5" cy="7" r="2.3" fill="#EFECF8" fill-opacity="0.75"/><circle cx="34.91" cy="6.59" r="1.89" fill="url(#mkCMnBowl)"/>
+                <circle cx="122.5" cy="7" r="2.3" fill="#EFECF8" fill-opacity="0.75"/><circle cx="122.91" cy="6.59" r="1.89" fill="url(#mkCMnBowl)"/>
+                <circle cx="45.3" cy="4.2" r="2.1" fill="#EFECF8" fill-opacity="0.75"/><circle cx="45.68" cy="3.82" r="1.72" fill="url(#mkCMnBowl)"/>
+                <circle cx="133.3" cy="4.2" r="2.1" fill="#EFECF8" fill-opacity="0.75"/><circle cx="133.68" cy="3.82" r="1.72" fill="url(#mkCMnBowl)"/>
+                <circle cx="25.7" cy="23.3" r="2" fill="#EFECF8" fill-opacity="0.75"/><circle cx="26.06" cy="22.94" r="1.64" fill="url(#mkCMnBowl)"/>
+                <circle cx="113.7" cy="23.3" r="2" fill="#EFECF8" fill-opacity="0.75"/><circle cx="114.06" cy="22.94" r="1.64" fill="url(#mkCMnBowl)"/>
+                <circle cx="41" cy="11.1" r="1.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="41.34" cy="10.76" r="1.56" fill="url(#mkCMnBowl)"/>
+                <circle cx="129" cy="11.1" r="1.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="129.34" cy="10.76" r="1.56" fill="url(#mkCMnBowl)"/>
+                <circle cx="35.6" cy="25.7" r="1.8" fill="#EFECF8" fill-opacity="0.75"/><circle cx="35.92" cy="25.38" r="1.48" fill="url(#mkCMnBowl)"/>
+                <circle cx="123.6" cy="25.7" r="1.8" fill="#EFECF8" fill-opacity="0.75"/><circle cx="123.92" cy="25.38" r="1.48" fill="url(#mkCMnBowl)"/>
+                <circle cx="0.3" cy="16.8" r="1.6" fill="#EFECF8" fill-opacity="0.75"/><circle cx="0.59" cy="16.51" r="1.31" fill="url(#mkCMnBowl)"/>
+                <circle cx="88.3" cy="16.8" r="1.6" fill="#EFECF8" fill-opacity="0.75"/><circle cx="88.59" cy="16.51" r="1.31" fill="url(#mkCMnBowl)"/>
+                <circle cx="57.9" cy="20.3" r="1.55" fill="#EFECF8" fill-opacity="0.75"/><circle cx="58.18" cy="20.02" r="1.27" fill="url(#mkCMnBowl)"/>
+                <circle cx="145.9" cy="20.3" r="1.55" fill="#EFECF8" fill-opacity="0.75"/><circle cx="146.18" cy="20.02" r="1.27" fill="url(#mkCMnBowl)"/>
+                <circle cx="61.4" cy="20.4" r="1.5" fill="#EFECF8" fill-opacity="0.75"/><circle cx="61.67" cy="20.13" r="1.23" fill="url(#mkCMnBowl)"/>
+                <circle cx="149.4" cy="20.4" r="1.5" fill="#EFECF8" fill-opacity="0.75"/><circle cx="149.67" cy="20.13" r="1.23" fill="url(#mkCMnBowl)"/>
+                <circle cx="28.4" cy="5.8" r="1.45" fill="#EFECF8" fill-opacity="0.75"/><circle cx="28.66" cy="5.54" r="1.19" fill="url(#mkCMnBowl)"/>
+                <circle cx="116.4" cy="5.8" r="1.45" fill="#EFECF8" fill-opacity="0.75"/><circle cx="116.66" cy="5.54" r="1.19" fill="url(#mkCMnBowl)"/>
+                <circle cx="8.7" cy="7.9" r="1.4" fill="#EFECF8" fill-opacity="0.75"/><circle cx="8.95" cy="7.65" r="1.15" fill="url(#mkCMnBowl)"/>
+                <circle cx="96.7" cy="7.9" r="1.4" fill="#EFECF8" fill-opacity="0.75"/><circle cx="96.95" cy="7.65" r="1.15" fill="url(#mkCMnBowl)"/>
+                <circle cx="80.4" cy="9.6" r="1.35" fill="#EFECF8" fill-opacity="0.75"/><circle cx="80.64" cy="9.36" r="1.11" fill="url(#mkCMnBowl)"/>
+                <circle cx="168.4" cy="9.6" r="1.35" fill="#EFECF8" fill-opacity="0.75"/><circle cx="168.64" cy="9.36" r="1.11" fill="url(#mkCMnBowl)"/>
+                <circle cx="6.2" cy="6.1" r="1.3" fill="#EFECF8" fill-opacity="0.75"/><circle cx="6.43" cy="5.87" r="1.07" fill="url(#mkCMnBowl)"/>
+                <circle cx="94.2" cy="6.1" r="1.3" fill="#EFECF8" fill-opacity="0.75"/><circle cx="94.43" cy="5.87" r="1.07" fill="url(#mkCMnBowl)"/>
+                <circle cx="15.6" cy="3.4" r="1.25" fill="#EFECF8" fill-opacity="0.75"/><circle cx="15.82" cy="3.17" r="1.02" fill="url(#mkCMnBowl)"/>
+                <circle cx="103.6" cy="3.4" r="1.25" fill="#EFECF8" fill-opacity="0.75"/><circle cx="103.82" cy="3.17" r="1.02" fill="url(#mkCMnBowl)"/>
+                <circle cx="17.7" cy="23.9" r="1.2" fill="#EFECF8" fill-opacity="0.75"/><circle cx="17.92" cy="23.68" r="0.98" fill="url(#mkCMnBowl)"/>
+                <circle cx="105.7" cy="23.9" r="1.2" fill="#EFECF8" fill-opacity="0.75"/><circle cx="105.92" cy="23.68" r="0.98" fill="url(#mkCMnBowl)"/>
+                <circle cx="32.5" cy="4.3" r="1.2" fill="#EFECF8" fill-opacity="0.75"/><circle cx="32.72" cy="4.08" r="0.98" fill="url(#mkCMnBowl)"/>
+                <circle cx="120.5" cy="4.3" r="1.2" fill="#EFECF8" fill-opacity="0.75"/><circle cx="120.72" cy="4.08" r="0.98" fill="url(#mkCMnBowl)"/>
+                <circle cx="19.3" cy="22.1" r="1.15" fill="#EFECF8" fill-opacity="0.75"/><circle cx="19.51" cy="21.89" r="0.94" fill="url(#mkCMnBowl)"/>
+                <circle cx="107.3" cy="22.1" r="1.15" fill="#EFECF8" fill-opacity="0.75"/><circle cx="107.51" cy="21.89" r="0.94" fill="url(#mkCMnBowl)"/>
+                <circle cx="54.8" cy="3.5" r="1.1" fill="#EFECF8" fill-opacity="0.75"/><circle cx="55" cy="3.3" r="0.9" fill="url(#mkCMnBowl)"/>
+                <circle cx="142.8" cy="3.5" r="1.1" fill="#EFECF8" fill-opacity="0.75"/><circle cx="143" cy="3.3" r="0.9" fill="url(#mkCMnBowl)"/>
+                <circle cx="55.1" cy="16.5" r="1.1" fill="#EFECF8" fill-opacity="0.75"/><circle cx="55.3" cy="16.3" r="0.9" fill="url(#mkCMnBowl)"/>
+                <circle cx="143.1" cy="16.5" r="1.1" fill="#EFECF8" fill-opacity="0.75"/><circle cx="143.3" cy="16.3" r="0.9" fill="url(#mkCMnBowl)"/>
+                <circle cx="12.2" cy="1.7" r="1.05" fill="#EFECF8" fill-opacity="0.75"/><circle cx="12.39" cy="1.51" r="0.86" fill="url(#mkCMnBowl)"/>
+                <circle cx="100.2" cy="1.7" r="1.05" fill="#EFECF8" fill-opacity="0.75"/><circle cx="100.39" cy="1.51" r="0.86" fill="url(#mkCMnBowl)"/>
+                <circle cx="46.6" cy="19.1" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="46.76" cy="18.94" r="0.74" fill="url(#mkCMnBowl)"/>
+                <circle cx="134.6" cy="19.1" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="134.76" cy="18.94" r="0.74" fill="url(#mkCMnBowl)"/>
+                <circle cx="18.7" cy="12.4" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="18.86" cy="12.24" r="0.74" fill="url(#mkCMnBowl)"/>
+                <circle cx="106.7" cy="12.4" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="106.86" cy="12.24" r="0.74" fill="url(#mkCMnBowl)"/>
+                <circle cx="86.2" cy="23.8" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="86.36" cy="23.64" r="0.74" fill="url(#mkCMnBowl)"/>
+                <circle cx="174.2" cy="23.8" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="174.36" cy="23.64" r="0.74" fill="url(#mkCMnBowl)"/>
+                <circle cx="3.1" cy="5.5" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="3.26" cy="5.34" r="0.74" fill="url(#mkCMnBowl)"/>
+                <circle cx="91.1" cy="5.5" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="91.26" cy="5.34" r="0.74" fill="url(#mkCMnBowl)"/>
+                <circle cx="13.6" cy="4.3" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="13.76" cy="4.14" r="0.74" fill="url(#mkCMnBowl)"/>
+                <circle cx="101.6" cy="4.3" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="101.76" cy="4.14" r="0.74" fill="url(#mkCMnBowl)"/>
+                <circle cx="37.2" cy="8.6" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="37.36" cy="8.44" r="0.74" fill="url(#mkCMnBowl)"/>
+                <circle cx="125.2" cy="8.6" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="125.36" cy="8.44" r="0.74" fill="url(#mkCMnBowl)"/>
+                <circle cx="60.4" cy="3.6" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="60.56" cy="3.44" r="0.74" fill="url(#mkCMnBowl)"/>
+                <circle cx="148.4" cy="3.6" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="148.56" cy="3.44" r="0.74" fill="url(#mkCMnBowl)"/>
+                <circle cx="69.9" cy="2.4" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="70.06" cy="2.24" r="0.74" fill="url(#mkCMnBowl)"/>
+                <circle cx="157.9" cy="2.4" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="158.06" cy="2.24" r="0.74" fill="url(#mkCMnBowl)"/>
+                <circle cx="54.7" cy="21.5" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="54.86" cy="21.34" r="0.74" fill="url(#mkCMnBowl)"/>
+                <circle cx="142.7" cy="21.5" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="142.86" cy="21.34" r="0.74" fill="url(#mkCMnBowl)"/>
+                <circle cx="58.9" cy="23" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="59.06" cy="22.84" r="0.74" fill="url(#mkCMnBowl)"/>
+                <circle cx="146.9" cy="23" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="147.06" cy="22.84" r="0.74" fill="url(#mkCMnBowl)"/>
+                <circle cx="28.3" cy="1.8" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="28.46" cy="1.64" r="0.74" fill="url(#mkCMnBowl)"/>
+                <circle cx="116.3" cy="1.8" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="116.46" cy="1.64" r="0.74" fill="url(#mkCMnBowl)"/>
+                <circle cx="21.4" cy="7.3" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="21.56" cy="7.14" r="0.74" fill="url(#mkCMnBowl)"/>
+                <circle cx="109.4" cy="7.3" r="0.9" fill="#EFECF8" fill-opacity="0.75"/><circle cx="109.56" cy="7.14" r="0.74" fill="url(#mkCMnBowl)"/>
+              </g>
+            </g>
+          </g>
+          <circle r="14" fill="url(#mkCMnShade)"/>
+        </g>
+    </g>
+    <g id="mkMoon4">
+      <animateMotion path="M85.67 -148.39 A171.35 171.35 0 1 0 -85.67 148.39 A171.35 171.35 0 1 0 85.67 -148.39" dur="72s" repeatCount="indefinite"/>
+      <g id="mkDDwarf" transform="scale(0.4500)">
+          <circle r="10" fill="#CDA273"/>
+          <g clip-path="url(#mkDDwClip)">
+            <g id="mkDDwSurfaceAnim">
+              <animateTransform attributeName="transform" type="translate" from="0 0" to="63 0" dur="160s" repeatCount="indefinite"/>
+              <g id="mkDDwSurfaceStrip" transform="translate(-93 -10)">
+                <rect width="126" height="20" fill="#CDA273" filter="url(#mkDDwSurface)"/>
+                <circle cx="39.2" cy="15.1" r="2.2" fill="#F6EBD6" fill-opacity="0.7"/><circle cx="39.6" cy="14.7" r="1.8" fill="url(#mkDDwBowl)"/>
+                <circle cx="102.2" cy="15.1" r="2.2" fill="#F6EBD6" fill-opacity="0.7"/><circle cx="102.6" cy="14.7" r="1.8" fill="url(#mkDDwBowl)"/>
+                <circle cx="47.7" cy="12.4" r="1.8" fill="#F6EBD6" fill-opacity="0.7"/><circle cx="48.02" cy="12.08" r="1.48" fill="url(#mkDDwBowl)"/>
+                <circle cx="110.7" cy="12.4" r="1.8" fill="#F6EBD6" fill-opacity="0.7"/><circle cx="111.02" cy="12.08" r="1.48" fill="url(#mkDDwBowl)"/>
+                <circle cx="13.6" cy="2.7" r="1.5" fill="#F6EBD6" fill-opacity="0.7"/><circle cx="13.87" cy="2.43" r="1.23" fill="url(#mkDDwBowl)"/>
+                <circle cx="76.6" cy="2.7" r="1.5" fill="#F6EBD6" fill-opacity="0.7"/><circle cx="76.87" cy="2.43" r="1.23" fill="url(#mkDDwBowl)"/>
+                <circle cx="42.1" cy="9.9" r="1.3" fill="#F6EBD6" fill-opacity="0.7"/><circle cx="42.33" cy="9.67" r="1.07" fill="url(#mkDDwBowl)"/>
+                <circle cx="105.1" cy="9.9" r="1.3" fill="#F6EBD6" fill-opacity="0.7"/><circle cx="105.33" cy="9.67" r="1.07" fill="url(#mkDDwBowl)"/>
+                <circle cx="58" cy="1.6" r="1.1" fill="#F6EBD6" fill-opacity="0.7"/><circle cx="58.2" cy="1.4" r="0.9" fill="url(#mkDDwBowl)"/>
+                <circle cx="121" cy="1.6" r="1.1" fill="#F6EBD6" fill-opacity="0.7"/><circle cx="121.2" cy="1.4" r="0.9" fill="url(#mkDDwBowl)"/>
+                <circle cx="59.7" cy="4.1" r="1" fill="#F6EBD6" fill-opacity="0.7"/><circle cx="59.88" cy="3.92" r="0.82" fill="url(#mkDDwBowl)"/>
+                <circle cx="122.7" cy="4.1" r="1" fill="#F6EBD6" fill-opacity="0.7"/><circle cx="122.88" cy="3.92" r="0.82" fill="url(#mkDDwBowl)"/>
+                <circle cx="62.2" cy="1.9" r="0.9" fill="#F6EBD6" fill-opacity="0.7"/><circle cx="62.36" cy="1.74" r="0.74" fill="url(#mkDDwBowl)"/>
+                <circle cx="125.2" cy="1.9" r="0.9" fill="#F6EBD6" fill-opacity="0.7"/><circle cx="125.36" cy="1.74" r="0.74" fill="url(#mkDDwBowl)"/>
+                <circle cx="50.3" cy="11.9" r="0.8" fill="#F6EBD6" fill-opacity="0.7"/><circle cx="50.44" cy="11.76" r="0.66" fill="url(#mkDDwBowl)"/>
+                <circle cx="113.3" cy="11.9" r="0.8" fill="#F6EBD6" fill-opacity="0.7"/><circle cx="113.44" cy="11.76" r="0.66" fill="url(#mkDDwBowl)"/>
+              </g>
+            </g>
+          </g>
+          <circle r="10" fill="url(#mkDDwShade)"/>
+        </g>
+    </g>
+  </g>
+</svg>

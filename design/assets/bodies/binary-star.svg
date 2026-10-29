@@ -1,0 +1,195 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">
+  <!-- Binary star (WP8), v1.5 rules. ONE group #binaryStar at translate(200 200) = the barycentre; geometry relative to (0,0).
+       Two copies of the approved sun construction (design/assets/star.svg, ids re-prefixed), recoloured:
+         primary   (ids bnA*) F-type yellow-white, r 30 (sun group scaled 30/46): body #FFE7A0 -> #FFC24A -> #FF9A2A, filaments #FFFDF0,
+                   dark plasma #A0460E, flames #FFF6D6 / #FFD27A / #FFA040, haze #FFB45A -> #FF8C3A ... (tokens binary.hot.*)
+         secondary (ids bnB*) K-type orange, r 20 (scaled 20/46): body #FF9A3A -> #FF7426 -> #E85A1A, filaments #FFC27A, dark plasma #6A1606,
+                   flames #FFC890 / #FF9A4A / #E8501A, limb #FFB27A / #FFD8B0, prominences #FF6A2A (tokens binary.cool.*)
+       Orbit (game-compatible, top-down circles about a fixed barycentre): masses 1.8:1.0, separation 120, so the primary circles at
+       a1 = 42.9 and the secondary at a2 = 77.1 (a1 m1 = a2 m2), opposite phases, one shared period 40 s, counter-clockwise on screen.
+       In a level: two bodies of kind "star" with orbit {cx, cy, radius: a_i, phase: phi and phi + pi, omega: 2 pi / P}.
+       animateMotion keeps each star upright (no rotate), so the stars' own flame rotations stay as authored.
+       Faint orbit guides: #ECF0FA a0.07, 1 px, dash 2 6 (preview only; drop in the game). Crash radii = r 30 / r 20. Ids: bn*. -->
+  <defs>
+    <radialGradient id="bnAStarHaze" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#FFB45A" stop-opacity="0.6"/><stop offset="0.23" stop-color="#FFB45A" stop-opacity="0.52"/><stop offset="0.33" stop-color="#FF7A2A" stop-opacity="0.3"/><stop offset="0.55" stop-color="#C2541A" stop-opacity="0.15"/><stop offset="0.8" stop-color="#7A2A0E" stop-opacity="0.06"/><stop offset="1" stop-color="#7A2A0E" stop-opacity="0"/></radialGradient>
+    <radialGradient id="bnAStarFlameFill" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="62"><stop offset="0" stop-color="#FFF6D6" stop-opacity="0.95"/><stop offset="0.74" stop-color="#FFF6D6" stop-opacity="0.95"/><stop offset="0.82" stop-color="#FFD27A" stop-opacity="0.8"/><stop offset="0.91" stop-color="#FFA040" stop-opacity="0.38"/><stop offset="1" stop-color="#FF8C2E" stop-opacity="0"/></radialGradient>
+    <radialGradient id="bnAStarWispFill" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="78"><stop offset="0" stop-color="#FFD27A" stop-opacity="0.55"/><stop offset="0.62" stop-color="#FFD27A" stop-opacity="0.55"/><stop offset="0.8" stop-color="#FFA040" stop-opacity="0.22"/><stop offset="1" stop-color="#FF7A2A" stop-opacity="0"/></radialGradient>
+    <radialGradient id="bnAStarBody" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#FFE7A0"/><stop offset="0.65" stop-color="#FFC24A"/><stop offset="1" stop-color="#FF9A2A"/></radialGradient>
+    <radialGradient id="bnAStarLimb" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="46"><stop offset="0.8" stop-color="#FFD27A" stop-opacity="0"/><stop offset="0.93" stop-color="#FFD27A" stop-opacity="0.55"/><stop offset="0.97" stop-color="#FFF1C2" stop-opacity="0.9"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0.95"/></radialGradient>
+    <linearGradient id="bnAStarFlareFill" gradientUnits="userSpaceOnUse" x1="46" y1="0" x2="86" y2="0"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#FFD27A" stop-opacity="0.15"/></linearGradient>
+    <filter id="bnAStarFlame" filterUnits="userSpaceOnUse" x="-88" y="-88" width="176" height="176" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.08" numOctaves="4" seed="21" result="n0"/>
+      <feColorMatrix in="n0" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0 1" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="20" xChannelSelector="R" yChannelSelector="G" result="nd"/>
+      <feGaussianBlur in="nd" stdDeviation="0.4"/>
+    </filter>
+    <filter id="bnAStarWisp" filterUnits="userSpaceOnUse" x="-107" y="-107" width="214" height="214" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="5" seed="33" result="w0"/>
+      <feColorMatrix in="w0" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0 1" result="w"/>
+      <feDisplacementMap in="SourceGraphic" in2="w" scale="34" xChannelSelector="R" yChannelSelector="G" result="wd"/>
+      <feGaussianBlur in="wd" stdDeviation="0.8"/>
+    </filter>
+    <filter id="bnAStarSurf" filterUnits="userSpaceOnUse" x="-48" y="-48" width="96" height="96" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="5" seed="4" result="f"/>
+      <feColorMatrix in="f" type="matrix" values="0 0 0 0 0.627  0 0 0 0 0.275  0 0 0 0 0.055  3.4 0 0 0 -1.6" result="dk"/>
+      <feComponentTransfer in="dk" result="dark"><feFuncA type="linear" slope="0.55"/></feComponentTransfer>
+      <feTurbulence type="turbulence" baseFrequency="0.06" numOctaves="5" seed="9" result="t"/>
+      <feColorMatrix in="t" type="matrix" values="0 0 0 0 1  0 0 0 0 0.992  0 0 0 0 0.941  -6.5 0 0 0 1.25" result="fl"/>
+      <feComponentTransfer in="fl" result="fil"><feFuncA type="linear" slope="0.85"/></feComponentTransfer>
+      <feMerge result="m"><feMergeNode in="SourceGraphic"/><feMergeNode in="dark"/><feMergeNode in="fil"/></feMerge>
+      <feComposite in="m" in2="SourceGraphic" operator="in"/>
+    </filter>
+    <filter id="bnAStarEdge" filterUnits="userSpaceOnUse" x="-60" y="-60" width="120" height="120" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.11" numOctaves="3" seed="44" result="e0"/>
+      <feColorMatrix in="e0" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0 1" result="e"/>
+      <feDisplacementMap in="SourceGraphic" in2="e" scale="6.5" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="bnAStarRimRag" filterUnits="userSpaceOnUse" x="-60" y="-60" width="120" height="120" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.22" numOctaves="2" seed="57" result="g0"/>
+      <feColorMatrix in="g0" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0 1" result="g"/>
+      <feDisplacementMap in="SourceGraphic" in2="g" scale="5" xChannelSelector="R" yChannelSelector="G" result="gd"/>
+      <feGaussianBlur in="gd" stdDeviation="0.35"/>
+    </filter>
+    <radialGradient id="bnBStarHaze" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#FF6A2A" stop-opacity="0.6"/><stop offset="0.23" stop-color="#FF6A2A" stop-opacity="0.52"/><stop offset="0.33" stop-color="#B83414" stop-opacity="0.3"/><stop offset="0.55" stop-color="#98200C" stop-opacity="0.15"/><stop offset="0.8" stop-color="#5A1006" stop-opacity="0.06"/><stop offset="1" stop-color="#5A1006" stop-opacity="0"/></radialGradient>
+    <radialGradient id="bnBStarFlameFill" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="62"><stop offset="0" stop-color="#FFC890" stop-opacity="0.95"/><stop offset="0.74" stop-color="#FFC890" stop-opacity="0.95"/><stop offset="0.82" stop-color="#FF9A4A" stop-opacity="0.8"/><stop offset="0.91" stop-color="#E8501A" stop-opacity="0.38"/><stop offset="1" stop-color="#C8401A" stop-opacity="0"/></radialGradient>
+    <radialGradient id="bnBStarWispFill" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="78"><stop offset="0" stop-color="#FF9A4A" stop-opacity="0.55"/><stop offset="0.62" stop-color="#FF9A4A" stop-opacity="0.55"/><stop offset="0.8" stop-color="#E8501A" stop-opacity="0.22"/><stop offset="1" stop-color="#B83414" stop-opacity="0"/></radialGradient>
+    <radialGradient id="bnBStarBody" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#FF9A3A"/><stop offset="0.65" stop-color="#FF7426"/><stop offset="1" stop-color="#E85A1A"/></radialGradient>
+    <radialGradient id="bnBStarLimb" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="46"><stop offset="0.8" stop-color="#FFB27A" stop-opacity="0"/><stop offset="0.93" stop-color="#FFB27A" stop-opacity="0.55"/><stop offset="0.97" stop-color="#FFD8B0" stop-opacity="0.9"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0.95"/></radialGradient>
+    <linearGradient id="bnBStarFlareFill" gradientUnits="userSpaceOnUse" x1="46" y1="0" x2="86" y2="0"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#FFB27A" stop-opacity="0.15"/></linearGradient>
+    <filter id="bnBStarFlame" filterUnits="userSpaceOnUse" x="-88" y="-88" width="176" height="176" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.08" numOctaves="4" seed="21" result="n0"/>
+      <feColorMatrix in="n0" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0 1" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="20" xChannelSelector="R" yChannelSelector="G" result="nd"/>
+      <feGaussianBlur in="nd" stdDeviation="0.4"/>
+    </filter>
+    <filter id="bnBStarWisp" filterUnits="userSpaceOnUse" x="-107" y="-107" width="214" height="214" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="5" seed="33" result="w0"/>
+      <feColorMatrix in="w0" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0 1" result="w"/>
+      <feDisplacementMap in="SourceGraphic" in2="w" scale="34" xChannelSelector="R" yChannelSelector="G" result="wd"/>
+      <feGaussianBlur in="wd" stdDeviation="0.8"/>
+    </filter>
+    <filter id="bnBStarSurf" filterUnits="userSpaceOnUse" x="-48" y="-48" width="96" height="96" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="5" seed="4" result="f"/>
+      <feColorMatrix in="f" type="matrix" values="0 0 0 0 0.416  0 0 0 0 0.086  0 0 0 0 0.024  3.4 0 0 0 -1.6" result="dk"/>
+      <feComponentTransfer in="dk" result="dark"><feFuncA type="linear" slope="0.55"/></feComponentTransfer>
+      <feTurbulence type="turbulence" baseFrequency="0.06" numOctaves="5" seed="9" result="t"/>
+      <feColorMatrix in="t" type="matrix" values="0 0 0 0 1  0 0 0 0 0.761  0 0 0 0 0.478  -6.5 0 0 0 1.25" result="fl"/>
+      <feComponentTransfer in="fl" result="fil"><feFuncA type="linear" slope="0.85"/></feComponentTransfer>
+      <feMerge result="m"><feMergeNode in="SourceGraphic"/><feMergeNode in="dark"/><feMergeNode in="fil"/></feMerge>
+      <feComposite in="m" in2="SourceGraphic" operator="in"/>
+    </filter>
+    <filter id="bnBStarEdge" filterUnits="userSpaceOnUse" x="-60" y="-60" width="120" height="120" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.11" numOctaves="3" seed="44" result="e0"/>
+      <feColorMatrix in="e0" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0 1" result="e"/>
+      <feDisplacementMap in="SourceGraphic" in2="e" scale="6.5" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="bnBStarRimRag" filterUnits="userSpaceOnUse" x="-60" y="-60" width="120" height="120" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.22" numOctaves="2" seed="57" result="g0"/>
+      <feColorMatrix in="g0" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0 1" result="g"/>
+      <feDisplacementMap in="SourceGraphic" in2="g" scale="5" xChannelSelector="R" yChannelSelector="G" result="gd"/>
+      <feGaussianBlur in="gd" stdDeviation="0.35"/>
+    </filter>
+  </defs>
+  <g id="binaryStar" transform="translate(200 200)">
+    <g fill="none" stroke="#ECF0FA" stroke-opacity="0.07" stroke-width="1" stroke-dasharray="2 6">
+      <circle r="42.86"/>
+      <circle r="77.14"/>
+    </g>
+    <g id="bnSecondary">
+      <animateMotion path="M77.14 0.00 A77.14 77.14 0 1 0 -77.14 -0.00 A77.14 77.14 0 1 0 77.14 0.00" dur="40s" repeatCount="indefinite"/>
+      <g id="bnBStar" transform="scale(0.4348)">
+          <g id="bnBStarBreathe">
+            <animateTransform attributeName="transform" type="scale" values="1;1.03;1;0.97;1" keyTimes="0;0.25;0.5;0.75;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1" dur="6s" repeatCount="indefinite"/>
+            <circle r="200" fill="url(#bnBStarHaze)"/>
+            <g><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="300s" repeatCount="indefinite"/>
+              <circle r="78" fill="url(#bnBStarWispFill)" filter="url(#bnBStarWisp)"/></g>
+            <g><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="200s" repeatCount="indefinite"/>
+              <circle r="62" fill="url(#bnBStarFlameFill)" filter="url(#bnBStarFlame)"/></g>
+          </g>
+          <g id="bnBStarProminences" fill="none" stroke-linecap="round">
+            <g transform="rotate(147.5) translate(46 0)">
+              <g id="bnBStarProm1" transform="scale(0.6)" opacity="0">
+                <animateTransform attributeName="transform" type="scale" values="0.6;1;0.6" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="12s" begin="0s" repeatCount="indefinite"/>
+                <animate attributeName="opacity" values="0;1;0" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="12s" begin="0s" repeatCount="indefinite"/>
+                <path d="M-0.9 -9 C21 -7.2 21 7.2 -0.9 9" stroke="#FF6A2A" stroke-width="2.8" stroke-opacity="0.85"/>
+                <path d="M-0.9 -9 C21 -7.2 21 7.2 -0.9 9" stroke="#FFD8B0" stroke-width="1" stroke-opacity="0.9"/>
+              </g>
+            </g>
+            <g transform="rotate(243.6) translate(46 0)">
+              <g id="bnBStarProm2" transform="scale(0.6)" opacity="0">
+                <animateTransform attributeName="transform" type="scale" values="0.6;1;0.6" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="16s" begin="5s" repeatCount="indefinite"/>
+                <animate attributeName="opacity" values="0;1;0" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="16s" begin="5s" repeatCount="indefinite"/>
+                <path d="M-1.3 -11 C23.5 -9 23.5 9 -1.3 11" stroke="#FF6A2A" stroke-width="2.8" stroke-opacity="0.85"/>
+                <path d="M-1.3 -11 C23.5 -9 23.5 9 -1.3 11" stroke="#FFD8B0" stroke-width="1" stroke-opacity="0.9"/>
+              </g>
+            </g>
+            <g transform="rotate(314.8) translate(46 0)">
+              <g id="bnBStarProm3" transform="scale(0.6)" opacity="0">
+                <animateTransform attributeName="transform" type="scale" values="0.6;1;0.6" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="14s" begin="9s" repeatCount="indefinite"/>
+                <animate attributeName="opacity" values="0;1;0" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="14s" begin="9s" repeatCount="indefinite"/>
+                <path d="M-0.8 -8.5 C29 -6.8 29 6.8 -0.8 8.5" stroke="#FF6A2A" stroke-width="2.8" stroke-opacity="0.85"/>
+                <path d="M-0.8 -8.5 C29 -6.8 29 6.8 -0.8 8.5" stroke="#FFD8B0" stroke-width="1" stroke-opacity="0.9"/>
+              </g>
+            </g>
+          </g>
+          <g id="bnBStarFlare" transform="rotate(25)" opacity="0">
+            <animate attributeName="opacity" values="0;0;1;0;0" keyTimes="0;0.5909;0.6318;0.6727;1" dur="22s" repeatCount="indefinite"/>
+            <path d="M46 -1.8 L86 0 L46 1.8 Z" fill="url(#bnBStarFlareFill)"/>
+          </g>
+          <g id="bnBStarDisc" filter="url(#bnBStarEdge)">
+            <circle r="46" fill="url(#bnBStarBody)" filter="url(#bnBStarSurf)"/>
+            <circle r="46" fill="url(#bnBStarLimb)"/>
+          </g>
+          <circle r="46.2" fill="none" stroke="#FFD8B0" stroke-width="1.6" stroke-opacity="0.75" filter="url(#bnBStarRimRag)"/>
+        </g>
+    </g>
+    <g id="bnPrimary">
+      <animateMotion path="M-42.86 0.00 A42.86 42.86 0 1 0 42.86 -0.00 A42.86 42.86 0 1 0 -42.86 0.00" dur="40s" repeatCount="indefinite"/>
+      <g id="bnAStar" transform="scale(0.6522)">
+          <g id="bnAStarBreathe">
+            <animateTransform attributeName="transform" type="scale" values="1;1.03;1;0.97;1" keyTimes="0;0.25;0.5;0.75;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1" dur="6s" repeatCount="indefinite"/>
+            <circle r="200" fill="url(#bnAStarHaze)"/>
+            <g><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="300s" repeatCount="indefinite"/>
+              <circle r="78" fill="url(#bnAStarWispFill)" filter="url(#bnAStarWisp)"/></g>
+            <g><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="200s" repeatCount="indefinite"/>
+              <circle r="62" fill="url(#bnAStarFlameFill)" filter="url(#bnAStarFlame)"/></g>
+          </g>
+          <g id="bnAStarProminences" fill="none" stroke-linecap="round">
+            <g transform="rotate(147.5) translate(46 0)">
+              <g id="bnAStarProm1" transform="scale(0.6)" opacity="0">
+                <animateTransform attributeName="transform" type="scale" values="0.6;1;0.6" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="12s" begin="0s" repeatCount="indefinite"/>
+                <animate attributeName="opacity" values="0;1;0" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="12s" begin="0s" repeatCount="indefinite"/>
+                <path d="M-0.9 -9 C21 -7.2 21 7.2 -0.9 9" stroke="#FF8C2E" stroke-width="2.8" stroke-opacity="0.85"/>
+                <path d="M-0.9 -9 C21 -7.2 21 7.2 -0.9 9" stroke="#FFF1C2" stroke-width="1" stroke-opacity="0.9"/>
+              </g>
+            </g>
+            <g transform="rotate(243.6) translate(46 0)">
+              <g id="bnAStarProm2" transform="scale(0.6)" opacity="0">
+                <animateTransform attributeName="transform" type="scale" values="0.6;1;0.6" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="16s" begin="5s" repeatCount="indefinite"/>
+                <animate attributeName="opacity" values="0;1;0" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="16s" begin="5s" repeatCount="indefinite"/>
+                <path d="M-1.3 -11 C23.5 -9 23.5 9 -1.3 11" stroke="#FF8C2E" stroke-width="2.8" stroke-opacity="0.85"/>
+                <path d="M-1.3 -11 C23.5 -9 23.5 9 -1.3 11" stroke="#FFF1C2" stroke-width="1" stroke-opacity="0.9"/>
+              </g>
+            </g>
+            <g transform="rotate(314.8) translate(46 0)">
+              <g id="bnAStarProm3" transform="scale(0.6)" opacity="0">
+                <animateTransform attributeName="transform" type="scale" values="0.6;1;0.6" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="14s" begin="9s" repeatCount="indefinite"/>
+                <animate attributeName="opacity" values="0;1;0" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="14s" begin="9s" repeatCount="indefinite"/>
+                <path d="M-0.8 -8.5 C29 -6.8 29 6.8 -0.8 8.5" stroke="#FF8C2E" stroke-width="2.8" stroke-opacity="0.85"/>
+                <path d="M-0.8 -8.5 C29 -6.8 29 6.8 -0.8 8.5" stroke="#FFF1C2" stroke-width="1" stroke-opacity="0.9"/>
+              </g>
+            </g>
+          </g>
+          <g id="bnAStarFlare" transform="rotate(25)" opacity="0">
+            <animate attributeName="opacity" values="0;0;1;0;0" keyTimes="0;0.5909;0.6318;0.6727;1" dur="22s" repeatCount="indefinite"/>
+            <path d="M46 -1.8 L86 0 L46 1.8 Z" fill="url(#bnAStarFlareFill)"/>
+          </g>
+          <g id="bnAStarDisc" filter="url(#bnAStarEdge)">
+            <circle r="46" fill="url(#bnAStarBody)" filter="url(#bnAStarSurf)"/>
+            <circle r="46" fill="url(#bnAStarLimb)"/>
+          </g>
+          <circle r="46.2" fill="none" stroke="#FFF1C2" stroke-width="1.6" stroke-opacity="0.75" filter="url(#bnAStarRimRag)"/>
+        </g>
+    </g>
+  </g>
+</svg>

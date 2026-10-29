@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
+  <!-- Dwarf planet, v1.5 (revised: realistic + vibrant + crisp, built to reference/planet-ref.svg variant F; airless rules). ONE group #dwarf at
+       translate(20 20); geometry relative to (0,0). Ids: dw*.
+       r 10, disc diameter H = 20. Lit side faces the star: L = (+0.7071, -0.7071) (upper-right). Lighting never rotates.
+       Airless: NO haze, NO rim, NO clouds, NO polar caps, NO limb line; crisp zones and pits; HARD terminator.
+       Palette (v1.5 tokens; Pluto-like: tholin browns + bright nitrogen-ice plains): dwarf.base #CDA273 · dwarf.shelf #A8744C · dwarf.dark #6A402A ·
+         dwarf.plains #F6EBD6 (also crater rims) · dwarf.pit #573522 (also crater bowls) · dwarf.highlight #FFF6E6 · shared terminator.warm #FF9455 ·
+         night #08122E / #050B1E  (v1.3 #B8A48E / #6E6052 / #E8DCC8 retired).
+
+       Texture strip: period P = round(2 pi r) = 63 px. ONE rect 2P x 2r = 126x20; noise computed once over the 63x20 subregion (stitched) and
+       feTile'd over 126x20. Scrolled west->east: SMIL translate 0 -> +63 over 160 s through #dwClip. Start phase: inner translate(-93 -10)
+       (tile x 20 at the disc's left edge); visible window inside strip x [20, 103]; every pit is drawn twice (x and x + P).
+
+       Draw order:
+       1. base     circle r 10, #CDA273.
+       2. surface  strip, SMIL translate 0 -> 63 over 160 s.
+          2a. mottle    rect 126x20 fill #CDA273, filter #dwSurface (region 0..126 x 0..20, sRGB):
+                   n = fractalNoise 0.09, 6 oct, seed 13 · h = fractalNoise 0.07, 3 oct, seed 19 · p = fractalNoise 0.28, 1 oct, seed 17
+                   (all stitched on the P x 2r tile, feTile'd over 2P). Crisp zones (alpha channel, linear threshold, then x alpha):
+                     shelf   #A8744C a0.55: n slope -36 (alpha 1 below 0.4622, 0 at 0.49)
+                     dark    #6A402A a0.85: n slope -40 (alpha 1 below 0.42, 0 at 0.445)
+                     bright  #F6EBD6 a0.9: h threshold 0.56 slope 28, composited IN the upland mask n > 0.47 (slope 14)
+                     pits    #573522 a0.5: p threshold 0.643 slope 30 (1-2 px specks)
+                     merge: base, shelf, dark, bright, pits.
+          2b. pits      the v1.3 seeded table (8 craters, mulberry32 seed 0x445741, unchanged), each at x and x + P: outer circle R #F6EBD6 a0.7 + bowl
+                   circle 0.82 R centred (+0.18 R, -0.18 R), fill #dwBowl = #573522 a0.95 (upper-right) -> 0.55 a0.75 -> a0.5 (lower-left).
+                   Table (x y R): (39.2 15.1 2.2) · (47.7 12.4 1.8) · (13.6 2.7 1.5) · (42.1 9.9 1.3) · (58 1.6 1.1) · (59.7 4.1 1) · (62.2 1.9 0.9) · (50.3 11.9 0.8)
+       3. shade    radial, userSpace centre 0.36 r L = (2.55, -2.55), radius 1.25 r = 12.5 (airless HARD terminator):
+                   0 #FFF6E6 a0.18 | 0.30 a0 | 0.69 #FF9455 a0 | 0.73 #FF9455 a0.18 (warm terminator band) | 0.755 #08122E a0.82 | 0.80 #050B1E a0.97 | 1.00 a1.
+                   No haze, no rim, no limb line (airless).
+       Static renders show t = 0. -->
+  <defs>
+    <clipPath id="dwClip"><circle r="10"/></clipPath>
+    <filter id="dwSurface" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="0" y="0" width="126" height="20" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.09" numOctaves="6" seed="13" stitchTiles="stitch" x="0" y="0" width="63" height="20" result="dwSurfaceN1"/>
+      <feTile in="dwSurfaceN1" x="0" y="0" width="126" height="20" result="dwSurfaceN"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.07" numOctaves="3" seed="19" stitchTiles="stitch" x="0" y="0" width="63" height="20" result="dwSurfaceH1"/>
+      <feTile in="dwSurfaceH1" x="0" y="0" width="126" height="20" result="dwSurfaceH"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.28" numOctaves="1" seed="17" stitchTiles="stitch" x="0" y="0" width="63" height="20" result="dwSurfaceP1"/>
+      <feTile in="dwSurfaceP1" x="0" y="0" width="126" height="20" result="dwSurfacePn"/>
+      <feColorMatrix in="dwSurfaceN" type="matrix" values="0 0 0 0 0.659  0 0 0 0 0.455  0 0 0 0 0.298  0 0 0 1 0" result="dwSurfaceShelfRGB"/>
+      <feComponentTransfer in="dwSurfaceShelfRGB" result="dwSurfaceShelfT"><feFuncA type="linear" slope="-36" intercept="17.64"/></feComponentTransfer>
+      <feComponentTransfer in="dwSurfaceShelfT" result="dwSurfaceShelf"><feFuncA type="linear" slope="0.55"/></feComponentTransfer>
+      <feColorMatrix in="dwSurfaceN" type="matrix" values="0 0 0 0 0.416  0 0 0 0 0.251  0 0 0 0 0.165  0 0 0 1 0" result="dwSurfaceDarkRGB"/>
+      <feComponentTransfer in="dwSurfaceDarkRGB" result="dwSurfaceDarkT"><feFuncA type="linear" slope="-40" intercept="17.8"/></feComponentTransfer>
+      <feComponentTransfer in="dwSurfaceDarkT" result="dwSurfaceDark"><feFuncA type="linear" slope="0.85"/></feComponentTransfer>
+      <feColorMatrix in="dwSurfaceH" type="matrix" values="0 0 0 0 0.965  0 0 0 0 0.922  0 0 0 0 0.839  0 0 0 1 0" result="dwSurfaceBriMRGB"/>
+      <feComponentTransfer in="dwSurfaceBriMRGB" result="dwSurfaceBriMT"><feFuncA type="linear" slope="28" intercept="-15.68"/></feComponentTransfer>
+      <feComponentTransfer in="dwSurfaceBriMT" result="dwSurfaceBriM"><feFuncA type="linear" slope="0.9"/></feComponentTransfer>
+      <feColorMatrix in="dwSurfaceN" type="matrix" values="0 0 0 0 1.000  0 0 0 0 1.000  0 0 0 0 1.000  0 0 0 1 0" result="dwSurfaceUpRGB"/>
+      <feComponentTransfer in="dwSurfaceUpRGB" result="dwSurfaceUp"><feFuncA type="linear" slope="14" intercept="-6.58"/></feComponentTransfer>
+      <feComposite in="dwSurfaceBriM" in2="dwSurfaceUp" operator="in" result="dwSurfaceBright"/>
+      <feColorMatrix in="dwSurfacePn" type="matrix" values="0 0 0 0 0.341  0 0 0 0 0.208  0 0 0 0 0.133  0 0 0 1 0" result="dwSurfacePitsRGB"/>
+      <feComponentTransfer in="dwSurfacePitsRGB" result="dwSurfacePitsT"><feFuncA type="linear" slope="30" intercept="-19.29"/></feComponentTransfer>
+      <feComponentTransfer in="dwSurfacePitsT" result="dwSurfacePits"><feFuncA type="linear" slope="0.5"/></feComponentTransfer>
+      <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="dwSurfaceShelf"/><feMergeNode in="dwSurfaceDark"/><feMergeNode in="dwSurfaceBright"/><feMergeNode in="dwSurfacePits"/></feMerge>
+    </filter>
+    <linearGradient id="dwBowl" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#573522" stop-opacity="0.95"/><stop offset="0.55" stop-color="#573522" stop-opacity="0.75"/><stop offset="1" stop-color="#573522" stop-opacity="0.5"/></linearGradient>
+    <radialGradient id="dwShade" gradientUnits="userSpaceOnUse" cx="2.55" cy="-2.55" r="12.5">
+      <stop offset="0" stop-color="#FFF6E6" stop-opacity="0.18"/>
+      <stop offset="0.3" stop-color="#FFF6E6" stop-opacity="0"/>
+      <stop offset="0.69" stop-color="#FF9455" stop-opacity="0"/>
+      <stop offset="0.73" stop-color="#FF9455" stop-opacity="0.18"/>
+      <stop offset="0.755" stop-color="#08122E" stop-opacity="0.82"/>
+      <stop offset="0.8" stop-color="#050B1E" stop-opacity="0.97"/>
+      <stop offset="1" stop-color="#050B1E" stop-opacity="1"/>
+    </radialGradient>
+  </defs>
+  <g id="dwarf" transform="translate(20 20)">
+    <circle r="10" fill="#CDA273"/>
+    <g clip-path="url(#dwClip)">
+      <g id="dwSurfaceAnim">
+        <animateTransform attributeName="transform" type="translate" from="0 0" to="63 0" dur="160s" repeatCount="indefinite"/>
+        <g id="dwSurfaceStrip" transform="translate(-93 -10)">
+          <rect width="126" height="20" fill="#CDA273" filter="url(#dwSurface)"/>
+          <circle cx="39.2" cy="15.1" r="2.2" fill="#F6EBD6" fill-opacity="0.7"/><circle cx="39.6" cy="14.7" r="1.8" fill="url(#dwBowl)"/>
+          <circle cx="102.2" cy="15.1" r="2.2" fill="#F6EBD6" fill-opacity="0.7"/><circle cx="102.6" cy="14.7" r="1.8" fill="url(#dwBowl)"/>
+          <circle cx="47.7" cy="12.4" r="1.8" fill="#F6EBD6" fill-opacity="0.7"/><circle cx="48.02" cy="12.08" r="1.48" fill="url(#dwBowl)"/>
+          <circle cx="110.7" cy="12.4" r="1.8" fill="#F6EBD6" fill-opacity="0.7"/><circle cx="111.02" cy="12.08" r="1.48" fill="url(#dwBowl)"/>
+          <circle cx="13.6" cy="2.7" r="1.5" fill="#F6EBD6" fill-opacity="0.7"/><circle cx="13.87" cy="2.43" r="1.23" fill="url(#dwBowl)"/>
+          <circle cx="76.6" cy="2.7" r="1.5" fill="#F6EBD6" fill-opacity="0.7"/><circle cx="76.87" cy="2.43" r="1.23" fill="url(#dwBowl)"/>
+          <circle cx="42.1" cy="9.9" r="1.3" fill="#F6EBD6" fill-opacity="0.7"/><circle cx="42.33" cy="9.67" r="1.07" fill="url(#dwBowl)"/>
+          <circle cx="105.1" cy="9.9" r="1.3" fill="#F6EBD6" fill-opacity="0.7"/><circle cx="105.33" cy="9.67" r="1.07" fill="url(#dwBowl)"/>
+          <circle cx="58" cy="1.6" r="1.1" fill="#F6EBD6" fill-opacity="0.7"/><circle cx="58.2" cy="1.4" r="0.9" fill="url(#dwBowl)"/>
+          <circle cx="121" cy="1.6" r="1.1" fill="#F6EBD6" fill-opacity="0.7"/><circle cx="121.2" cy="1.4" r="0.9" fill="url(#dwBowl)"/>
+          <circle cx="59.7" cy="4.1" r="1" fill="#F6EBD6" fill-opacity="0.7"/><circle cx="59.88" cy="3.92" r="0.82" fill="url(#dwBowl)"/>
+          <circle cx="122.7" cy="4.1" r="1" fill="#F6EBD6" fill-opacity="0.7"/><circle cx="122.88" cy="3.92" r="0.82" fill="url(#dwBowl)"/>
+          <circle cx="62.2" cy="1.9" r="0.9" fill="#F6EBD6" fill-opacity="0.7"/><circle cx="62.36" cy="1.74" r="0.74" fill="url(#dwBowl)"/>
+          <circle cx="125.2" cy="1.9" r="0.9" fill="#F6EBD6" fill-opacity="0.7"/><circle cx="125.36" cy="1.74" r="0.74" fill="url(#dwBowl)"/>
+          <circle cx="50.3" cy="11.9" r="0.8" fill="#F6EBD6" fill-opacity="0.7"/><circle cx="50.44" cy="11.76" r="0.66" fill="url(#dwBowl)"/>
+          <circle cx="113.3" cy="11.9" r="0.8" fill="#F6EBD6" fill-opacity="0.7"/><circle cx="113.44" cy="11.76" r="0.66" fill="url(#dwBowl)"/>
+        </g>
+      </g>
+    </g>
+    <circle r="10" fill="url(#dwShade)"/>
+  </g>
+</svg>
