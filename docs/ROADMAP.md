@@ -155,12 +155,15 @@ Stephan points Claude at this section for the next visual pack.
 
 **WP10:** fully designed in [PR #22](https://github.com/stepwaec/slingshot/pull/22) (comet, solar recharge indicator) and in the game in [PR #31](https://github.com/stepwaec/slingshot/pull/31). Nothing from that pack is still open.
 
+**Ship systems:** fully designed in [PR #26](https://github.com/stepwaec/slingshot/pull/26). That pack includes the hull bar, the tidal-stress warning, and the upgrade screen, and the modular spacecraft redesign: a base hull with visible hull plating, shielding, chemical, ion and pulse engines, larger fuel tanks, solar panels, a gas scoop, sensors, a cryosleep module, and damage states that match the hull bar.
+
 **Open requests**, in priority order:
 
-1. **Ship systems:** hull health bar, tidal-stress warning, and upgrade screen. These are being built now with placeholder UI, so the designs should match those UI slots. Also a spacecraft redesign with visible upgrade parts: a modular base hull, and each upgrade visibly changes the ship (hull plating or structural strength, shielding, engines — chemical, ion and pulse, each with its own nozzle and plume — larger fuel tanks, solar panels, a gas scoop, sensors, and a cryosleep module). Include damage states that match the hull health bar. Keep the blue-to-violet plume. It must read well at game scale.
-2. **WP11:** sparse, medium and dense asteroid belts; Kuiper belt; rogue planet; radiation heatmap; dose meter.
-3. **Ship and planning view:** blue-to-violet plume with no trailing halo; burn node; gravity grid styling.
-4. **Late game:** stellar engine, Dyson swarm, ringworld, Shkadov thruster, space elevator, wormhole.
+1. **WP11:** sparse, medium and dense asteroid belts; Kuiper belt; rogue planet; radiation heatmap; dose meter.
+2. **Burn plume:** blue-to-violet, with no trailing halo.
+3. **Burn node.**
+4. **Gravity grid** styling.
+5. **Late game:** stellar engine, Dyson swarm, ringworld, Shkadov thruster, space elevator, wormhole.
 
 **Guidelines:** a realistic and vibrant style matching v1.5 and v2; SVG files under `design/assets/`; easter eggs only as hints, never logos or characters.
 
