@@ -32,12 +32,12 @@ Note on numbering: Brainstormer's first draft called the flight loop "WP2" and r
 | Art motion | Done, merged 2026-10-29 in [PR #33](https://github.com/stepwaec/slingshot/pull/33) | Sun prominences and the flare follow the timelines in `star.svg` instead of sitting at the rest frame. The comet tail is its own sprite: it points away from the star and shortens with `clamp(Rperi / d, 0.35, 1)`. Pulse's painted beams end on the level's damage reach. Planet sprites still turn their lit side toward the brightest star. Visual only. |
 | Implementation review | Done, merged 2026-10-29 in [PR #35](https://github.com/stepwaec/slingshot/pull/35) | Follows `design/IMPLEMENTING.md` through the visual items in `design/IMPLEMENTATION-REVIEW.md`. The sun's haze breathes and its flame and wisp rings turn. The ship frame is centred on the ship, and the longer plume still starts at the engine throat. SVG rasters bake at DPR × zoom bucket with mipmaps. The comet's dust tail mirrors with its orbit. Nebulae draw behind bodies. Prediction is unchanged. |
 | Remaining visual review | In progress, opened 2026-10-29 in [PR #38](https://github.com/stepwaec/slingshot/pull/38) | Home, Planet X and gas giants scroll their strips under a separate light layer. The comet's ion wind, knot and coma move. The magnetar's dashes, grain and starquake run. The red giant's drag edge crawls. The recharge HUD and the shipyard follow their SVG headers. The recharge cutoff, Kepler speeds and every other physics note stay unchanged. |
-| WP11: hazards plus radiation | In progress. Radiation slice merged 2026-10-29 in [PR #42](https://github.com/stepwaec/slingshot/pull/42). Belt fields opened 2026-10-29 in [PR #43](https://github.com/stepwaec/slingshot/pull/43). | Radiation: stars, flares, magnetic belts, pulsar beams, black-hole disks and cosmic background feed one dose field. Crew dose integrates in the sim step (the limit fails the mission), shielding halves it and adds mass, a planet's disc shadows a star and its flare, and a Radiation button draws the halftone map. Levels Shade and Wander. Rogue planets drift in a straight line. This pass adds seeded asteroid belts (sparse, medium, dense) and the Kuiper belt: rocks with r ≥ 7 crash (Kuiper r ≥ 5), dense dust can drain hull, shielding halves that, and the edges show in planning. Levels Weave and Frost. |
-| WP12: dramatic events | Planned | Supernova countdowns (get out before the star explodes), shockwaves from supernova remnants, quasars. |
+| WP11: hazards plus radiation | Done, merged 2026-10-29 in [PR #42](https://github.com/stepwaec/slingshot/pull/42) and [PR #43](https://github.com/stepwaec/slingshot/pull/43). | Radiation: stars, flares, magnetic belts, pulsar beams, black-hole disks and cosmic background feed one dose field. Crew dose integrates in the sim step (the limit fails the mission), shielding halves it and adds mass, a planet's disc shadows a star and its flare, and a Radiation button draws the halftone map. Levels Shade and Wander. Rogue planets drift in a straight line. This pass adds seeded asteroid belts (sparse, medium, dense) and the Kuiper belt: rocks with r ≥ 7 crash (Kuiper r ≥ 5), dense dust can drain hull, shielding halves that, and the edges show in planning. Levels Weave and Frost. |
+| WP12: dramatic events | Planned, next | Supernova countdowns (get out before the star explodes), shockwaves from supernova remnants, quasars. |
 | WP13: three-body chaos | Planned | Multi-sun systems (Trisolaran style) where three-body chaos means planning uses widening probability cones instead of exact lines. |
 | WP14: world builder | Planned | Build and share levels, using the JSON level format from WP7c. |
 | WP15: galaxy map | Planned | A galaxy-scale mission map where galaxies move relative to each other; each level stays one solar system. |
-| Late game: easter eggs and megastructures (after WP13) | Planned, no package number | Rare, optional easter eggs and the megastructures and exotic objects listed below. Scope with Stephan later. |
+| Late game: easter eggs and megastructures (after WP13) | Planned, next, no package number | Rare, optional easter eggs and the megastructures and exotic objects listed below. Scope with Stephan later. |
 
 ## Living universe
 
@@ -45,9 +45,9 @@ Physics stays game-like but true to its real shape, and prediction always matche
 
 | Package | Status | Scope |
 | --- | --- | --- |
-| LU1: lively surfaces | In progress, opened 2026-10-29 in [PR #41](https://github.com/stepwaec/slingshot/pull/41) | Subtle animation on every body: star granulation and flares, gas giant bands drifting, cloud layers moving, planets rotating. Visual only. Home, Planet X and gas giants already scroll from the visual review. This pass adds the moons and the dwarf on the same strips, turns the sun's granulation under a fixed limb, and plays the red giant's flare on the sun's 22 s timeline. |
-| LU2: moving bodies | Planned | Planets orbit stars or black holes, and moons orbit planets, on deterministic on-rails Kepler orbits where position is a function of time. Prediction uses the bodies' future positions, with ghost markers for the target's future position. Reuse the elliptical comet orbits. Start with one or two levels. |
-| LU3: scripted collisions and consumption | Planned | Timed, deterministic events: a comet hits a planet, a planet spirals into a star and burns up, a star is pulled into a black hole's accretion disk. Debris and changing gravity become gameplay (escape windows, narrowing gaps). |
+| LU1: lively surfaces | Done, merged 2026-10-29 in [PR #41](https://github.com/stepwaec/slingshot/pull/41) | Subtle animation on every body: star granulation and flares, gas giant bands drifting, cloud layers moving, planets rotating. Visual only. Home, Planet X and gas giants already scroll from the visual review. This pass adds the moons and the dwarf on the same strips, turns the sun's granulation under a fixed limb, and plays the red giant's flare on the sun's 22 s timeline. |
+| LU2: moving bodies | In progress | Planets orbit stars or black holes, and moons orbit planets, on deterministic on-rails Kepler orbits where position is a function of time. Prediction uses the bodies' future positions, with ghost markers for the target's future position. Reuse the elliptical comet orbits. Start with one or two levels. |
+| LU3: scripted collisions and consumption | Planned, next | Timed, deterministic events: a comet hits a planet, a planet spirals into a star and burns up, a star is pulled into a black hole's accretion disk. Debris and changing gravity become gameplay (escape windows, narrowing gaps). |
 | LU4: level design that uses motion | Planned | Launch windows, catching up with a moving target, and moon slingshots. |
 
 **Showcase level:** the target planet spirals into its star, and the player must arrive and settle into a stable orbit before it burns up. It uses LU2 and LU3.
@@ -182,12 +182,13 @@ Stephan points Claude at this section for the next visual pack.
 
 **Burn plume, burn node and gravity grid styling:** done in [PR #36](https://github.com/stepwaec/slingshot/pull/36). The plume is blue-to-violet, with no trailing halo.
 
+**Late game, wormholes and living surfaces:** done in [PR #40](https://github.com/stepwaec/slingshot/pull/40). That pack is the stellar engine, Dyson swarm, ringworld, Shkadov thruster, space elevator and wormhole (`design/assets/mega/`, `design/mockups/late-game.svg`), plus living surfaces: `design/assets/star-surface-motion.svg` and `style.md` §13, which gives granulation, flares, band drift, clouds and rotation per body type.
+
 **Open requests**, in priority order:
 
-1. **Surface animation:** guidance per body type (granulation, flares, band drift, clouds, rotation).
-2. **Collisions and consumption:** impact flash, debris, a planet's tidal-disruption stream, burning up in a star, accretion disk.
-3. **Ghost markers** for a body's future position.
-4. **Late game:** stellar engine, Dyson swarm, ringworld, Shkadov thruster, space elevator, wormhole.
+1. **Collisions and consumption** (LU3). Impact flash, debris, a planet's tidal-disruption stream, burning up in a star, and a star falling into an accretion disk. `design/` has none of these.
+2. **Ghost markers** (LU2) for where a moving body will be. The path ghosts, the recharge planning ghost and the dose ghost are already specified. A marker on a body's future position is not.
+3. **A lone stray asteroid**, outside a belt. The WP11 note above still stands: `design/` has the belt fields and the rogue planet, not a stray rock.
 
 **Guidelines:** a realistic and vibrant style matching v1.5 and v2; SVG files under `design/assets/`; easter eggs only as hints, never logos or characters.
 
