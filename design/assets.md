@@ -1,6 +1,6 @@
-# Slingshot — asset index (v2.4)
+# Slingshot — asset index (v2.5)
 
-One row per file in `design/assets/` (12 top-level files, 30 bodies in `bodies/`, 15 ship parts in `ship/`, 2 map overlays in `overlays/`, 9 environment files in `space/` — 68 SVGs). Coding agents implementing these designs: read `IMPLEMENTING.md` first; `IMPLEMENTATION-REVIEW.md` lists fixes for what is already in the game, then the previews and the mockups. All SVGs are self-contained (no scripts, external refs or raster), `xmllint --noout` clean and use only the tokens of `style.md` §2 / §8 / §9. "Anchor" is the point the game positions and rotates. Exact Canvas code is in `canvas-notes.md` (§ numbers below). How to build each asset in the game\'s Three.js renderer is in `threejs-notes.md` (§10 maps every asset to its factory).
+One row per file in `design/assets/` (13 top-level files, 30 bodies in `bodies/`, 16 ship files in `ship/`, 4 map overlays in `overlays/`, 9 environment files in `space/` — 72 SVGs). Coding agents implementing these designs: read `IMPLEMENTING.md` first; `IMPLEMENTATION-REVIEW.md` lists fixes for what is already in the game, then the previews and the mockups. All SVGs are self-contained (no scripts, external refs or raster), `xmllint --noout` clean and use only the tokens of `style.md` §2 / §8 / §9. "Anchor" is the point the game positions and rotates. Exact Canvas code is in `canvas-notes.md` (§ numbers below). How to build each asset in the game\'s Three.js renderer is in `threejs-notes.md` (§10 maps every asset to its factory).
 
 **Structure.** Every body and environment asset is `<defs>` (ids prefixed per file) + **one** top-level group `<g id="…" transform="translate(cx cy)">` with all geometry relative to (0, 0), SMIL animation inside, and a **header comment listing every parameter — the header is the canon**. Mockups and galleries copy the defs and the group verbatim and change only the translate (plus scene-local lighting wrappers). Ids are unique across all 37 SVGs (checked: no id defined in two files, every `url(#…)` / `href` resolves). Static renders and mockups show t = 0.
 
@@ -22,6 +22,7 @@ One row per file in `design/assets/` (12 top-level files, 30 bodies in `bodies/`
 | `solar-recharge.svg` (v2.2, WP10) | **Solar recharge indicator** sample sheet: fuel block in flight (off, charging, close pass), fuel block in planning (ghost segment), predicted-path dot ramp near a star, ship charging pulse | `0 0 520 320` | `#solarRecharge` (0, 0); `rc*` | `solar.glyph` #FFD27A · `solar.charge` #FFE08A · `solar.shimmer` #FFF6D6 · `solar.path` #FFD86E (`style.md` §8 WP10) | rate model and placement in the header; the mechanic itself lands with the ship systems package |
 | `hud-hull.svg` (v2.3, ship systems) | **Hull bar and tidal-stress warning** sample sheet: hull block at 100 / 64 / 38 / 16 % (10 segments), tidal-stress chip at levels 1–3, in-world chevrons around a ship near a white dwarf | `0 0 520 360` | `#hudHull` (0, 0) | `hull.*` #9FC4FF / #FFC857 / #FF5A5F · `stress.*` #FF9F43 / #FF5A5F (`style.md` §10) | HUD placement under the fuel block in the header; chevrons are screen-space |
 | `hud-dose.svg` (v2.4, WP11) | **Crew dose meter** sample sheet: low, rising (belt), danger (flare, pulsing), shadow, and the planning ghost; plus the radiation-map legend | `0 0 520 420` | `#hudDose` (0, 0) | `rad.dose*` #9BE15D / #FFE83A / #FF5A5F · star mark #FFD27A (`style.md` §11) | third block of the status stack (baseline 144); chips move to y 170 |
+| `burn-node.svg` (v2.5) | **Burn node** in every state: idle, selected (Δv chip, delete), placing, over budget, wind-up arc, ignition flash, fired; 2.4× and 1× | `0 0 1400 330` | `#burnNode` (0, 0); `kn*` | `node.*` #B8A8FF / #F7FBFF / #0A0D1A / #FFFFFF / #FF5A5F (`style.md` §12) | screen-space; arrow keeps the drag-arrow geometry and power ramp |
 
 ## Body library (`design/assets/bodies/`)
 
@@ -83,6 +84,7 @@ Every part uses one frame — viewBox `0 0 96 160`, ship centre at (48, 64), nos
 | `damage-45.svg` | **Damage, 45 %**: adds a glowing crack and a breached panel (hull 25–49 %) | `#shipDamage45`; `sxD2*` | layered with the others; tokens `ship.*` (`style.md` §10) |
 | `damage-15.svg` | **Damage, 15 %**: adds venting, sparks, a missing plate and a red beacon (hull < 25 %) | `#shipDamage15`; `sxD3*` | layered with the others; tokens `ship.*` (`style.md` §10) |
 | `ship-builds.svg` | **Four example builds** composed from the parts: base, explorer, harvester, full | `#shipBuilds`, 384 × 160; `sxB1*`–`sxB4*` | preview only; tokens `ship.*` (`style.md` §10) |
+| `plume-states.svg` (v2.5) | **Burn plume** states on the base hull: wind-up, ignition, small / medium / large burn, tail-off (1.55× with 1× beside) | sample sheet `0 0 1140 330`, nozzle at local y 28.2 | `#plumeStates`; `pm*` | shape function, length from Δv and state timings in the header; tokens `plume.*` (`style.md` §12) |
 
 ## Map overlays (`design/assets/overlays/`, v2.1, WP9)
 
@@ -90,6 +92,8 @@ Every part uses one frame — viewBox `0 0 96 160`, ship centre at (48, 64), nos
 |---|---|---|---|---|---|
 | `magnetism-heatmap.svg` | **Magnetism danger map**, one body's overlay: four stepped |B| zones (Fuzzy, Scrambled, Damaging, Lethal) as dipole contours, R1 100, axis 20°; outer edge dashed and crawling, Lethal edge breathing 2.4 s | `0 0 240 240` | `#magField` (120, 120); no defs | `magmap.*` #7C5CFF / #B14DFF / #E541C9 / #FF3D7F (`style.md` §8 WP9) | one shader quad summing all dipoles, toggled by M, planning and pause only (`threejs-notes.md` §11); never changes the sim |
 | `radiation-map.svg` (v2.4, WP11) | **Radiation map** sample: halftone dose field on a 12 px grid around a star with a flare and a gas giant with a radiation belt; the planet's shadow is the safe strip | `0 0 720 400` | `#radiationMap` (0, 0); `rad*` | `rad.*` #9BE15D / #D4F03C / #FFE83A / #FFF4B8 (`style.md` §11) | one screen-space shader sampling the sim's dose field, toggled by R (`threejs-notes.md` §14); never changes the sim |
+| `gravity-grid.svg` (v2.5) | **Gravity grid** restyled: depth-tinted thin lines, major every 4th, edge fade, lines stop at bodies, dashed tidal ring | `0 0 720 420` | `#gravityGrid` (0, 0); `gd*` | `grid.depth` ramp, `grid.tidal` #FF5A5F (`style.md` §12) | same warp as WP6b; new ink only (`threejs-notes.md` §15) |
+| `gravity-sheet.svg` (v2.5) | **Gravity sheet** restyled: dark glass cells, glowing depth lines, soft edges, real funnel depth | `0 0 900 340` | `#gravitySheet` (0, 0); `gs*` | `sheet.glass` #0B1430 α 0.55 + `grid.depth` | replaces the opaque blue panel |
 
 ## Space environment (`design/assets/space/`, v1.4)
 
@@ -121,7 +125,7 @@ All self-contained pages (inline CSS, no scripts) on `bg.base`, inlining the ass
 
 ## Mockups (`design/mockups/`, all `0 0 1440 900`; **PNG = 2× render**)
 
-Every PNG is a 2× render of its SVG (2880 × 1800, `--force-device-scale-factor=2`, same filename). All thirteen share the v1.1 background (the upgrade screen dims it) (a `bg.edge` rect, the vignette centred (720, 450) r 900, then the `#starfield` group verbatim) and splice every body group **verbatim** from the v1.5 assets with only its translate changed; where a library body's upper-right light does not face the scene's star, its lighting layers sit in a scene-local `rotate(angle(L_scene) − angle(L_library))` wrapper (strips and the asset files untouched).
+Every PNG is a 2× render of its SVG (2880 × 1800, `--force-device-scale-factor=2`, same filename). All fifteen share the v1.1 background (the upgrade screen dims it) (a `bg.edge` rect, the vignette centred (720, 450) r 900, then the `#starfield` group verbatim) and splice every body group **verbatim** from the v1.5 assets with only its translate changed; where a library body's upper-right light does not face the scene's star, its lighting layers sit in a scene-local `rotate(angle(L_scene) − angle(L_library))` wrapper (strips and the asset files untouched).
 
 | File | Mode | What it demonstrates |
 |---|---|---|
@@ -138,6 +142,8 @@ Every PNG is a 2× render of its SVG (2880 × 1800, `--force-device-scale-factor
 | `upgrade-screen.svg` / `.png` (v2.3, ship systems) | Shipyard, between levels | The live ship (ion, plating, shield, solar, tanks, sensors) docked at 5.8× with mass, fuel range and recharge; eight upgrade cards showing every state (fitted, upgrade, fit, locked, engine choice); 3 stars to spend; Back and Launch |
 | `flight-damaged.svg` / `.png` (v2.3, ship systems) | In flight, damaged | The flight scene without the removed trail: the modular explorer build at 45 % hull passing a white dwarf (1010, 286), tidal chevrons along the ship → dwarf axis, the hull block (45 %, amber) and tidal-stress chip (level 2) under the fuel block, and a 5× callout (mockup only) of the damage |
 | `belts-radiation.svg` / `.png` (v2.4, WP11) | Planning, radiation map on | A medium belt rings the sun (R 262, w 30) and the predicted path threads two gaps; a banded gas giant (420, 300) carries a radiation belt; the halftone dose field is on with the Radiation toggle pressed and its legend; the status stack reads fuel · hull · dose with "+10 mSv on this path" |
+| `planning-grid.svg` / `.png` (v2.5) | Planning, gravity grid on | The restyled grid over the planning scene (tidal ring at r 96 around the sun), a selected correction burn (node 2) with its Δv chip and delete button, an idle capture node (3), and the Gravity grid toggle pressed |
+| `flight-burn.svg` / `.png` (v2.5) | In flight, mid-burn | The modular ship firing a medium chemical plume (L 80), the burn being executed behind it as a fired node, the next node ahead in its wind-up arc, the predicted path ahead, and a 3.3× callout (mockup only) of the plume; the removed trail is gone |
 
 ## Usage rules
 

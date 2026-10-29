@@ -1,6 +1,6 @@
 # Slingshot — visual style v1.5
 
-Calm, cinematic space for Slingshot. This file is the look; `canvas-notes.md` is the pixel-exact drawing reference (how each SVG recipe looks and what it costs, written for Canvas 2D); `threejs-notes.md` maps it onto the game's Three.js renderer (WP3); `assets.md` indexes every file. Sections: §1 mood · §2 palette (background, sky, the sun, the two original planets, the shared lighting tokens, UI) · §3 typography · §4 glow and blur rules, with **§4.1 Realism, vibrancy and crispness rules** · §5 motion · §6 layout · §7 asset index · §8 the **body library** (31 bodies: 12 planets, 6 stars and compact objects, 4 moons, 3 ringed planets, the 3 WP8 objects: binary star, red giant, moon chain, the 2 WP9 compact objects: pulsar, magnetar, and the WP10 comet) plus the WP9 **magnetism map** and the WP10 **solar recharge indicator** · §9 the **space environment** (nebulae, asteroid field, wreck debris) · §10 **ship systems** (modular ship, damage states, hull HUD, tidal-stress warning, upgrade screen) · §11 **WP11** (asteroid belts, Kuiper belt, rogue planet, radiation map, dose meter). Coding agents: read `IMPLEMENTING.md` first. Assets live in `design/assets` (bodies in `design/assets/bodies`, the environment in `design/assets/space`, map overlays in `design/assets/overlays`, the modular ship in `design/assets/ship`), mockups (1440×900, PNG = 2× render) in `design/mockups`, animated previews in `design/preview/planets.html`, `bodies.html` and `space.html`.
+Calm, cinematic space for Slingshot. This file is the look; `canvas-notes.md` is the pixel-exact drawing reference (how each SVG recipe looks and what it costs, written for Canvas 2D); `threejs-notes.md` maps it onto the game's Three.js renderer (WP3); `assets.md` indexes every file. Sections: §1 mood · §2 palette (background, sky, the sun, the two original planets, the shared lighting tokens, UI) · §3 typography · §4 glow and blur rules, with **§4.1 Realism, vibrancy and crispness rules** · §5 motion · §6 layout · §7 asset index · §8 the **body library** (31 bodies: 12 planets, 6 stars and compact objects, 4 moons, 3 ringed planets, the 3 WP8 objects: binary star, red giant, moon chain, the 2 WP9 compact objects: pulsar, magnetar, and the WP10 comet) plus the WP9 **magnetism map** and the WP10 **solar recharge indicator** · §9 the **space environment** (nebulae, asteroid field, wreck debris) · §10 **ship systems** (modular ship, damage states, hull HUD, tidal-stress warning, upgrade screen) · §11 **WP11** (asteroid belts, Kuiper belt, rogue planet, radiation map, dose meter) · §12 **ship and planning view** (burn plume, burn node, gravity grid and sheet). Coding agents: read `IMPLEMENTING.md` first. Assets live in `design/assets` (bodies in `design/assets/bodies`, the environment in `design/assets/space`, map overlays in `design/assets/overlays`, the modular ship in `design/assets/ship`), mockups (1440×900, PNG = 2× render) in `design/mockups`, animated previews in `design/preview/planets.html`, `bodies.html` and `space.html`.
 
 **History in one paragraph.** v1 set the layout, UI and the two-glow rule. v1.1 was the first realism pass (limb-darkened star, planets with a terminator and a rim, a tinted starfield with a Milky Way). v1.2 made the planets rotate: a seamless texture strip slides under a lighting overlay that never moves. v1.3 built the body library (12 planets, 6 stars and compact objects) and gave the stars prominences and a flare. v1.4 adds moons, ringed planets, nebulae and debris fields (§8, §9). **v1.5 (revised) is the realism, vibrancy and crispness pass**, agreed with the client on two approved reference assets — the ocean world "variant F" and the sun "variant J" — and applied to every body: vivid multi-zone surfaces with crisp edges, elongated clouds with cast shadows, a warm terminator band, a lit-side haze and rim, a fiery plasma sun with ragged flame rings and an irregular rim, and no untinted grey anywhere. The earlier v1.5 "crispness pass" numbers (halve blurs, ±12 % lightness, limb line at α 0.30) were rejected as indistinguishable from v1.2 and are **not** used; §4.1 holds the rules that replaced them.
 
@@ -1089,3 +1089,72 @@ The third block of the right-hand status stack (fuel 48 · hull 96 · dose 144);
 - **Header:** "DOSE", a trefoil in the bar colour, the total in mSv (red from 75 %).
 - **Rate line:** "+2.4 mSv/s · belt" with the dominant source, coloured by its map zone; "0.0 mSv/s · shadow" in `ui.textMuted` while a body shields the ship.
 - **Planning:** a ghost segment `#D4F03C` α 0.9 showing the dose the plan will add, and "+10 mSv on this path".
+
+## 12. Ship and planning view (v2.5): burn plume, burn node, gravity grid
+
+Files: `assets/ship/plume-states.svg`, `assets/burn-node.svg`, `assets/overlays/gravity-grid.svg`, `assets/overlays/gravity-sheet.svg`, mockups `mockups/planning-grid.svg` and `mockups/flight-burn.svg`. Renderer notes: `threejs-notes.md` §15.
+
+### Burn plume
+
+One crisp, ragged shape running blue-white into violet, with a white core and no halo or bloom shape behind it.
+
+- **Shape (shader-ready):** half-width `w(t) = W · (0.55 + 0.45 min(1, t/0.25)) · (1 − max(0, (t − 0.25)/0.75))^1.4 · (1 + 0.12 rag(t) min(1, 6t))`, with t = 0 at the nozzle and 1 at the tip. `rag` is the mean of 3 sines (5–11 cycles along the length) whose phases advance with time: the flicker.
+- **Length from burn size:** `L = min(110, 44 + 12 |Δv|)` design units, and `W = 6.5 + L/40`. That gives 50 for a small burn, 80 for a medium one and 110 at the cap. It replaces the fixed 96-unit plume, so big burns read as big.
+- **States** (sim time, `theme.burn`):
+
+| State | When | Look |
+|---|---|---|
+| Wind-up | −0.5 → 0 s | Throat glow `#E2D4FF` growing (rx 1.5 → 4.6) and flickering at 9 Hz; a short lick (L 16, W 4.2) |
+| Ignition | 0 → 0.12 s | Flash ring at the nozzle, r 4 → 13, `#F7FBFF` 1.2 px, fading; the plume grows to L |
+| Full | the burn | L from Δv, flickering every 0.33 s |
+| Tail-off | the existing tail time | The root goes first: a cutoff runs from nozzle to tip (soft edge 0.15 L) while the detached plume fades aft |
+
+| Token | Hex | Used for |
+|---|---|---|
+| `plume.chem` | `#F7FBFF` → `#D6C8FF` (α 0.92, 0.2) → `#A06BFF` (α 0.6, 0.5) → `#7A4AD8` (α 0.2, 0.8) → α 0 | Flame along t |
+| `plume.core` | `#FFFFFF` → `#E6F4FF` (α 0.85) → `#C8D8FF` α 0 | White core, 0.42 L × 0.38 W |
+| `plume.glow` | `#E2D4FF` | Wind-up throat glow |
+| `plume.flash` | `#F7FBFF` | Ignition ring |
+
+Ion and pulse engines keep their own shapes (§10) and use the same wind-up, ignition and tail-off timing.
+
+### Burn node
+
+A ring on the path in the engine family's blue-violet. It replaces the gold disc, which sat next to the gold recharge dots and doubled as `fuel.low`. Screen-space, never scaled with zoom.
+
+| State | Look |
+|---|---|
+| Idle | Ring r 5, 2 px `#B8A8FF`, fill `#0A0D1A`, core r 1.7 `#F7FBFF`; the burn number (1 or 2) in 9 px mono `#8B95B5` at (+7, −8) |
+| Selected | Ring r 6.5 in `#FFFFFF` plus an outer ring r 9.5 `#B8A8FF` α 0.55; a chip by the arrow head ("Δv 1.8 · 12 %", 10.5 px mono on the panel fill); a delete button r 6 at (+13, +11), only while unfired |
+| Placing | Dashed ghost line `#FFFFFF` α 0.3 (3 3) to a handle r 4 `#ECF0FA` |
+| Over budget | Ring, core and arrow head `#FF5A5F`; the chip reads "Δv 6.2 · +18 % over" in `#FF5A5F` |
+| Wind-up | A white arc r 9, 2 px, round caps, filling clockwise from 12 o'clock over the 0.5 s wind-up (sim time) |
+| Ignition | A flash ring r 6 → 18, `#F7FBFF` 1.5 px, fading over 0.4 s |
+| Fired | Ring dashed 2 2, `#B8A8FF` α 0.45, no core: history, not editable |
+
+The burn arrow keeps the drag-arrow geometry and power ramp (`arrow.power`: `#3DE0C2` → `#FFC857` → `#FF5A5F` by cost / fuel).
+
+| Token | Hex | Used for |
+|---|---|---|
+| `node.ring` | `#B8A8FF` | Node ring, selected outer ring, fired ring |
+| `node.core` | `#F7FBFF` | Core dot, wind-up arc, ignition ring |
+| `node.fill` | `#0A0D1A` | Ring fill (= `ship.outline`) |
+| `node.selected` | `#FFFFFF` | Selected ring |
+| `node.over` | `#FF5A5F` | Over budget (= `fuel.critical`) |
+
+### Gravity grid and sheet
+
+The warp is unchanged: lines still bend and bunch toward masses by the real potential (WP6b). What changes is the ink.
+
+- **Thin and crisp:** minor lines 0.75 px, every fourth line major at 1 px (+0.10 α), with `fwidth` antialiasing.
+- **Tinted by well depth:** `d = log(1 + Φ/Φ0) / log(1 + Φmax/Φ0)`, `t = d^2.2`, colour from the ramp below at 1.05 t. Flat space stays faint blue, and only the wells warm up.
+- **Alpha:** `(0.16 + 0.62 t + 0.10 major) × edge fade`, where the fade runs from 0 at the screen edge to 1 at 70 px in, so there is no hard border. Lines stop 3 px outside body discs.
+- **Tidal ring:** a dashed `#FF5A5F` α 0.8, 1 px, dash 4 4, crawling 8 px/s, at the radius where tidal stress reaches level 1, labelled "tidal stress". It replaces the filled red disc, which looked like the magnetism Lethal zone.
+- **Sheet:** cells filled `#0B1430` α 0.55 (dark glass), drawn back to front under the same ink at 0.7 px. Depth is `z = H · d^1.3` with `H = 0.22 ×` the longer side, so funnels read and black holes stay finite. The outer 5 cells fade to nothing. Tilt is 62° with a mild perspective. Bodies sit at the bottom of their wells and the planned path rides the sheet.
+- Clock-rate contours (C) are unchanged.
+
+| Token | Hex | Used for |
+|---|---|---|
+| `grid.depth` | `#2A4A8A` (0) · `#3D8BFF` (0.18) · `#3DE0C2` (0.42) · `#FFC857` (0.68) · `#FF5A1F` (1) | Grid and sheet lines by depth (`#2A4A8A` is new; the rest are existing tokens) |
+| `grid.tidal` | `#FF5A5F` | Tidal ring |
+| `sheet.glass` | `#0B1430` | Sheet cells, α 0.55 |
