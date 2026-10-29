@@ -29,7 +29,8 @@ Note on numbering: Brainstormer's first draft called the flight loop "WP2" and r
 | WP9: compact objects plus magnetism layer | Done, 2026-10-29 in [PR #27](https://github.com/stepwaec/slingshot/pull/27) | Quiet neutron star (Needle), pulsar (Pulse) and magnetar (Quake) use the WP9 SVGs. Pulsar beams spin on sim time and damage the hull; the prediction matches that flight. Magnetars scramble the drawn path by a deterministic dipole spread that never changes the trajectory. Rescue's black hole gains a tilted disk, Doppler shift, an Einstein ring and lensed arcs. Magnetism map: M or the Magnetism button, separate from G, colours safe through lethal for magnetars, neutron stars and gas giants. The toggle does not change the sim. |
 | WP10: environment and resources | Done, 2026-10-29 in [PR #31](https://github.com/stepwaec/slingshot/pull/31) | Comets (Ice, Drift) ride Kepler ellipses in `bodyPose`, fast at periapsis, and the ship harvests ice inside the coma. Nebulae (Veil, Drift) scoop fuel; a dark cloud hides the bodies under it. The solar recharge indicator, gold path dots and the `+fuel` line all read the same rate the tank integrates. Prediction matches the flight, including the moving comet and the scooped fuel. |
 | Design fidelity | Done, merged 2026-10-29 in [PR #32](https://github.com/stepwaec/slingshot/pull/32) | Bodies are drawn from Claude's SVG files in `design/assets` (the art from PRs #17, #19, #22 and #26), rasterized in sRGB with no mipmaps, instead of procedural stand-ins. The sun is `star.svg`. Chemical and ion plumes are longer, still blue-white at the nozzle fading to violet, and the drawn length still follows burn size. Physics and prediction are unchanged. `design/IMPLEMENTING.md` was not on main yet. |
-| Art motion | In progress, opened 2026-10-29 in [PR #33](https://github.com/stepwaec/slingshot/pull/33) | Sun prominences and the flare follow the timelines in `star.svg` instead of sitting at the rest frame. The comet tail is its own sprite: it points away from the star and shortens with `clamp(Rperi / d, 0.35, 1)`. Pulse's painted beams end on the level's damage reach. Planet sprites still turn their lit side toward the brightest star. Visual only. |
+| Art motion | Done, merged 2026-10-29 in [PR #33](https://github.com/stepwaec/slingshot/pull/33) | Sun prominences and the flare follow the timelines in `star.svg` instead of sitting at the rest frame. The comet tail is its own sprite: it points away from the star and shortens with `clamp(Rperi / d, 0.35, 1)`. Pulse's painted beams end on the level's damage reach. Planet sprites still turn their lit side toward the brightest star. Visual only. |
+| Implementation review | In progress, opened 2026-10-29 in [PR #35](https://github.com/stepwaec/slingshot/pull/35) | Follows `design/IMPLEMENTING.md` through the visual items in `design/IMPLEMENTATION-REVIEW.md`. The sun's haze breathes and its flame and wisp rings turn. The ship frame is centred on the ship, and the longer plume still starts at the engine throat. SVG rasters bake at DPR × zoom bucket with mipmaps. The comet's dust tail mirrors with its orbit. Nebulae draw behind bodies. Prediction is unchanged. |
 | WP11: hazards plus radiation | Planned | Asteroid and Kuiper belts in density tiers, rogue planets, stray asteroids, solar flares. Radiation: sources are stars and flares, magnetic radiation belts, pulsars and magnetars, accretion disks and quasars, and background cosmic rays. Crew dose meter (too much fails the mission, a low dose earns a bonus), shielding as an upgrade that costs mass, hiding in a planet's shadow during flares, and a radiation heatmap toggle next to gravity and magnetism. |
 | WP12: dramatic events | Planned | Supernova countdowns (get out before the star explodes), shockwaves from supernova remnants, quasars. |
 | WP13: three-body chaos | Planned | Multi-sun systems (Trisolaran style) where three-body chaos means planning uses widening probability cones instead of exact lines. |
@@ -159,13 +160,15 @@ Stephan points Claude at this section for the next visual pack.
 
 **Ship systems:** fully designed in [PR #26](https://github.com/stepwaec/slingshot/pull/26). That pack includes the hull bar, the tidal-stress warning, and the upgrade screen, and the modular spacecraft redesign: a base hull with visible hull plating, shielding, chemical, ion and pulse engines, larger fuel tanks, solar panels, a gas scoop, sensors, a cryosleep module, and damage states that match the hull bar.
 
+**WP11:** fully designed in [PR #34](https://github.com/stepwaec/slingshot/pull/34) (sparse, medium and dense asteroid belts, Kuiper belt, rogue planet, radiation heatmap, dose meter). Not in the game yet.
+
+**Burn plume:** blue-to-violet, with no trailing halo. Already in the game.
+
 **Open requests**, in priority order:
 
-1. **WP11:** sparse, medium and dense asteroid belts; Kuiper belt; rogue planet; radiation heatmap; dose meter.
-2. **Burn plume:** blue-to-violet, with no trailing halo.
-3. **Burn node.**
-4. **Gravity grid** styling.
-5. **Late game:** stellar engine, Dyson swarm, ringworld, Shkadov thruster, space elevator, wormhole.
+1. **Burn node.**
+2. **Gravity grid** styling.
+3. **Late game:** stellar engine, Dyson swarm, ringworld, Shkadov thruster, space elevator, wormhole.
 
 **Guidelines:** a realistic and vibrant style matching v1.5 and v2; SVG files under `design/assets/`; easter eggs only as hints, never logos or characters.
 

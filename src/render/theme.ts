@@ -136,8 +136,14 @@ export const theme = {
     frameWidth: 96,
     frameHeight: 160,
     headingLerp: 0.18,
-    /** Aft of the tail (tail is −22.6). Nose is +Y. */
-    nozzle: -23,
+    /**
+     * PlaneGeometry(96, 160) is centred on the frame middle (48, 80).
+     * The ship centre is (48, 64). Shift the geometry so the sim position
+     * is the ship centre. design/assets/ship/hull-base.svg header.
+     */
+    frameShift: -16,
+    /** Chemical throat, engine-chemical.svg local y 28.2, nose +Y. */
+    nozzle: -28.2,
   },
   /**
    * Exhaust plume, in the ship's local space (nose is +Y).

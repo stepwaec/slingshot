@@ -1,12 +1,14 @@
 import * as THREE from "three";
 import type { Body, Nebula } from "../sim/physics";
+import { zoomBucket } from "./ship-art";
 import type { Theme } from "./theme";
 import { bakedSvgUrl, rasterSvg, type SvgBakeOptions } from "./svg-bake";
 
 /**
  * Claude's files in design/assets, not a shader rewrite of them.
  * Each picture is the SVG rasterized in the browser (filters included),
- * stored as sRGB, clamped, with no mipmaps so the art stays crisp.
+ * stored as sRGB and clamped. Size is viewBox × DPR × zoom bucket, with a
+ * mip chain so a zoomed-out body does not shimmer between buckets.
  * `svgRadius` is the crash radius in the SVG. The quad is the viewBox,
  * scaled so that radius matches the body.
  */
@@ -102,27 +104,39 @@ function keepBinary(which: "bnPrimary" | "bnSecondary"): (doc: Document) => void
   };
 }
 
-export function rasterPixels(viewW: number, viewH: number): { width: number; height: number } {
-  const longest = Math.max(viewW, viewH);
-  const scale = Math.min(2, 1024 / longest);
+/** Longest side, in pixels. A zoomed-in sun is several full-viewBox layers. */
+const RASTER_CAP = 2048;
+
+/**
+ * viewBox × DPR × zoom bucket (`IMPLEMENTING.md` §3). The 2048 cap is the
+ * only departure: past that, a 2× display at high zoom would bake multi-
+ * megapixel copies of every sun layer.
+ */
+export function rasterPixels(viewW: number, viewH: number, dpr = 1, zoom = 1): { width: number; height: number } {
+  const bucket = zoomBucket(zoom);
+  const raw = Math.min(2, Math.max(1, dpr)) * bucket;
+  const longest = Math.max(viewW, viewH) * raw;
+  const scale = longest > RASTER_CAP ? raw * (RASTER_CAP / longest) : raw;
   return {
-    width: Math.max(64, Math.round(viewW * scale)),
-    height: Math.max(64, Math.round(viewH * scale)),
+    width: Math.max(32, Math.round(viewW * scale)),
+    height: Math.max(32, Math.round(viewH * scale)),
   };
 }
 
-/** sRGB, clamped, no mipmaps. The browser's SVG raster is the picture. */
-export async function loadArtTexture(fit: ArtFit): Promise<THREE.CanvasTexture> {
+/** sRGB, clamped, with mipmaps. The browser's SVG raster is the picture. */
+export async function loadArtTexture(
+  fit: ArtFit,
+  pixels = rasterPixels(fit.viewW, fit.viewH),
+): Promise<THREE.CanvasTexture> {
   const blob = await bakedSvgUrl(fit.url, fit.hide ?? [], fit.bake);
-  const size = rasterPixels(fit.viewW, fit.viewH);
-  const canvas = await rasterSvg(blob, size.width, size.height);
+  const canvas = await rasterSvg(blob, pixels.width, pixels.height);
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.wrapS = THREE.ClampToEdgeWrapping;
   texture.wrapT = THREE.ClampToEdgeWrapping;
   texture.magFilter = THREE.LinearFilter;
-  texture.minFilter = THREE.LinearFilter;
-  texture.generateMipmaps = false;
+  texture.minFilter = THREE.LinearMipmapLinearFilter;
+  texture.generateMipmaps = true;
   texture.needsUpdate = true;
   return texture;
 }
