@@ -4,7 +4,7 @@ How to build the v1.5 realistic look in the game's actual renderer: the orthogra
 
 Read with: `style.md` (tokens and rules), `assets.md` (one row per asset), the asset SVG header comments (the canon for every number), and in the code `src/render/visual.ts`, `src/render/visuals/index.ts`, `src/render/theme.ts`, `src/render/palette.ts`.
 
-Sections: §0 how the renderer is put together · §1 rules for the realistic visuals · §2 translating SVG filter recipes to GLSL · §3 planets · §4 stars · §5 compact objects · §6 moons and moon chains · §7 environment (nebulae, debris, rings) · §8 palette and colour · §9 budget · §10 asset → factory map, with what WP8 needs · §11 the magnetism map and fuzzy prediction (WP9) · §12 comets and the solar recharge indicator (WP10) · §13 the modular ship, damage, hull HUD and upgrade screen (ship systems) · §14 belts, Kuiper belt, rogue planet, radiation map and dose (WP11). Coding agents: `IMPLEMENTING.md` is the rulebook; `IMPLEMENTATION-REVIEW.md` lists fixes for what is already built.
+Sections: §0 how the renderer is put together · §1 rules for the realistic visuals · §2 translating SVG filter recipes to GLSL · §3 planets · §4 stars · §5 compact objects · §6 moons and moon chains · §7 environment (nebulae, debris, rings) · §8 palette and colour · §9 budget · §10 asset → factory map, with what WP8 needs · §11 the magnetism map and fuzzy prediction (WP9) · §12 comets and the solar recharge indicator (WP10) · §13 the modular ship, damage, hull HUD and upgrade screen (ship systems) · §14 belts, Kuiper belt, rogue planet, radiation map and dose (WP11) · §15 burn plume, burn node and gravity grid styling. Coding agents: `IMPLEMENTING.md` is the rulebook; `IMPLEMENTATION-REVIEW.md` lists fixes for what is already built.
 
 ---
 
@@ -285,3 +285,15 @@ Designs: `space/belt-sparse|medium|dense.svg`, `space/kuiper-belt.svg`, `bodies/
 **Radiation map.** One full-screen pass in screen space, toggled by R. For each 12 px cell, find the cell centre, convert to world, evaluate `doseAt(p)` (the same pure function the sim uses: stars with luminosity, flare cone, belts, pulsar beam, disks, background, and a line-of-sight shadow test against up to 8 body discs), pick the zone, and draw an anti-aliased dot of the zone radius with `fwidth`. Skip cells inside bodies and inside HUD rectangles. Cost: ≈ 9 000 cells × a few sources, well under 0.3 ms; skip the pass when R is off.
 
 **Dose.** In the sim step: `dose += doseAt(ship) · dosePerD1 · dt`, reduced by shielding. The prediction integrates the same, which gives the planning ghost and "+N mSv on this path". Ending below 25 % of the limit earns the bonus; reaching the limit fails the mission. The HUD block is DOM, as `assets/hud-dose.svg` specifies.
+
+## 15. Burn plume, burn node and gravity grid styling
+
+Designs: `ship/plume-states.svg`, `burn-node.svg`, `overlays/gravity-grid.svg`, `overlays/gravity-sheet.svg`, `mockups/planning-grid.svg`, `mockups/flight-burn.svg`. Values in `style.md` §12.
+
+**Plume.** Keep the one-mesh plume (no bloom pass, no halo) and give the fragment shader the half-width function from §12. In local plume space (t along the axis, s across it), fill where `|s| < w(t)`, antialiased with `fwidth`, colour from the 5-stop ramp along t, plus the core at `0.42 L × 0.38 W`. Drive `rag` phases with `frame.now` (cosmetic). Set the length from the node's Δv: `L = min(110, 44 + 12 |Δv|)`, `W = 6.5 + L/40`. The state timings follow `theme.burn` on sim time: wind-up glow and lick before the node, the ignition ring and grow-in over 0.12 s, then the tail-off cutoff `c = elapsed / tail` (alpha 0 for `t < c`, a 0.15 soft edge), keeping the length.
+
+**Burn node.** Draw it in screen space like today, swapping the disc for the ring, core and states in §12. The wind-up arc is a ring segment with `angle = 2π · (1 − remaining / windup)` on sim time. The ignition ring plays once at the burn step. Fired nodes keep their dashed ring until the level resets. The Δv chip and the delete button are DOM next to the selected node.
+
+**Grid ink.** Keep `sampleGravityGrid` and the warp. Per vertex, compute `d` from the same potential the grid already samples. Pass `t = d^2.2` as a vertex attribute, map it through the `grid.depth` ramp in the fragment shader, and set alpha by §12 (major lines by index). Apply the edge fade in screen space, and skip segments inside body discs. Draw the tidal ring as a ring quad at the radius where the sim's tidal stress reaches level 1, with px-space dashes like the capture ring.
+
+**Sheet.** Same vertices with `z = H · d^1.3`. Draw the cells as one indexed mesh (`#0B1430` α 0.55, depth-sorted, or two-sided with depth test on inside the sheet group only) and the lines on top with the grid ink. Fade the outer 5 cells. Bodies are offset to `z` of their well so they sit in the funnel.

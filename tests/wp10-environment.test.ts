@@ -166,8 +166,8 @@ describe("WP10 environment", () => {
     const star: Body = { id: "sun", name: "sun", kind: "star", look: "sun", x: 0, y: 0, mass: 0, radius: 40 };
     const surface = solarRechargeRate(0, 40, 0, [star], 12, 1);
     expect(surface).toBe(12);
-    expect(solarRechargeRate(0, 80, 0, [star], 12, 1)).toBeCloseTo(3, 8);
-    expect(solarRechargeRate(0, 40 * 13, 0, [star], 12, 1)).toBe(0);
+    expect(solarRechargeRate(0, 170, 0, [star], 12, 1)).toBeCloseTo(3, 8);
+    expect(solarRechargeRate(0, 400, 0, [star], 12, 1)).toBe(0);
     const config: SimConfig = {
       g: 1,
       dt: 1 / 60,
@@ -184,5 +184,6 @@ describe("WP10 environment", () => {
     const state = makeState(0, 80, 0, 0, config);
     advancePlan(state, config, [], { index: 0 });
     expect(state.recharged).toBeCloseTo(solarRechargeRate(0, 80, config.dt, [star], 12, 1) * config.dt, 8);
+    expect(state.recharged).toBeCloseTo(12 * config.dt, 8);
   });
 });

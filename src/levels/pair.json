@@ -18,14 +18,14 @@
       "name": "the primary",
       "kind": "star",
       "look": "binary-hot",
-      "x": 242,
+      "x": 265.8,
       "y": 360,
       "mass": 42000,
       "radius": 30,
       "orbit": {
         "cx": 210,
         "cy": 360,
-        "radius": 32,
+        "radius": 55.8,
         "phase": 0,
         "omega": 0.1308996938995747
       }
@@ -35,14 +35,14 @@
       "name": "the secondary",
       "kind": "star",
       "look": "binary-cool",
-      "x": 152.4,
+      "x": 109.6,
       "y": 360,
       "mass": 23333.333333333332,
       "radius": 20,
       "orbit": {
         "cx": 210,
         "cy": 360,
-        "radius": 57.6,
+        "radius": 100.4,
         "phase": 3.141592653589793,
         "omega": 0.1308996938995747
       }
