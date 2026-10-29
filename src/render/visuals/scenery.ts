@@ -71,7 +71,9 @@ class SceneryVisual implements Visual {
     }
 
     this.spin = { value: 0 };
-    this.object.add(field(theme.scenery.asteroidCount, center.x + 180, center.y + 40, 220, 0x9aa4b8, 6, 16, rnd, this.spin, 0));
+    if (!level.belts || level.belts.length === 0) {
+      this.object.add(field(theme.scenery.asteroidCount, center.x + 180, center.y + 40, 220, 0x9aa4b8, 6, 16, rnd, this.spin, 0));
+    }
     this.object.add(field(theme.scenery.wreckCount, center.x - 260, center.y - 120, 160, 0x6a5344, 10, 28, rnd, this.spin, 1));
   }
 

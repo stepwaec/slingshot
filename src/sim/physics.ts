@@ -31,6 +31,8 @@
  * This module does not touch the DOM.
  */
 
+import { beltDrift, pointInBelt, type Belt, type BeltRock } from "./belts";
+
 export interface Vec2 {
   x: number;
   y: number;
@@ -265,8 +267,12 @@ export interface SimConfig {
   dosePerD1?: number;
   /** Crew dose that fails the mission. Omitted means dose never fails a flight. */
   doseLimit?: number;
-  /** Multiplier on crew dose. 1 is unshielded. Shielding uses 0.5. */
+  /** Multiplier on crew dose and on belt dust damage. 1 is unshielded. Shielding uses 0.5. */
   shield?: number;
+  /** Asteroid and Kuiper belts. Omitted leaves rock collision and dust damage off. */
+  belts?: readonly Belt[];
+  /** Rocks from `placeBelts`. Omitted with `belts`. */
+  beltRocks?: readonly BeltRock[];
 }
 
 /** How many times a flight may freeze so the player can edit burns. */
@@ -1640,6 +1646,25 @@ export function iceHarvestRate(x: number, y: number, time: number, bodies: reado
   return rate;
 }
 
+/** Hull per second from belt dust, after shielding. 0 when the level has no dust rate. */
+function beltDust(x: number, y: number, config: SimConfig, time: number): number {
+  const belts = config.belts;
+  if (!belts || belts.length === 0) return 0;
+  const g = gravityConstant(config);
+  const shield = config.shield ?? 1;
+  let rate = 0;
+  for (let i = 0; i < belts.length; i++) {
+    const belt = belts[i];
+    const dust = belt.dustDamage ?? 0;
+    if (!(dust > 0)) continue;
+    const center = findBody(config.bodies, belt.centerId);
+    if (!center) continue;
+    const pose = bodyPose(center, time, config.bodies, g);
+    if (pointInBelt(x, y, pose.x, pose.y, belt)) rate += dust * shield;
+  }
+  return rate;
+}
+
 /**
  * Hull damage, the stress reading, and solar recharge. Motion is untouched.
  * A stock ship (no tides, no solar, outside every close shell) only records
@@ -1651,7 +1676,7 @@ function applyShipSystems(state: SimState, config: SimConfig, time: number): voi
   const beam = beamDamageRate(state.x, state.y, time, config.bodies);
   state.stress = stress;
   if (stress > state.peakStress) state.peakStress = stress;
-  const damage = (stress + pass + beam) * config.dt;
+  const damage = (stress + pass + beam + beltDust(state.x, state.y, config, time)) * config.dt;
   if (damage > 0) {
     state.hull -= damage;
     if (!(state.hull > 0)) {
@@ -1720,11 +1745,49 @@ export function step(state: SimState, config: SimConfig): void {
     }
   }
 
+  const rocks = config.beltRocks;
+  let rockSnap: { x: number; y: number; radius: number } | null = null;
+  if (rocks) {
+    const g = gravityConstant(config);
+    for (let i = 0; i < rocks.length; i++) {
+      const rock = rocks[i];
+      if (!rock.solid) continue;
+      const center = findBody(bodies, rock.centerId);
+      if (!center) continue;
+      const c0 = bodyPose(center, t0, bodies, g);
+      const c1 = bodyPose(center, t1, bodies, g);
+      const a0 = rock.angle + beltDrift(rock.tier, t0);
+      const a1 = rock.angle + beltDrift(rock.tier, t1);
+      const p0x = c0.x + Math.cos(a0) * rock.distance;
+      const p0y = c0.y + Math.sin(a0) * rock.distance;
+      const p1x = c1.x + Math.cos(a1) * rock.distance;
+      const p1y = c1.y + Math.sin(a1) * rock.distance;
+      const hit = circleEntry(x0 - p0x, y0 - p0y, x1 - p1x, y1 - p1y, 0, 0, rock.radius);
+      if (hit !== null && hit < crashT) {
+        crashT = hit;
+        crashBody = `${rock.beltId}:${i}`;
+        rockSnap = {
+          x: p0x + (p1x - p0x) * hit,
+          y: p0y + (p1y - p0y) * hit,
+          radius: rock.radius,
+        };
+      }
+    }
+  }
+
   if (crashBody !== null) {
-    const body = bodies.find((item) => item.id === crashBody);
+    const body = rockSnap ? undefined : bodies.find((item) => item.id === crashBody);
     state.x = x0 + (x1 - x0) * crashT;
     state.y = y0 + (y1 - y0) * crashT;
-    if (body) {
+    if (rockSnap) {
+      const dx = state.x - rockSnap.x;
+      const dy = state.y - rockSnap.y;
+      const distance = Math.hypot(dx, dy);
+      if (distance > 1e-8) {
+        state.x = rockSnap.x + (dx / distance) * rockSnap.radius;
+        state.y = rockSnap.y + (dy / distance) * rockSnap.radius;
+      }
+    } else if (body) {
       let cx = body.x;
       let cy = body.y;
       if (body.orbit || body.drift) {

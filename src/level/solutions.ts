@@ -164,3 +164,15 @@ export const wanderPlan: readonly BurnNode[] = [
   { step: 0, dvx: 9.781476007338057, dvy: 2.079116908177593 },
   { step: 4403, dvx: -5.819954789359722, dvy: -4.06238700271758 },
 ];
+
+/** Weave: thread the sparse belt and capture at Planet X. */
+export const weavePlan: readonly BurnNode[] = [
+  { step: 0, dvx: 11.737771208805668, dvy: 2.494940289813112 },
+  { step: 6381, dvx: -10.583498447617348, dvy: 11.493598038443018 },
+];
+
+/** Frost: cross the Kuiper lane and capture at Planet X. */
+export const frostPlan: readonly BurnNode[] = [
+  { step: 0, dvx: 11.737771208805668, dvy: 2.494940289813112 },
+  { step: 4461, dvx: -15.056260298636449, dvy: 2.500286395988347 },
+];
