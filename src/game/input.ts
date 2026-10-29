@@ -94,7 +94,12 @@ export function bindInput(
   });
 
   canvas.addEventListener("pointermove", (event) => {
-    if (event.pointerId !== pointerId || drag === null) return;
+    if (pointerId === null || drag === null || event.pointerId !== pointerId) {
+      const size = getSize();
+      game.cursorStep = isEditing(game) ? closestPathStep(game, size.width, size.height, event.offsetX, event.offsetY) : null;
+      return;
+    }
+    game.cursorStep = null;
     if (drag.kind === "pending") {
       if (Math.hypot(event.offsetX - drag.x, event.offsetY - drag.y) < DRAG_THRESHOLD) return;
       if (drag.hit.type === "node") {
@@ -133,6 +138,9 @@ export function bindInput(
   };
   canvas.addEventListener("pointerup", endPointer);
   canvas.addEventListener("pointercancel", endPointer);
+  canvas.addEventListener("pointerleave", () => {
+    game.cursorStep = null;
+  });
 
   canvas.addEventListener(
     "wheel",

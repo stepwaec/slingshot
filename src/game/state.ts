@@ -69,6 +69,11 @@ export interface Game {
   magnetism: boolean;
   /** Planning radiation map. Does not affect prediction or flight. */
   radiation: boolean;
+  /**
+   * Path sample under the pointer, in planning and pause.
+   * Ghosts read it. Prediction and flight do not.
+   */
+  cursorStep: number | null;
 }
 
 /** Planning, or a tactical pause mid-flight. Burns can be edited in both. */
@@ -113,6 +118,7 @@ export function createGame(level: Level = passage, camera: Camera = { x: 0, y: 0
     gravityClock: false,
     magnetism: false,
     radiation: false,
+    cursorStep: null,
   };
 }
 
@@ -175,6 +181,7 @@ export function loadLevel(game: Game, level: Level): void {
   game.slowPhase = 0;
   game.nodes = [];
   game.selected = null;
+  game.cursorStep = null;
   game.mode = "planning";
   game.points = UPGRADE_POINTS;
   game.upgrades = [];

@@ -46,7 +46,7 @@ Physics stays game-like but true to its real shape, and prediction always matche
 | Package | Status | Scope |
 | --- | --- | --- |
 | LU1: lively surfaces | In progress, opened 2026-10-29 in [PR #41](https://github.com/stepwaec/slingshot/pull/41) | Subtle animation on every body: star granulation and flares, gas giant bands drifting, cloud layers moving, planets rotating. Visual only. Home, Planet X and gas giants already scroll from the visual review. This pass adds the moons and the dwarf on the same strips, turns the sun's granulation under a fixed limb, and plays the red giant's flare on the sun's 22 s timeline. |
-| LU2: moving bodies | Planned | Planets orbit stars or black holes, and moons orbit planets, on deterministic on-rails Kepler orbits where position is a function of time. Prediction uses the bodies' future positions, with ghost markers for the target's future position. Reuse the elliptical comet orbits. Start with one or two levels. |
+| LU2: moving bodies | In progress | Planets orbit stars or black holes, and moons orbit planets, on deterministic on-rails Kepler orbits where position is a function of time. Prediction uses the bodies' future positions, with ghost markers for the target's future position. Reuse the elliptical comet orbits. Start with one or two levels. Lead puts Planet X on a Kepler circle around its sun. Ghost rings mark every moving body at each maneuver node and at the path sample under the cursor. The rings do not change the flight. |
 | LU3: scripted collisions and consumption | Planned | Timed, deterministic events: a comet hits a planet, a planet spirals into a star and burns up, a star is pulled into a black hole's accretion disk. Debris and changing gravity become gameplay (escape windows, narrowing gaps). |
 | LU4: level design that uses motion | Planned | Launch windows, catching up with a moving target, and moon slingshots. |
 
@@ -67,6 +67,7 @@ Physics stays game-like but true to its real shape, and prediction always matche
 - Radiation (Shade, Wander): starlight, solar flares, gas-giant and magnetar belts, pulsar beams, black-hole disks and a cosmic background. The dose meter names the dominant source. A planet disc blocks a star and its flare. Shielding halves crew dose and adds mass. The Radiation button toggles a halftone map.
 - A rogue planet (Wander) that drifts in a straight line, has gravity, and gives no recharge.
 - Asteroid belts (Weave) and a Kuiper belt (Frost). Seeded rocks. The large ones are solid. Dense dust can drain the hull, and shielding halves that.
+- Planet X on a Kepler orbit around its sun (Lead). Ghost markers show where a moving body will be at each burn and under the cursor.
 
 **Planned, by package**
 - Asteroid belts in sparse, medium and dense tiers, and a Kuiper belt (Weave, Frost). Rocks are seeded. Large ones crash the ship. Dense dust can drain hull, and shielding halves that.

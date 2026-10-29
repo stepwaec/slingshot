@@ -176,3 +176,9 @@ export const frostPlan: readonly BurnNode[] = [
   { step: 0, dvx: 11.737771208805668, dvy: 2.494940289813112 },
   { step: 4461, dvx: -15.056260298636449, dvy: 2.500286395988347 },
 ];
+
+/** Lead: meet Planet X on its Kepler orbit, not where it is at launch. */
+export const leadPlan: readonly BurnNode[] = [
+  { step: 0, dvx: 6, dvy: 0 },
+  { step: 230, dvx: -12.457725858549999, dvy: -19.6212337239022 },
+];
