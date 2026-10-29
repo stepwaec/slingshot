@@ -5,6 +5,7 @@ import {
   canLaunch,
   canPause,
   createGame,
+  cycleGravity,
   isEditing,
   launch,
   loadLevel,
@@ -15,6 +16,7 @@ import {
   planFuel,
   queuedBurns,
   selectNode,
+  setGravityClock,
   setPlan,
   tick,
   type Game,
@@ -73,6 +75,8 @@ const deadlineFill = required<HTMLElement>("#deadline-fill");
 const routeActions = required<HTMLElement>("#route-actions");
 const routeSafe = required<HTMLButtonElement>("#route-safe");
 const routeDeep = required<HTMLButtonElement>("#route-deep");
+const gravityButton = required<HTMLButtonElement>("#gravity");
+const gravityClockButton = required<HTMLButtonElement>("#gravity-clock");
 
 const game = createGame();
 const view = new SpaceView(canvas, game);
@@ -116,6 +120,8 @@ bindInput(
     pauseButton,
     resumeButton,
     slowButton,
+    gravityButton,
+    gravityClockButton,
   },
   () => ({ width: canvas.clientWidth, height: canvas.clientHeight }),
   () => frameLevel(game.camera, canvas.clientWidth, canvas.clientHeight, game.level),
@@ -149,6 +155,14 @@ function loop(now: number): void {
   requestAnimationFrame(loop);
 }
 
+function syncGravity(current: Game): void {
+  const label = current.gravity === "heat" ? "Gravity heat" : current.gravity === "sheet" ? "Gravity sheet" : "Gravity off";
+  gravityButton.textContent = label;
+  gravityButton.setAttribute("aria-pressed", current.gravity === "off" ? "false" : "true");
+  gravityClockButton.hidden = current.gravity !== "heat";
+  gravityClockButton.setAttribute("aria-pressed", current.gravityClock ? "true" : "false");
+}
+
 function syncHud(current: Game): void {
   const width = canvas.clientWidth;
   const height = canvas.clientHeight;
@@ -157,6 +171,7 @@ function syncHud(current: Game): void {
   const planning = current.mode === "planning";
   const editing = isEditing(current);
   app.dataset.mode = current.mode;
+  syncGravity(current);
   modeLabel.textContent = planning ? "Planning" : current.mode === "paused" ? "Paused" : "In flight";
   planningActions.hidden = !planning;
   flightActions.hidden = planning;
@@ -424,6 +439,8 @@ declare global {
       setPlan: (nodes: readonly BurnNode[]) => void;
       launch: () => void;
       select: (index: number | null) => void;
+      cycleGravity: () => void;
+      setGravityClock: (on: boolean) => void;
     };
   }
 }
@@ -434,5 +451,7 @@ if (import.meta.env.DEV) {
     setPlan: (nodes) => setPlan(game, nodes),
     launch: () => launch(game),
     select: (index) => selectNode(game, index),
+    cycleGravity: () => cycleGravity(game),
+    setGravityClock: (on) => setGravityClock(game, on),
   };
 }

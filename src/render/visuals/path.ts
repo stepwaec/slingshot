@@ -104,7 +104,9 @@ class PathVisual implements Visual {
   update(frame: VisualFrame): void {
     const { game, width, height } = frame;
     const planning = game.mode === "planning" || game.mode === "paused";
-    if (!planning) {
+    // The tilted sheet draws the plan on its surface. The screen-space dots
+    // would sit on the flat projection instead.
+    if (!planning || game.gravity === "sheet") {
       this.path.mesh.visible = false;
       this.orbit.mesh.visible = false;
       this.endRing.visible = false;

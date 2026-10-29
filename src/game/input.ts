@@ -5,6 +5,7 @@ import {
   clearPlan,
   deleteSelected,
   isEditing,
+  cycleGravity,
   launch,
   moveNodeAlong,
   nodeIncoming,
@@ -13,6 +14,7 @@ import {
   reset,
   resume,
   selectNode,
+  setGravityClock,
   setNodeBurn,
   setSlow,
   setSpeed,
@@ -32,6 +34,8 @@ export interface InputElements {
   pauseButton: HTMLButtonElement;
   resumeButton: HTMLButtonElement;
   slowButton: HTMLButtonElement;
+  gravityButton: HTMLButtonElement;
+  gravityClockButton: HTMLButtonElement;
 }
 
 const HANDLE_RADIUS = 16;
@@ -143,6 +147,8 @@ export function bindInput(
   elements.pauseButton.addEventListener("click", () => pause(game));
   elements.resumeButton.addEventListener("click", () => resume(game));
   elements.slowButton.addEventListener("click", () => setSlow(game, !game.slow));
+  elements.gravityButton.addEventListener("click", () => cycleGravity(game));
+  elements.gravityClockButton.addEventListener("click", () => setGravityClock(game, !game.gravityClock));
   elements.deleteButton.addEventListener("click", () => deleteSelected(game));
   for (const button of elements.resetButtons) button.addEventListener("click", doReset);
   for (const button of elements.clearButtons) button.addEventListener("click", () => clearPlan(game));
@@ -175,6 +181,13 @@ export function bindInput(
       deleteSelected(game);
     } else if (event.key === "Escape") {
       selectNode(game, null);
+    } else if (event.key === "g" || event.key === "G") {
+      if (event.repeat || event.metaKey || event.ctrlKey || event.altKey) return;
+      cycleGravity(game);
+    } else if (event.key === "c" || event.key === "C") {
+      if (event.repeat || event.metaKey || event.ctrlKey || event.altKey) return;
+      if (game.gravity !== "heat") return;
+      setGravityClock(game, !game.gravityClock);
     } else if (event.key === "1" || event.key === "2" || event.key === "4") {
       setSpeed(game, Number(event.key) as SimSpeed);
     }
