@@ -1,4 +1,5 @@
 import type { VisualFactory } from "../visual";
+import { createGallery } from "./gallery";
 import { createClouds } from "./clouds";
 import { createComet } from "./comet";
 import { createCompact } from "./compact";
@@ -28,6 +29,7 @@ export const visualFactories = {
   magnetism: createMagnetism,
   star: createStar,
   scenery: createScenery,
+  gallery: createGallery,
   planets: createPlanets,
   compact: createCompact,
   comet: createComet,

@@ -66,8 +66,8 @@ export const ENGINE_PLUME_IDS: Record<EngineLook, readonly string[]> = {
  */
 export const ENGINE_PLUMES: Record<EngineLook, PlumeLook> = {
   chemical: {
-    length: 42,
-    halfWidth: 5,
+    length: 96,
+    halfWidth: 8,
     turbulence: 0.42,
     core: "#F7FBFF",
     edge: "#A06BFF",
@@ -75,8 +75,8 @@ export const ENGINE_PLUMES: Record<EngineLook, PlumeLook> = {
     continuous: true,
   },
   ion: {
-    length: 55,
-    halfWidth: 6.6,
+    length: 128,
+    halfWidth: 10.5,
     turbulence: 0.04,
     core: "#F2F9FF",
     edge: "#A06BFF",
@@ -84,8 +84,8 @@ export const ENGINE_PLUMES: Record<EngineLook, PlumeLook> = {
     continuous: true,
   },
   pulse: {
-    length: 17,
-    halfWidth: 8.5,
+    length: 36,
+    halfWidth: 11,
     turbulence: 0,
     core: "#FFFFFF",
     edge: "#A06BFF",

@@ -3,6 +3,7 @@ import type { Game } from "../../game/state";
 import { bodyPose, type Body } from "../../sim/physics";
 import type { Theme } from "../theme";
 import { disposeObject, type Visual, type VisualFactory, type VisualFrame } from "../visual";
+import { artForBody } from "../art-sprite";
 import { shader, srgbVec } from "./materials";
 
 /**
@@ -214,6 +215,7 @@ class PlanetsVisual implements Visual {
     for (const body of level.bodies) {
       if (body.kind === "star" || body.look === "comet") continue;
       if (body.kind === "blackhole") {
+        if (artForBody(body, theme)) continue;
         const diskUniforms = {
           uHot: { value: srgbVec("#FFB15A") },
           uCool: { value: srgbVec("#FF6A2A") },
@@ -258,6 +260,8 @@ class PlanetsVisual implements Visual {
         this.holes.push({ body, mesh, back, front, time: diskUniforms.uTime });
         continue;
       }
+      const useArt = artForBody(body, theme) !== null;
+      if (!useArt) {
       const target = body.kind === "target";
       const paint = planetPaint(body, theme);
       this.object.userData.asset = paint.asset;
@@ -314,6 +318,7 @@ class PlanetsVisual implements Visual {
       mesh.name = body.id;
       this.object.add(mesh);
       this.planets.push({ body, mesh, halo, belt, light, light2, weight2, spin, cloudSpin, surface: baked.surface, clouds: baked.clouds });
+      }
 
       if (body.captureRadius !== undefined) {
         const uniforms = {

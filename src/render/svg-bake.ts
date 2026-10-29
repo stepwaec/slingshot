@@ -1,8 +1,14 @@
 const blobs = new Map<string, Promise<string>>();
 
+export interface SvgBakeOptions {
+  /** Cache key when `prep` changes the document. */
+  tag?: string;
+  prep?: (doc: Document) => void;
+}
+
 /** Fetch an SVG asset and drop the named elements, so a nozzle can be drawn without its plume. */
-export function bakedSvgUrl(sourceUrl: string, hideIds: readonly string[] = []): Promise<string> {
-  const key = `${sourceUrl}::${hideIds.join(",")}`;
+export function bakedSvgUrl(sourceUrl: string, hideIds: readonly string[] = [], options?: SvgBakeOptions): Promise<string> {
+  const key = `${sourceUrl}::${hideIds.join(",")}::${options?.tag ?? ""}`;
   let pending = blobs.get(key);
   if (!pending) {
     pending = fetch(sourceUrl)
@@ -11,7 +17,7 @@ export function bakedSvgUrl(sourceUrl: string, hideIds: readonly string[] = []):
         return res.text();
       })
       .then((text) => {
-        const svg = hideIds.length === 0 ? text : stripIds(text, hideIds);
+        const svg = hideIds.length === 0 && !options?.prep ? text : editSvg(text, hideIds, options?.prep);
         return URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
       });
     blobs.set(key, pending);
@@ -19,9 +25,10 @@ export function bakedSvgUrl(sourceUrl: string, hideIds: readonly string[] = []):
   return pending;
 }
 
-function stripIds(svg: string, ids: readonly string[]): string {
+function editSvg(svg: string, ids: readonly string[], prep?: (doc: Document) => void): string {
   const doc = new DOMParser().parseFromString(svg, "image/svg+xml");
   for (const id of ids) doc.getElementById(id)?.remove();
+  prep?.(doc);
   return new XMLSerializer().serializeToString(doc.documentElement);
 }
 

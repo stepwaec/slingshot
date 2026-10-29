@@ -10,6 +10,10 @@ import binaryStarUrl from "../../design/assets/bodies/binary-star.svg?url";
 import redGiantUrl from "../../design/assets/bodies/red-giant.svg?url";
 import whiteDwarfUrl from "../../design/assets/bodies/white-dwarf.svg?url";
 import gasBandedUrl from "../../design/assets/bodies/gas-banded.svg?url";
+import moonUrl from "../../design/assets/bodies/moon.svg?url";
+import moonIcyUrl from "../../design/assets/bodies/moon-icy.svg?url";
+import moonVolcanicUrl from "../../design/assets/bodies/moon-volcanic.svg?url";
+import dwarfUrl from "../../design/assets/bodies/dwarf.svg?url";
 import moonChainUrl from "../../design/assets/bodies/moon-chain.svg?url";
 import hullBaseUrl from "../../design/assets/ship/hull-base.svg?url";
 import platingUrl from "../../design/assets/ship/module-plating.svg?url";
@@ -54,6 +58,10 @@ export const theme = {
     redGiant: redGiantUrl,
     whiteDwarf: whiteDwarfUrl,
     gasGiant: gasBandedUrl,
+    moon: moonUrl,
+    moonIcy: moonIcyUrl,
+    moonVolcanic: moonVolcanicUrl,
+    dwarf: dwarfUrl,
     moonChain: moonChainUrl,
     neutronStar: neutronStarUrl,
     pulsar: pulsarUrl,

@@ -3,6 +3,7 @@ import { bodyPose, type Body } from "../../sim/physics";
 import type { Theme } from "../theme";
 import { isEditing } from "../../game/state";
 import { disposeObject, type Visual, type VisualFactory, type VisualFrame } from "../visual";
+import { artForBody } from "../art-sprite";
 import { shader, srgbVec } from "./materials";
 
 /**
@@ -130,6 +131,7 @@ class CometVisual implements Visual {
       );
       tail.renderOrder = order++;
       tail.name = `${body.id}-tail`;
+      const replaced = artForBody(body, theme) !== null;
       const dash = { value: 0 };
       const ring = new THREE.Mesh(
         new THREE.PlaneGeometry(2, 2),
@@ -139,7 +141,8 @@ class CometVisual implements Visual {
       ring.scale.set(reach, reach, 1);
       ring.renderOrder = order++;
       ring.name = `${body.id}-harvest`;
-      this.object.add(tail, head, ring);
+      if (!replaced) this.object.add(tail, head);
+      this.object.add(ring);
       this.views.push({ body, head, tail, ring, time, dash, mirror });
     }
   }
