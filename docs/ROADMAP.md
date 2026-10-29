@@ -141,6 +141,26 @@ Other gameplay ideas raised by Brainstormer and not yet scheduled: realistic vis
 - **Gravity map cost in flight:** Brainstormer suggested it could be free in planning but cost energy in flight, or be unlocked by a tutorial; not decided.
 - **Easter eggs and megastructures:** which package(s) they go in after WP13.
 
+## Design requests for Claude
+
+Stephan points Claude at this section for the next visual pack.
+
+**Start here.** Open a new pull request from branch `design/visual-style` into `main`. The newest commits are `6ee6149` and `c27aae0` (v1.3 to v1.5). [PR #2](https://github.com/stepwaec/slingshot/pull/2) was closed without merging, so those designs are not on `main`.
+
+**Already on that branch:** white dwarf; gas giants (banded, ringed, Saturn-like, shepherd); moons (icy, volcanic, captured, two-moon system); neutron star with beams; black hole; three nebulae; asteroid field; wreck debris; solar flares; ship.
+
+**Still missing.** WP8 is the top priority.
+
+- **WP8 (top priority):** binary stars; a red giant with a soft drag atmosphere.
+- **WP9:** magnetar; a distinct pulsar; magnetism danger heatmap.
+- **WP10:** comet; solar recharge indicator.
+- **WP11:** sparse, medium and dense asteroid belts; Kuiper belt; rogue planet; radiation heatmap; dose meter.
+- **Ship systems:** hull health bar; tidal-stress warning; upgrade screen.
+- **Ship and planning view:** blue-to-violet plume (no trailing halo); burn node; gravity grid styling.
+- **Late game:** stellar engine; Dyson swarm; ringworld; Shkadov thruster; space elevator; wormhole.
+
+**Guidelines:** a realistic and vibrant style matching v1.5; SVG files under `design/assets/`; easter eggs only as hints, never logos or characters.
+
 ## How this document is maintained
 
 Engineering Manager keeps ROADMAP.md and DESIGN.md current in the repo. When a package lands, it updates the status and PR link in the table, moves scope changes into the right section, and tells Stephan what changed. New ideas from Stephan or Brainstormer go into the backlog or the relevant package after Stephan confirms them.
