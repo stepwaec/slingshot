@@ -27,7 +27,8 @@ import {
   tick,
   type Game,
 } from "../src/game/state";
-import { passage, slingshotCapture, slingshotLaunch, slingshotPlan } from "../src/level/passage";
+import { passage } from "../src/level/catalog";
+import { slingshotCapture, slingshotLaunch, slingshotPlan } from "../src/level/solutions";
 import type { BurnNode } from "../src/sim/physics";
 
 const dt = 1 / 60;

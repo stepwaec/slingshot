@@ -11,7 +11,8 @@ import {
   tick,
   type Game,
 } from "../src/game/state";
-import { passage, slingshotPlan } from "../src/level/passage";
+import { passage } from "../src/level/catalog";
+import { slingshotPlan } from "../src/level/solutions";
 import type { BurnNode, PlanFuel } from "../src/sim/physics";
 
 const middle: BurnNode = { step: 400, dvx: 0.4, dvy: -0.2 };
