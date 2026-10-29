@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="160" viewBox="0 0 96 160">
+  <!-- Modular ship: damage overlay, hull 15 %. ONE group #shipDamage15 at translate(48 64). Ids: sxD3*.
+       Shared ship frame: viewBox 0 0 96 160, ship centre at (48, 64), nose UP (-y) at local y -26, tail at +22.6. Every ship part uses this frame, so parts stack exactly: translate(48 64) on each file's one top-level group. Base hull length 48.6 units = 22 px at zoom 1 (scale 0.453, theme.ship.lengthAtZoom1); minimum 12 px. Lighting is symmetric (bright ridge, cooler edges), so the sprite can rotate with the heading.
+       Draw order for a build: 1 back modules (solar, tanks, plating back) -> 2 engine plume -> 3 fins + engine nozzle + hull (hull-base) -> 4 front modules (plating front, cryo, scoop, sensors, shield) -> 5 one damage overlay. 
+       Layer 5, shown for hull < 25 % (includes the 45 % damage). Adds a second glowing crack, a missing nose plate #141A33, gas venting from the breach (3 puffs #DCE4FF α 0.85 -> 0 over 1.6-2.1 s), sparks #FFD27A blinking 0.9 s and a red beacon #FF5A5F (fuel.critical) r 1.2 + halo r 3.6, 1 s pulse. At game scale the breach glow, venting and beacon are what reads; the HUD hull bar carries the number.
+       Tokens: style.md §8 Ship systems (ship.*). -->
+  <defs>
+    <radialGradient id="sxD3Scorch" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#1E1410" stop-opacity="0.75"/><stop offset="0.6" stop-color="#3A2418" stop-opacity="0.45"/><stop offset="1" stop-color="#3A2418" stop-opacity="0"/></radialGradient>
+    <radialGradient id="sxD3Breach" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#FFB45A"/><stop offset="0.4" stop-color="#FF6A2A"/><stop offset="1" stop-color="#141A33"/></radialGradient>
+  </defs>
+  <g id="shipDamage15" transform="translate(48 64)">
+    <ellipse cx="4.2" cy="2" rx="2.8" ry="4" fill="url(#sxD3Scorch)"/><ellipse cx="-3.8" cy="14" rx="2.4" ry="2" fill="url(#sxD3Scorch)"/>
+    <path d="M-6.2 -9 L-4.4 -8.2 L-4.8 -6 L-6.5 -6.6 Z" fill="#AEBBDD"/>
+    <path d="M2.4 -9 L3.6 -6.4 L2.6 -4.2 L4.4 -1.4 L3.4 1.6" fill="none" stroke="#FF8A3A" stroke-width="1.8" stroke-opacity="0.55" stroke-linecap="round"/><path d="M2.4 -9 L3.6 -6.4 L2.6 -4.2 L4.4 -1.4 L3.4 1.6" fill="none" stroke="#0A0D1A" stroke-width="0.6"/>
+    <path d="M-7 3.4 L-3.8 2.4 L-2.8 5.4 L-4.2 9.4 L-7.3 8.6 Z" fill="url(#sxD3Breach)" stroke="#0A0D1A" stroke-width="0.6"/>
+    <ellipse cx="-11.5" cy="16" rx="2" ry="1.5" fill="url(#sxD3Scorch)"/>
+    <path d="M-1.2 12 L0.6 14.6 L-0.4 16.8 L1.4 19.4" fill="none" stroke="#FF8A3A" stroke-width="1.8" stroke-opacity="0.6" stroke-linecap="round"/><path d="M-1.2 12 L0.6 14.6 L-0.4 16.8 L1.4 19.4" fill="none" stroke="#0A0D1A" stroke-width="0.6"/>
+    <path d="M-3 -21 L-1 -20.6 L-1.4 -18.4 L-3.4 -19 Z" fill="#141A33"/>
+    <circle cx="-6" cy="6" r="0.9" fill="#DCE4FF"><animate attributeName="cx" values="-6;-15" dur="1.6s" begin="-0.0s" repeatCount="indefinite"/><animate attributeName="cy" values="6;8" dur="1.6s" begin="-0.0s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.85;0" dur="1.6s" begin="-0.0s" repeatCount="indefinite"/></circle>
+    <circle cx="-6" cy="6" r="0.9" fill="#DCE4FF"><animate attributeName="cx" values="-6;-16" dur="2.1s" begin="-0.6s" repeatCount="indefinite"/><animate attributeName="cy" values="6;12" dur="2.1s" begin="-0.6s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.85;0" dur="2.1s" begin="-0.6s" repeatCount="indefinite"/></circle>
+    <circle cx="-6" cy="6" r="0.9" fill="#DCE4FF"><animate attributeName="cx" values="-6;-14.5" dur="1.9s" begin="-1.2s" repeatCount="indefinite"/><animate attributeName="cy" values="6;5" dur="1.9s" begin="-1.2s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.85;0" dur="1.9s" begin="-1.2s" repeatCount="indefinite"/></circle>
+    <g stroke="#FFD27A" stroke-width="0.6" stroke-linecap="round"><path d="M3.4 -3 L5.6 -4.2 M4 -1 L6.2 -0.4"><animate attributeName="opacity" values="1;0;0;1;0" dur="0.9s" repeatCount="indefinite"/></path></g>
+    <circle cx="0" cy="4" r="3.6" fill="#FF5A5F" opacity="0.25"><animate attributeName="opacity" values="0.35;0;0.35" dur="1s" repeatCount="indefinite"/></circle><circle cx="0" cy="4" r="1.2" fill="#FF5A5F"><animate attributeName="opacity" values="1;0.3;1" dur="1s" repeatCount="indefinite"/></circle>
+  </g>
+</svg>

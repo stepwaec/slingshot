@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="160" viewBox="0 0 96 160">
+  <!-- Modular ship: Solar panels module. ONE group #shipModSolar at translate(48 64). Ids: sxMo*.
+       Shared ship frame: viewBox 0 0 96 160, ship centre at (48, 64), nose UP (-y) at local y -26, tail at +22.6. Every ship part uses this frame, so parts stack exactly: translate(48 64) on each file's one top-level group. Base hull length 48.6 units = 22 px at zoom 1 (scale 0.453, theme.ship.lengthAtZoom1); minimum 12 px. Lighting is symmetric (bright ridge, cooler edges), so the sprite can rotate with the heading.
+       Draw order for a build: 1 back modules (solar, tanks, plating back) -> 2 engine plume -> 3 fins + engine nozzle + hull (hull-base) -> 4 front modules (plating front, cryo, scoop, sensors, shield) -> 5 one damage overlay. 
+       Back. Two wings 16 × 11 at x ±(13-29), y -1..10, linked by two struts #8496C4; cells #2E62D8 -> #1E3F9E -> #15307E with grid #0A1A4A α 0.7, frame #FFD27A (solar.glyph) 0.8, sheen #FFFFFF α 0.16. Tier 2 / 3: add a second panel row (y 10..21) / widen to 22. While charging, the frame may glow #FFE08A.
+       Tokens: style.md §8 Ship systems (ship.*). -->
+  <defs>
+    <linearGradient id="sxMoSolar" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2E62D8"/><stop offset="0.55" stop-color="#1E3F9E"/><stop offset="1" stop-color="#15307E"/></linearGradient>
+  </defs>
+  <g id="shipModSolar" transform="translate(48 64)">
+    <g id="shipModSolarBack">
+    <path d="M7 3 L13 3 M7 7 L13 7" stroke="#8496C4" stroke-width="1.2"/>
+    <rect x="13" y="-1" width="16" height="11" rx="0.6" fill="url(#sxMoSolar)" stroke="#FFD27A" stroke-width="0.8"/>
+    <g stroke="#0A1A4A" stroke-opacity="0.7" stroke-width="0.4"><line x1="17" y1="-1" x2="17" y2="10"/><line x1="21" y1="-1" x2="21" y2="10"/><line x1="25" y1="-1" x2="25" y2="10"/><line x1="13" y1="4.5" x2="29" y2="4.5"/></g>
+    <path d="M14 -0.2 L19 -0.2 L14 6 Z" fill="#FFFFFF" fill-opacity="0.16"/>
+    <path d="M-7 3 L-13 3 M-7 7 L-13 7" stroke="#8496C4" stroke-width="1.2"/>
+    <rect x="-29" y="-1" width="16" height="11" rx="0.6" fill="url(#sxMoSolar)" stroke="#FFD27A" stroke-width="0.8"/>
+    <g stroke="#0A1A4A" stroke-opacity="0.7" stroke-width="0.4"><line x1="-25" y1="-1" x2="-25" y2="10"/><line x1="-21" y1="-1" x2="-21" y2="10"/><line x1="-17" y1="-1" x2="-17" y2="10"/><line x1="-29" y1="4.5" x2="-13" y2="4.5"/></g>
+    <path d="M-28 -0.2 L-23 -0.2 L-28 6 Z" fill="#FFFFFF" fill-opacity="0.16"/>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="160" viewBox="0 0 96 160">
+  <!-- Modular ship: chemical engine, firing. ONE group #shipEngineChem at translate(48 64). Ids: sxEc*.
+       Shared ship frame: viewBox 0 0 96 160, ship centre at (48, 64), nose UP (-y) at local y -26, tail at +22.6. Every ship part uses this frame, so parts stack exactly: translate(48 64) on each file's one top-level group. Base hull length 48.6 units = 22 px at zoom 1 (scale 0.453, theme.ship.lengthAtZoom1); minimum 12 px. Lighting is symmetric (bright ridge, cooler edges), so the sprite can rotate with the heading.
+       Draw order for a build: 1 back modules (solar, tanks, plating back) -> 2 engine plume -> 3 fins + engine nozzle + hull (hull-base) -> 4 front modules (plating front, cryo, scoop, sensors, shield) -> 5 one damage overlay. 
+       Layers 2-3. Bell nozzle 6.4 -> 10 wide, y 22.4-28.2 (steel), throat #1A2240. #sxEcPlume (toggle on while thrusting): teardrop to y 70, linear #F7FBFF | 0.22 #D6C8FF α 0.9 | 0.55 #A06BFF α 0.55 | 1 #7A4AD8 α 0, flicker 0.33 s, white core to y 48; #sxEcGlow throat glow #E2D4FF. The game's plume (theme.thrust) already matches; length still follows the burn (WP7b).
+       Tokens: style.md §8 Ship systems (ship.*). -->
+  <defs>
+    <linearGradient id="sxEcSteel" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8496C4"/><stop offset="0.5" stop-color="#DCE4F6"/><stop offset="1" stop-color="#8496C4"/></linearGradient>
+    <linearGradient id="sxEcPlumeChem" gradientUnits="userSpaceOnUse" x1="0" y1="28" x2="0" y2="70"><stop offset="0" stop-color="#F7FBFF"/><stop offset="0.22" stop-color="#D6C8FF" stop-opacity="0.9"/><stop offset="0.55" stop-color="#A06BFF" stop-opacity="0.55"/><stop offset="1" stop-color="#7A4AD8" stop-opacity="0"/></linearGradient>
+  </defs>
+  <g id="shipEngineChem" transform="translate(48 64)">
+    <g id="sxEcPlume"><path d="M-4.6 28 C-6.5 40 -4 56 0 70 C4 56 6.5 40 4.6 28 Z" fill="url(#sxEcPlumeChem)"><animate attributeName="opacity" values="1;0.82;1;0.9;1" dur="0.33s" repeatCount="indefinite"/></path><path d="M-2.2 28 C-2.8 34 -1.4 42 0 48 C1.4 42 2.8 34 2.2 28 Z" fill="#F7FBFF" fill-opacity="0.9"/></g>
+    <path d="M-3.2 22.4 L3.2 22.4 L5 28.2 L-5 28.2 Z" fill="url(#sxEcSteel)" stroke="#0A0D1A" stroke-width="0.8" stroke-linejoin="round"/><ellipse cx="0" cy="28.2" rx="5" ry="1.1" fill="#1A2240" stroke="#0A0D1A" stroke-width="0.6"/>
+    <ellipse id="sxEcGlow" cx="0" cy="28.2" rx="3.6" ry="0.7" fill="#E2D4FF"/>
+  </g>
+</svg>

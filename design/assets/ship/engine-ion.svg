@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="160" viewBox="0 0 96 160">
+  <!-- Modular ship: ion engine, firing. ONE group #shipEngineIon at translate(48 64). Ids: sxEi*.
+       Shared ship frame: viewBox 0 0 96 160, ship centre at (48, 64), nose UP (-y) at local y -26, tail at +22.6. Every ship part uses this frame, so parts stack exactly: translate(48 64) on each file's one top-level group. Base hull length 48.6 units = 22 px at zoom 1 (scale 0.453, theme.ship.lengthAtZoom1); minimum 12 px. Lighting is symmetric (bright ridge, cooler edges), so the sprite can rotate with the heading.
+       Draw order for a build: 1 back modules (solar, tanks, plating back) -> 2 engine plume -> 3 fins + engine nozzle + hull (hull-base) -> 4 front modules (plating front, cryo, scoop, sensors, shield) -> 5 one damage overlay. 
+       Layers 2-3. Gridded plate 14 × 3.8 (#22305E, 6 grid bars #7FB8FF). #sxEiPlume: long, thin, steady beam 12 -> 13.2 wide to y 80, linear #E6F4FF | 0.3 #8FC2FF α 0.75 | 0.7 #A06BFF α 0.3 | 1 α 0, slow 2 s shimmer, tapered core #F2F9FF α 0.7 to y 58; #sxEiGlow plate edge #BFE0FF. Low thrust: burns last longer, so the beam stays on for the whole burn.
+       Tokens: style.md §8 Ship systems (ship.*). -->
+  <defs>
+    <linearGradient id="sxEiPlumeIon" gradientUnits="userSpaceOnUse" x1="0" y1="25" x2="0" y2="80"><stop offset="0" stop-color="#E6F4FF"/><stop offset="0.3" stop-color="#8FC2FF" stop-opacity="0.75"/><stop offset="0.7" stop-color="#A06BFF" stop-opacity="0.3"/><stop offset="1" stop-color="#A06BFF" stop-opacity="0"/></linearGradient>
+  </defs>
+  <g id="shipEngineIon" transform="translate(48 64)">
+    <g id="sxEiPlume"><path d="M-6 25.5 L6 25.5 L6.6 80 L-6.6 80 Z" fill="url(#sxEiPlumeIon)"><animate attributeName="opacity" values="0.9;1;0.9" dur="2s" repeatCount="indefinite"/></path><path d="M-2.6 25.5 L2.6 25.5 L0 58 Z" fill="#F2F9FF" fill-opacity="0.7"/></g>
+    <rect x="-7" y="21.8" width="14" height="3.8" rx="1" fill="#22305E" stroke="#0A0D1A" stroke-width="0.8"/>
+    <g stroke="#7FB8FF" stroke-width="0.45" stroke-opacity="0.9"><line x1="-5" y1="22.4" x2="-5" y2="25"/><line x1="-3" y1="22.4" x2="-3" y2="25"/><line x1="-1" y1="22.4" x2="-1" y2="25"/><line x1="1" y1="22.4" x2="1" y2="25"/><line x1="3" y1="22.4" x2="3" y2="25"/><line x1="5" y1="22.4" x2="5" y2="25"/></g>
+    <rect id="sxEiGlow" x="-6.6" y="24.8" width="13.2" height="1" fill="#BFE0FF"/>
+  </g>
+</svg>
