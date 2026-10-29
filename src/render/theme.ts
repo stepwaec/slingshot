@@ -75,13 +75,23 @@ export const theme = {
     finR: [15.8, 12.5, 20, 19.2, 17, 19.6],
     cockpit: { x: 0, y: 2.5, w: 1.6, h: 4 },
   },
+  /**
+   * Exhaust plume, in the ship's local space (nose is +Y).
+   * The hull tail tips sit at local y = -9, so `nozzle` is just aft of them
+   * and the plume only extends further aft. Sizes are ship units; colours are sRGB.
+   */
   thrust: {
-    outerHalfWidth: 5,
-    coreHalfWidth: 2.6,
-    base: -5.5,
-    outerLength: 21.5,
-    coreLength: 14,
-    outerAlpha: 0.9,
+    nozzle: -9.6,
+    length: 28,
+    /** Widest half-width. The shader keeps the root narrower than the tail tips. */
+    halfWidth: 6.8,
+    /** Soft halo drawn behind the plume, scaled from the same nozzle. */
+    bloomScale: 1.45,
+    /** 0..1 raggedness of the edge and the density. */
+    turbulence: 0.42,
+    core: "#F7FBFF",
+    edge: "#A06BFF",
+    bloom: "#7A4AD8",
   },
   /**
    * Burn animation, in seconds of sim time (`step * dt`).
