@@ -1,5 +1,6 @@
 import * as THREE from "three";
-import { hasMagneticBody, spreadAlong, type SpreadPoint, type Vec2 } from "../../sim/physics";
+import { shipLoadout } from "../../game/upgrades";
+import { hasMagneticBody, solarRechargeRate, spreadAlong, type SpreadPoint, type Vec2 } from "../../sim/physics";
 import { projectToScreen } from "../camera";
 import { srgb01 } from "../palette";
 import type { Theme } from "../theme";
@@ -50,6 +51,7 @@ interface Sample {
   step: number;
   rate: number;
   sigma: number;
+  charge: number;
 }
 
 class PathVisual implements Visual {
@@ -62,6 +64,11 @@ class PathVisual implements Visual {
   private readonly which: Uint8Array;
   private readonly dotRate: Float32Array;
   private readonly dotSigma: Float32Array;
+  private readonly dotCharge: Float32Array;
+  private solar = 0;
+  private dt = 1 / 60;
+  private g = 1;
+  private bodies: Parameters<typeof solarRechargeRate>[3] = [];
   private readonly ghost: Dots;
   private readonly envelope: THREE.Mesh;
   private readonly envelopePos: Float32Array;
@@ -69,7 +76,7 @@ class PathVisual implements Visual {
   private useSpread = false;
   private fuzzy = false;
   private ghostSet = -1;
-  private readonly cursor: Sample = { x: 0, y: 0, step: 0, rate: 1, sigma: 0 };
+  private readonly cursor: Sample = { x: 0, y: 0, step: 0, rate: 1, sigma: 0, charge: 0 };
   private readonly scratch: Vec2 = { x: 0, y: 0 };
   private chain: readonly { x: number; y: number; step?: number; rate?: number }[] = [];
   private chainPrefix: { x: number; y: number; step: number; rate: number } | null = null;
@@ -87,6 +94,7 @@ class PathVisual implements Visual {
     this.which = new Uint8Array(max);
     this.dotRate = new Float32Array(max);
     this.dotSigma = new Float32Array(max);
+    this.dotCharge = new Float32Array(max);
     this.object.name = "path";
     this.object.userData.asset = theme.assets.predictedPath;
     this.path = makeDots(theme, 2);
@@ -169,6 +177,10 @@ class PathVisual implements Visual {
     this.pathZoom = camera.zoom;
     this.pathW = width;
     this.pathH = height;
+    this.solar = shipLoadout(game.upgrades).solar;
+    this.dt = game.level.dt;
+    this.g = game.level.g;
+    this.bodies = game.level.bodies;
 
     let splitStep = game.initial.step;
     const snaps = game.prediction.snapshots;
@@ -190,7 +202,7 @@ class PathVisual implements Visual {
     const tailColor = tailHex(game, this.theme);
     const tail = srgb01(tailColor);
     this.paint(this.path.colors, count, head, tail, true);
-    commitDots(this.path, count, this.theme.path.dotSpanPx);
+    commitDots(this.path, count, this.theme.path.dotSpanPx, this.dotCharge);
     if (count > 0) {
       const last = (count - 1) * 2;
       this.endRing.position.set(this.path.centers[last], this.path.centers[last + 1], 0);
@@ -239,8 +251,10 @@ class PathVisual implements Visual {
     this.which[0] = this.cursor.step <= splitStep ? 0 : 1;
     this.dotRate[0] = this.cursor.rate;
     this.dotSigma[0] = this.cursor.sigma;
+    this.dotCharge[0] = this.cursor.charge;
     let prevRate = this.cursor.rate;
     let prevSigma = this.cursor.sigma;
+    let prevCharge = this.cursor.charge;
     let count = 1;
     let carry = 0;
     for (let i = 1; i < total && count < max; i++) {
@@ -248,6 +262,7 @@ class PathVisual implements Visual {
       const step = this.cursor.step;
       const curRate = this.cursor.rate;
       const curSigma = this.cursor.sigma;
+      const curCharge = this.cursor.charge;
       projectToScreen(this.cursor.x, this.cursor.y, width, height, this.scratch);
       const curX = this.scratch.x;
       const curY = this.scratch.y;
@@ -263,6 +278,7 @@ class PathVisual implements Visual {
         this.which[count] = step <= splitStep ? 0 : 1;
         this.dotRate[count] = prevRate + (curRate - prevRate) * u;
         this.dotSigma[count] = prevSigma + (curSigma - prevSigma) * u;
+        this.dotCharge[count] = prevCharge + (curCharge - prevCharge) * u;
         count += 1;
         t += spacing;
       }
@@ -271,6 +287,7 @@ class PathVisual implements Visual {
       prevY = curY;
       prevRate = curRate;
       prevSigma = curSigma;
+      prevCharge = curCharge;
     }
     return count;
   }
@@ -282,6 +299,7 @@ class PathVisual implements Visual {
     this.cursor.step = this.chainPrefix.step;
     this.cursor.rate = this.chainPrefix.rate;
     this.cursor.sigma = 0;
+    this.cursor.charge = this.chargeAt(this.cursor.x, this.cursor.y, this.cursor.step);
     return;
   }
   const i = index - (this.chainPrefix ? 1 : 0);
@@ -291,6 +309,7 @@ class PathVisual implements Visual {
   this.cursor.step = point.step ?? i;
   this.cursor.rate = point.rate ?? 1;
   this.cursor.sigma = this.useSpread ? (this.spread[i]?.sigma ?? 0) : 0;
+  this.cursor.charge = this.useSpread ? this.chargeAt(point.x, point.y, this.cursor.step) : 0;
 }
 
   private paint(
@@ -307,15 +326,24 @@ class PathVisual implements Visual {
       const slow = 1 - Math.min(1, Math.max(0, rate));
       const glow = slow * slow;
       const base = this.which[i] === 0 ? head : tail;
-      const rgb = byRate ? mixRgb(base, hot, glow) : base;
+      const tinted = byRate ? mixRgb(base, hot, glow) : base;
+      const sigma = this.dotSigma[i];
+      const charge = this.dotCharge[i];
+      const gold = Math.min(1, Math.sqrt(Math.max(0, 1.6 * charge)));
+      const rgb = gold > 0 ? mixRgb(tinted, srgb01("#FFD86E"), gold) : tinted;
       const o = i * 4;
       colors[o] = rgb[0];
       colors[o + 1] = rgb[1];
       colors[o + 2] = rgb[2];
-      const sigma = this.dotSigma[i];
       const faded = sigma >= 0.6 ? Math.max(0.18, 0.7 - sigma / 40) : i < split ? this.theme.path.sureAlpha : this.theme.path.dimAlpha;
-      colors[o + 3] = Math.min(0.95, faded + (byRate && sigma < 0.6 ? glow * 0.4 : 0));
+      colors[o + 3] = gold > 0 ? 1 : Math.min(0.95, faded + (byRate && sigma < 0.6 ? glow * 0.4 : 0));
     }
+  }
+
+  private chargeAt(x: number, y: number, step: number): number {
+    if (!(this.solar > 0)) return 0;
+    const rate = solarRechargeRate(x, y, step * this.dt, this.bodies, this.solar, this.g);
+    return Math.min(1, rate / this.solar);
   }
 
   private drawFuzzy(width: number, height: number, now: number): void {
@@ -434,13 +462,14 @@ function makeDots(theme: Theme, order: number): Dots {
   return { mesh, centers, colors, quadPos, quadCol };
 }
 
-function commitDots(dots: Dots, count: number, span: number): void {
-  const r = span / 2;
+function commitDots(dots: Dots, count: number, span: number, charge?: Float32Array): void {
   const pos = dots.quadPos;
   const col = dots.quadCol;
   for (let i = 0; i < count; i++) {
     const x = dots.centers[i * 2];
     const y = dots.centers[i * 2 + 1];
+    const grown = charge ? 1 + 0.85 * Math.min(1, 1.4 * charge[i]) : 1;
+    const r = (span / 2) * grown;
     const cr = dots.colors[i * 4];
     const cg = dots.colors[i * 4 + 1];
     const cb = dots.colors[i * 4 + 2];

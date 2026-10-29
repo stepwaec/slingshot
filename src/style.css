@@ -343,6 +343,19 @@ html, body, #app {
 #fuel-fill[data-band="low"] { background: #ffc857; }
 #fuel-fill[data-band="critical"] { background: #ff5a5f; }
 
+#recharge {
+  position: absolute;
+  top: 118px;
+  right: 40px;
+  margin: 0;
+  width: 220px;
+  font: 600 12px/1 var(--mono);
+  color: #ffe08a;
+  text-align: right;
+}
+
+#recharge[hidden] { display: none; }
+
 .hull-block {
   position: absolute;
   top: 64px;

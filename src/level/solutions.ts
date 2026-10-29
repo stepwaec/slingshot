@@ -134,3 +134,21 @@ export const needlePlan: readonly BurnNode[] = [
   { step: 0, dvx: -11.817693036146496, dvy: -2.0837781320031654 },
   { step: 5029, dvx: -11.074885332370972, dvy: 5.022153209325186 },
 ];
+
+/** Ice: cross the comet's coma, harvest, and capture at Planet X. */
+export const icePlan: readonly BurnNode[] = [
+  { step: 0, dvx: 4.000000000000001, dvy: 6.928203230275509 },
+  { step: 5386, dvx: -3.28234668258312, dvy: 6.9915419648240285 },
+];
+
+/** Veil: fly through the emission nebula, scoop fuel, and capture. */
+export const veilPlan: readonly BurnNode[] = [
+  { step: 0, dvx: 24.248711305964274, dvy: -14.000000000000012 },
+  { step: 1320, dvx: -10.442264332687, dvy: 1.2012000023548266 },
+];
+
+/** Drift: the dark cloud and the comet both feed the tank on the way to Planet X. */
+export const driftPlan: readonly BurnNode[] = [
+  { step: 0, dvx: -2.070552360820167, dvy: 7.7274066103125465 },
+  { step: 6569, dvx: -11.486484390049283, dvy: 1.1946888427665865 },
+];

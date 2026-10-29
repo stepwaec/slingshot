@@ -8,6 +8,9 @@ import chainData from "../levels/chain.json";
 import pulseData from "../levels/pulse.json";
 import quakeData from "../levels/quake.json";
 import needleData from "../levels/needle.json";
+import iceData from "../levels/ice.json";
+import veilData from "../levels/veil.json";
+import driftData from "../levels/drift.json";
 import { loadLevelData, type Level, type LevelPhysics } from "./schema";
 import { shipLoadout } from "../game/upgrades";
 
@@ -25,8 +28,11 @@ export const chain: Level = loadLevelData(chainData, "src/levels/chain.json");
 export const pulse: Level = loadLevelData(pulseData, "src/levels/pulse.json");
 export const quake: Level = loadLevelData(quakeData, "src/levels/quake.json");
 export const needle: Level = loadLevelData(needleData, "src/levels/needle.json");
+export const ice: Level = loadLevelData(iceData, "src/levels/ice.json");
+export const veil: Level = loadLevelData(veilData, "src/levels/veil.json");
+export const drift: Level = loadLevelData(driftData, "src/levels/drift.json");
 
-export const LEVELS: readonly Level[] = [passage, relay, rescue, pair, ember, chain, pulse, quake, needle];
+export const LEVELS: readonly Level[] = [passage, relay, rescue, pair, ember, chain, pulse, quake, needle, ice, veil, drift];
 
 function bodyById(level: Level, id: string): Body {
   const body = level.bodies.find((item) => item.id === id);
@@ -80,6 +86,7 @@ export function simConfigFromLevel(level: Level, upgrades: readonly string[] = [
   if (physics?.dilationCap !== undefined) config.dilationCap = physics.dilationCap;
   if (physics?.tidalStrength !== undefined) config.tidalStrength = physics.tidalStrength;
   if (physics?.dragStrength !== undefined) config.dragStrength = physics.dragStrength;
+  if (level.nebulae && level.nebulae.length > 0) config.nebulae = level.nebulae;
   return config;
 }
 

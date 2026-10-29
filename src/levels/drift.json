@@ -1,0 +1,100 @@
+{
+  "id": "drift",
+  "name": "Drift",
+  "g": 1,
+  "dt": 0.016666666666666666,
+  "bodies": [
+    {
+      "id": "home",
+      "name": "Home",
+      "kind": "home",
+      "x": 0,
+      "y": 0,
+      "mass": 9000,
+      "radius": 16
+    },
+    {
+      "id": "sun",
+      "name": "the sun",
+      "kind": "star",
+      "look": "sun",
+      "x": 200,
+      "y": 40,
+      "mass": 18000,
+      "radius": 30
+    },
+    {
+      "id": "comet",
+      "name": "the comet",
+      "kind": "planet",
+      "look": "comet",
+      "x": 0,
+      "y": 0,
+      "mass": 400,
+      "radius": 5,
+      "harvest": 10,
+      "harvestRadius": 32,
+      "orbit": {
+        "kind": "ellipse",
+        "centerId": "sun",
+        "a": 190,
+        "e": 0.72,
+        "periapsisAngle": 0.9,
+        "phase": 0.2
+      }
+    },
+    {
+      "id": "x",
+      "name": "Planet X",
+      "kind": "target",
+      "x": 540,
+      "y": 60,
+      "mass": 7500,
+      "radius": 18,
+      "captureRadius": 90
+    }
+  ],
+  "nebulae": [
+    {
+      "id": "cloud",
+      "x": 360,
+      "y": 30,
+      "rx": 90,
+      "ry": 54,
+      "angle": -0.2,
+      "scoop": 4,
+      "look": "dark"
+    }
+  ],
+  "targetId": "x",
+  "ship": {
+    "x": 42,
+    "y": 0,
+    "vx": 0,
+    "vy": 14.638501094227998
+  },
+  "orbit": {
+    "bodyId": "home",
+    "radius": 42
+  },
+  "fuel": 150,
+  "fuelPerDv": 1,
+  "bounds": {
+    "minX": -5000,
+    "maxX": 5000,
+    "minY": -5000,
+    "maxY": 5000
+  },
+  "maxSteps": 7000,
+  "dvPerPixel": 0.25,
+  "periapsisMargin": 6,
+  "maxPlannedBurns": 4,
+  "c": 1000000,
+  "mission": {
+    "deadline": 400,
+    "crewLimit": 400,
+    "fuelStarMin": 0,
+    "crewWeight": 1,
+    "fuelWeight": 1
+  }
+}

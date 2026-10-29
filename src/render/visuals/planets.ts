@@ -212,7 +212,7 @@ class PlanetsVisual implements Visual {
     const star = brightestStar(level.bodies);
     let order = 1;
     for (const body of level.bodies) {
-      if (body.kind === "star") continue;
+      if (body.kind === "star" || body.look === "comet") continue;
       if (body.kind === "blackhole") {
         const diskUniforms = {
           uHot: { value: srgbVec("#FFB15A") },
