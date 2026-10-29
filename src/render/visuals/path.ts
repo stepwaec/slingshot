@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import type { Vec2 } from "../../sim/physics";
+import { hasMagneticBody, spreadAlong, type SpreadPoint, type Vec2 } from "../../sim/physics";
 import { projectToScreen } from "../camera";
 import { srgb01 } from "../palette";
 import type { Theme } from "../theme";
@@ -49,6 +49,7 @@ interface Sample {
   y: number;
   step: number;
   rate: number;
+  sigma: number;
 }
 
 class PathVisual implements Visual {
@@ -60,7 +61,15 @@ class PathVisual implements Visual {
   private readonly endRing: THREE.Mesh;
   private readonly which: Uint8Array;
   private readonly dotRate: Float32Array;
-  private readonly cursor: Sample = { x: 0, y: 0, step: 0, rate: 1 };
+  private readonly dotSigma: Float32Array;
+  private readonly ghost: Dots;
+  private readonly envelope: THREE.Mesh;
+  private readonly envelopePos: Float32Array;
+  private spread: SpreadPoint[] = [];
+  private useSpread = false;
+  private fuzzy = false;
+  private ghostSet = -1;
+  private readonly cursor: Sample = { x: 0, y: 0, step: 0, rate: 1, sigma: 0 };
   private readonly scratch: Vec2 = { x: 0, y: 0 };
   private chain: readonly { x: number; y: number; step?: number; rate?: number }[] = [];
   private chainPrefix: { x: number; y: number; step: number; rate: number } | null = null;
@@ -77,6 +86,7 @@ class PathVisual implements Visual {
     const max = theme.path.maxDots;
     this.which = new Uint8Array(max);
     this.dotRate = new Float32Array(max);
+    this.dotSigma = new Float32Array(max);
     this.object.name = "path";
     this.object.userData.asset = theme.assets.predictedPath;
     this.path = makeDots(theme, 2);
@@ -98,7 +108,28 @@ class PathVisual implements Visual {
     this.endRing.frustumCulled = false;
     this.endRing.renderOrder = 3;
     this.endRing.visible = false;
-    this.object.add(this.path.mesh, this.orbit.mesh, this.endRing);
+    this.ghost = makeDots(theme, 4);
+    this.ghost.mesh.name = "path-ghost";
+    this.envelopePos = new Float32Array(max * 18);
+    const envelopeGeom = new THREE.BufferGeometry();
+    envelopeGeom.setAttribute("position", new THREE.BufferAttribute(this.envelopePos, 3));
+    envelopeGeom.setDrawRange(0, 0);
+    this.envelope = new THREE.Mesh(
+      envelopeGeom,
+      new THREE.MeshBasicMaterial({
+        color: theme.colors.path,
+        transparent: true,
+        opacity: 0.14,
+        depthTest: false,
+        depthWrite: false,
+        toneMapped: false,
+        side: THREE.DoubleSide,
+      }),
+    );
+    this.envelope.frustumCulled = false;
+    this.envelope.renderOrder = 1;
+    this.envelope.visible = false;
+    this.object.add(this.envelope, this.path.mesh, this.orbit.mesh, this.ghost.mesh, this.endRing);
   }
 
   update(frame: VisualFrame): void {
@@ -109,8 +140,11 @@ class PathVisual implements Visual {
     if (!planning || game.gravity === "sheet") {
       this.path.mesh.visible = false;
       this.orbit.mesh.visible = false;
+      this.ghost.mesh.visible = false;
+      this.envelope.visible = false;
       this.endRing.visible = false;
       this.pathPred = null;
+      this.fuzzy = false;
       return;
     }
     const camera = game.camera;
@@ -122,6 +156,11 @@ class PathVisual implements Visual {
       width === this.pathW &&
       height === this.pathH
     ) {
+      const bucket = Math.floor(frame.now / 300);
+      if (this.fuzzy && bucket !== this.ghostSet) {
+        this.ghostSet = bucket;
+        this.drawFuzzy(width, height, frame.now);
+      }
       return;
     }
     this.pathPred = game.prediction;
@@ -138,8 +177,14 @@ class PathVisual implements Visual {
     }
     const origin = game.mode === "paused" ? game.ship : game.initial;
     this.chain = game.prediction.path;
+    this.spread = hasMagneticBody(game.level.bodies)
+      ? spreadAlong(game.prediction.path, game.level.dt, game.level.bodies)
+      : [];
+    const endSigma = this.spread.length === 0 ? 0 : this.spread[this.spread.length - 1].sigma;
+    this.fuzzy = endSigma >= 0.6;
     this.chainPrefix = { x: origin.x, y: origin.y, step: origin.step, rate: origin.rate };
     this.chainClose = false;
+    this.useSpread = true;
     const count = this.sample(width, height, this.path.centers, splitStep);
     const head = srgb01(this.theme.colors.path);
     const tailColor = tailHex(game, this.theme);
@@ -152,15 +197,19 @@ class PathVisual implements Visual {
       this.endRing.visible = true;
       const ringColor = this.which[count - 1] === 0 ? this.theme.colors.path : tailColor;
       (this.endRing.material as THREE.MeshBasicMaterial).color.set(ringColor);
+      const grown = this.fuzzy ? (6 + endSigma) / this.theme.path.endRingOuter : 1;
+      this.endRing.scale.setScalar(grown);
     } else {
       this.endRing.visible = false;
     }
+    this.drawFuzzy(width, height, frame.now);
 
     const orbit = game.prediction.orbit;
     if (orbit && orbit.length > 2) {
       this.chain = orbit;
       this.chainPrefix = null;
       this.chainClose = true;
+      this.useSpread = false;
       const n = this.sample(width, height, this.orbit.centers, -1);
       const mint = srgb01(this.theme.colors.resultWin);
       for (let i = 0; i < n; i++) this.which[i] = 1;
@@ -189,13 +238,16 @@ class PathVisual implements Visual {
     centers[1] = height - prevY;
     this.which[0] = this.cursor.step <= splitStep ? 0 : 1;
     this.dotRate[0] = this.cursor.rate;
+    this.dotSigma[0] = this.cursor.sigma;
     let prevRate = this.cursor.rate;
+    let prevSigma = this.cursor.sigma;
     let count = 1;
     let carry = 0;
     for (let i = 1; i < total && count < max; i++) {
       this.read(i);
       const step = this.cursor.step;
       const curRate = this.cursor.rate;
+      const curSigma = this.cursor.sigma;
       projectToScreen(this.cursor.x, this.cursor.y, width, height, this.scratch);
       const curX = this.scratch.x;
       const curY = this.scratch.y;
@@ -210,6 +262,7 @@ class PathVisual implements Visual {
         centers[o + 1] = height - y;
         this.which[count] = step <= splitStep ? 0 : 1;
         this.dotRate[count] = prevRate + (curRate - prevRate) * u;
+        this.dotSigma[count] = prevSigma + (curSigma - prevSigma) * u;
         count += 1;
         t += spacing;
       }
@@ -217,6 +270,7 @@ class PathVisual implements Visual {
       prevX = curX;
       prevY = curY;
       prevRate = curRate;
+      prevSigma = curSigma;
     }
     return count;
   }
@@ -225,17 +279,19 @@ class PathVisual implements Visual {
     if (this.chainPrefix && index === 0) {
       this.cursor.x = this.chainPrefix.x;
       this.cursor.y = this.chainPrefix.y;
-      this.cursor.step = this.chainPrefix.step;
-      this.cursor.rate = this.chainPrefix.rate;
-      return;
-    }
-    const i = index - (this.chainPrefix ? 1 : 0);
-    const point = i < this.chain.length ? this.chain[i] : this.chain[0];
-    this.cursor.x = point.x;
-    this.cursor.y = point.y;
-    this.cursor.step = point.step ?? i;
-    this.cursor.rate = point.rate ?? 1;
+    this.cursor.step = this.chainPrefix.step;
+    this.cursor.rate = this.chainPrefix.rate;
+    this.cursor.sigma = 0;
+    return;
   }
+  const i = index - (this.chainPrefix ? 1 : 0);
+  const point = i < this.chain.length ? this.chain[i] : this.chain[0];
+  this.cursor.x = point.x;
+  this.cursor.y = point.y;
+  this.cursor.step = point.step ?? i;
+  this.cursor.rate = point.rate ?? 1;
+  this.cursor.sigma = this.useSpread ? (this.spread[i]?.sigma ?? 0) : 0;
+}
 
   private paint(
     colors: Float32Array,
@@ -256,9 +312,77 @@ class PathVisual implements Visual {
       colors[o] = rgb[0];
       colors[o + 1] = rgb[1];
       colors[o + 2] = rgb[2];
-      const alpha = i < split ? this.theme.path.sureAlpha : this.theme.path.dimAlpha;
-      colors[o + 3] = Math.min(0.95, alpha + (byRate ? glow * 0.4 : 0));
+      const sigma = this.dotSigma[i];
+      const faded = sigma >= 0.6 ? Math.max(0.18, 0.7 - sigma / 40) : i < split ? this.theme.path.sureAlpha : this.theme.path.dimAlpha;
+      colors[o + 3] = Math.min(0.95, faded + (byRate && sigma < 0.6 ? glow * 0.4 : 0));
     }
+  }
+
+  private drawFuzzy(width: number, height: number, now: number): void {
+    if (!this.fuzzy || this.spread.length < 2) {
+      this.envelope.visible = false;
+      this.ghost.mesh.visible = false;
+      return;
+    }
+    const zoom = Math.max(this.pathZoom, 0.18);
+    const limit = this.envelopePos.length / 3;
+    const stride = Math.max(1, Math.ceil(this.spread.length / 120));
+    let verts = 0;
+    let ghosts = 0;
+    const set = Math.floor(now / 300) % 2;
+    this.ghostSet = Math.floor(now / 300);
+    const ghostRgb = srgb01("#E9DCFF");
+    let prev: { x: number; y: number; sigma: number } | null = null;
+    for (let i = 0; i < this.spread.length; i += stride) {
+      const point = this.spread[i];
+      if (point.sigma < 0.6) {
+        prev = null;
+        continue;
+      }
+      projectToScreen(point.x, point.y, width, height, this.scratch);
+      const sx = this.scratch.x;
+      const sy = height - this.scratch.y;
+      if (ghosts < this.theme.path.maxDots) {
+        const h = Math.sin(i * 12.9898 + set * 78.233) * 43758.5453;
+        const f = h - Math.floor(h);
+        const ang = f * Math.PI * 2;
+        const rad = (0.25 + 0.7 * Math.abs(Math.sin(h * 1.7))) * point.sigma * zoom;
+        this.ghost.centers[ghosts * 2] = sx + Math.cos(ang) * rad;
+        this.ghost.centers[ghosts * 2 + 1] = sy + Math.sin(ang) * rad;
+        this.ghost.colors[ghosts * 4] = ghostRgb[0];
+        this.ghost.colors[ghosts * 4 + 1] = ghostRgb[1];
+        this.ghost.colors[ghosts * 4 + 2] = ghostRgb[2];
+        this.ghost.colors[ghosts * 4 + 3] = ghosts % 2 === 0 ? 0.45 : 0.1;
+        ghosts += 1;
+      }
+      if (prev && verts + 6 <= limit) {
+        const dx = sx - prev.x;
+        const dy = sy - prev.y;
+        const len = Math.hypot(dx, dy) || 1;
+        const nx = (-dy / len) * prev.sigma * zoom;
+        const ny = (dx / len) * prev.sigma * zoom;
+        const mx = (-dy / len) * point.sigma * zoom;
+        const my = (dx / len) * point.sigma * zoom;
+        this.envelopePos.set(
+          [
+            prev.x + nx, prev.y + ny, 0,
+            prev.x - nx, prev.y - ny, 0,
+            sx + mx, sy + my, 0,
+            prev.x - nx, prev.y - ny, 0,
+            sx - mx, sy - my, 0,
+            sx + mx, sy + my, 0,
+          ],
+          verts * 3,
+        );
+        verts += 6;
+      }
+      prev = { x: sx, y: sy, sigma: point.sigma };
+    }
+    const geometry = this.envelope.geometry;
+    geometry.setDrawRange(0, verts);
+    geometry.attributes.position.needsUpdate = true;
+    this.envelope.visible = verts > 0;
+    commitDots(this.ghost, ghosts, 3.2);
   }
 }
 

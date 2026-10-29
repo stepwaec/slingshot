@@ -229,20 +229,73 @@ html, body, #app {
 }
 
 #gravity,
-#gravity-clock {
+#gravity-clock,
+#magnetism {
   height: 32px;
   padding: 0 12px;
   font-size: 12px;
 }
 
 #gravity[aria-pressed="true"],
-#gravity-clock[aria-pressed="true"] {
+#gravity-clock[aria-pressed="true"],
+#magnetism[aria-pressed="true"] {
   background: var(--accent);
   color: var(--ink);
   border-color: transparent;
 }
 
-#gravity-clock[hidden] { display: none; }
+#gravity-clock[hidden],
+#magnetism[hidden],
+#mag-legend[hidden] { display: none; }
+
+#mag-legend {
+  position: absolute;
+  left: 40px;
+  top: 172px;
+  width: 168px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel);
+  pointer-events: none;
+}
+
+.mag-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.mag-key {
+  font: 600 11px/1 var(--ui);
+  color: var(--muted);
+}
+
+#mag-legend ul {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font: 500 11px/1.2 var(--ui);
+  color: var(--text);
+}
+
+.mag-swatch {
+  display: inline-block;
+  width: 54px;
+  height: 10px;
+  margin-right: 8px;
+  vertical-align: -1px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+}
+
+.mag-swatch[data-zone="fuzzy"] { background: rgba(124, 92, 255, 0.46); border-color: #7C5CFF; }
+.mag-swatch[data-zone="scrambled"] { background: rgba(177, 77, 255, 0.59); border-color: #B14DFF; }
+.mag-swatch[data-zone="damaging"] { background: rgba(229, 65, 201, 0.77); border-color: #E541C9; }
+.mag-swatch[data-zone="lethal"] { background: rgba(255, 61, 127, 0.9); border-color: #FF3D7F; }
 
 .fuel-block {
   position: absolute;

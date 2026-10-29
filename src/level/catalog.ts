@@ -5,6 +5,9 @@ import rescueData from "../levels/rescue.json";
 import pairData from "../levels/pair.json";
 import emberData from "../levels/ember.json";
 import chainData from "../levels/chain.json";
+import pulseData from "../levels/pulse.json";
+import quakeData from "../levels/quake.json";
+import needleData from "../levels/needle.json";
 import { loadLevelData, type Level, type LevelPhysics } from "./schema";
 import { shipLoadout } from "../game/upgrades";
 
@@ -19,8 +22,11 @@ export const rescue: Level = loadLevelData(rescueData, "src/levels/rescue.json")
 export const pair: Level = loadLevelData(pairData, "src/levels/pair.json");
 export const ember: Level = loadLevelData(emberData, "src/levels/ember.json");
 export const chain: Level = loadLevelData(chainData, "src/levels/chain.json");
+export const pulse: Level = loadLevelData(pulseData, "src/levels/pulse.json");
+export const quake: Level = loadLevelData(quakeData, "src/levels/quake.json");
+export const needle: Level = loadLevelData(needleData, "src/levels/needle.json");
 
-export const LEVELS: readonly Level[] = [passage, relay, rescue, pair, ember, chain];
+export const LEVELS: readonly Level[] = [passage, relay, rescue, pair, ember, chain, pulse, quake, needle];
 
 function bodyById(level: Level, id: string): Body {
   const body = level.bodies.find((item) => item.id === id);

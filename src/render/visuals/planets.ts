@@ -120,21 +120,27 @@ const diskFrag = /* glsl */ `
 varying vec2 vLocal;
 uniform vec3 uHot;
 uniform vec3 uCool;
+uniform float uTime;
+uniform float uHalf;
 void main() {
+  if (uHalf > 0.0 && vLocal.y < 0.0) discard;
+  if (uHalf < 0.0 && vLocal.y > 0.0) discard;
   float r = length(vLocal);
-  float fw = fwidth(r);
   float band = smoothstep(0.28, 0.36, r) * (1.0 - smoothstep(0.92, 1.0, r));
   if (band <= 0.0) discard;
   float ang = atan(vLocal.y, vLocal.x);
-  float fil = 0.65 + 0.35 * sin(ang * 8.0 + r * 30.0);
+  float fil = 0.55 + 0.45 * sin(ang * 10.0 - uTime * 1.4 + r * 24.0);
+  float approach = smoothstep(0.9, -0.9, vLocal.x);
   vec3 col = mix(uCool, uHot, smoothstep(0.36, 0.7, r));
-  gl_FragColor = vec4(col, band * fil * 0.8);
+  col *= mix(0.55, 1.15, approach);
+  gl_FragColor = vec4(col, band * fil * 0.85);
 }
 `;
 
 const holeFrag = /* glsl */ `
 varying vec2 vLocal;
 uniform vec3 uRing;
+uniform vec3 uArc;
 uniform float uHorizon;
 void main() {
   float r = length(vLocal);
@@ -142,9 +148,18 @@ void main() {
   float hole = 1.0 - smoothstep(uHorizon - fw, uHorizon + fw, r);
   float ringR = uHorizon * 1.22;
   float ring = 1.0 - smoothstep(0.012, 0.012 + fw * 2.0, abs(r - ringR));
-  if (hole <= 0.0 && ring <= 0.0) discard;
-  vec3 col = mix(vec3(0.01, 0.012, 0.02), uRing, ring);
-  float alpha = max(hole, ring * 0.85);
+  float einstein = 1.0 - smoothstep(0.008, 0.008 + fw * 2.0, abs(r - 0.875));
+  float ang = atan(vLocal.y, vLocal.x);
+  float wobble = 0.006 * sin(ang * 5.0);
+  float arcR = 0.68 + wobble;
+  float arcBand = 1.0 - smoothstep(0.018, 0.018 + fw * 2.0, abs(r - arcR));
+  float upper = 1.0 - smoothstep(0.15, 0.55, abs(ang - 1.5707963));
+  float lower = 1.0 - smoothstep(0.15, 0.55, abs(ang + 1.5707963));
+  float arc = arcBand * max(upper, lower);
+  if (hole <= 0.0 && ring <= 0.0 && einstein <= 0.0 && arc <= 0.0) discard;
+  vec3 col = mix(vec3(0.01, 0.012, 0.02), uRing, max(ring, einstein * 0.65));
+  col = mix(col, uArc, arc);
+  float alpha = max(max(hole, ring * 0.9), max(einstein * 0.45, arc * 0.75));
   gl_FragColor = vec4(col, alpha);
 }
 `;
@@ -152,7 +167,9 @@ void main() {
 interface HoleView {
   body: Body;
   mesh: THREE.Mesh;
-  disk: THREE.Mesh;
+  back: THREE.Mesh;
+  front: THREE.Mesh;
+  time: THREE.IUniform<number>;
 }
 
 interface PlanetView {
@@ -197,22 +214,23 @@ class PlanetsVisual implements Visual {
     for (const body of level.bodies) {
       if (body.kind === "star") continue;
       if (body.kind === "blackhole") {
-        const disk = new THREE.Mesh(
-          new THREE.PlaneGeometry(2, 2),
-          shader(diskFrag, {
-            uHot: { value: srgbVec("#FFB15A") },
-            uCool: { value: srgbVec("#FF6A2A") },
-          }),
-        );
-        disk.scale.set(body.radius * 3.1, body.radius * 1.35, 1);
-        disk.position.set(body.x, body.y, 0);
-        disk.renderOrder = order++;
-        disk.name = `${body.id}-disk`;
-        this.object.add(disk);
+        const diskUniforms = {
+          uHot: { value: srgbVec("#FFB15A") },
+          uCool: { value: srgbVec("#FF6A2A") },
+          uTime: { value: 0 },
+          uHalf: { value: 1 },
+        };
+        const back = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), shader(diskFrag, diskUniforms));
+        back.scale.set(body.radius * 3.1, body.radius * 1.35, 1);
+        back.position.set(body.x, body.y, 0);
+        back.renderOrder = order++;
+        back.name = `${body.id}-disk`;
+        this.object.add(back);
         const mesh = new THREE.Mesh(
           new THREE.PlaneGeometry(2, 2),
           shader(holeFrag, {
-            uRing: { value: srgbVec(theme.colors.starCorona) },
+            uRing: { value: srgbVec("#B48CFF") },
+            uArc: { value: srgbVec("#FFB15A") },
             uHorizon: { value: 1 / 2.4 },
           }),
         );
@@ -221,8 +239,23 @@ class PlanetsVisual implements Visual {
         mesh.scale.set(span, span, 1);
         mesh.renderOrder = order++;
         mesh.name = body.id;
+        mesh.userData.asset = theme.assets.blackHole;
         this.object.add(mesh);
-        this.holes.push({ body, mesh, disk });
+        const front = new THREE.Mesh(
+          new THREE.PlaneGeometry(2, 2),
+          shader(diskFrag, {
+            uHot: { value: srgbVec("#FFB15A") },
+            uCool: { value: srgbVec("#FF6A2A") },
+            uTime: diskUniforms.uTime,
+            uHalf: { value: -1 },
+          }),
+        );
+        front.scale.set(body.radius * 3.1, body.radius * 1.35, 1);
+        front.position.set(body.x, body.y, 0);
+        front.renderOrder = order++;
+        front.name = `${body.id}-disk-front`;
+        this.object.add(front);
+        this.holes.push({ body, mesh, back, front, time: diskUniforms.uTime });
         continue;
       }
       const target = body.kind === "target";
@@ -318,10 +351,13 @@ class PlanetsVisual implements Visual {
     const time = simTime(frame.game);
     const bodies = frame.game.level.bodies;
     const spin = (frame.now / 1000) * 0.12;
+    const spinTime = frame.now / 1000;
     for (const hole of this.holes) {
       const pose = bodyPose(hole.body, time, bodies);
       hole.mesh.position.set(pose.x, pose.y, 0);
-      hole.disk.position.set(pose.x, pose.y, 0);
+      hole.back.position.set(pose.x, pose.y, 0);
+      hole.front.position.set(pose.x, pose.y, 0);
+      hole.time.value = spinTime;
     }
     for (const planet of this.planets) {
       const pose = bodyPose(planet.body, time, bodies);

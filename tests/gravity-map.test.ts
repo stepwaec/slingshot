@@ -299,6 +299,7 @@ describe("gravity map toggle", () => {
             },
           },
           gravityClockButton: quietButton(),
+          magnetismButton: quietButton(),
         } as unknown as InputElements,
         () => ({ width: 800, height: 600 }),
       );

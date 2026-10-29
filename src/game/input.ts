@@ -8,6 +8,7 @@ import {
   applyGravityKey,
   cycleGravity,
   launch,
+  toggleMagnetism,
   moveNodeAlong,
   nodeIncoming,
   nodePosition,
@@ -23,7 +24,7 @@ import {
   type RailSample,
 } from "./state";
 import { panBy, worldToScreen, zoomAt } from "../render/camera";
-import { SIM_SPEEDS, type SimSpeed } from "../sim/physics";
+import { hasMagneticBody, SIM_SPEEDS, type SimSpeed } from "../sim/physics";
 
 export interface InputElements {
   canvas: HTMLCanvasElement;
@@ -39,6 +40,7 @@ export interface InputElements {
   slowButton: HTMLButtonElement;
   gravityButton: HTMLButtonElement;
   gravityClockButton: HTMLButtonElement;
+  magnetismButton: HTMLButtonElement;
 }
 
 const HANDLE_RADIUS = 16;
@@ -152,6 +154,10 @@ export function bindInput(
   elements.slowButton.addEventListener("click", () => setSlow(game, !game.slow));
   elements.gravityButton.addEventListener("click", () => cycleGravity(game));
   elements.gravityClockButton.addEventListener("click", () => setGravityClock(game, !game.gravityClock));
+  elements.magnetismButton.addEventListener("click", () => {
+    if (!hasMagneticBody(game.level.bodies)) return;
+    toggleMagnetism(game);
+  });
   elements.deleteButton.addEventListener("click", () => deleteSelected(game));
   elements.nodeRemove.addEventListener("click", (event) => {
     event.stopPropagation();
@@ -194,6 +200,10 @@ export function bindInput(
       if (event.repeat || event.metaKey || event.ctrlKey || event.altKey) return;
       if (game.gravity !== "grid") return;
       setGravityClock(game, !game.gravityClock);
+    } else if (event.key === "m" || event.key === "M") {
+      if (event.repeat || event.metaKey || event.ctrlKey || event.altKey) return;
+      if (!hasMagneticBody(game.level.bodies)) return;
+      toggleMagnetism(game);
     } else if (event.key === "1" || event.key === "2" || event.key === "4") {
       setSpeed(game, Number(event.key) as SimSpeed);
     }
