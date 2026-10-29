@@ -1,12 +1,15 @@
 import * as THREE from "three";
 import type { Vec2 } from "../../sim/physics";
+import { sampleBurnAnim, windupFlicker, type BurnSample } from "../burn-anim";
 import { projectToScreen } from "../camera";
+import { srgbVec, shader } from "./materials";
 import type { Theme } from "../theme";
 import { disposeObject, type Visual, type VisualFactory, type VisualFrame } from "../visual";
 
 /**
- * v1 ship: the ship.svg polygons, flat, screen-pixel sized, plus a one-frame
- * thrust flash and the crash burst. Swap this factory for a glTF. Load
+ * v1 ship: the ship.svg polygons, flat, screen-pixel sized, plus the burn
+ * wind-up and thrust tail. Those read sim time and the plan; they never
+ * step the simulation. Swap this factory for a glTF. Load
  * `theme.assets.ship` and parent it on `object`; keep the heading lerp.
  * The crash burst can move with the ship or become its own factory later.
  */
@@ -21,11 +24,14 @@ class ShipVisual implements Visual {
   private readonly burst: THREE.Group;
   private readonly outerAttr: THREE.BufferAttribute;
   private readonly coreAttr: THREE.BufferAttribute;
+  private readonly outerMat: THREE.MeshBasicMaterial;
+  private readonly coreMat: THREE.MeshBasicMaterial;
+  private readonly glow: THREE.Mesh;
+  private readonly glowAlpha: THREE.IUniform<number>;
   private readonly scratch: Vec2 = { x: 0, y: 0 };
   private angle = 0;
   private angleReady = false;
   private lastMode: VisualFrame["game"]["mode"] | null = null;
-  private lastSpent = 0;
   private burstFrames = 0;
 
   constructor(theme: Theme) {
@@ -88,11 +94,29 @@ class ShipVisual implements Visual {
     );
     this.outerAttr = outerGeo.getAttribute("position") as THREE.BufferAttribute;
     this.coreAttr = coreGeo.getAttribute("position") as THREE.BufferAttribute;
-    const outer = new THREE.Mesh(outerGeo, flameMaterial(theme.colors.thrustOuter, theme.thrust.outerAlpha));
-    const core = new THREE.Mesh(coreGeo, flameMaterial(theme.colors.thrustCore, 1));
+    this.outerMat = flameMaterial(theme.colors.thrustOuter, theme.thrust.outerAlpha);
+    this.coreMat = flameMaterial(theme.colors.thrustCore, 1);
+    const outer = new THREE.Mesh(outerGeo, this.outerMat);
+    const core = new THREE.Mesh(coreGeo, this.coreMat);
     outer.renderOrder = 7;
     core.renderOrder = 7;
-    this.thrust.add(outer, core);
+    const glowAlpha = { value: 0 };
+    this.glowAlpha = glowAlpha;
+    this.glow = new THREE.Mesh(
+      new THREE.CircleGeometry(1, 28),
+      shader(glowFrag, {
+        uColor: { value: srgbVec(theme.colors.thrustOuter) },
+        uAlpha: glowAlpha,
+      }),
+    );
+    this.glow.name = "burn-windup";
+    this.glow.position.set(0, theme.thrust.base, 0);
+    this.glow.frustumCulled = false;
+    this.glow.renderOrder = 6;
+    this.glow.visible = false;
+    const glowMat = this.glow.material as THREE.ShaderMaterial;
+    glowMat.blending = THREE.AdditiveBlending;
+    this.thrust.add(this.glow, outer, core);
     this.thrust.visible = false;
 
     this.burst = buildBurst(theme);
@@ -108,7 +132,6 @@ class ShipVisual implements Visual {
         (this.lastMode === "paused" && game.mode === "flying");
       if (!flightPause) this.angleReady = false;
       this.lastMode = game.mode;
-      if (game.mode === "planning") this.lastSpent = 0;
     }
     const crashed = game.mode !== "planning" && game.ship.status === "crashed";
     const pose = game.mode === "planning" ? game.initial : game.ship;
@@ -128,18 +151,15 @@ class ShipVisual implements Visual {
     this.ship.rotation.z = this.angle;
     this.ship.scale.set(k, k, 1);
 
-    const thrusting = game.mode === "flying" && game.spentNodes > this.lastSpent;
-    if (game.mode !== "planning") this.lastSpent = game.spentNodes;
-    this.thrust.visible = thrusting && !crashed;
-    if (this.thrust.visible) {
-      const j = 0.9 + Math.random() * 0.2;
-      this.outerAttr.setY(2, this.theme.thrust.base - this.theme.thrust.outerLength * j);
-      this.coreAttr.setY(2, this.theme.thrust.base - this.theme.thrust.coreLength * j);
-      this.outerAttr.needsUpdate = true;
-      this.coreAttr.needsUpdate = true;
-      this.thrust.position.copy(this.ship.position);
-      this.thrust.rotation.z = this.angle;
-      this.thrust.scale.set(k, k, 1);
+    const showBurn = !crashed && (game.mode === "flying" || game.mode === "paused");
+    if (!showBurn) {
+      this.thrust.visible = false;
+    } else {
+      const burn = this.theme.burn;
+      this.poseThrust(
+        sampleBurnAnim(game.ship.step, game.level.dt, game.nodes, burn.windup, burn.tail),
+        k,
+      );
     }
 
     this.burst.visible = crashed;
@@ -157,7 +177,49 @@ class ShipVisual implements Visual {
   dispose(): void {
     disposeObject(this.object);
   }
+
+  /** Wind-up glow and thrust tail. Length and flicker come from sim time. */
+  private poseThrust(anim: BurnSample, scale: number): void {
+    const burn = this.theme.burn;
+    const windup = anim.windup;
+    const thrust = anim.thrust;
+    const flicker = windupFlicker(anim.time, windup, burn.flickerHz);
+    const show = thrust > 0 || windup > 0;
+    this.thrust.visible = show;
+    this.glow.visible = windup > 0;
+    if (!show) return;
+    this.thrust.position.copy(this.ship.position);
+    this.thrust.rotation.z = this.angle;
+    this.thrust.scale.set(scale, scale, 1);
+    const wobble = 0.94 + 0.06 * Math.sin(anim.time * burn.flickerHz * Math.PI * 2);
+    const lengthScale =
+      thrust > 0 ? (0.7 + 0.3 * thrust) * wobble : (0.22 + 0.38 * windup) * (0.72 + 0.28 * flicker);
+    const alpha = thrust > 0 ? thrust : windup * flicker * 0.8;
+    this.outerAttr.setY(2, this.theme.thrust.base - this.theme.thrust.outerLength * lengthScale);
+    this.coreAttr.setY(2, this.theme.thrust.base - this.theme.thrust.coreLength * lengthScale);
+    this.outerAttr.needsUpdate = true;
+    this.coreAttr.needsUpdate = true;
+    this.outerMat.opacity = this.theme.thrust.outerAlpha * alpha;
+    this.coreMat.opacity = alpha;
+    if (!this.glow.visible) return;
+    const span = 4 + 10 * windup * flicker;
+    this.glow.scale.set(span, span, 1);
+    this.glowAlpha.value = 0.35 + 0.65 * windup * flicker;
+  }
 }
+
+const glowFrag = /* glsl */ `
+varying vec2 vLocal;
+uniform vec3 uColor;
+uniform float uAlpha;
+void main() {
+  float d = length(vLocal);
+  float alpha = smoothstep(1.0, 0.0, d);
+  alpha *= alpha;
+  if (alpha <= 0.01) discard;
+  gl_FragColor = vec4(uColor, alpha * uAlpha);
+}
+`;
 
 function flameMaterial(color: string, opacity: number): THREE.MeshBasicMaterial {
   const material = new THREE.MeshBasicMaterial({

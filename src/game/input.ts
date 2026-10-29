@@ -28,6 +28,8 @@ export interface InputElements {
   canvas: HTMLCanvasElement;
   launchButton: HTMLButtonElement;
   deleteButton: HTMLButtonElement;
+  /** Small × drawn next to the selected node. */
+  nodeRemove: HTMLButtonElement;
   resetButtons: HTMLButtonElement[];
   clearButtons: HTMLButtonElement[];
   speedButtons: HTMLButtonElement[];
@@ -150,6 +152,10 @@ export function bindInput(
   elements.gravityButton.addEventListener("click", () => cycleGravity(game));
   elements.gravityClockButton.addEventListener("click", () => setGravityClock(game, !game.gravityClock));
   elements.deleteButton.addEventListener("click", () => deleteSelected(game));
+  elements.nodeRemove.addEventListener("click", (event) => {
+    event.stopPropagation();
+    deleteSelected(game);
+  });
   for (const button of elements.resetButtons) button.addEventListener("click", doReset);
   for (const button of elements.clearButtons) button.addEventListener("click", () => clearPlan(game));
   for (const button of elements.speedButtons) {

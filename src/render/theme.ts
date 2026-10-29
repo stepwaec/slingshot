@@ -83,6 +83,21 @@ export const theme = {
     coreLength: 14,
     outerAlpha: 0.9,
   },
+  /**
+   * Burn animation, in seconds of sim time (`step * dt`).
+   * The wind-up starts this long before each burn node. The thrust tail
+   * lasts this long after it. Speed, slow motion, and pause do not scale
+   * these: they only change how fast the step advances. Set either duration
+   * to 0 to hide that half. The sim does not read this.
+   */
+  burn: {
+    windup: 0.5,
+    tail: 0.75,
+    /** Flicker cycles per sim second while the engine spools up. */
+    flickerHz: 9,
+    /** Node-marker pulse cycles per sim second during the wind-up. */
+    pulseHz: 3.5,
+  },
   burst: { frames: 12 },
   trail: { samples: 240, widthPx: 2 },
   path: {

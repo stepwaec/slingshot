@@ -66,6 +66,27 @@ html, body, #app {
 
 .node-tag[data-over="true"] { color: var(--critical); }
 
+#node-x {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--text);
+  font: 600 12px/14px var(--ui);
+  pointer-events: auto;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  z-index: 2;
+}
+
+#node-x[hidden] { display: none; }
+
+#node-x:hover { color: var(--critical); }
+
 #hud {
   position: absolute;
   inset: 0;
