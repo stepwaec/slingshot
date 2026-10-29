@@ -1,30 +1,87 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
-  <!-- Start planet (v1.1 realism pass). ONE group #planetStart at translate(60 60); geometry relative to (0,0).
-       r 34. Lit side faces the star: L = (+0.7071, -0.7071) (upper-right). Draw order:
-       1. base   circle r 34, #3D8BFF, with the surface filter:
-       2. noise  feTurbulence fractalNoise baseFrequency 0.045, numOctaves 3, seed 7, saturate 0,
-                 contrast x3 about 0.5 (linear slope 3 intercept -1), constant alpha 0.22, blend soft-light, clipped to the disc.
-                 Canvas: 128 px value-noise tile (mulberry32 seed 7, 3 octaves, contrast x3), "soft-light" at alpha 0.22, clipped.
-       3. shade  radial, userSpace centre 0.36 r L = (8.66, -8.66), radius 1.25 r = 42.5:
-                 0.00 #9CCBFF a0.90 | 0.40 #3D8BFF a0 | 0.70 #142B5E a0.55 | 0.86 #142B5E a0.92 | 1.00 #142B5E a1.0
-                 (0.70-0.86 is the terminator).
-       4. limb   circle r 33.5, stroke 1, #9CCBFF a0.16.
-       5. rim    circle r 1.12 r = 38.08, radial from the planet centre, #7FB8FF:
-                 0.00 a0 | 0.80 a0 | 0.87 a0.55 | 0.92 a0.30 | 1.00 a0,
-                 multiplied (alpha mask) by a linear gradient along L from +1.12 r L (26.93,-26.93) = 1.0 to -1.12 r L = 0.35. -->
+  <!-- Start planet, v1.2 (ocean world, animated). ONE group #planetStart at translate(60 60); geometry relative to (0,0).
+       r 34, disc diameter H = 68. Lit side faces the star: L = (+0.7071, -0.7071) (upper-right). Lighting never rotates.
+       Texture strip: period P = round(2*pi*r) = 214 px (one full rotation). Each strip is ONE rect 2P x 2r = 428x68 (never two abutting rects:
+       an anti-aliased join inside the clip would show as a hairline at fractional translate); its filter computes the noise once over a
+       214x68 subregion (stitchTiles stitch -> periodic in exactly P) and feTile repeats it across the 428 px region, so the strip is 2P wide
+       with no geometry edge. Scrolled west->east (texture moves left->right: translate 0 -> +P; the brief's sketch says to="-P" but also
+       "texture moves left->right" - the + sign is what does that) through the circular clip #psClip. Start phase: tile x 44 (strip x 258) at the
+       disc's left edge (inner translate(-292 -34) = -(r + P + 44), -r); the t = 0 window then shows ~38 % land (the tile averages 33.5 %).
+
+       Draw order:
+       1. base     circle r 34, #3D8BFF (ocean).
+       2. surface  strip, SMIL translate 0 -> 214 over 90 s. Strip = rect 428x68, fill #3D8BFF, filter #psLand (region 0..428 x 0..68):
+                   feTurbulence fractalNoise baseFrequency 0.030, numOctaves 4, seed 7, stitchTiles stitch on subregion 0..214 x 0..68 (-> seamless),
+                   feTile to 428x68 (two periods, one rect),
+                   alpha channel -> land mask: linear slope 24, intercept -12.772 (soft threshold at 0.553 = p68 of the field -> ~32 % land,
+                   coastline transition ~1 px), land colour #8FB07A; highlands = same noise, slope 6 intercept -3.358 (threshold 0.643), then x0.22,
+                   colour #142B5E (darker interiors on the larger continents).
+                   Polar caps: bands 12 % of the disc at top and bottom (8.16 px), #E9EEF8, alpha 1 at the pole | 0.9 at 60 % | 0 at the band's inner edge,
+                   drawn inside the strip (they move with it, but as bands they look fixed).
+       3. clouds   strip, SMIL translate 0 -> 214 over 64 s, group opacity 0.5. Strip = rect 428x68, fill #F2F5FF, filter #psCloud:
+                   feTurbulence fractalNoise baseFrequency 0.055, numOctaves 4, seed 19, stitchTiles stitch on subregion 0..214 x 0..68, feTile over
+                   the filter region -4..432 x -4..72 (two periods, and the blur sees periodic neighbours), alpha -> linear slope 14, intercept -6.85
+                   (threshold 0.525 = p60 -> ~40 % cover), feGaussianBlur 0.8, feComposite in SourceGraphic (crops back to the 428x68 strip).
+                   Start phase: tile x 0 at the disc's left edge (inner translate(-248 -34) = -(r + P), -r).
+       4. squash   circle r 34, radial from the centre, #3D8BFF: 0.88 a0 | 1.00 a0.45  (fades the texture to 55 % in the outer 12 % of r).
+       5. glint    ellipse 0.22 r x 0.12 r = 7.5 x 4.1 at 0.45 r L = (10.82, -10.82), long axis along L (radial), rotate(-45), #FFFFFF radial a0.35 -> 0.
+       6. shade    radial, userSpace centre 0.36 r L = (8.66, -8.66), radius 1.25 r = 42.5 (v1.1 numbers, unchanged):
+                   0.00 #9CCBFF a0.90 | 0.40 #3D8BFF a0 | 0.70 #142B5E a0.55 | 0.86 #142B5E a0.92 | 1.00 #142B5E a1.0  (0.70-0.86 is the terminator).
+       7. limb     circle r 33.5, stroke 1, #9CCBFF a0.16.
+       8. rim      circle r 1.12 r = 38.08, radial from the planet centre, #7FB8FF: 0.00 a0 | 0.80 a0 | 0.87 a0.55 | 0.92 a0.30 | 1.00 a0,
+                   multiplied (alpha mask) by a linear gradient along L from +1.12 r L (26.93,-26.93) = 1.0 to -1.12 r L = 0.35 (v1.1, unchanged).
+       Static renders show t = 0. Ids: ps*. -->
   <defs>
-    <filter id="psSurface" x="-5%" y="-5%" width="110%" height="110%" color-interpolation-filters="sRGB">
-      <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="3" seed="7" result="psNoise"/>
-      <feColorMatrix in="psNoise" type="saturate" values="0" result="psGrey"/>
-      <feComponentTransfer in="psGrey" result="psGrain">
-        <feFuncR type="linear" slope="3" intercept="-1"/>
-        <feFuncG type="linear" slope="3" intercept="-1"/>
-        <feFuncB type="linear" slope="3" intercept="-1"/>
-        <feFuncA type="linear" slope="0" intercept="0.22"/>
+    <clipPath id="psClip"><circle r="34"/></clipPath>
+    <filter id="psLand" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="0" y="0" width="428" height="68" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.030" numOctaves="4" seed="7" stitchTiles="stitch" x="0" y="0" width="214" height="68" result="psN1"/>
+      <feTile in="psN1" x="0" y="0" width="428" height="68" result="psN"/>
+      <feColorMatrix in="psN" type="matrix" values="0 0 0 0 0.561  0 0 0 0 0.690  0 0 0 0 0.478  0 0 0 1 0" result="psLandRGB"/>
+      <feComponentTransfer in="psLandRGB" result="psLandMask">
+        <feFuncA type="linear" slope="24" intercept="-12.772"/>
       </feComponentTransfer>
-      <feBlend in="psGrain" in2="SourceGraphic" mode="soft-light" result="psShaded"/>
-      <feComposite in="psShaded" in2="SourceGraphic" operator="in"/>
+      <feColorMatrix in="psN" type="matrix" values="0 0 0 0 0.078  0 0 0 0 0.169  0 0 0 0 0.369  0 0 0 1 0" result="psHighRGB"/>
+      <feComponentTransfer in="psHighRGB" result="psHighCut">
+        <feFuncA type="linear" slope="6" intercept="-3.358"/>
+      </feComponentTransfer>
+      <feComponentTransfer in="psHighCut" result="psHighMask">
+        <feFuncA type="linear" slope="0.22" intercept="0"/>
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode in="SourceGraphic"/>
+        <feMergeNode in="psLandMask"/>
+        <feMergeNode in="psHighMask"/>
+      </feMerge>
     </filter>
+    <filter id="psCloud" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-4" y="-4" width="436" height="76" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.055" numOctaves="4" seed="19" stitchTiles="stitch" x="0" y="0" width="214" height="68" result="psCN"/>
+      <feTile in="psCN" x="-4" y="-4" width="436" height="76" result="psCT"/>
+      <feColorMatrix in="psCT" type="matrix" values="0 0 0 0 0.949  0 0 0 0 0.961  0 0 0 0 1  0 0 0 1 0" result="psCRGB"/>
+      <feComponentTransfer in="psCRGB" result="psCMask">
+        <feFuncA type="linear" slope="14" intercept="-6.85"/>
+      </feComponentTransfer>
+      <feGaussianBlur in="psCMask" stdDeviation="0.8" result="psCSoft"/>
+      <feComposite in="psCSoft" in2="SourceGraphic" operator="in"/>
+    </filter>
+    <linearGradient id="psCapN" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#E9EEF8" stop-opacity="1"/>
+      <stop offset="0.6" stop-color="#E9EEF8" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#E9EEF8" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="psCapS" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#E9EEF8" stop-opacity="1"/>
+      <stop offset="0.6" stop-color="#E9EEF8" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#E9EEF8" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="psSquash" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="34">
+      <stop offset="0.88" stop-color="#3D8BFF" stop-opacity="0"/>
+      <stop offset="1" stop-color="#3D8BFF" stop-opacity="0.45"/>
+    </radialGradient>
+    <radialGradient id="psGlint" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.35"/>
+      <stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
     <radialGradient id="psShade" gradientUnits="userSpaceOnUse" cx="8.66" cy="-8.66" r="42.5">
       <stop offset="0" stop-color="#9CCBFF" stop-opacity="0.90"/>
       <stop offset="0.40" stop-color="#3D8BFF" stop-opacity="0"/>
@@ -48,7 +105,25 @@
     </mask>
   </defs>
   <g id="planetStart" transform="translate(60 60)">
-    <circle r="34" fill="#3D8BFF" filter="url(#psSurface)"/>
+    <circle r="34" fill="#3D8BFF"/>
+    <g clip-path="url(#psClip)">
+      <g id="psSurfaceAnim">
+        <animateTransform attributeName="transform" type="translate" from="0 0" to="214 0" dur="90s" repeatCount="indefinite"/>
+        <g id="psSurfaceStrip" transform="translate(-292 -34)">
+          <rect width="428" height="68" fill="#3D8BFF" filter="url(#psLand)"/>
+          <rect width="428" height="8.16" fill="url(#psCapN)"/>
+          <rect y="59.84" width="428" height="8.16" fill="url(#psCapS)"/>
+        </g>
+      </g>
+      <g id="psCloudAnim" opacity="0.5">
+        <animateTransform attributeName="transform" type="translate" from="0 0" to="214 0" dur="64s" repeatCount="indefinite"/>
+        <g id="psCloudStrip" transform="translate(-248 -34)">
+          <rect width="428" height="68" fill="#F2F5FF" filter="url(#psCloud)"/>
+        </g>
+      </g>
+    </g>
+    <circle r="34" fill="url(#psSquash)"/>
+    <ellipse cx="10.82" cy="-10.82" rx="7.5" ry="4.1" transform="rotate(-45 10.82 -10.82)" fill="url(#psGlint)"/>
     <circle r="34" fill="url(#psShade)"/>
     <circle r="33.5" fill="none" stroke="#9CCBFF" stroke-opacity="0.16" stroke-width="1"/>
     <circle r="38.08" fill="url(#psRim)" mask="url(#psRimMask)"/>

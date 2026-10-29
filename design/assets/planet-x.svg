@@ -1,37 +1,96 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240">
-  <!-- Planet X, the target (v1.1 realism pass). ONE group #planetX at translate(120 120); geometry relative to (0,0).
-       r 30. Lit side faces the star: L = (-0.7071, +0.7071) (lower-left). Draw order:
-       0. halo   circle r 1.8 r = 54, #3DE0C2: 0.00 a0.35 | 0.556 a0.35 | 0.78 a0.10 | 1.00 a0   (as v1)
-       1. base   circle r 30, #3DE0C2, with the surface filter:
-       2. noise  feTurbulence fractalNoise baseFrequency 0.055, numOctaves 3, seed 11, saturate 0,
-                 contrast x3 about 0.5 (linear slope 3 intercept -1), constant alpha 0.22, blend soft-light, clipped to the disc.
-                 Canvas: 128 px value-noise tile (mulberry32 seed 11, 3 octaves, contrast x3), "soft-light" at alpha 0.22, clipped.
-       3. shade  radial, userSpace centre 0.36 r L = (-7.64, 7.64), radius 1.25 r = 37.5:
-                 0.00 #B5FFF0 a0.90 | 0.40 #3DE0C2 a0 | 0.70 #0E4A40 a0.55 | 0.86 #0E4A40 a0.92 | 1.00 #0E4A40 a1.0
-       4. limb   circle r 29.5, stroke 1, #B5FFF0 a0.18.
-       5. rim    circle r 1.12 r = 33.6, radial from the planet centre, #8FFFE6:
-                 0.00 a0 | 0.80 a0 | 0.87 a0.55 | 0.92 a0.30 | 1.00 a0,
-                 multiplied (alpha mask) by a linear gradient along L from +1.12 r L (-23.76, 23.76) = 1.0 to -1.12 r L = 0.35.
-       6. ring   capture ring r 78, #3DE0C2, stroke 1.5, dash 6 6, a0.55 (pulses 0.35-0.70 in game)   (as v1) -->
+  <!-- Planet X, the target, v1.2 (cold mineral/ice world, animated). ONE group #planetX at translate(120 120); geometry relative to (0,0).
+       r 30, disc diameter H = 60. Lit side faces the star: L = (-0.7071, +0.7071) (lower-left). Lighting never rotates.
+       Texture strip: period P = round(2*pi*r) = 188 px (one full rotation). Each strip is ONE rect 2P x 2r = 376x60 (never two abutting rects:
+       an anti-aliased join inside the clip would show as a hairline at fractional translate); its filter computes the noise once over a
+       188x60 subregion (stitchTiles stitch -> periodic in exactly P) and feTile repeats it across the 376 px region, so the strip is 2P wide
+       with no geometry edge. Scrolled west->east (texture moves left->right: translate 0 -> +P; the brief's sketch says to="-P" but also
+       "texture moves left->right" - the + sign is what does that) through the circular clip #pxClip. Start phase: surface tile x 40 (strip x 228)
+       at the disc's left edge (inner translate(-258 -30) = -(r + P + 40), -r); wisps tile x 0 at the left edge (translate(-218 -30) = -(r + P), -r).
+
+       Draw order:
+       0. halo     circle r 1.8 r = 54, #3DE0C2: 0.00 a0.35 | 0.556 a0.35 | 0.78 a0.10 | 1.00 a0 (as v1), breathing: scale 1 -> 1.04 -> 1 -> 0.96 -> 1 over 2.4 s (sine, +-4 %, t=0 is the rest size).
+       1. base     circle r 30, #3DE0C2.
+       2. surface  strip, SMIL translate 0 -> 188 over 120 s. Strip = rect 376x60, fill #3DE0C2, filter #pxSurface (region 0..376 x 0..60; each
+                   noise field: subregion 0..188 x 0..60, stitched, then feTile to 376x60 = two periods in one rect):
+                   basins: feTurbulence fractalNoise baseFrequency 0.035, numOctaves 4, seed 11, stitchTiles stitch (188x60 -> seamless),
+                           alpha -> linear slope 12, intercept -6.508 (soft threshold at 0.584 = p72 of the field -> ~28 % basins), then x0.60,
+                           colour #0E4A40.
+                   veins:  feTurbulence turbulence baseFrequency 0.040, numOctaves 2, seed 11, stitch; alpha -> linear slope -14.29, intercept 1
+                           (bright where the turbulence field is < 0.07: thin creases, ~5 % coverage), then x0.35, colour #0E4A40.
+                   Polar caps: bands 18 % of the disc at top and bottom (10.8 px), #B5FFF0, alpha 1 at the pole | 0.9 at 60 % | 0 at the band's inner edge.
+       3. wisps    strip, SMIL translate 0 -> 188 over 80 s. Strip = rect 376x60, fill #B5FFF0, filter #pxWisp (region 0..376 x 0..60):
+                   feTurbulence turbulence baseFrequency 0.050, numOctaves 2, seed 23, stitch on subregion 0..188 x 0..60, feTile to 376x60;
+                   alpha -> linear slope -8.7, intercept 1
+                   (bright where the field is < 0.115 -> ~15 % coverage, thin filaments), then x0.35.
+       4. squash   circle r 30, radial from the centre, #3DE0C2: 0.88 a0 | 1.00 a0.45 (fades the texture to 55 % in the outer 12 % of r).
+       5. shade    radial, userSpace centre 0.36 r L = (-7.64, 7.64), radius 1.25 r = 37.5 (v1.1 numbers, unchanged):
+                   0.00 #B5FFF0 a0.90 | 0.40 #3DE0C2 a0 | 0.70 #0E4A40 a0.55 | 0.86 #0E4A40 a0.92 | 1.00 #0E4A40 a1.0  (0.70-0.86 is the terminator).
+       6. limb     circle r 29.5, stroke 1, #B5FFF0 a0.18.
+       7. rim      circle r 1.12 r = 33.6, radial from the planet centre, #8FFFE6: 0.00 a0 | 0.80 a0 | 0.87 a0.55 | 0.92 a0.30 | 1.00 a0,
+                   multiplied (alpha mask) by a linear gradient along L from +1.12 r L (-23.76, 23.76) = 1.0 to -1.12 r L = 0.35 (v1.1, unchanged).
+       8. ring     capture ring r 78, #3DE0C2, stroke 1.5, dash 6 6: dash crawl stroke-dashoffset 0 -> -12 over 1 s (= -12 px/s, seamless),
+                   alpha pulse stroke-opacity 0.55 -> 0.70 -> 0.55 -> 0.35 -> 0.55 over 2.4 s (sine) and radius 78 -> 80 -> 78 -> 76 -> 78 (+-2 px, same
+                   2.4 s sine, in phase). Static renders show t = 0: a 0.55, r 78 (= the v1 mockup state).
+       No specular (no liquid). Ids: px*. -->
   <defs>
+    <clipPath id="pxClip"><circle r="30"/></clipPath>
     <radialGradient id="pxHalo" cx="0.5" cy="0.5" r="0.5">
       <stop offset="0" stop-color="#3DE0C2" stop-opacity="0.35"/>
       <stop offset="0.556" stop-color="#3DE0C2" stop-opacity="0.35"/>
       <stop offset="0.78" stop-color="#3DE0C2" stop-opacity="0.10"/>
       <stop offset="1" stop-color="#3DE0C2" stop-opacity="0"/>
     </radialGradient>
-    <filter id="pxSurface" x="-5%" y="-5%" width="110%" height="110%" color-interpolation-filters="sRGB">
-      <feTurbulence type="fractalNoise" baseFrequency="0.055" numOctaves="3" seed="11" result="pxNoise"/>
-      <feColorMatrix in="pxNoise" type="saturate" values="0" result="pxGrey"/>
-      <feComponentTransfer in="pxGrey" result="pxGrain">
-        <feFuncR type="linear" slope="3" intercept="-1"/>
-        <feFuncG type="linear" slope="3" intercept="-1"/>
-        <feFuncB type="linear" slope="3" intercept="-1"/>
-        <feFuncA type="linear" slope="0" intercept="0.22"/>
+    <filter id="pxSurface" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="0" y="0" width="376" height="60" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="4" seed="11" stitchTiles="stitch" x="0" y="0" width="188" height="60" result="pxN1"/>
+      <feTile in="pxN1" x="0" y="0" width="376" height="60" result="pxN"/>
+      <feColorMatrix in="pxN" type="matrix" values="0 0 0 0 0.055  0 0 0 0 0.290  0 0 0 0 0.251  0 0 0 1 0" result="pxBasinRGB"/>
+      <feComponentTransfer in="pxBasinRGB" result="pxBasinCut">
+        <feFuncA type="linear" slope="12" intercept="-6.508"/>
       </feComponentTransfer>
-      <feBlend in="pxGrain" in2="SourceGraphic" mode="soft-light" result="pxShaded"/>
-      <feComposite in="pxShaded" in2="SourceGraphic" operator="in"/>
+      <feComponentTransfer in="pxBasinCut" result="pxBasin">
+        <feFuncA type="linear" slope="0.60" intercept="0"/>
+      </feComponentTransfer>
+      <feTurbulence type="turbulence" baseFrequency="0.040" numOctaves="2" seed="11" stitchTiles="stitch" x="0" y="0" width="188" height="60" result="pxV1"/>
+      <feTile in="pxV1" x="0" y="0" width="376" height="60" result="pxV"/>
+      <feColorMatrix in="pxV" type="matrix" values="0 0 0 0 0.055  0 0 0 0 0.290  0 0 0 0 0.251  0 0 0 1 0" result="pxVeinRGB"/>
+      <feComponentTransfer in="pxVeinRGB" result="pxVeinCut">
+        <feFuncA type="linear" slope="-14.29" intercept="1"/>
+      </feComponentTransfer>
+      <feComponentTransfer in="pxVeinCut" result="pxVein">
+        <feFuncA type="linear" slope="0.35" intercept="0"/>
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode in="SourceGraphic"/>
+        <feMergeNode in="pxBasin"/>
+        <feMergeNode in="pxVein"/>
+      </feMerge>
     </filter>
+    <filter id="pxWisp" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="0" y="0" width="376" height="60" color-interpolation-filters="sRGB">
+      <feTurbulence type="turbulence" baseFrequency="0.050" numOctaves="2" seed="23" stitchTiles="stitch" x="0" y="0" width="188" height="60" result="pxW1"/>
+      <feTile in="pxW1" x="0" y="0" width="376" height="60" result="pxW"/>
+      <feColorMatrix in="pxW" type="matrix" values="0 0 0 0 0.710  0 0 0 0 1  0 0 0 0 0.941  0 0 0 1 0" result="pxWispRGB"/>
+      <feComponentTransfer in="pxWispRGB" result="pxWispCut">
+        <feFuncA type="linear" slope="-8.7" intercept="1"/>
+      </feComponentTransfer>
+      <feComponentTransfer in="pxWispCut">
+        <feFuncA type="linear" slope="0.35" intercept="0"/>
+      </feComponentTransfer>
+    </filter>
+    <linearGradient id="pxCapN" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#B5FFF0" stop-opacity="1"/>
+      <stop offset="0.6" stop-color="#B5FFF0" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#B5FFF0" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="pxCapS" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#B5FFF0" stop-opacity="1"/>
+      <stop offset="0.6" stop-color="#B5FFF0" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#B5FFF0" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="pxSquash" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="30">
+      <stop offset="0.88" stop-color="#3DE0C2" stop-opacity="0"/>
+      <stop offset="1" stop-color="#3DE0C2" stop-opacity="0.45"/>
+    </radialGradient>
     <radialGradient id="pxShade" gradientUnits="userSpaceOnUse" cx="-7.64" cy="7.64" r="37.5">
       <stop offset="0" stop-color="#B5FFF0" stop-opacity="0.90"/>
       <stop offset="0.40" stop-color="#3DE0C2" stop-opacity="0"/>
@@ -55,11 +114,34 @@
     </mask>
   </defs>
   <g id="planetX" transform="translate(120 120)">
-    <circle r="54" fill="url(#pxHalo)"/>
-    <circle r="30" fill="#3DE0C2" filter="url(#pxSurface)"/>
+    <circle r="54" fill="url(#pxHalo)">
+      <animateTransform attributeName="transform" type="scale" values="1;1.04;1;0.96;1" keyTimes="0;0.25;0.5;0.75;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1" dur="2.4s" repeatCount="indefinite"/>
+    </circle>
+    <circle r="30" fill="#3DE0C2"/>
+    <g clip-path="url(#pxClip)">
+      <g id="pxSurfaceAnim">
+        <animateTransform attributeName="transform" type="translate" from="0 0" to="188 0" dur="120s" repeatCount="indefinite"/>
+        <g id="pxSurfaceStrip" transform="translate(-258 -30)">
+          <rect width="376" height="60" fill="#3DE0C2" filter="url(#pxSurface)"/>
+          <rect width="376" height="10.8" fill="url(#pxCapN)"/>
+          <rect y="49.2" width="376" height="10.8" fill="url(#pxCapS)"/>
+        </g>
+      </g>
+      <g id="pxWispAnim">
+        <animateTransform attributeName="transform" type="translate" from="0 0" to="188 0" dur="80s" repeatCount="indefinite"/>
+        <g id="pxWispStrip" transform="translate(-218 -30)">
+          <rect width="376" height="60" fill="#B5FFF0" filter="url(#pxWisp)"/>
+        </g>
+      </g>
+    </g>
+    <circle r="30" fill="url(#pxSquash)"/>
     <circle r="30" fill="url(#pxShade)"/>
     <circle r="29.5" fill="none" stroke="#B5FFF0" stroke-opacity="0.18" stroke-width="1"/>
     <circle r="33.6" fill="url(#pxRim)" mask="url(#pxRimMask)"/>
-    <circle r="78" fill="none" stroke="#3DE0C2" stroke-opacity="0.55" stroke-width="1.5" stroke-dasharray="6 6"/>
+    <circle r="78" fill="none" stroke="#3DE0C2" stroke-opacity="0.55" stroke-width="1.5" stroke-dasharray="6 6">
+      <animate attributeName="stroke-dashoffset" from="0" to="-12" dur="1s" repeatCount="indefinite"/>
+      <animate attributeName="stroke-opacity" values="0.55;0.70;0.55;0.35;0.55" keyTimes="0;0.25;0.5;0.75;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1" dur="2.4s" repeatCount="indefinite"/>
+      <animate attributeName="r" values="78;80;78;76;78" keyTimes="0;0.25;0.5;0.75;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1" dur="2.4s" repeatCount="indefinite"/>
+    </circle>
   </g>
 </svg>

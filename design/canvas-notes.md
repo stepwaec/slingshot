@@ -1,8 +1,8 @@
-# Slingshot — Canvas 2D drawing notes (v1.1)
+# Slingshot — Canvas 2D drawing notes (v1.2)
 
 How to draw every element of the visual style in plain Canvas 2D (TypeScript, no engine) and hold a steady 60 fps on an integrated GPU. Every number below is taken from `design/style.md`, the asset SVGs in `design/assets/` and the shared brief; every colour is a palette token written as hex. Snippets are valid TypeScript with no imports — `ctx` is always a `CanvasRenderingContext2D`.
 
-v1.1 is the realism pass: the three bodies and the sky got richer, and all of that richness is paid **once**, at build time, into cached bitmaps (background, star sprite, two planet sprites). Per frame nothing changed except that the two planets are now blits instead of live gradients. Ship, trail, path, arrow, HUD and overlays (§5–§11) are exactly v1.
+v1.1 was the realism pass: the three bodies and the sky got richer, and all of that richness is paid **once**, at build time, into cached bitmaps (background, star sprite, planet sprites). v1.2 is the planet pass: each planet's cached sprite becomes a cached **texture strip** (land / clouds, basins / wisps, polar caps; period P = round(2π r)) that scrolls under a cached **lighting overlay** (limb squash, glint, terminator, limb line, rim) — the surface rotates at 64–120 s per turn, the light never moves, and the per-frame cost is 1 clip + 3 blits per planet (§4). Planet X's halo now breathes with the ring. Star, sky, ship, trail, path, arrow, HUD and overlays (§1–§3, §5–§11) are exactly v1.1.
 
 Scene reference used throughout (world units = screen px at zoom 1, 1440×900 mockup): star centre (760, 470) r 46; start planet (250, 690) r 34; planet X (1190, 210) r 30, capture ring r 78; ship 22 px long. The unit vector from a planet toward the star is called **L** (start planet: (+0.7071, −0.7071), upper-right; planet X: (−0.7071, +0.7071), lower-left).
 
@@ -26,7 +26,7 @@ function fitCanvas(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
 }
 ```
 
-`{ alpha: false }` lets the browser skip blending the canvas against the page. All drawing is in CSS pixels; the transform does the scaling. Call `fitCanvas` on resize only, and rebuild the background and the star sprite in the same handler (§1, §3). The planet sprites (§4) depend only on r, L, the zoom bucket and the constant `DPR`, so resize leaves them alone — they rebuild only when the bucket changes (§12).
+`{ alpha: false }` lets the browser skip blending the canvas against the page. All drawing is in CSS pixels; the transform does the scaling. Call `fitCanvas` on resize only, and rebuild the background and the star sprite in the same handler (§1, §3). The planet strips and lighting overlays (§4) depend only on r, L, the zoom bucket and the constant `DPR`, so resize leaves them alone — they rebuild only when the bucket changes (§12).
 
 ### Clear strategy
 Do not call `clearRect`. The background layer (§1) is an opaque offscreen canvas that already contains `bg.edge`, the vignette, the Milky Way and the whole starfield; blitting it with `drawImage` *is* the clear. One `drawImage` of a full-screen opaque bitmap is ~0.2 ms; `clearRect` + `fillRect` + ~1005 star arcs + 15 gradients would be ~2.5 ms.
@@ -34,7 +34,7 @@ Do not call `clearRect`. The background layer (§1) is an opaque offscreen canva
 ### Draw order (back to front, every frame)
 1. background (cached: edge + vignette + Milky Way + starfield) — one `drawImage`
 2. star (cached sprite, breathing scale)
-3. planets (cached sprites: start, then X with its **live** halo under the sprite)
+3. planets (cached texture strips scrolled through a circular clip + cached lighting overlay: start, then X with its **live** breathing halo under the strips)
 4. capture ring (dashed, pulsing, live)
 5. predicted path (planning) **or** trail (flight)
 6. drag arrow (planning only)
@@ -48,14 +48,14 @@ Do not call `clearRect`. The background layer (§1) is an opaque offscreen canva
 |---|---|---|
 | Background blit | 0.20 | one opaque `drawImage`, cached (Milky Way, halos and ~1005 dots are baked in) |
 | Star | 0.10 | one `drawImage` of a 400×400 sprite — richer interior (streamers, chromosphere, limb darkening, granulation), same blit |
-| Planets (2) | 0.10 | **two `drawImage` blits of cached sprites** (81 / 72 px at zoom 1, §4) — they replace v1's two live gradients; rebuilt only when the zoom bucket changes (§12), never on resize |
-| Planet X halo + ring | 0.15 | one gradient fill + one dashed stroke, both live |
+| Planets (2) | 0.16 | per planet **1 `arc` clip + 2 strip `drawImage` with a dt-based x offset + 1 lighting-overlay `drawImage`** (≈ 0.08 ms each, §4) — the strips (428 × 68 / 376 × 60 at zoom 1) and overlays (81 / 72 px) are cached, rebuilt only when the zoom bucket changes (§12), never on resize; only the 2r window inside the clip is rasterised |
+| Planet X halo + ring | 0.15 | one gradient fill (radius breathing ±4 %) + one dashed stroke, both live |
 | Predicted path (≤ 400 dots) **or** trail (≤ 240 segs) | 0.60 | one `Path2D` fill / 20 gradient-chunk strokes |
 | Drag arrow | 0.05 | 3 strokes, 1 fill, 1 `fillText` |
 | Ship + thrust | 0.10 | 3 small polygons + 2 triangles |
 | HUD | 0.60 | ≤ 10 `fillText` (flight mode has 9), ≤ 6 rounded rects; in the letter-spacing fallback ≤ 21 single-character `fillText` and **zero** `measureText` (advances cached, §10) |
 | Result overlay | 0.30 | scrim `fillRect` + one `drawImage` |
-| **Render total** | **≈ 2.2 ms** | leaves > 3.5 ms of the 6 ms target for physics and GC |
+| **Render total** | **≈ 2.3 ms** | leaves > 3.5 ms of the 6 ms target for physics and GC |
 
 Target ≤ 6 ms of render per frame, so a 16.7 ms frame keeps slack even when the browser is busy. Measure with `performance.now()` around the draw and show it in the telemetry line while developing.
 
@@ -65,19 +65,20 @@ Target ≤ 6 ms of render per frame, so a 16.7 ms frame keeps slack even when th
 |---|---|---|
 | Background (§1 + §2): 3 band gradients, 380 + 420 + 160 + 45 dots, 12 halo gradients, 4 sparkles | 2.5 | resize |
 | Star sprite (§3): 2 gradient discs, 12 wedges, 3 rings, body gradient, 128² noise tile `multiply` | 1.5 | resize (fixed 400 px bitmap that `drawImage` scales; see §3 if the game ever zooms past 2×) |
-| Planet sprite (§4), each: base, noise `soft-light`, terminator gradient, limb, rim (2 passes) | 1–2 | when the zoom bucket changes (§12: buckets at 1.25^k, 25 % apart, flipping ±11.8 % about each centre) — not on resize |
-| Noise tiles (§4 `makeNoiseTile`), each: 128² value noise, 2–3 octaves, `putImageData` | 0.3 | once per seed (3, 7, 11); kept across sprite rebuilds |
+| Planet strips + lighting overlay (§4), each planet: 2 noise fields stretched from the 128² tiles (`getImageData` once each), 3 thresholded layers (`putImageData` + 2 blits each), polar-cap bands, overlay (squash, glint, terminator, limb, rim in 2 passes) | ≈ 2 | when the zoom bucket changes (§12: buckets at 1.25^k, 25 % apart, flipping ±11.8 % about each centre) — not on resize; both planets ≈ 4 ms in the same frame |
+| Noise tiles (§4 `makeNoiseTile`), each: 128² value noise, 2–4 octaves, `putImageData` | 0.3–0.4 | once per (seed, cells, octaves): 3 (star), 7 / 6, 19 / 12 (start), 11 / 7, 23 / 9 (X) — five tiles, kept across strip rebuilds |
 
 ### Cached offscreen vs. drawn live
 | Cached (rebuilt only on resize / state change) | Drawn live every frame |
 |---|---|
-| Background + vignette + Milky Way + starfield (one canvas) | Planet X halo (gradient) and capture ring |
+| Background + vignette + Milky Way + starfield (one canvas) | Planet X halo (gradient, breathing) and capture ring |
 | Star sprite 400×400 (×DPR) | Ring, path, trail, arrow, ship, thrust |
-| Planet sprites 81×81 / 72×72 (×DPR, at the current zoom bucket) | HUD text and bars, scrim |
+| Planet texture strips 428×68 / 376×60 (×DPR, two per planet, at the current zoom bucket) | The strips' scroll: a dt-based source offset on two clipped blits per planet — the pixels themselves are never touched |
+| Planet lighting overlays 81×81 / 72×72 (×DPR, at the current zoom bucket) | HUD text and bars, scrim |
 | Result card 520×232 (+ 64 px shadow margin) | |
 
 ### The rule
-**Never call `shadowBlur` on moving things.** `shadowBlur` forces a full-size readback and a two-pass Gaussian for every draw call that uses it; on a moving object it runs every frame. The one permitted use is the result card (§11), drawn once into an offscreen canvas and then blitted. The same goes for everything v1.1 added: noise, blend modes (`multiply`, `soft-light`, `destination-in`) and gradient wedges run only inside the sprite builds, never in the frame loop. Realism comes from richer cached pixels, not from more draw calls.
+**Never call `shadowBlur` on moving things.** `shadowBlur` forces a full-size readback and a two-pass Gaussian for every draw call that uses it; on a moving object it runs every frame. The one permitted use is the result card (§11), drawn once into an offscreen canvas and then blitted. The same goes for everything v1.1 added: noise, blend modes (`multiply`, `destination-in`) and gradient wedges run only inside the sprite builds, never in the frame loop — and for v1.2's rotation, which is nothing but a changing `drawImage` offset on a cached strip (plus the one `getImageData`/`putImageData` per layer at build time that thresholds the noise). Realism comes from richer cached pixels, not from more draw calls; motion comes from where the cached pixels are drawn, not from redrawing them.
 
 ```ts
 // Helpers used by every section.
@@ -409,34 +410,57 @@ The sprite is built for r 46 at zoom 1 in a fixed 400 px canvas (`S = 400`, ever
 
 ## 4. Planets
 
-### v1.1: sprites instead of live gradients
-In v1 each planet was one live radial gradient per frame. The realism pass adds surface noise, a day/night terminator and an atmosphere rim; those are not per-frame material, so each planet becomes a **cached sprite** built once by the pipeline below and blitted every frame (0.05 ms each). The silhouette is still a circle, so every zoom rule from v1 holds; the sprite is just re-rendered when the zoom moves to a new **bucket** (§12).
+### v1.2: scrolling strips under a fixed lighting overlay
+In v1 each planet was one live radial gradient; v1.1 baked noise, terminator and rim into a cached sprite. v1.2 splits that sprite in two so the surface can **rotate**: a **texture strip** (base colour + thresholded noise layers + polar caps, two tiles wide, period P = round(2π r)) and a second strip for the **clouds / wisps**, both built once and slid under a cached **lighting overlay** (limb squash, glint, terminator, limb line, rim) that never moves. Per frame, per planet: `save` → `clip(arc r)` → `drawImage(surface, x − r − P + φₛ·P)` → `drawImage(cloud, x − r − P + φ꜀·P)` → `restore` → `drawImage(overlay)` — **1 clip + 3 blits ≈ 0.08 ms**, no per-frame noise, no blur, no blend mode. The silhouette is still a circle, so every zoom rule from v1 holds; strips and overlay are re-rendered only when the zoom **bucket** changes (§12). The SVG assets (`planet-start.svg`, `planet-x.svg`) are the canon — their header comments list every frequency, seed, threshold, period and coverage; this section reproduces them with the value-noise tile from v1.1.
 
-Sprite size: **(2 · 1.12 r + 4) px square** at the bucket zoom, rendered at the canvas `DPR` (`min(devicePixelRatio, 2)`, §0 — i.e. 2× on a retina display) → 80.16 → **81 px** for the start planet and 71.2 → **72 px** for planet X at zoom 1 (162² / 144² device px at DPR 2; 81² / 72² at DPR 1, where the residual up-scale of up to 1.118 softens the baked 1 px limb line slightly). Light comes from the star: **L** is the unit vector from the planet to the star (start (+0.7071, −0.7071), X (−0.7071, +0.7071) on the mockup). In this prototype the bodies never move, so L is fixed per sprite; if they ever did, rebuild when L turns by more than ~5°.
+Light comes from the star: **L** is the unit vector from the planet to the star (start (+0.7071, −0.7071), X (−0.7071, +0.7071) on the mockup). The bodies never move in this prototype, so L is fixed per overlay; if they ever did, rebuild when L turns by more than ~5°. Rotation is **wall-clock** (`dt` from the frame clock), identical at 1x / 2x / 4x — it is weather, not simulation state — and it keeps running under the result overlays.
 
-### Pipeline (per sprite, draw order = `planet-start.svg` / `planet-x.svg`)
+### Geometry (both planets)
 
-| # | Step | Exact values |
+| | Start planet | Planet X |
 |---|---|---|
-| 1 | Base disc | `planet.*.base`, r |
-| 2 | Surface noise | `makeNoiseTile(128, seed, 3, 3, cells)` — seed **7** / **11** (start / X), 3 octaves, contrast **×3** (linear slope 3, intercept −1), cells 6 / 7 (≈ 128 · baseFrequency 0.045 / 0.055); drawn with `globalCompositeOperation = "soft-light"` at **α 0.22**, clipped to the disc, scaled with the bucket zoom so the texture keeps its world size |
-| 3 | Terminator shade | radial gradient, centre **planet centre + 0.36 r · L**, radius **1.25 r**: 0.00 `highlight` α 0.90 · 0.40 `base` α 0 · 0.70 `shadow` α 0.55 · 0.86 `shadow` α 0.92 · 1.00 `shadow` α 1.0 — the 0.70–0.86 span **is** the terminator; the transparent 0.40 stop lets the noise show on the day side |
-| 4 | Limb line | 1 px stroke at r − 0.5, `highlight` α **0.16** (start) / **0.18** (X), as v1 |
-| 5 | Atmosphere rim | disc r **1.12 r**, radial from the planet centre, `planet.*.atmo`: 0.00 α 0 · 0.80 α 0 · 0.87 α **0.55** · 0.92 α **0.30** · 1.00 α 0 — drawn into a scratch canvas (pass 1), then multiplied by a linear alpha gradient along L from +1.12 r · L (α **1.0**, lit) to −1.12 r · L (α **0.35**, dark) with `destination-in` (pass 2), then composited over the body. Result: the mask ratio is 1.0 : 0.35 (the brief's "~2×"); in the composite the rim reads ≈ 1.5× brighter on the lit side, because the body's own shading and, on planet X, the halo add the same base under both sides (measured on planet X just outside the disc: RGB 57,129,114 lit vs 36,95,85 dark) |
+| r (zoom 1) | 34 | 30 |
+| Strip period P = round(2π r) | **214** px | **188** px |
+| Tile = P × 2r | 214 × 68 | 188 × 60 |
+| Strip bitmap = 2 tiles | 428 × 68 (856 × 136 device px at DPR 2) | 376 × 60 (752 × 120) |
+| Surface period / speed at zoom 1 | **90 s** / 2.38 px/s (a feature crosses the disc in ≈ 29 s) | **120 s** / 1.57 px/s (≈ 38 s) |
+| Cloud / wisp period / speed | **64 s** / 3.34 px/s (clouds overtake the land at ≈ 1 px/s, lapping it every 90·64/(90−64) ≈ 222 s) | **80 s** / 2.35 px/s (lap every 240 s) |
+| Direction | west→east: the texture moves **left→right**, i.e. the drawImage x offset grows with time (the brief's sketch `to="−P 0"` / `−((t/period)·W) mod W` would scroll east→west; +P is what its prose asks for) | same |
+| Lighting overlay | (2 · 1.12 r + 4) px square → **81 px** | **72 px** |
+| Limb squash | radial, base α 0 at 0.88 r → α 0.45 at r (texture fades to 55 % in the outer 12 % of r) | same, `planet.x.base` |
+| Specular glint | ellipse 0.22 r × 0.12 r = 7.5 × 4.1 at 0.45 r·L = (+10.82, −10.82), long axis along L, `planet.specular #FFFFFF` α 0.35 → 0.18 at 50 % → 0 | none (no liquid) |
+| Terminator, limb line, rim | v1.1 numbers, unchanged (table below) | v1.1, unchanged |
+| Polar caps (in the strip) | top and bottom **12 %** of the disc = 8.16 px bands, `planet.start.ice #E9EEF8` | **18 %** = 10.8 px, `planet.x.ice #B5FFF0` |
 
-Planet X additionally keeps its **halo** (live gradient, 1.8 r, before the sprite) and the **dashed capture ring** (live stroke, after the sprite) exactly as v1 — draw order halo → sprite (body, noise, shade, limb, rim) → ring.
+### Texture layers (what the strips contain)
 
-| Planet | r | seed / cells | base | highlight | shadow | atmo | limb α |
-|---|---|---|---|---|---|---|---|
-| start | 34 | 7 / 6 | `#3D8BFF` | `#9CCBFF` | `#142B5E` | `#7FB8FF` | 0.16 |
-| X | 30 | 11 / 7 | `#3DE0C2` | `#B5FFF0` | `#0E4A40` | `#8FFFE6` | 0.18 |
+The SVG thresholds `feTurbulence` alpha with `feFuncA type="linear"` (slope s, intercept 0.5 − s·T: alpha 0.5 at the threshold T, full ramp over 1/s). Canvas thresholds the **grey value-noise field** the same way, but sets T from a **percentile of its own field** (a 256-bin histogram, O(n)) so the *coverage* matches the asset — the two noise generators have different value distributions, and coverage is what you see. The ramp width is the SVG's 1/s expressed in this field's spread (σ ≈ 31 grey levels at contrast 1): land 0.042 → 12 levels, highlands 0.167 → 46, clouds 0.071 → 24 (the asset also blurs σ 0.8, which the wider ramp stands in for), basins 0.083 → 22. The "turbulence"-type layers (veins, wisps) are **creases**: bright where the field is closest to its median, alpha 1 − |v − median| / d, with d set so the chosen fraction of pixels is lit — the same thin-filament look as `turbulence < 0.07` / `< 0.115` in the asset.
 
-### Noise tile
-A 128×128 seamless value-noise tile from `mulberry32`: a wrapping lattice of `cells` random values per edge for octave 0, doubling the lattice and halving the amplitude per octave (3 octaves for the planets, 2 for the star), smoothstep-interpolated, then **contrast-stretched about 0.5** (`v' = (v − 0.5)·contrast + 0.5`, clamped) — fractal noise clusters around 0.5 and would be invisible at α 0.22 / 0.16 without the stretch. Grey, opaque; the blend mode and `globalAlpha` at draw time do the rest. Built with one `putImageData` at startup (≈ 0.3 ms per tile) and kept — it is the SVG `feTurbulence` → `saturate 0` → `feComponentTransfer` chain, precomputed.
+| Layer | Planet | Noise tile (seed / cells / octaves) | Selection | Colour · alpha | Coverage |
+|---|---|---|---|---|---|
+| land | start | 7 / 6 / 4 (≈ 214 · 0.030) | above p68, ramp 12 | `planet.start.land #8FB07A` · 1.0 | ≈ 32 % (asset 33.5 %) |
+| highlands | start | same field | above p90, ramp 46 | `planet.start.shadow #142B5E` · 0.22 | ≈ 10 % (asset threshold 0.643 ≈ p90 of its field) |
+| clouds | start | 19 / 12 / 4 (≈ 214 · 0.055) | above p60, ramp 24 | `planet.start.cloud #F2F5FF` · **0.5** baked | ≈ 40 % (asset 39.6 %) |
+| basins | X | 11 / 7 / 4 (≈ 188 · 0.035) | above p72, ramp 22 | `planet.x.mineral #0E4A40` · 0.60 | ≈ 28 % (asset 27.3 %) |
+| veins | X | same field | crease, 5 % | `planet.x.mineral #0E4A40` · 0.35 | ≈ 5 % |
+| wisps | X | 23 / 9 / 2 (≈ 188 · 0.050) | crease, 15 % | `planet.x.wisp #B5FFF0` · 0.35 baked | ≈ 15 % (asset 15.8 %) |
+
+`cells` is the lattice size of octave 0 across one tile period (the asset's `baseFrequency · P`, rounded — `stitchTiles` does the same rounding), so one 128 px tile stretched to P px gives the same feature size as the SVG at every zoom. The cloud and wisp alphas are **baked into the strip** so the per-frame draw needs no `globalAlpha` change (drawing an α 1 strip at `globalAlpha 0.5` is equivalent and is what the brief's sketch shows).
+
+| Planet | r | base | highlight | shadow | atmo | limb α | squash | glint |
+|---|---|---|---|---|---|---|---|---|
+| start | 34 | `#3D8BFF` | `#9CCBFF` | `#142B5E` | `#7FB8FF` | 0.16 | `#3D8BFF` 0 → 0.45 | yes |
+| X | 30 | `#3DE0C2` | `#B5FFF0` | `#0E4A40` | `#8FFFE6` | 0.18 | `#3DE0C2` 0 → 0.45 | no |
+
+Terminator shade (v1.1, both): radial, centre **planet centre + 0.36 r · L**, radius **1.25 r**: 0.00 `highlight` α 0.90 · 0.40 `base` α 0 · 0.70 `shadow` α 0.55 · 0.86 `shadow` α 0.92 · 1.00 `shadow` α 1.0 — the 0.70–0.86 span **is** the terminator; the transparent 0.40 stop lets the texture show on the day side. Rim (v1.1, both): disc **1.12 r**, radial from the centre, `atmo` 0.00 α 0 · 0.80 α 0 · 0.87 α **0.55** · 0.92 α **0.30** · 1.00 α 0, multiplied by a linear alpha along L from +1.12 r·L (α 1.0) to −1.12 r·L (α 0.35) — in the composite ≈ 1.5× brighter on the lit side. Limb line: 1 px at r − 0.5, `highlight` at the α above.
+
+### Noise tile (as v1.1; contrast 1 for the strips)
+A 128×128 seamless value-noise tile from `mulberry32`: a wrapping lattice of `cells` random values per edge for octave 0, doubling the lattice and halving the amplitude per octave, smoothstep-interpolated, then **contrast-stretched about 0.5** (`v' = (v − 0.5)·contrast + 0.5`, clamped). The star's granulation (§3) still uses contrast ×2; the planet strips use **contrast 1** (raw), because their thresholds are percentiles and the stretch would only clip the tails. Grey, opaque. ≈ 0.3–0.4 ms per tile with one `putImageData` at startup, kept for ever — five tiles in all (seeds 3 / 7 / 11 / 19 / 23).
 
 ```ts
 // Seamless grey value-noise tile. size px square; cells = lattice points per edge at octave 0
-// (≈ size · SVG baseFrequency: 6 ≈ 128·0.045, 7 ≈ 128·0.055, 14 ≈ 128·0.11); contrast about 0.5.
+// (planets: ≈ P · SVG baseFrequency — 6 ≈ 214·0.030, 12 ≈ 214·0.055, 7 ≈ 188·0.035, 9 ≈ 188·0.050; star: 14 ≈ 128·0.11);
+// contrast about 0.5 (1 = raw).
 function makeNoiseTile(size: number, seed: number, octaves: number, contrast: number, cells: number): HTMLCanvasElement {
   const rnd = mulberry32(seed);
   const lattices: Float32Array[] = [];
@@ -472,46 +496,167 @@ function makeNoiseTile(size: number, seed: number, octaves: number, contrast: nu
 }
 ```
 
-### Sprite build and blit
+### Specs
 
 ```ts
 interface Body { x: number; y: number; r: number }
 
+type Select = { kind: "above"; cover: number; ramp: number }   // alpha 0.5 where the field crosses the (1 − cover) percentile, full ramp over `ramp` grey levels
+            | { kind: "crease"; cover: number };               // alpha 1 at the field's median → 0 at the distance that lights `cover` of the pixels
+
+interface StripLayer { seed: number; cells: number; octaves: number; color: string; alpha: number; sel: Select }
+
 interface PlanetSpec {
-  r: number; base: string; highlight: string; shadow: string; atmo: string; limbAlpha: number; seed: number; cells: number;
-}
-const PLANET_START: PlanetSpec = { r: 34, base: "#3D8BFF", highlight: "#9CCBFF", shadow: "#142B5E", atmo: "#7FB8FF", limbAlpha: 0.16, seed: 7,  cells: 6 };
-const PLANET_X:     PlanetSpec = { r: 30, base: "#3DE0C2", highlight: "#B5FFF0", shadow: "#0E4A40", atmo: "#8FFFE6", limbAlpha: 0.18, seed: 11, cells: 7 };
-
-interface PlanetSprite { canvas: HTMLCanvasElement; size: number; zoom: number; lx: number; ly: number }
-
-// Zoom bucket (§12): sprites are built at 1.25^k; round() flips the bucket at the midpoints (±11.8 % about each centre),
-// so successive builds are 25 % apart and the residual scale stays within 0.894 … 1.118.
-function zoomBucket(zoom: number): number {
-  return Math.pow(1.25, Math.round(Math.log(zoom) / Math.log(1.25)));
+  r: number; base: string; highlight: string; shadow: string; atmo: string; limbAlpha: number;
+  surface: StripLayer[];                      // drawn over the base fill, in order
+  caps: { color: string; frac: number };      // polar bands, fraction of the disc diameter each
+  cloud: StripLayer;                          // second strip, transparent background, alpha baked
+  specular: boolean;                          // ocean glint in the overlay (start only)
+  surfacePeriod: number; cloudPeriod: number; // seconds per rotation
 }
 
-// lx, ly = L (unit vector toward the star). zoomB = zoomBucket(zoom). tile = makeNoiseTile(128, spec.seed, 3, 3, spec.cells).
-function buildPlanetSprite(spec: PlanetSpec, lx: number, ly: number, zoomB: number, tile: HTMLCanvasElement): PlanetSprite {
+const PLANET_START: PlanetSpec = {
+  r: 34, base: "#3D8BFF", highlight: "#9CCBFF", shadow: "#142B5E", atmo: "#7FB8FF", limbAlpha: 0.16,
+  surface: [
+    { seed: 7, cells: 6, octaves: 4, color: "#8FB07A", alpha: 1,    sel: { kind: "above", cover: 0.32, ramp: 12 } },   // planet.start.land
+    { seed: 7, cells: 6, octaves: 4, color: "#142B5E", alpha: 0.22, sel: { kind: "above", cover: 0.10, ramp: 46 } },   // highlands
+  ],
+  caps: { color: "#E9EEF8", frac: 0.12 },                                                                              // planet.start.ice
+  cloud: { seed: 19, cells: 12, octaves: 4, color: "#F2F5FF", alpha: 0.5, sel: { kind: "above", cover: 0.40, ramp: 24 } }, // planet.start.cloud
+  specular: true, surfacePeriod: 90, cloudPeriod: 64,
+};
+const PLANET_X: PlanetSpec = {
+  r: 30, base: "#3DE0C2", highlight: "#B5FFF0", shadow: "#0E4A40", atmo: "#8FFFE6", limbAlpha: 0.18,
+  surface: [
+    { seed: 11, cells: 7, octaves: 4, color: "#0E4A40", alpha: 0.60, sel: { kind: "above", cover: 0.28, ramp: 22 } },  // planet.x.mineral basins
+    { seed: 11, cells: 7, octaves: 4, color: "#0E4A40", alpha: 0.35, sel: { kind: "crease", cover: 0.05 } },           // veins
+  ],
+  caps: { color: "#B5FFF0", frac: 0.18 },                                                                              // planet.x.ice
+  cloud: { seed: 23, cells: 9, octaves: 2, color: "#B5FFF0", alpha: 0.35, sel: { kind: "crease", cover: 0.15 } },     // planet.x.wisp
+  specular: false, surfacePeriod: 120, cloudPeriod: 80,
+};
+
+const noiseTiles = new Map<string, HTMLCanvasElement>();            // built once per (seed, cells, octaves), kept
+function noiseTile(l: StripLayer): HTMLCanvasElement {
+  const key = `${l.seed}/${l.cells}/${l.octaves}`;
+  let t = noiseTiles.get(key);
+  if (!t) { t = makeNoiseTile(128, l.seed, l.octaves, 1, l.cells); noiseTiles.set(key, t); }
+  return t;
+}
+```
+
+### buildPlanetStrips — once per zoom bucket
+
+Everything here is device pixels (`W = P · zoomB · DPR`, `H = 2r · zoomB · DPR`) so the strip is never resampled twice: one tile of the 128 px noise is stretched to exactly **W** px through a repeating pattern (so the bilinear filter wraps correctly at the tile edge — a plain `drawImage` would clamp and leave a sub-pixel seam), read back **once** with `getImageData`, thresholded in a plain loop, written with `putImageData` into a scratch canvas and composited **twice** side by side. Two copies of a W-periodic image are 2W-periodic, which is what lets the draw wrap (below). The `getImageData`/`putImageData` pair is a build-time cost (≈ 0.3 ms per layer at 428 × 136 px); §13's ban is on the frame loop.
+
+```ts
+interface PlanetStrips {
+  surface: HTMLCanvasElement;   // 2W × H device px: base + land/basins + caps, two identical tiles side by side
+  cloud: HTMLCanvasElement;     // 2W × H, transparent background, alpha baked (0.5 clouds / 0.35 wisps)
+  overlay: HTMLCanvasElement;   // S × S (× DPR): squash, glint, shade, limb, rim — fixed to L
+  size: number;                 // S in CSS px at the bucket zoom (81 / 72 at zoom 1)
+  r: number; P: number;         // CSS px at the bucket zoom
+  zoom: number;                 // the bucket this was built at
+}
+
+// Grey field of one tile period, W × H device px, from the 128 px tile (R channel of RGBA).
+function fieldFromTile(tile: HTMLCanvasElement, W: number, H: number): Uint8ClampedArray {
+  const c = document.createElement("canvas"); c.width = W; c.height = H;
+  const g = c.getContext("2d", { willReadFrequently: true })!;
+  g.scale(W / 128, W / 128);                                           // isotropic: 128 tile px → W device px
+  g.fillStyle = g.createPattern(tile, "repeat")!;                      // pattern, not drawImage: wraps at the tile edge
+  g.fillRect(0, 0, 128, (128 * H) / W + 1);
+  return g.getImageData(0, 0, W, H).data;
+}
+
+function percentile(f: Uint8ClampedArray, q: number): number {        // grey level at quantile q of the field
+  const hist = new Uint32Array(256);
+  for (let i = 0; i < f.length; i += 4) hist[f[i]]++;
+  const target = q * (f.length / 4);
+  for (let v = 0, acc = 0; v < 256; v++) { acc += hist[v]; if (acc >= target) return v; }
+  return 255;
+}
+
+function creaseWidth(f: Uint8ClampedArray, med: number, cover: number): number {   // |v − med| under which `cover` of the pixels lie
+  const hist = new Uint32Array(256);
+  for (let i = 0; i < f.length; i += 4) hist[Math.abs(f[i] - med)]++;
+  const target = cover * (f.length / 4);
+  for (let d = 0, acc = 0; d < 256; d++) { acc += hist[d]; if (acc >= target) return Math.max(1, d); }
+  return 255;
+}
+
+// One thresholded layer: colour + alpha from the field, straight (non-premultiplied) RGBA for putImageData.
+function paintLayer(f: Uint8ClampedArray, W: number, H: number, l: StripLayer): ImageData {
+  const img = new ImageData(W, H), d = img.data;
+  const n = parseInt(l.color.slice(1), 16), R = (n >> 16) & 255, G = (n >> 8) & 255, B = n & 255;
+  const crease = l.sel.kind === "crease";
+  const med = crease ? percentile(f, 0.5) : 0;
+  const T = crease ? 0 : percentile(f, 1 - l.sel.cover);
+  const inv = crease ? 1 / creaseWidth(f, med, l.sel.cover) : 1 / (l.sel as { ramp: number }).ramp;
+  for (let i = 0; i < d.length; i += 4) {
+    const v = f[i];
+    let a = crease ? 1 - Math.abs(v - med) * inv : (v - T) * inv + 0.5;   // SVG feFuncA linear: 0.5 at the threshold
+    a = a < 0 ? 0 : a > 1 ? 1 : a;
+    d[i] = R; d[i + 1] = G; d[i + 2] = B; d[i + 3] = Math.round(a * l.alpha * 255);
+  }
+  return img;
+}
+
+// A 2W × H strip: optional base fill, thresholded layers composited twice side by side, optional polar caps.
+function buildStrip(layers: StripLayer[], base: string | null, caps: { color: string; frac: number } | null,
+                    W: number, H: number): HTMLCanvasElement {
+  const strip = document.createElement("canvas"); strip.width = 2 * W; strip.height = H;
+  const g = strip.getContext("2d")!;
+  if (base) { g.fillStyle = base; g.fillRect(0, 0, 2 * W, H); }
+  const scratch = document.createElement("canvas"); scratch.width = W; scratch.height = H;
+  const s = scratch.getContext("2d")!;
+  for (const l of layers) {
+    s.putImageData(paintLayer(fieldFromTile(noiseTile(l), W, H), W, H, l), 0, 0);
+    g.drawImage(scratch, 0, 0); g.drawImage(scratch, W, 0);             // composite (not putImageData) → alpha blends over the base
+  }
+  if (caps) {                                                            // bands: α 1 at the pole · 0.9 at 60 % · 0 at the inner edge
+    const h = caps.frac * H;
+    const band = (y0: number, y1: number) => {
+      const lg = g.createLinearGradient(0, y0, 0, y1);
+      lg.addColorStop(0, caps.color); lg.addColorStop(0.6, rgba(caps.color, 0.9)); lg.addColorStop(1, rgba(caps.color, 0));
+      g.fillStyle = lg; g.fillRect(0, Math.min(y0, y1), 2 * W, h);
+    };
+    band(0, h); band(H, H - h);
+  }
+  return strip;
+}
+
+// Lighting overlay, S × S CSS px at the bucket zoom (× DPR): everything that is fixed to the star direction.
+function buildLightingOverlay(spec: PlanetSpec, lx: number, ly: number, zoomB: number): { canvas: HTMLCanvasElement; size: number } {
   const r = spec.r * zoomB;
   const S = Math.ceil(2 * 1.12 * r + 4), c = S / 2;                     // 81 (start) / 72 (X) at zoom 1
   const canvas = document.createElement("canvas");
-  canvas.width = canvas.height = S * DPR;                               // device px at the canvas DPR (2× on retina)
+  canvas.width = canvas.height = S * DPR;
   const g = canvas.getContext("2d")!;
   g.setTransform(DPR, 0, 0, DPR, 0, 0);
 
-  g.save();                                                             // steps 1–3 are clipped to the disc
+  g.save();                                                             // 1–3 are clipped to the disc
   g.beginPath(); g.arc(c, c, r, 0, Math.PI * 2); g.clip();
-  g.fillStyle = spec.base; g.fillRect(0, 0, S, S);                      // 1. base disc
 
-  g.save();                                                             // 2. surface noise: soft-light α 0.22, world-scale texture
-  g.translate(c, c); g.scale(zoomB, zoomB);
-  g.globalCompositeOperation = "soft-light"; g.globalAlpha = 0.22;
-  g.fillStyle = g.createPattern(tile, "repeat")!;
-  g.fillRect(-spec.r, -spec.r, 2 * spec.r, 2 * spec.r);
-  g.restore();
+  const sq = g.createRadialGradient(c, c, 0, c, c, r);                  // 1. limb squash: base α 0 at 0.88 r → 0.45 at r
+  sq.addColorStop(0.88, rgba(spec.base, 0));
+  sq.addColorStop(1,    rgba(spec.base, 0.45));
+  g.fillStyle = sq; g.fillRect(0, 0, S, S);
 
-  const sx = c + 0.36 * r * lx, sy = c + 0.36 * r * ly;                 // 3. terminator shade, centre +0.36 r·L, radius 1.25 r
+  if (spec.specular) {                                                  // 2. glint: ellipse 0.22 r × 0.12 r at 0.45 r·L, long axis along L
+    g.save();
+    g.translate(c + 0.45 * r * lx, c + 0.45 * r * ly);
+    g.rotate(Math.atan2(ly, lx));
+    g.scale(0.22 * r, 0.12 * r);                                        // unit circle → ellipse
+    const gl = g.createRadialGradient(0, 0, 0, 0, 0, 1);
+    gl.addColorStop(0,   "rgba(255,255,255,0.35)");                     // planet.specular
+    gl.addColorStop(0.5, "rgba(255,255,255,0.18)");
+    gl.addColorStop(1,   "rgba(255,255,255,0)");
+    g.fillStyle = gl; g.beginPath(); g.arc(0, 0, 1, 0, Math.PI * 2); g.fill();
+    g.restore();
+  }
+
+  const sx = c + 0.36 * r * lx, sy = c + 0.36 * r * ly;                 // 3. terminator shade (v1.1): centre +0.36 r·L, radius 1.25 r
   const shade = g.createRadialGradient(sx, sy, 0, sx, sy, 1.25 * r);
   shade.addColorStop(0,    rgba(spec.highlight, 0.90));
   shade.addColorStop(0.40, rgba(spec.base, 0));
@@ -524,101 +669,137 @@ function buildPlanetSprite(spec: PlanetSpec, lx: number, ly: number, zoomB: numb
   g.strokeStyle = rgba(spec.highlight, spec.limbAlpha); g.lineWidth = 1;   // 4. limb line at r − 0.5
   g.beginPath(); g.arc(c, c, r - 0.5, 0, Math.PI * 2); g.stroke();
 
-  const R = 1.12 * r;                                                   // 5. atmosphere rim, two passes in a scratch canvas
+  const R = 1.12 * r;                                                   // 5. atmosphere rim (v1.1): two passes in a scratch canvas
   const rim = document.createElement("canvas");
   rim.width = rim.height = S * DPR;
   const h = rim.getContext("2d")!;
   h.setTransform(DPR, 0, 0, DPR, 0, 0);
-  const rg = h.createRadialGradient(c, c, 0, c, c, R);                  // pass 1: the rim itself
+  const rg = h.createRadialGradient(c, c, 0, c, c, R);
   rg.addColorStop(0,    rgba(spec.atmo, 0));
   rg.addColorStop(0.80, rgba(spec.atmo, 0));
   rg.addColorStop(0.87, rgba(spec.atmo, 0.55));
   rg.addColorStop(0.92, rgba(spec.atmo, 0.30));
   rg.addColorStop(1,    rgba(spec.atmo, 0));
   h.fillStyle = rg; h.beginPath(); h.arc(c, c, R, 0, Math.PI * 2); h.fill();
-  h.globalCompositeOperation = "destination-in";                        // pass 2: × linear alpha along L, 1.0 lit → 0.35 dark
+  h.globalCompositeOperation = "destination-in";                        // × linear alpha along L, 1.0 lit → 0.35 dark
   const lit = h.createLinearGradient(c + R * lx, c + R * ly, c - R * lx, c - R * ly);
   lit.addColorStop(0, "rgba(255,255,255,1)");
   lit.addColorStop(1, "rgba(255,255,255,0.35)");
   h.fillStyle = lit; h.fillRect(0, 0, S, S);
-  g.drawImage(rim, 0, 0, S, S);                                         // composite over the body
+  g.drawImage(rim, 0, 0, S, S);
 
-  return { canvas, size: S, zoom: zoomB, lx, ly };
+  return { canvas, size: S };
 }
 
-function drawPlanetSprite(ctx: CanvasRenderingContext2D, sp: PlanetSprite, sx: number, sy: number, zoom: number): void {
-  const k = zoom / sp.zoom;                                             // residual scale inside the bucket: 0.894 … 1.118
-  const s = sp.size * k;
-  ctx.drawImage(sp.canvas, sx - s / 2, sy - s / 2, s, s);
+// Zoom bucket (§12): built at 1.25^k; round() flips at the midpoints (±11.8 % about each centre),
+// so successive builds are 25 % apart and the residual scale stays within 0.894 … 1.118.
+function zoomBucket(zoom: number): number {
+  return Math.pow(1.25, Math.round(Math.log(zoom) / Math.log(1.25)));
+}
+
+// lx, ly = L (unit vector toward the star). zoomB = zoomBucket(zoom). ≈ 2 ms per planet, once per bucket.
+function buildPlanetStrips(spec: PlanetSpec, lx: number, ly: number, zoomB: number): PlanetStrips {
+  const r = spec.r * zoomB;
+  const P = Math.round(2 * Math.PI * r);                                // 214 (start) / 188 (X) at zoom 1 — one full rotation
+  const W = Math.round(P * DPR), H = Math.round(2 * r * DPR);           // one tile in device px
+  const surface = buildStrip(spec.surface, spec.base, spec.caps, W, H);
+  const cloud   = buildStrip([spec.cloud], null, null, W, H);
+  const ov = buildLightingOverlay(spec, lx, ly, zoomB);
+  return { surface, cloud, overlay: ov.canvas, size: ov.size, r, P, zoom: zoomB };
 }
 ```
 
-The brief's simpler SVG-style approximation for step 5 — one full rim at α 0.30 scale plus a second rim clipped to the lit half at +0.25 — is acceptable if you want to avoid the scratch canvas; the two-pass `destination-in` version above reproduces the asset's mask exactly and costs the same (once).
+### Per-frame draw: dt-based phase and the seamless wrap
 
-### Keeping the sprites current
+Each planet keeps two **phases** in [0, 1) — the fraction of a rotation completed by the surface and by the cloud/wisp strip. They advance by **`dt / period`** from the frame clock (never by frame count: a dropped frame must not freeze the planet, and 2x/4x must not spin it) and are wrapped with `x − floor(x)`, so they never grow and never lose precision. The pixel offset is `phase · P`; because the strip holds two identical tiles, drawing it at `x = cx − r − P + phase · P` always covers the whole disc window [cx − r, cx + r] (left edge ≤ cx − r because phase < 1; right edge = cx − r + P + phase·P ≥ cx + r because P > 2r), and the image at phase → 1 is pixel-identical to phase = 0 — that is the modulo: no seam, no snap, nothing to blend. Sign note: the brief's construction sketch writes `from="0 0" to="−<period> 0"` and `drawImage(surface, −((t/period)·W) mod W)`, which would scroll the texture east→west; the assets (`translate 0 → +P`) and this code (offset grows with time) deliberately use the + direction because the brief's prose specifies "texture moves left→right" and the two statements contradict each other — copy the sign from here, not from the sketch. Do **not** round the offset: at zoom 1 the start planet moves 0.04 px per frame, and the bilinear filter on a fractional `drawImage` is what makes that read as motion instead of a 1 px step every 25 frames.
 
 ```ts
-let startTile: HTMLCanvasElement | undefined, xTile: HTMLCanvasElement | undefined;   // noise tiles: built once, kept
-let startSprite: PlanetSprite | undefined, xSprite: PlanetSprite | undefined;
+interface Spin { surface: number; cloud: number }                      // phases in [0, 1)
+const frac = (x: number): number => x - Math.floor(x);
+
+// dtS = seconds since the last frame (clamp to ≤ 0.1 s after a tab switch so the planet does not jump).
+function advanceSpin(spin: Spin, spec: PlanetSpec, dtS: number): void {
+  spin.surface = frac(spin.surface + dtS / spec.surfacePeriod);         // 90 s / 120 s
+  spin.cloud   = frac(spin.cloud   + dtS / spec.cloudPeriod);           // 64 s / 80 s — drifts relative to the surface
+}
+
+// 1 clip + 3 drawImage. sx, sy = screen centre; zoom = current camera zoom (residual k inside the bucket: 0.894 … 1.118).
+function drawPlanet(ctx: CanvasRenderingContext2D, st: PlanetStrips, spin: Spin, sx: number, sy: number, zoom: number): void {
+  const k = zoom / st.zoom, r = st.r * k, P = st.P * k, D = 2 * r;
+  ctx.save();
+  ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI * 2); ctx.clip();
+  ctx.drawImage(st.surface, sx - r - P + spin.surface * P, sy - r, 2 * P, D);   // west→east: offset grows with time
+  ctx.drawImage(st.cloud,   sx - r - P + spin.cloud   * P, sy - r, 2 * P, D);   // alpha baked (0.5 / 0.35)
+  ctx.restore();
+  const s = st.size * k;
+  ctx.drawImage(st.overlay, sx - s / 2, sy - s / 2, s, s);                      // squash + glint + shade + limb + rim, never rotates
+}
+```
+
+The strip is 2P wide but only the 2r × 2r window inside the clip is rasterised, so the two strip blits cost like 68 × 68 / 60 × 60 blits, not 428 × 68 ones. Start phase: the Canvas texture is its own noise field, so there is nothing to align with the SVG's t = 0 (which puts tile x 44 / 40 at the disc's left edge); start both phases at 0.
+
+### Keeping the strips current
+
+```ts
+let startStrips: PlanetStrips | undefined, xStrips: PlanetStrips | undefined;
+const startSpin: Spin = { surface: 0, cloud: 0 }, xSpin: Spin = { surface: 0, cloud: 0 };
 
 function towardStar(p: Body, star: Body): [number, number] {           // L — same direction in world or screen space
   const dx = star.x - p.x, dy = star.y - p.y, d = Math.hypot(dx, dy) || 1;
   return [dx / d, dy / d];
 }
 
-// Call once per frame before drawing. Rebuilds only when the zoom bucket changes; resize does not touch these sprites
-// (they depend only on r, L, the bucket and the constant DPR).
-function ensurePlanetSprites(start: Body, x: Body, star: Body, zoom: number): void {
+// Call once per frame before drawing. Rebuilds only when the zoom bucket changes; resize does not touch these
+// (they depend only on r, L, the bucket and the constant DPR). Phases survive a rebuild.
+function ensurePlanetStrips(start: Body, x: Body, star: Body, zoom: number, dtS: number): void {
   const zb = zoomBucket(zoom);
-  if (!startTile) startTile = makeNoiseTile(128, PLANET_START.seed, 3, 3, PLANET_START.cells);
-  if (!xTile)     xTile     = makeNoiseTile(128, PLANET_X.seed, 3, 3, PLANET_X.cells);
-  if (!startSprite || startSprite.zoom !== zb) {
-    const [lx, ly] = towardStar(start, star);
-    startSprite = buildPlanetSprite(PLANET_START, lx, ly, zb, startTile);
-  }
-  if (!xSprite || xSprite.zoom !== zb) {
-    const [lx, ly] = towardStar(x, star);
-    xSprite = buildPlanetSprite(PLANET_X, lx, ly, zb, xTile);
-  }
+  if (!startStrips || startStrips.zoom !== zb) { const [lx, ly] = towardStar(start, star); startStrips = buildPlanetStrips(PLANET_START, lx, ly, zb); }
+  if (!xStrips     || xStrips.zoom     !== zb) { const [lx, ly] = towardStar(x, star);     xStrips     = buildPlanetStrips(PLANET_X, lx, ly, zb); }
+  advanceSpin(startSpin, PLANET_START, dtS);
+  advanceSpin(xSpin, PLANET_X, dtS);
 }
 
 function drawPlanetStart(ctx: CanvasRenderingContext2D, p: Body, zoom: number): void {
-  drawPlanetSprite(ctx, startSprite!, p.x, p.y, zoom);
+  drawPlanet(ctx, startStrips!, startSpin, p.x, p.y, zoom);
 }
 ```
 
-(`p.x`/`p.y` here are already screen coordinates; the §12 camera does world→screen before calling. Build cost ≈ 1–2 ms per sprite, once, and again only when the bucket changes; a bucket change rebuilds both in the same frame — ≈ 3 ms, once, inside the 6 ms target.)
+(`p.x`/`p.y` here are already screen coordinates; the §12 camera does world→screen before calling.)
 
-### Planet X halo + capture ring (live, as v1)
-Halo: radial gradient `#3DE0C2`, radius **1.8 · r** (54 at r 30), α 0.35 from the centre out to the planet's edge (offset 0.556 = 1/1.8), 0.10 at 0.78, 0 at the rim. Draw it before the sprite. It stays live because it is one gradient fill (~0.05 ms) that scales cleanly with zoom, and because it must not be clipped by the 1.12 r sprite.
+### Cost
+Per frame, per planet: 1 `arc` clip + 2 clipped strip blits + 1 overlay blit ≈ **0.08 ms** (0.16 ms for both, the "Planets" row in §0). Build, per planet, once per bucket change: 2 fields (`fieldFromTile` ≈ 0.3 ms each at 428 × 136), 3 `paintLayer` loops (≈ 0.1 ms each), 3 `putImageData` + 6 small blits, caps, overlay (2 gradients, glint, limb, rim ≈ 1 ms) ≈ **2 ms**; both planets ≈ 4 ms in the same frame, once, inside the 6 ms target. Memory: strips 856 × 136 + 752 × 120 device px × 2 each, overlays 162² / 144² — under 1 MB in all. Noise tiles ≈ 0.4 ms each, five in all, built at startup and kept.
 
-Ring: radius 78 at zoom 1, `#3DE0C2`, stroke 1.5 px, `setLineDash([6, 6])`. Two motions, both continuous: the dashes **crawl** via `lineDashOffset` at **−12 px/s** (one 12 px dash period per second, so the pattern never jumps), **and** the ring **pulses** over **2.4 s** (sine): α 0.35 ↔ 0.70, radius ±2 px. Together with the star breathe that is the complete motion list in `style.md` §5; nothing else moves on its own. `setLineDash` is cheap, but it is context state: **reset it to `[]`** (and `lineDashOffset` to 0) afterwards or the trail and HUD hairlines will come out dashed.
+### Planet X halo + capture ring (live)
+Halo: radial gradient `#3DE0C2`, radius **1.8 · r** (54 at r 30), α 0.35 from the centre out to the planet's edge (offset 0.556 = 1/1.8), 0.10 at 0.78, 0 at the rim. Draw it before the strips. v1.2 makes it **breathe ±4 % over 2.4 s** (sine, in phase with the ring: scale 1 → 1.04 → 1 → 0.96 → 1), which costs nothing because the radius is a parameter of a live gradient. It stays live because it is one gradient fill (~0.05 ms) that scales cleanly with zoom, and because it must not be clipped by the 1.12 r overlay.
+
+Ring: radius 78 at zoom 1, `#3DE0C2`, stroke 1.5 px, `setLineDash([6, 6])`. Two motions, both continuous and now also in the SVG: the dashes **crawl** via `lineDashOffset` at **−12 px/s** (one 12 px dash period per second, so the pattern never jumps), **and** the ring **pulses** over **2.4 s** (sine): α 0.35 ↔ 0.70, radius ±2 px. The sine form below has its rest point at α 0.525; the asset's keyframes (`0.55; 0.70; 0.55; 0.35; 0.55`) start from v1's static 0.55 — 0.025 apart, invisible. `setLineDash` is context state: **reset it to `[]`** (and `lineDashOffset` to 0) afterwards or the trail and HUD hairlines will come out dashed.
 
 ```ts
 function drawPlanetX(ctx: CanvasRenderingContext2D, p: Body, zoom: number, tMs: number): void {
   const r = p.r * zoom;
-  const halo = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, 1.8 * r);
+  const w = Math.sin((tMs / 2400) * Math.PI * 2);                      // −1..1 over 2.4 s — one clock for halo and ring
+  const haloR = 1.8 * r * (1 + 0.04 * w);                              // halo breathe ±4 %
+  const halo = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, haloR);
   halo.addColorStop(0, rgba("#3DE0C2", 0.35));
   halo.addColorStop(0.556, rgba("#3DE0C2", 0.35));
   halo.addColorStop(0.78, rgba("#3DE0C2", 0.10));
   halo.addColorStop(1, rgba("#3DE0C2", 0));
   ctx.fillStyle = halo;
-  ctx.beginPath(); ctx.arc(p.x, p.y, 1.8 * r, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(p.x, p.y, haloR, 0, Math.PI * 2); ctx.fill();
 
-  drawPlanetSprite(ctx, xSprite!, p.x, p.y, zoom);                     // body + noise + shade + limb + rim, cached
+  drawPlanet(ctx, xStrips!, xSpin, p.x, p.y, zoom);                    // strips through the clip + lighting overlay
 
-  const s = Math.sin((tMs / 2400) * Math.PI * 2) * 0.5 + 0.5;  // 0..1 over 2.4 s
-  const ringR = 78 * zoom + (s * 2 - 1) * 2;                   // ±2 px (screen px)
-  ctx.strokeStyle = rgba("#3DE0C2", 0.35 + s * 0.35);           // α 0.35 → 0.70
+  const ringR = 78 * zoom + 2 * w;                                     // ±2 px (screen px)
+  ctx.strokeStyle = rgba("#3DE0C2", 0.525 + 0.175 * w);                // α 0.35 ↔ 0.70
   ctx.lineWidth = 1.5;
   ctx.setLineDash([6, 6]);
-  ctx.lineDashOffset = -((tMs / 1000) * 12) % 12;               // dash crawl −12 px/s (one 12 px period per second)
+  ctx.lineDashOffset = -((tMs / 1000) * 12) % 12;                      // dash crawl −12 px/s (one 12 px period per second)
   ctx.beginPath(); ctx.arc(p.x, p.y, ringR, 0, Math.PI * 2); ctx.stroke();
-  ctx.setLineDash([]); ctx.lineDashOffset = 0;                  // always reset
+  ctx.setLineDash([]); ctx.lineDashOffset = 0;                         // always reset
 }
 ```
 
-On the win overlay the pulse and the crawl stop and the ring is drawn at **full α 1.0** (radius 78, `lineDashOffset` 0), as in `result-win.svg` — the one moment the boundary reads as solid.
+On the win overlay the pulse and the crawl stop and the ring is drawn at **full α 1.0** (radius 78, `lineDashOffset` 0), as in `result-win.svg` — the one moment the boundary reads as solid. The halo breathe and the surface rotation continue under the scrim.
 
 ---
 
@@ -1061,9 +1242,10 @@ A single camera `{ x, y, zoom }` maps world → screen: `sx = (wx − cam.x) · 
 |---|---|
 | Body radii (star 46, planets 34 / 30, halo 1.8 r, ring 78) | Ship **minimum** size (`max(12, 22·zoom)`) |
 | Star sprite size (400 · zoom · breathe) | All line widths: ring 1.5, trail 2, path dots r 1.5, arrow 2, outline 1, planet limb line 1 (baked at the bucket zoom) |
-| Planet sprite blit size (`size · zoom / bucketZoom`, §4) | Dot spacing on the predicted path (10 px) and the 400-dot cap |
+| Planet strip and overlay blit sizes (`2P · zoom / bucketZoom`, `size · zoom / bucketZoom`, §4) | Dot spacing on the predicted path (10 px) and the 400-dot cap |
 | Positions of trail samples, path dots, ship, planets | Ring pulse amplitude (±2 px), dash pattern `[6, 6]` and dash crawl (−12 px/s) |
-| Sprite geometry — shade centre 0.36 r·L, shade radius 1.25 r, rim 1.12 r, noise texture size — all in r, baked at the bucket zoom | Drag arrow (tick at 242 · power from the ship centre), head, tick, label |
+| Strip period P = round(2π r) at the bucket zoom (214 / 188 at zoom 1) and the texture feature size (cells per P) — so the surface speed in px/s scales with zoom while the **rotation periods (90 / 64 / 120 / 80 s) are wall-clock** and never change | Rotation periods: seconds per turn, independent of zoom and of the 1x/2x/4x simulation speed |
+| Overlay geometry — squash 0.88–1.0 r, glint 0.45 r·L and 0.22 r × 0.12 r, shade centre 0.36 r·L, shade radius 1.25 r, rim 1.12 r — all in r, baked at the bucket zoom | Drag arrow (tick at 242 · power from the ship centre), head, tick, label |
 | | HUD, fuel bar, buttons, telemetry, result card |
 
 ```ts
@@ -1079,8 +1261,8 @@ The tuple-returning `worldToScreen` is fine for the handful of bodies and for th
 
 Do not use `ctx.scale(zoom, zoom)` for the whole scene: it would scale line widths, dash patterns and the ship with it, and you would spend the frame dividing them back out. Transform positions and radii explicitly; keep the context at DPR scale only.
 
-### Zoom bucket rule (planet sprites)
-The planet sprites are bitmaps, so they are built at a **bucketed** zoom and scaled by the residual: `bucketZoom = 1.25^round(log(zoom) / log 1.25)` (§4 `zoomBucket`), which puts the residual `zoom / bucketZoom` inside **0.894 … 1.118** — the sprite is never stretched or shrunk by more than ~12 %, so its 1 px limb line and the noise grain stay clean. A sprite is **re-rendered only when the bucket changes** (buckets … 0.64, 0.8, 1, 1.25, 1.5625 …): `round()` flips at the bucket midpoints, i.e. **±11.8 %** about each centre (`zoomBucket(1.117) = 1`, `zoomBucket(1.119) = 1.25`), so successive builds are always **25 % apart** in zoom — the rule is "25 % between builds", not "25 % since the last build": a zoom sitting right on a boundary can rebuild on a sub-1 % change. Continuous zooming inside a bucket costs nothing. Both planets share the bucket, so a change rebuilds both (≈ 3 ms once). Hysteresis is not needed: a rebuild is cheap enough that chattering across a boundary is harmless, and keeping the residual inside ±11.8 % (rather than the ±25 % a hysteresis band would allow) is what keeps the 1 px limb line clean.
+### Zoom bucket rule (planet strips and overlays)
+The planet strips and lighting overlays are bitmaps, so they are built at a **bucketed** zoom and scaled by the residual: `bucketZoom = 1.25^round(log(zoom) / log 1.25)` (§4 `zoomBucket`), which puts the residual `zoom / bucketZoom` inside **0.894 … 1.118** — nothing is stretched or shrunk by more than ~12 %, so the 1 px limb line, the ≈ 1 px coastlines and the thin veins stay clean. They are **re-rendered only when the bucket changes** (buckets … 0.64, 0.8, 1, 1.25, 1.5625 …): `round()` flips at the bucket midpoints, i.e. **±11.8 %** about each centre (`zoomBucket(1.117) = 1`, `zoomBucket(1.119) = 1.25`), so successive builds are always **25 % apart** in zoom — the rule is "25 % between builds", not "25 % since the last build": a zoom sitting right on a boundary can rebuild on a sub-1 % change. Continuous zooming inside a bucket costs nothing. Both planets share the bucket, so a change rebuilds both (≈ 4 ms once); the rotation phases live outside the bitmaps and survive the rebuild, so the surface does not jump. Hysteresis is not needed: a rebuild is cheap enough that chattering across a boundary is harmless, and keeping the residual inside ±11.8 % (rather than the ±25 % a hysteresis band would allow) is what keeps the 1 px limb line clean.
 
 When zoom changes, nothing else needs rebuilding: the star sprite is a fixed 400 px bitmap that `drawImage` scales (§3). The background does not zoom at all (no parallax in this prototype) — the Milky Way and the starfield are screen-space.
 
@@ -1095,9 +1277,10 @@ When zoom changes, nothing else needs rebuilding: the star sprite is a fixed 400
 | One `Path2D` with hundreds of arcs + one `fill()` | Hundreds of separate `beginPath/arc/fill` calls with changing `fillStyle` |
 | `setLineDash` + `lineDashOffset` (but reset to `[]`) | `getImageData` / `putImageData` anywhere in the loop |
 | `globalCompositeOperation = "lighter"` on two small triangles | `"lighter"` over large areas or many layers |
-| `"multiply"` / `"soft-light"` / `"destination-in"` **inside a sprite build** (§3, §4) | Blend modes on a live layer every frame |
-| A 128² noise tile built once with `putImageData` and reused as a pattern | Noise, `feTurbulence`-style filters or `ctx.filter` per frame |
-| Planet sprite blits (81 / 72 px), rebuilt only when the zoom bucket changes (buckets 25 % apart, flipping at ±11.8 %) | Rebuilding a sprite per zoom tick, or drawing the noise + terminator + rim live |
+| `"multiply"` / `"destination-in"` **inside a sprite build** (§3, §4) | Blend modes on a live layer every frame |
+| A 128² noise tile built once with `putImageData` and reused as a pattern; one `getImageData` per strip layer **at build time** to threshold it (§4) | Noise, `feTurbulence`-style filters or `ctx.filter` per frame |
+| Planet strips (428 × 68 / 376 × 60) + lighting overlays (81 / 72 px), rebuilt only when the zoom bucket changes (buckets 25 % apart, flipping at ±11.8 %) | Rebuilding a strip per zoom tick, or drawing the noise + terminator + rim live |
+| Rotating a planet by moving the `drawImage` x offset of a cached, 2-tile strip through a circular clip (1 clip + 3 blits, dt-based phase, modulo wrap) | Re-rendering the texture per frame, rotating with `ctx.rotate` (the lighting would turn), or a per-frame `ctx.filter`/mask for the "sphere" |
 | `fillText` ≤ 10 per frame at integer positions | Measuring and laying out text every frame (`measureText` in a loop) |
 | `translate/rotate/scale` + `save/restore` per sprite | Deep `save/restore` nesting; re-setting `font` for every string |
 | Opaque context `{ alpha: false }`, DPR capped at 2 | DPR 3 canvases, transparent contexts, `clearRect` + redraw of a static background |
@@ -1105,4 +1288,4 @@ When zoom changes, nothing else needs rebuilding: the star sprite is a fixed 400
 | Ring buffers and `Float32Array` for trail/path | Allocating arrays per frame (GC pauses show up as dropped frames) |
 | ~1005 dots, 12 halos and 3 band gradients **once** into the background (≈ 2.5 ms) | Any starfield, halo or band drawing in the frame loop |
 
-If a frame ever exceeds 6 ms, the order to look at is: (1) a stray `shadowBlur`, (2) the background being redrawn instead of blitted, (3) a planet sprite being rebuilt every frame (check that `zoomBucket` is stable), (4) the trail drawn per segment with 240 strokes, (5) text drawn with letter-spacing fallback per character. Fix in that order; each one alone can double the frame cost.
+If a frame ever exceeds 6 ms, the order to look at is: (1) a stray `shadowBlur`, (2) the background being redrawn instead of blitted, (3) the planet strips being rebuilt every frame (check that `zoomBucket` is stable and that `ensurePlanetStrips` compares the bucket, not the raw zoom), (4) the trail drawn per segment with 240 strokes, (5) text drawn with letter-spacing fallback per character. Fix in that order; each one alone can double the frame cost. If a planet's surface visibly steps instead of gliding, something is rounding the strip offset — keep it fractional (§4).

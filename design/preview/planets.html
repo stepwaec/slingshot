@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Slingshot — planet preview (v1.2)</title>
+<!-- design/preview/planets.html — self-contained, no scripts. The three <svg> elements in the 3x row are
+     design/assets/planet-start.svg, planet-x.svg and star.svg copied verbatim (ids ps*, px*, star* are unique on this page);
+     the 1x row re-uses them through <use href="#planetStart|#planetX|#star"> so nothing is duplicated and both rows share one
+     SMIL timeline. The star has no SMIL in its asset; its +-3 % / 6 s breathe is a CSS transform on its box here. -->
+<style>
+  :root {
+    --bg-base: #050710;
+    --ui-text: #ECF0FA;
+    --ui-text-muted: #8B95B5;
+    --ui-text-dim: #4B5470;
+    --ui-border: rgba(255,255,255,0.10);
+    --ui-panel: rgba(10,13,26,0.72);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg-base); }
+  body {
+    color: var(--ui-text);
+    font-family: -apple-system, "Segoe UI", Inter, Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 13px;
+    line-height: 1.4;
+    padding: 40px 48px 48px;
+    -webkit-font-smoothing: antialiased;
+  }
+  header { margin-bottom: 36px; }
+  .wordmark {
+    font-size: 13px; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--ui-text-muted); margin: 0 0 6px;
+  }
+  h1 { font-size: 16px; font-weight: 500; margin: 0; color: var(--ui-text); }
+  header p { margin: 6px 0 0; color: var(--ui-text-muted); }
+  code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 12px; color: var(--ui-text); }
+  section { margin-bottom: 44px; }
+  .mode {
+    font-size: 11px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--ui-text-muted); margin: 0 0 16px;
+  }
+  .row { display: flex; flex-wrap: wrap; align-items: center; gap: 40px; }
+  figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .box {
+    width: var(--s); height: var(--s);
+    border: 1px solid var(--ui-border); border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .box > svg { width: var(--s); height: var(--s); display: block; }
+  .breathe > svg { animation: breathe 6s ease-in-out infinite; transform-origin: 50% 50%; }
+  @keyframes breathe { 0% { transform: scale(1); } 25% { transform: scale(1.03); } 50% { transform: scale(1); } 75% { transform: scale(0.97); } 100% { transform: scale(1); } }
+  @media (prefers-reduced-motion: reduce) { .breathe > svg { animation: none; } }
+  figcaption { text-align: center; color: var(--ui-text-muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+  figcaption b { font-weight: 500; color: var(--ui-text); display: block; margin-bottom: 2px; }
+  footer { color: var(--ui-text-muted); border-top: 1px solid var(--ui-border); padding-top: 16px; }
+</style>
+</head>
+<body>
+<header>
+  <p class="wordmark">Slingshot</p>
+  <h1>Planets, v1.2 — realistic and animated</h1>
+  <p>Inline copies of <code>design/assets/planet-start.svg</code>, <code>planet-x.svg</code> and <code>star.svg</code>; SMIL scrolls the texture strips and drives the capture ring, the lighting stays fixed toward the star.</p>
+</header>
+
+<section>
+  <p class="mode">3× — planets at 360 / 720 px, star 1 : 1 (its 3× would be 1200 px)</p>
+  <div class="row">
+    <figure>
+      <div class="box" style="--s:360px">
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+  <!-- Start planet, v1.2 (ocean world, animated). ONE group #planetStart at translate(60 60); geometry relative to (0,0).
+       r 34, disc diameter H = 68. Lit side faces the star: L = (+0.7071, -0.7071) (upper-right). Lighting never rotates.
+       Texture strip: period P = round(2*pi*r) = 214 px (one full rotation). Each strip is ONE rect 2P x 2r = 428x68 (never two abutting rects:
+       an anti-aliased join inside the clip would show as a hairline at fractional translate); its filter computes the noise once over a
+       214x68 subregion (stitchTiles stitch -> periodic in exactly P) and feTile repeats it across the 428 px region, so the strip is 2P wide
+       with no geometry edge. Scrolled west->east (texture moves left->right: translate 0 -> +P; the brief's sketch says to="-P" but also
+       "texture moves left->right" - the + sign is what does that) through the circular clip #psClip. Start phase: tile x 44 (strip x 258) at the
+       disc's left edge (inner translate(-292 -34) = -(r + P + 44), -r); the t = 0 window then shows ~38 % land (the tile averages 33.5 %).
+
+       Draw order:
+       1. base     circle r 34, #3D8BFF (ocean).
+       2. surface  strip, SMIL translate 0 -> 214 over 90 s. Strip = rect 428x68, fill #3D8BFF, filter #psLand (region 0..428 x 0..68):
+                   feTurbulence fractalNoise baseFrequency 0.030, numOctaves 4, seed 7, stitchTiles stitch on subregion 0..214 x 0..68 (-> seamless),
+                   feTile to 428x68 (two periods, one rect),
+                   alpha channel -> land mask: linear slope 24, intercept -12.772 (soft threshold at 0.553 = p68 of the field -> ~32 % land,
+                   coastline transition ~1 px), land colour #8FB07A; highlands = same noise, slope 6 intercept -3.358 (threshold 0.643), then x0.22,
+                   colour #142B5E (darker interiors on the larger continents).
+                   Polar caps: bands 12 % of the disc at top and bottom (8.16 px), #E9EEF8, alpha 1 at the pole | 0.9 at 60 % | 0 at the band's inner edge,
+                   drawn inside the strip (they move with it, but as bands they look fixed).
+       3. clouds   strip, SMIL translate 0 -> 214 over 64 s, group opacity 0.5. Strip = rect 428x68, fill #F2F5FF, filter #psCloud:
+                   feTurbulence fractalNoise baseFrequency 0.055, numOctaves 4, seed 19, stitchTiles stitch on subregion 0..214 x 0..68, feTile over
+                   the filter region -4..432 x -4..72 (two periods, and the blur sees periodic neighbours), alpha -> linear slope 14, intercept -6.85
+                   (threshold 0.525 = p60 -> ~40 % cover), feGaussianBlur 0.8, feComposite in SourceGraphic (crops back to the 428x68 strip).
+                   Start phase: tile x 0 at the disc's left edge (inner translate(-248 -34) = -(r + P), -r).
+       4. squash   circle r 34, radial from the centre, #3D8BFF: 0.88 a0 | 1.00 a0.45  (fades the texture to 55 % in the outer 12 % of r).
+       5. glint    ellipse 0.22 r x 0.12 r = 7.5 x 4.1 at 0.45 r L = (10.82, -10.82), long axis along L (radial), rotate(-45), #FFFFFF radial a0.35 -> 0.
+       6. shade    radial, userSpace centre 0.36 r L = (8.66, -8.66), radius 1.25 r = 42.5 (v1.1 numbers, unchanged):
+                   0.00 #9CCBFF a0.90 | 0.40 #3D8BFF a0 | 0.70 #142B5E a0.55 | 0.86 #142B5E a0.92 | 1.00 #142B5E a1.0  (0.70-0.86 is the terminator).
+       7. limb     circle r 33.5, stroke 1, #9CCBFF a0.16.
+       8. rim      circle r 1.12 r = 38.08, radial from the planet centre, #7FB8FF: 0.00 a0 | 0.80 a0 | 0.87 a0.55 | 0.92 a0.30 | 1.00 a0,
+                   multiplied (alpha mask) by a linear gradient along L from +1.12 r L (26.93,-26.93) = 1.0 to -1.12 r L = 0.35 (v1.1, unchanged).
+       Static renders show t = 0. Ids: ps*. -->
+  <defs>
+    <clipPath id="psClip"><circle r="34"/></clipPath>
+    <filter id="psLand" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="0" y="0" width="428" height="68" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.030" numOctaves="4" seed="7" stitchTiles="stitch" x="0" y="0" width="214" height="68" result="psN1"/>
+      <feTile in="psN1" x="0" y="0" width="428" height="68" result="psN"/>
+      <feColorMatrix in="psN" type="matrix" values="0 0 0 0 0.561  0 0 0 0 0.690  0 0 0 0 0.478  0 0 0 1 0" result="psLandRGB"/>
+      <feComponentTransfer in="psLandRGB" result="psLandMask">
+        <feFuncA type="linear" slope="24" intercept="-12.772"/>
+      </feComponentTransfer>
+      <feColorMatrix in="psN" type="matrix" values="0 0 0 0 0.078  0 0 0 0 0.169  0 0 0 0 0.369  0 0 0 1 0" result="psHighRGB"/>
+      <feComponentTransfer in="psHighRGB" result="psHighCut">
+        <feFuncA type="linear" slope="6" intercept="-3.358"/>
+      </feComponentTransfer>
+      <feComponentTransfer in="psHighCut" result="psHighMask">
+        <feFuncA type="linear" slope="0.22" intercept="0"/>
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode in="SourceGraphic"/>
+        <feMergeNode in="psLandMask"/>
+        <feMergeNode in="psHighMask"/>
+      </feMerge>
+    </filter>
+    <filter id="psCloud" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-4" y="-4" width="436" height="76" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.055" numOctaves="4" seed="19" stitchTiles="stitch" x="0" y="0" width="214" height="68" result="psCN"/>
+      <feTile in="psCN" x="-4" y="-4" width="436" height="76" result="psCT"/>
+      <feColorMatrix in="psCT" type="matrix" values="0 0 0 0 0.949  0 0 0 0 0.961  0 0 0 0 1  0 0 0 1 0" result="psCRGB"/>
+      <feComponentTransfer in="psCRGB" result="psCMask">
+        <feFuncA type="linear" slope="14" intercept="-6.85"/>
+      </feComponentTransfer>
+      <feGaussianBlur in="psCMask" stdDeviation="0.8" result="psCSoft"/>
+      <feComposite in="psCSoft" in2="SourceGraphic" operator="in"/>
+    </filter>
+    <linearGradient id="psCapN" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#E9EEF8" stop-opacity="1"/>
+      <stop offset="0.6" stop-color="#E9EEF8" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#E9EEF8" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="psCapS" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#E9EEF8" stop-opacity="1"/>
+      <stop offset="0.6" stop-color="#E9EEF8" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#E9EEF8" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="psSquash" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="34">
+      <stop offset="0.88" stop-color="#3D8BFF" stop-opacity="0"/>
+      <stop offset="1" stop-color="#3D8BFF" stop-opacity="0.45"/>
+    </radialGradient>
+    <radialGradient id="psGlint" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.35"/>
+      <stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="psShade" gradientUnits="userSpaceOnUse" cx="8.66" cy="-8.66" r="42.5">
+      <stop offset="0" stop-color="#9CCBFF" stop-opacity="0.90"/>
+      <stop offset="0.40" stop-color="#3D8BFF" stop-opacity="0"/>
+      <stop offset="0.70" stop-color="#142B5E" stop-opacity="0.55"/>
+      <stop offset="0.86" stop-color="#142B5E" stop-opacity="0.92"/>
+      <stop offset="1" stop-color="#142B5E" stop-opacity="1"/>
+    </radialGradient>
+    <radialGradient id="psRim" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="38.08">
+      <stop offset="0" stop-color="#7FB8FF" stop-opacity="0"/>
+      <stop offset="0.80" stop-color="#7FB8FF" stop-opacity="0"/>
+      <stop offset="0.87" stop-color="#7FB8FF" stop-opacity="0.55"/>
+      <stop offset="0.92" stop-color="#7FB8FF" stop-opacity="0.30"/>
+      <stop offset="1" stop-color="#7FB8FF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="psRimLit" gradientUnits="userSpaceOnUse" x1="26.93" y1="-26.93" x2="-26.93" y2="26.93">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="1"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.35"/>
+    </linearGradient>
+    <mask id="psRimMask" mask-type="alpha" maskUnits="userSpaceOnUse" x="-40" y="-40" width="80" height="80">
+      <rect x="-40" y="-40" width="80" height="80" fill="url(#psRimLit)"/>
+    </mask>
+  </defs>
+  <g id="planetStart" transform="translate(60 60)">
+    <circle r="34" fill="#3D8BFF"/>
+    <g clip-path="url(#psClip)">
+      <g id="psSurfaceAnim">
+        <animateTransform attributeName="transform" type="translate" from="0 0" to="214 0" dur="90s" repeatCount="indefinite"/>
+        <g id="psSurfaceStrip" transform="translate(-292 -34)">
+          <rect width="428" height="68" fill="#3D8BFF" filter="url(#psLand)"/>
+          <rect width="428" height="8.16" fill="url(#psCapN)"/>
+          <rect y="59.84" width="428" height="8.16" fill="url(#psCapS)"/>
+        </g>
+      </g>
+      <g id="psCloudAnim" opacity="0.5">
+        <animateTransform attributeName="transform" type="translate" from="0 0" to="214 0" dur="64s" repeatCount="indefinite"/>
+        <g id="psCloudStrip" transform="translate(-248 -34)">
+          <rect width="428" height="68" fill="#F2F5FF" filter="url(#psCloud)"/>
+        </g>
+      </g>
+    </g>
+    <circle r="34" fill="url(#psSquash)"/>
+    <ellipse cx="10.82" cy="-10.82" rx="7.5" ry="4.1" transform="rotate(-45 10.82 -10.82)" fill="url(#psGlint)"/>
+    <circle r="34" fill="url(#psShade)"/>
+    <circle r="33.5" fill="none" stroke="#9CCBFF" stroke-opacity="0.16" stroke-width="1"/>
+    <circle r="38.08" fill="url(#psRim)" mask="url(#psRimMask)"/>
+  </g>
+</svg>
+      </div>
+      <figcaption><b>Start planet</b>surface 90 s · clouds 64 s · r 34</figcaption>
+    </figure>
+    <figure>
+      <div class="box" style="--s:720px">
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240">
+  <!-- Planet X, the target, v1.2 (cold mineral/ice world, animated). ONE group #planetX at translate(120 120); geometry relative to (0,0).
+       r 30, disc diameter H = 60. Lit side faces the star: L = (-0.7071, +0.7071) (lower-left). Lighting never rotates.
+       Texture strip: period P = round(2*pi*r) = 188 px (one full rotation). Each strip is ONE rect 2P x 2r = 376x60 (never two abutting rects:
+       an anti-aliased join inside the clip would show as a hairline at fractional translate); its filter computes the noise once over a
+       188x60 subregion (stitchTiles stitch -> periodic in exactly P) and feTile repeats it across the 376 px region, so the strip is 2P wide
+       with no geometry edge. Scrolled west->east (texture moves left->right: translate 0 -> +P; the brief's sketch says to="-P" but also
+       "texture moves left->right" - the + sign is what does that) through the circular clip #pxClip. Start phase: surface tile x 40 (strip x 228)
+       at the disc's left edge (inner translate(-258 -30) = -(r + P + 40), -r); wisps tile x 0 at the left edge (translate(-218 -30) = -(r + P), -r).
+
+       Draw order:
+       0. halo     circle r 1.8 r = 54, #3DE0C2: 0.00 a0.35 | 0.556 a0.35 | 0.78 a0.10 | 1.00 a0 (as v1), breathing: scale 1 -> 1.04 -> 1 -> 0.96 -> 1 over 2.4 s (sine, +-4 %, t=0 is the rest size).
+       1. base     circle r 30, #3DE0C2.
+       2. surface  strip, SMIL translate 0 -> 188 over 120 s. Strip = rect 376x60, fill #3DE0C2, filter #pxSurface (region 0..376 x 0..60; each
+                   noise field: subregion 0..188 x 0..60, stitched, then feTile to 376x60 = two periods in one rect):
+                   basins: feTurbulence fractalNoise baseFrequency 0.035, numOctaves 4, seed 11, stitchTiles stitch (188x60 -> seamless),
+                           alpha -> linear slope 12, intercept -6.508 (soft threshold at 0.584 = p72 of the field -> ~28 % basins), then x0.60,
+                           colour #0E4A40.
+                   veins:  feTurbulence turbulence baseFrequency 0.040, numOctaves 2, seed 11, stitch; alpha -> linear slope -14.29, intercept 1
+                           (bright where the turbulence field is < 0.07: thin creases, ~5 % coverage), then x0.35, colour #0E4A40.
+                   Polar caps: bands 18 % of the disc at top and bottom (10.8 px), #B5FFF0, alpha 1 at the pole | 0.9 at 60 % | 0 at the band's inner edge.
+       3. wisps    strip, SMIL translate 0 -> 188 over 80 s. Strip = rect 376x60, fill #B5FFF0, filter #pxWisp (region 0..376 x 0..60):
+                   feTurbulence turbulence baseFrequency 0.050, numOctaves 2, seed 23, stitch on subregion 0..188 x 0..60, feTile to 376x60;
+                   alpha -> linear slope -8.7, intercept 1
+                   (bright where the field is < 0.115 -> ~15 % coverage, thin filaments), then x0.35.
+       4. squash   circle r 30, radial from the centre, #3DE0C2: 0.88 a0 | 1.00 a0.45 (fades the texture to 55 % in the outer 12 % of r).
+       5. shade    radial, userSpace centre 0.36 r L = (-7.64, 7.64), radius 1.25 r = 37.5 (v1.1 numbers, unchanged):
+                   0.00 #B5FFF0 a0.90 | 0.40 #3DE0C2 a0 | 0.70 #0E4A40 a0.55 | 0.86 #0E4A40 a0.92 | 1.00 #0E4A40 a1.0  (0.70-0.86 is the terminator).
+       6. limb     circle r 29.5, stroke 1, #B5FFF0 a0.18.
+       7. rim      circle r 1.12 r = 33.6, radial from the planet centre, #8FFFE6: 0.00 a0 | 0.80 a0 | 0.87 a0.55 | 0.92 a0.30 | 1.00 a0,
+                   multiplied (alpha mask) by a linear gradient along L from +1.12 r L (-23.76, 23.76) = 1.0 to -1.12 r L = 0.35 (v1.1, unchanged).
+       8. ring     capture ring r 78, #3DE0C2, stroke 1.5, dash 6 6: dash crawl stroke-dashoffset 0 -> -12 over 1 s (= -12 px/s, seamless),
+                   alpha pulse stroke-opacity 0.55 -> 0.70 -> 0.55 -> 0.35 -> 0.55 over 2.4 s (sine) and radius 78 -> 80 -> 78 -> 76 -> 78 (+-2 px, same
+                   2.4 s sine, in phase). Static renders show t = 0: a 0.55, r 78 (= the v1 mockup state).
+       No specular (no liquid). Ids: px*. -->
+  <defs>
+    <clipPath id="pxClip"><circle r="30"/></clipPath>
+    <radialGradient id="pxHalo" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#3DE0C2" stop-opacity="0.35"/>
+      <stop offset="0.556" stop-color="#3DE0C2" stop-opacity="0.35"/>
+      <stop offset="0.78" stop-color="#3DE0C2" stop-opacity="0.10"/>
+      <stop offset="1" stop-color="#3DE0C2" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="pxSurface" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="0" y="0" width="376" height="60" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="4" seed="11" stitchTiles="stitch" x="0" y="0" width="188" height="60" result="pxN1"/>
+      <feTile in="pxN1" x="0" y="0" width="376" height="60" result="pxN"/>
+      <feColorMatrix in="pxN" type="matrix" values="0 0 0 0 0.055  0 0 0 0 0.290  0 0 0 0 0.251  0 0 0 1 0" result="pxBasinRGB"/>
+      <feComponentTransfer in="pxBasinRGB" result="pxBasinCut">
+        <feFuncA type="linear" slope="12" intercept="-6.508"/>
+      </feComponentTransfer>
+      <feComponentTransfer in="pxBasinCut" result="pxBasin">
+        <feFuncA type="linear" slope="0.60" intercept="0"/>
+      </feComponentTransfer>
+      <feTurbulence type="turbulence" baseFrequency="0.040" numOctaves="2" seed="11" stitchTiles="stitch" x="0" y="0" width="188" height="60" result="pxV1"/>
+      <feTile in="pxV1" x="0" y="0" width="376" height="60" result="pxV"/>
+      <feColorMatrix in="pxV" type="matrix" values="0 0 0 0 0.055  0 0 0 0 0.290  0 0 0 0 0.251  0 0 0 1 0" result="pxVeinRGB"/>
+      <feComponentTransfer in="pxVeinRGB" result="pxVeinCut">
+        <feFuncA type="linear" slope="-14.29" intercept="1"/>
+      </feComponentTransfer>
+      <feComponentTransfer in="pxVeinCut" result="pxVein">
+        <feFuncA type="linear" slope="0.35" intercept="0"/>
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode in="SourceGraphic"/>
+        <feMergeNode in="pxBasin"/>
+        <feMergeNode in="pxVein"/>
+      </feMerge>
+    </filter>
+    <filter id="pxWisp" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="0" y="0" width="376" height="60" color-interpolation-filters="sRGB">
+      <feTurbulence type="turbulence" baseFrequency="0.050" numOctaves="2" seed="23" stitchTiles="stitch" x="0" y="0" width="188" height="60" result="pxW1"/>
+      <feTile in="pxW1" x="0" y="0" width="376" height="60" result="pxW"/>
+      <feColorMatrix in="pxW" type="matrix" values="0 0 0 0 0.710  0 0 0 0 1  0 0 0 0 0.941  0 0 0 1 0" result="pxWispRGB"/>
+      <feComponentTransfer in="pxWispRGB" result="pxWispCut">
+        <feFuncA type="linear" slope="-8.7" intercept="1"/>
+      </feComponentTransfer>
+      <feComponentTransfer in="pxWispCut">
+        <feFuncA type="linear" slope="0.35" intercept="0"/>
+      </feComponentTransfer>
+    </filter>
+    <linearGradient id="pxCapN" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#B5FFF0" stop-opacity="1"/>
+      <stop offset="0.6" stop-color="#B5FFF0" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#B5FFF0" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="pxCapS" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#B5FFF0" stop-opacity="1"/>
+      <stop offset="0.6" stop-color="#B5FFF0" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#B5FFF0" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="pxSquash" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="30">
+      <stop offset="0.88" stop-color="#3DE0C2" stop-opacity="0"/>
+      <stop offset="1" stop-color="#3DE0C2" stop-opacity="0.45"/>
+    </radialGradient>
+    <radialGradient id="pxShade" gradientUnits="userSpaceOnUse" cx="-7.64" cy="7.64" r="37.5">
+      <stop offset="0" stop-color="#B5FFF0" stop-opacity="0.90"/>
+      <stop offset="0.40" stop-color="#3DE0C2" stop-opacity="0"/>
+      <stop offset="0.70" stop-color="#0E4A40" stop-opacity="0.55"/>
+      <stop offset="0.86" stop-color="#0E4A40" stop-opacity="0.92"/>
+      <stop offset="1" stop-color="#0E4A40" stop-opacity="1"/>
+    </radialGradient>
+    <radialGradient id="pxRim" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="33.6">
+      <stop offset="0" stop-color="#8FFFE6" stop-opacity="0"/>
+      <stop offset="0.80" stop-color="#8FFFE6" stop-opacity="0"/>
+      <stop offset="0.87" stop-color="#8FFFE6" stop-opacity="0.55"/>
+      <stop offset="0.92" stop-color="#8FFFE6" stop-opacity="0.30"/>
+      <stop offset="1" stop-color="#8FFFE6" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="pxRimLit" gradientUnits="userSpaceOnUse" x1="-23.76" y1="23.76" x2="23.76" y2="-23.76">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="1"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.35"/>
+    </linearGradient>
+    <mask id="pxRimMask" mask-type="alpha" maskUnits="userSpaceOnUse" x="-36" y="-36" width="72" height="72">
+      <rect x="-36" y="-36" width="72" height="72" fill="url(#pxRimLit)"/>
+    </mask>
+  </defs>
+  <g id="planetX" transform="translate(120 120)">
+    <circle r="54" fill="url(#pxHalo)">
+      <animateTransform attributeName="transform" type="scale" values="1;1.04;1;0.96;1" keyTimes="0;0.25;0.5;0.75;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1" dur="2.4s" repeatCount="indefinite"/>
+    </circle>
+    <circle r="30" fill="#3DE0C2"/>
+    <g clip-path="url(#pxClip)">
+      <g id="pxSurfaceAnim">
+        <animateTransform attributeName="transform" type="translate" from="0 0" to="188 0" dur="120s" repeatCount="indefinite"/>
+        <g id="pxSurfaceStrip" transform="translate(-258 -30)">
+          <rect width="376" height="60" fill="#3DE0C2" filter="url(#pxSurface)"/>
+          <rect width="376" height="10.8" fill="url(#pxCapN)"/>
+          <rect y="49.2" width="376" height="10.8" fill="url(#pxCapS)"/>
+        </g>
+      </g>
+      <g id="pxWispAnim">
+        <animateTransform attributeName="transform" type="translate" from="0 0" to="188 0" dur="80s" repeatCount="indefinite"/>
+        <g id="pxWispStrip" transform="translate(-218 -30)">
+          <rect width="376" height="60" fill="#B5FFF0" filter="url(#pxWisp)"/>
+        </g>
+      </g>
+    </g>
+    <circle r="30" fill="url(#pxSquash)"/>
+    <circle r="30" fill="url(#pxShade)"/>
+    <circle r="29.5" fill="none" stroke="#B5FFF0" stroke-opacity="0.18" stroke-width="1"/>
+    <circle r="33.6" fill="url(#pxRim)" mask="url(#pxRimMask)"/>
+    <circle r="78" fill="none" stroke="#3DE0C2" stroke-opacity="0.55" stroke-width="1.5" stroke-dasharray="6 6">
+      <animate attributeName="stroke-dashoffset" from="0" to="-12" dur="1s" repeatCount="indefinite"/>
+      <animate attributeName="stroke-opacity" values="0.55;0.70;0.55;0.35;0.55" keyTimes="0;0.25;0.5;0.75;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1" dur="2.4s" repeatCount="indefinite"/>
+      <animate attributeName="r" values="78;80;78;76;78" keyTimes="0;0.25;0.5;0.75;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1" dur="2.4s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+</svg>
+      </div>
+      <figcaption><b>Planet X</b>surface 120 s · wisps 80 s · ring pulse 2.4 s, dash −12 px/s · halo ±4 % · r 30</figcaption>
+    </figure>
+    <figure>
+      <div class="box breathe" style="--s:400px">
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">
+  <!-- Central star (v1.1 realism pass). ONE group #star at translate(200 200); all geometry relative to (0,0).
+       Envelope unchanged: body r 46, corona to r 130, glow to r 200. Draw order (back to front):
+       1. glow    circle r 200, #FF5A1F  stops 0.00 a0.50 | 0.23 a0.45 | 0.65 a0.12 | 1.00 a0
+       2. corona  circle r 130, #FF8C2E  stops 0.00 a0.90 | 0.35 a0.70 | 0.62 a0.22 | 1.00 a0   blur sd 3
+       3. streamers  10 wedges, fill #FF8C2E, blur sd 6. Each: base width w centred at r 48, tip at r T,
+          rotated by angle A (SVG degrees, clockwise from +x, y down). From mulberry32(0x5747), draws in order
+          angle, [reject if < 20 deg from an accepted angle, redraw angle], w = 10 + 8u, T = 110 + 65u, alpha = 0.10 + 0.06u:
+            S1  A 158.9  w 11.0  T 134.0  a 0.110      S6  A  51.7  w 16.7  T 168.7  a 0.115
+            S2  A 346.7  w 13.8  T 112.0  a 0.160      S7  A   7.4  w 11.5  T 145.6  a 0.137
+            S3  A 311.3  w 12.8  T 128.9  a 0.113      S8  A 264.0  w 12.7  T 130.9  a 0.150
+            S4  A  89.2  w 16.1  T 129.3  a 0.124      S9  A 181.0  w 10.1  T 157.0  a 0.140
+            S5  A 216.1  w 10.8  T 169.9  a 0.104      S10 A 241.3  w 12.5  T 165.2  a 0.142
+          Canvas: same wedges, no blur, linear gradient along the wedge alpha a -> 0 from base to tip.
+       4. helmet lobes  2 wedges, base 40 at r 48, tip r 150, #FF8C2E a0.06, angles 122 and 292, same blur sd 6.
+       5. chromosphere  ring r 47, stroke 3, #FF8C2E a0.60, blur sd 1.5 (Canvas: 1 px strokes at r 46/47/48, a 0.60/0.35/0.15).
+       6. body  circle r 46, radial (0.5,0.5): 0.00 #FFF8E1 | 0.45 #FFC857 | 0.78 #FFC857 | 0.90 #FF8C2E | 1.00 #FF5A1F (limb)
+       7. granulation  feTurbulence fractalNoise baseFrequency 0.11, numOctaves 2, seed 3, saturate 0,
+          contrast x2 about 0.5 (linear slope 2 intercept -0.5), constant alpha 0.16, blend multiply, clipped to the body.
+          Canvas: 128 px value-noise tile (mulberry32 seed 3, 2 octaves, contrast x2), "multiply" at alpha 0.16, clipped to r 46. -->
+  <defs>
+    <radialGradient id="starGlow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#FF5A1F" stop-opacity="0.50"/>
+      <stop offset="0.23" stop-color="#FF5A1F" stop-opacity="0.45"/>
+      <stop offset="0.65" stop-color="#FF5A1F" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#FF5A1F" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="starCorona" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#FF8C2E" stop-opacity="0.90"/>
+      <stop offset="0.35" stop-color="#FF8C2E" stop-opacity="0.70"/>
+      <stop offset="0.62" stop-color="#FF8C2E" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#FF8C2E" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="starBody" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#FFF8E1"/>
+      <stop offset="0.45" stop-color="#FFC857"/>
+      <stop offset="0.78" stop-color="#FFC857"/>
+      <stop offset="0.90" stop-color="#FF8C2E"/>
+      <stop offset="1" stop-color="#FF5A1F"/>
+    </radialGradient>
+    <filter id="starCoronaBlur" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur stdDeviation="3"/>
+    </filter>
+    <filter id="starStreamerBlur" x="-15%" y="-15%" width="130%" height="130%">
+      <feGaussianBlur stdDeviation="6"/>
+    </filter>
+    <filter id="starChromoBlur" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur stdDeviation="1.5"/>
+    </filter>
+    <filter id="starGranulation" x="-5%" y="-5%" width="110%" height="110%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.11" numOctaves="2" seed="3" result="starNoise"/>
+      <feColorMatrix in="starNoise" type="saturate" values="0" result="starGrey"/>
+      <feComponentTransfer in="starGrey" result="starGrain">
+        <feFuncR type="linear" slope="2" intercept="-0.5"/>
+        <feFuncG type="linear" slope="2" intercept="-0.5"/>
+        <feFuncB type="linear" slope="2" intercept="-0.5"/>
+        <feFuncA type="linear" slope="0" intercept="0.16"/>
+      </feComponentTransfer>
+      <feBlend in="starGrain" in2="SourceGraphic" mode="multiply" result="starShaded"/>
+      <feComposite in="starShaded" in2="SourceGraphic" operator="in"/>
+    </filter>
+  </defs>
+  <g id="star" transform="translate(200 200)">
+    <circle r="200" fill="url(#starGlow)"/>
+    <circle r="130" fill="url(#starCorona)" filter="url(#starCoronaBlur)"/>
+    <g fill="#FF8C2E" filter="url(#starStreamerBlur)">
+      <path d="M48 -5.5 L134 0 L48 5.5 Z" transform="rotate(158.9)" fill-opacity="0.110"/>
+      <path d="M48 -6.9 L112 0 L48 6.9 Z" transform="rotate(346.7)" fill-opacity="0.160"/>
+      <path d="M48 -6.4 L128.9 0 L48 6.4 Z" transform="rotate(311.3)" fill-opacity="0.113"/>
+      <path d="M48 -8.05 L129.3 0 L48 8.05 Z" transform="rotate(89.2)" fill-opacity="0.124"/>
+      <path d="M48 -5.4 L169.9 0 L48 5.4 Z" transform="rotate(216.1)" fill-opacity="0.104"/>
+      <path d="M48 -8.35 L168.7 0 L48 8.35 Z" transform="rotate(51.7)" fill-opacity="0.115"/>
+      <path d="M48 -5.75 L145.6 0 L48 5.75 Z" transform="rotate(7.4)" fill-opacity="0.137"/>
+      <path d="M48 -6.35 L130.9 0 L48 6.35 Z" transform="rotate(264)" fill-opacity="0.150"/>
+      <path d="M48 -5.05 L157 0 L48 5.05 Z" transform="rotate(181)" fill-opacity="0.140"/>
+      <path d="M48 -6.25 L165.2 0 L48 6.25 Z" transform="rotate(241.3)" fill-opacity="0.142"/>
+      <path d="M48 -20 L150 0 L48 20 Z" transform="rotate(122)" fill-opacity="0.06"/>
+      <path d="M48 -20 L150 0 L48 20 Z" transform="rotate(292)" fill-opacity="0.06"/>
+    </g>
+    <circle r="47" fill="none" stroke="#FF8C2E" stroke-opacity="0.60" stroke-width="3" filter="url(#starChromoBlur)"/>
+    <circle r="46" fill="url(#starBody)" filter="url(#starGranulation)"/>
+  </g>
+</svg>
+      </div>
+      <figcaption><b>Star</b>no rotation · breathe ±3 % over 6 s (CSS here, cached sprite in game) · r 46</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section>
+  <p class="mode">1× — native size, as in the 1440 × 900 mockups</p>
+  <div class="row">
+    <figure>
+      <div class="box" style="--s:120px">
+        <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120"><use href="#planetStart"/></svg>
+      </div>
+      <figcaption><b>Start planet</b>90 s / 64 s</figcaption>
+    </figure>
+    <figure>
+      <div class="box" style="--s:240px">
+        <svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240"><use href="#planetX"/></svg>
+      </div>
+      <figcaption><b>Planet X</b>120 s / 80 s · ring 2.4 s</figcaption>
+    </figure>
+    <figure>
+      <div class="box breathe" style="--s:400px">
+        <svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400"><use href="#star"/></svg>
+      </div>
+      <figcaption><b>Star</b>6 s breathe</figcaption>
+    </figure>
+  </div>
+</section>
+
+<footer>One rotation = the strip's period (214 px start / 188 px X) scrolled west → east; static renders of the mockups show t = 0 — open this file from <code>file://</code>, no scripts needed.</footer>
+</body>
+</html>
