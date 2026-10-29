@@ -106,6 +106,7 @@ Rare and optional, so they feel like real discoveries; placed after WP13.
 - **2001: A Space Odyssey:** a black monolith orbiting a gas giant (Jupiter).
 - **The Three-Body Problem:** a Trisolaran fleet in the three-sun levels.
 - **The Expanse:** a ring gate as the wormhole design.
+- **Project Hail Mary (Andy Weir):** must-have. A friendly alien ship named after Rocky's "fist my bump"; a Tau Ceti system level; "Astrophage" as a star-dimming hazard or a high-energy fuel pickup; an achievement "Amaze! Amaze! Amaze!"; a relativistic long-haul mission where crew time versus outside time matters.
 
 **Copyright note:** keep these as playful hints only: names, quotes and silhouettes. No logos, actual ship designs or characters, to avoid copyright trouble if the game is ever published.
 
