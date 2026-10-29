@@ -19,10 +19,10 @@ uniform vec3 uColor;
 uniform float uAlpha;
 void main() {
   float r = length(vLocal);
-  float fw = fwidth(r);
-  float band = 1.0 - smoothstep(0.04, 0.04 + fw, abs(r - 0.72));
-  if (band <= 0.0) discard;
-  gl_FragColor = vec4(uColor, uAlpha * band);
+  float w = 1.2 * fwidth(r);
+  float ring = 1.0 - smoothstep(0.0, w, abs(r - 1.0));
+  if (ring <= 0.0) discard;
+  gl_FragColor = vec4(uColor, uAlpha * ring);
 }
 `;
 
@@ -30,6 +30,7 @@ class RechargeVisual implements Visual {
   readonly space = "screen" as const;
   readonly object = new THREE.Group();
   private readonly mesh: THREE.Mesh;
+  private readonly disc: THREE.Mesh;
   private readonly alpha: THREE.IUniform<number>;
   private readonly scratch = { x: 0, y: 0 };
 
@@ -42,7 +43,21 @@ class RechargeVisual implements Visual {
       shader(fragment, { uColor: { value: srgbVec("#FFE08A") }, uAlpha: this.alpha }),
     );
     this.mesh.visible = false;
-    this.mesh.renderOrder = 2;
+    this.mesh.renderOrder = 3;
+    this.disc = new THREE.Mesh(
+      new THREE.CircleGeometry(1, 32),
+      new THREE.MeshBasicMaterial({
+        color: "#FFE08A",
+        transparent: true,
+        opacity: 0.12,
+        depthTest: false,
+        depthWrite: false,
+        toneMapped: false,
+      }),
+    );
+    this.disc.visible = false;
+    this.disc.renderOrder = 2;
+    this.object.add(this.disc);
     this.object.add(this.mesh);
   }
 
@@ -53,12 +68,17 @@ class RechargeVisual implements Visual {
     const rate = solarRechargeRate(pose.x, pose.y, pose.t, game.level.bodies, solar, game.level.g);
     const charging = game.mode === "flying" && solar > 0 && rate >= solar * 0.08;
     this.mesh.visible = charging;
+    this.disc.visible = charging;
     if (!charging) return;
     projectToScreen(pose.x, pose.y, frame.width, frame.height, this.scratch);
     const cycle = (frame.now / 1200) % 1;
     const radius = 9 + cycle * 9;
-    this.mesh.position.set(this.scratch.x, frame.height - this.scratch.y, 0);
+    const x = this.scratch.x;
+    const y = frame.height - this.scratch.y;
+    this.mesh.position.set(x, y, 0);
     this.mesh.scale.set(radius, radius, 1);
+    this.disc.position.set(x, y, 0);
+    this.disc.scale.set(13, 13, 1);
     this.alpha.value = 0.75 * (1 - cycle);
   }
 
