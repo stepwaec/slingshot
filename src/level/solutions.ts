@@ -188,3 +188,9 @@ export const flashPlan: readonly BurnNode[] = [
   { step: 0, dvx: 11.737771208805668, dvy: 2.494940289813112 },
   { step: 7520, dvx: 2.8813474188411083, dvy: 3.210953879851165 },
 ];
+
+/** Ash: settle into orbit around Planet X before it falls into the sun. */
+export const ashPlan: readonly BurnNode[] = [
+  { step: 0, dvx: 8, dvy: 0 },
+  { step: 1700, dvx: -4.260580335490253, dvy: -10.59112647138052 },
+];

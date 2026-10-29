@@ -173,7 +173,20 @@ export interface Body {
   supernova?: Supernova;
   /** Bipolar jet. Omitted bodies have none. */
   quasar?: QuasarJet;
+  /**
+   * Scripted collision or consumption. The pose stays a function of sim time.
+   * Omitted bodies keep their ordinary orbit or drift.
+   */
+  script?: BodyScript;
 }
+
+/**
+ * `consume` falls from the body's orbit into `centerId` and is gone at `end`.
+ * `impact` removes the body at `at`. `into` names what it hits, for the placeholder.
+ */
+export type BodyScript =
+  | { kind: "consume"; centerId: string; start: number; end: number; radius: number }
+  | { kind: "impact"; at: number; into?: string };
 
 /** World position and velocity of one body at an instant. */
 export interface Pose {
@@ -293,7 +306,7 @@ export interface PauseBudget {
 
 export type FlightStatus = "flying" | "won" | "crashed" | "lost";
 
-export type LostReason = "bounds" | "timeout" | "flyby" | "hull" | "dose" | "nova";
+export type LostReason = "bounds" | "timeout" | "flyby" | "hull" | "dose" | "nova" | "burned";
 
 /** What the dose meter names as the strongest source at a point. */
 export type DoseSource = "star" | "flare" | "belt" | "pulsar" | "disk" | "cosmic" | "shadow";
@@ -462,7 +475,19 @@ function findBody(bodies: readonly Body[], id: string): Body | undefined {
  * `g` is only read by an ellipse. Circles ignore it, so a call without `g`
  * stays on today's rail.
  */
+/** False after a scripted impact or after a body has been consumed. */
+export function bodyPresent(body: Body, time: number): boolean {
+  const script = body.script;
+  if (!script) return true;
+  if (script.kind === "consume") return time < script.end;
+  return time < script.at;
+}
+
 export function bodyPose(body: Body, time: number, bodies: readonly Body[], g = 1): Pose {
+  if (body.script?.kind === "consume") return consumePose(body, time, bodies, g);
+  if (body.script?.kind === "impact" && time >= body.script.at) {
+    return bodyPose({ ...body, script: undefined }, body.script.at, bodies, g);
+  }
   if (body.drift && !body.orbit) {
     return {
       x: body.x + body.drift.vx * time,
@@ -473,6 +498,45 @@ export function bodyPose(body: Body, time: number, bodies: readonly Body[], g = 
   }
   if (!body.orbit) return { x: body.x, y: body.y, vx: 0, vy: 0 };
   return poseFromOrbit(body, time, bodies, 0, g);
+}
+
+/** Fall from the orbit into the center. After `end` the pose stays on the surface. */
+function consumePose(body: Body, time: number, bodies: readonly Body[], g: number): Pose {
+  const script = body.script;
+  const orbit = body.orbit;
+  if (!script || script.kind !== "consume" || !orbit) return { x: body.x, y: body.y, vx: 0, vy: 0 };
+  if (time < script.start) return poseFromOrbit(body, time, bodies, 0, g);
+  const end = script.end;
+  const clamped = time > end ? end : time;
+  const centerBody = findBody(bodies, script.centerId);
+  const center = centerBody
+    ? bodyPose(centerBody, clamped, bodies, g)
+    : { x: orbit.cx ?? 0, y: orbit.cy ?? 0, vx: 0, vy: 0 };
+  const r0 = orbit.radius;
+  const r1 = script.radius;
+  const span = end - script.start;
+  const u = span > 0 ? (clamped - script.start) / span : 1;
+  const radius = r0 + (r1 - r0) * u;
+  const k = span > 0 ? (r1 - r0) / span : 0;
+  const mu = g * (centerBody?.mass ?? 0);
+  const phase = orbit.phase;
+  let theta = phase + orbit.omega * clamped;
+  let omega = orbit.omega;
+  if (mu > 0 && r0 > 0 && radius > 0) {
+    const omega0 = Math.sqrt(mu / (r0 * r0 * r0));
+    const extra = Math.abs(k) > 1e-12 ? (2 / k) * (1 / Math.sqrt(r0) - 1 / Math.sqrt(radius)) : 0;
+    theta = phase + omega0 * script.start + Math.sqrt(mu) * extra;
+    omega = Math.sqrt(mu / (radius * radius * radius));
+  }
+  const c = Math.cos(theta);
+  const s = Math.sin(theta);
+  const radial = clamped >= end ? 0 : k;
+  return {
+    x: center.x + radius * c,
+    y: center.y + radius * s,
+    vx: center.vx + radial * c - radius * omega * s,
+    vy: center.vy + radial * s + radius * omega * c,
+  };
 }
 
 /**
@@ -584,6 +648,7 @@ function newtonAcceleration(
   const bodies = config.bodies;
   for (let i = 0; i < bodies.length; i++) {
     const body = bodies[i];
+    if (!bodyPresent(body, time)) continue;
     const point = bodyPoint(body, time, bodies, g);
     const dx = point.x - x;
     const dy = point.y - y;
@@ -616,6 +681,7 @@ function shapedAcceleration(
   const eps2 = eps * eps;
   for (let i = 0; i < bodies.length; i++) {
     const body = bodies[i];
+    if (!bodyPresent(body, time)) continue;
     const point = bodyPoint(body, time, bodies, g);
     const dx = point.x - x;
     const dy = point.y - y;
@@ -649,6 +715,7 @@ function newtonPotential(x: number, y: number, g: number, config: SimConfig, tim
   const bodies = config.bodies;
   for (let i = 0; i < bodies.length; i++) {
     const body = bodies[i];
+    if (!bodyPresent(body, time)) continue;
     const point = bodyPoint(body, time, bodies, g);
     const dx = point.x - x;
     const dy = point.y - y;
@@ -736,6 +803,7 @@ function shapedPotential(x: number, y: number, g: number, eps: number, p: number
   const bodies = config.bodies;
   for (let i = 0; i < bodies.length; i++) {
     const body = bodies[i];
+    if (!bodyPresent(body, time)) continue;
     const point = bodyPoint(body, time, bodies, g);
     const dx = point.x - x;
     const dy = point.y - y;
@@ -1788,7 +1856,8 @@ export function step(state: SimState, config: SimConfig): void {
   const bodies = config.bodies;
   for (let i = 0; i < bodies.length; i++) {
     const body = bodies[i];
-    const moving = body.orbit !== undefined || body.drift !== undefined;
+    if (!bodyPresent(body, t0) && !bodyPresent(body, t1)) continue;
+    const moving = body.orbit !== undefined || body.drift !== undefined || body.script?.kind === "consume";
     const hit = moving
       ? movingCircleEntry(x0, y0, x1, y1, body, t0, t1, bodies, body.radius)
       : circleEntry(x0, y0, x1, y1, body.x, body.y, body.radius);
@@ -1877,6 +1946,11 @@ export function step(state: SimState, config: SimConfig): void {
   const target = targetBody(config);
   const captureRadius = target?.captureRadius;
   if (target && captureRadius !== undefined) {
+    if (!bodyPresent(target, t1)) {
+      state.status = "lost";
+      state.lostReason = "burned";
+      return;
+    }
     let tx = target.x;
     let ty = target.y;
     let crossed: boolean;

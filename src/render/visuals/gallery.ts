@@ -30,7 +30,7 @@ import { zoomBucket } from "../ship-art";
 import { keepBase, keepHalo, keepLight, stripsFor, surfaceKind, type StripSpec, type SurfaceKind } from "../surface-art";
 import { rasterMarkup } from "../svg-bake";
 import { shader, srgbVec } from "./materials";
-import { beamAxis, bodyPose, type Body, type Nebula } from "../../sim/physics";
+import { beamAxis, bodyPose, bodyPresent, type Body, type Nebula } from "../../sim/physics";
 import type { Theme } from "../theme";
 import { disposeObject, type Visual, type VisualFactory, type VisualFrame } from "../visual";
 
@@ -468,6 +468,11 @@ class GalleryVisual implements Visual {
       }
       const body = sprite.body;
       if (!body) continue;
+      if (!bodyPresent(body, time)) {
+        sprite.mesh.visible = false;
+        continue;
+      }
+      sprite.mesh.visible = sprite.role === "flare" ? sprite.mesh.visible : true;
       const pose = bodyPose(body, time, bodies, game.level.g);
       const rot = rotation(sprite, pose.x, pose.y, time, bodies, frame.now, game.level.g);
       if (sprite.role === "haze" || sprite.role === "wisp" || sprite.role === "flame") {
