@@ -1,0 +1,126 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+  <!-- Lava world, v1.3 body library (animated). ONE group #lava at translate(60 60); geometry relative to (0,0).
+       r 26, disc diameter H = 52. Lit side faces the star: L = (+0.7071, -0.7071) (upper-right; library convention). Lighting never rotates.
+       Texture strip: period P = round(2*pi*r) = 163 px (one full rotation, 95 s). Each strip is ONE rect 2P x 2r = 326x52 (v1.2 rule: never two
+       abutting rects); each filter computes its noise field once over a 163x52 subregion (stitchTiles stitch -> periodic in exactly P) and feTile
+       repeats it across the padded filter region (2P + 6 px each side, so the bloom blur sees periodic neighbours). Both strips sit in ONE animated
+       group (crust + veins share the same translate 0 -> +P, 95 s), scrolled west->east through the circular clip #lvClip.
+       Start phase: tile x 20 (strip x 183) at the disc's left edge (inner translate(-209 -26) = -(r + P + 20), -r). No polar caps.
+
+       Tokens: lava.crust #3A2A2A · lava.crustLight #5A4040 · lava.vein #FF6A2A · lava.veinHot #FFC857 · lava.atmo #FF8C2E (rim a 0.35, also the halo
+       and limb colour) · lava.shadow #1E1414 (NEW: night side; the crust itself is the "base", so the shadow has to be darker than it).
+
+       Draw order:
+       0. halo     circle r 1.4 r = 36.4, #FF8C2E: 0.00 a0.18 | 0.714 a0.18 (= the disc edge) | 0.86 a0.07 | 1.00 a0. Static (the only non-X halo).
+       1. base     circle r 26, #3A2A2A.
+       2. crust    strip (in #lvSurfaceAnim, SMIL translate 0 -> 163 over 95 s). Rect 326x52, fill #3A2A2A, filter #lvCrust (region -6..332 x -6..58,
+                   cropped back by feComposite in SourceGraphic): feTurbulence fractalNoise baseFrequency 0.04, numOctaves 4, seed 53 (subregion
+                   0..163 x 0..52 stitched, feTile); lighter plates: alpha -> linear slope 6, intercept -2.5 (soft threshold 0.5 = p49 -> ~45 %),
+                   then x0.8, colour #5A4040.
+       3. veins    strip (same animated group), group #lvVeinPulse opacity PULSE 1.0 -> 0.7 -> 1.0 over 5 s (sine, t = 0 is full glow).
+                   Rect 326x52, fill #FF6A2A, filter #lvVein (same region, cropped): feTurbulence turbulence baseFrequency 0.05, numOctaves 2, seed 59
+                   (subregion 0..163 x 0..52 stitched, feTile);
+                   vein:   alpha -> linear slope -12.3, intercept 1.4 (bright where the field is < 0.114 = p18 -> ~18 % coverage, full alpha below 0.033),
+                           colour #FF6A2A;
+                   hot:    alpha -> linear slope -25.5, intercept 1.4 (bright where the field is < 0.055 = p5, the vein cores), colour #FFC857;
+                   bloom:  the vein alpha blurred sd 1.2, x0.45, colour #FF6A2A, merged UNDER the veins (a soft glow around every vein, computed once
+                           in the strip - no runtime blur).
+                   The vein and hot alpha ramps are written as the ALPHA ROW of the feColorMatrix that also sets their colour ("0 0 0 -12.3 1.4" /
+                   "0 0 0 -25.5 1.4"), not as a following feComponentTransfer: where a type="turbulence" pixel has alpha exactly 0 its premultiplied
+                   RGB is 0, and a separate transfer would lift it to alpha 1 with RGB 0 - an opaque black speck inside the hottest vein cores.
+       4. squash   circle r 26, radial from the centre, #3A2A2A: 0.88 a0 | 1.00 a0.45 (fades the texture to 55 % in the outer 12 % of r).
+       5. shade    radial, userSpace centre 0.36 r L = (6.62, -6.62), radius 1.25 r = 32.5 (v1.1 geometry):
+                   0.00 #5A4040 a0.55 | 0.40 #3A2A2A a0 | 0.70 #1E1414 a0.55 | 0.86 #1E1414 a0.92 | 1.00 #1E1414 a1.0 (0.70-0.86 is the terminator).
+                   Documented exception: the highlight stop is a0.55 (not 0.90) because the surface is emissive - a 0.9 wash of mid-grey would
+                   hide the veins at the sub-stellar point. The night side keeps the v1.1 alphas (veins fade out toward the dark limb).
+       6. limb     circle r 25.5, stroke 1, #FF8C2E a0.16.
+       7. rim      circle r 1.12 r = 29.12, radial from the planet centre, #FF8C2E: 0.00 a0 | 0.80 a0 | 0.87 a0.35 | 0.92 a0.19 | 1.00 a0
+                   (v1.1 rim x 0.35/0.55), multiplied (alpha mask) by a linear gradient along L from +1.12 r L (20.59,-20.59) = 1.0 to -1.12 r L = 0.35.
+       No specular. Static renders show t = 0. Ids: lv*. -->
+  <defs>
+    <clipPath id="lvClip"><circle r="26"/></clipPath>
+    <radialGradient id="lvHalo" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#FF8C2E" stop-opacity="0.18"/>
+      <stop offset="0.714" stop-color="#FF8C2E" stop-opacity="0.18"/>
+      <stop offset="0.86" stop-color="#FF8C2E" stop-opacity="0.07"/>
+      <stop offset="1" stop-color="#FF8C2E" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="lvCrust" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-6" y="-6" width="338" height="64" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="4" seed="53" stitchTiles="stitch" x="0" y="0" width="163" height="52" result="lvC1"/>
+      <feTile in="lvC1" x="-6" y="-6" width="338" height="64" result="lvC"/>
+      <feColorMatrix in="lvC" type="matrix" values="0 0 0 0 0.353  0 0 0 0 0.251  0 0 0 0 0.251  0 0 0 1 0" result="lvPlateRGB"/>
+      <feComponentTransfer in="lvPlateRGB" result="lvPlateCut">
+        <feFuncA type="linear" slope="6" intercept="-2.5"/>
+      </feComponentTransfer>
+      <feComponentTransfer in="lvPlateCut" result="lvPlate">
+        <feFuncA type="linear" slope="0.8" intercept="0"/>
+      </feComponentTransfer>
+      <feMerge result="lvCrustAll">
+        <feMergeNode in="SourceGraphic"/>
+        <feMergeNode in="lvPlate"/>
+      </feMerge>
+      <feComposite in="lvCrustAll" in2="SourceGraphic" operator="in"/>
+    </filter>
+    <filter id="lvVein" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-6" y="-6" width="338" height="64" color-interpolation-filters="sRGB">
+      <feTurbulence type="turbulence" baseFrequency="0.05" numOctaves="2" seed="59" stitchTiles="stitch" x="0" y="0" width="163" height="52" result="lvV1"/>
+      <feTile in="lvV1" x="-6" y="-6" width="338" height="64" result="lvV"/>
+      <feColorMatrix in="lvV" type="matrix" values="0 0 0 0 1  0 0 0 0 0.416  0 0 0 0 0.165  0 0 0 -12.3 1.4" result="lvVeinA"/>
+      <feColorMatrix in="lvV" type="matrix" values="0 0 0 0 1  0 0 0 0 0.784  0 0 0 0 0.341  0 0 0 -25.5 1.4" result="lvHot"/>
+      <feGaussianBlur in="lvVeinA" stdDeviation="1.2" result="lvBloomSoft"/>
+      <feComponentTransfer in="lvBloomSoft" result="lvBloom">
+        <feFuncA type="linear" slope="0.45" intercept="0"/>
+      </feComponentTransfer>
+      <feMerge result="lvVeinAll">
+        <feMergeNode in="lvBloom"/>
+        <feMergeNode in="lvVeinA"/>
+        <feMergeNode in="lvHot"/>
+      </feMerge>
+      <feComposite in="lvVeinAll" in2="SourceGraphic" operator="in"/>
+    </filter>
+    <radialGradient id="lvSquash" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="26">
+      <stop offset="0.88" stop-color="#3A2A2A" stop-opacity="0"/>
+      <stop offset="1" stop-color="#3A2A2A" stop-opacity="0.45"/>
+    </radialGradient>
+    <radialGradient id="lvShade" gradientUnits="userSpaceOnUse" cx="6.62" cy="-6.62" r="32.5">
+      <stop offset="0" stop-color="#5A4040" stop-opacity="0.55"/>
+      <stop offset="0.40" stop-color="#3A2A2A" stop-opacity="0"/>
+      <stop offset="0.70" stop-color="#1E1414" stop-opacity="0.55"/>
+      <stop offset="0.86" stop-color="#1E1414" stop-opacity="0.92"/>
+      <stop offset="1" stop-color="#1E1414" stop-opacity="1"/>
+    </radialGradient>
+    <radialGradient id="lvRim" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="29.12">
+      <stop offset="0" stop-color="#FF8C2E" stop-opacity="0"/>
+      <stop offset="0.80" stop-color="#FF8C2E" stop-opacity="0"/>
+      <stop offset="0.87" stop-color="#FF8C2E" stop-opacity="0.35"/>
+      <stop offset="0.92" stop-color="#FF8C2E" stop-opacity="0.19"/>
+      <stop offset="1" stop-color="#FF8C2E" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="lvRimLit" gradientUnits="userSpaceOnUse" x1="20.59" y1="-20.59" x2="-20.59" y2="20.59">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="1"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.35"/>
+    </linearGradient>
+    <mask id="lvRimMask" mask-type="alpha" maskUnits="userSpaceOnUse" x="-32" y="-32" width="64" height="64">
+      <rect x="-32" y="-32" width="64" height="64" fill="url(#lvRimLit)"/>
+    </mask>
+  </defs>
+  <g id="lava" transform="translate(60 60)">
+    <circle r="36.4" fill="url(#lvHalo)"/>
+    <circle r="26" fill="#3A2A2A"/>
+    <g clip-path="url(#lvClip)">
+      <g id="lvSurfaceAnim">
+        <animateTransform attributeName="transform" type="translate" from="0 0" to="163 0" dur="95s" repeatCount="indefinite"/>
+        <g id="lvSurfaceStrip" transform="translate(-209 -26)">
+          <rect width="326" height="52" fill="#3A2A2A" filter="url(#lvCrust)"/>
+          <g id="lvVeinPulse">
+            <animate attributeName="opacity" values="1;0.7;1" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="5s" repeatCount="indefinite"/>
+            <rect width="326" height="52" fill="#FF6A2A" filter="url(#lvVein)"/>
+          </g>
+        </g>
+      </g>
+    </g>
+    <circle r="26" fill="url(#lvSquash)"/>
+    <circle r="26" fill="url(#lvShade)"/>
+    <circle r="25.5" fill="none" stroke="#FF8C2E" stroke-opacity="0.16" stroke-width="1"/>
+    <circle r="29.12" fill="url(#lvRim)" mask="url(#lvRimMask)"/>
+  </g>
+</svg>

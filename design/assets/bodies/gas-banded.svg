@@ -1,0 +1,185 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160">
+  <!-- Banded gas giant, v1.3 body library ("gasBanded"). ONE group #gasBanded at translate(80 80); geometry relative to (0,0). Ids: gb*.
+       r 44, disc diameter H = 88. Lit side faces the star: L = (+0.7071, -0.7071) (upper-right). Lighting never rotates.
+       Palette: band.cream #F2D9B8 · band.tan #E3B07C · band.brown #B9794B · band.dark #8C5A3C · storm #D9623E · atmo #F5D7B0 ·
+                shadow #4A2E1E (NEW token gasBanded.shadow: night side / terminator colour; the band set has no dark enough tone for a night side).
+
+       Texture strips (v1.2 technique): period P = round(2*pi*r) = 276 px (one full rotation). Each band group is ONE rect set 2P x H
+       (552 x 88, rects overdrawn to y -8..96 so the blur never thins the poles) with ONE filter on the group; the filter computes its noise
+       once over a 276 x 88 subregion (stitchTiles stitch -> periodic in exactly P) and feTile repeats it over the 2P region, so the strip is
+       2P wide with no geometry edge (never two abutting rects: an anti-aliased join inside the clip shows as a hairline at fractional translate).
+       Three band groups drift through the circular clip #gbClip with counter-flow:
+         group C (back, full height)     SMIL translate 0 -> +276 over 180 s  (texture moves left -> right)   phase: disc left edge at strip x 320
+         group B (middle, two belts)     SMIL translate 0 -> -276 over 110 s  (texture moves right -> left)   phase: disc left edge at strip x 44
+         group A (front, equatorial)     SMIL translate 0 -> +276 over 150 s  (left -> right)                 phase: disc left edge at strip x 320
+       (+P groups: inner translate(-(r+P+44), -r) = (-364 -44); -P group: inner translate(-(r+44), -r) = (-88 -44). The disc window is
+        88 px wide and sweeps P px per cycle, so with an 8 px margin either side the window stays inside 8..544 at every phase.)
+       Group filter (#gbWaveC / #gbWaveB / #gbWaveA, region -8..560 x -8..96, sRGB):
+         wavy edges  feTurbulence fractalNoise baseFrequency "0.012 0.08" (brief: 0.02; 0.012 gives longer, calmer waves ~80 px), numOctaves 2, seeds 31 / 37 / 41, stitch on 0..276 x 0..88, feTile,
+                     contrast x2 about 0.5 on R and G (so the map actually spans 0..1), alpha forced to 1, feDisplacementMap scale 6
+                     (y <- R, x <- G): band edges wave +-3 px, each edge independently (the y frequency 0.08 decorrelates neighbouring edges),
+                     then feGaussianBlur 0.6 (soft band edges).
+         zonal streaks  feTurbulence fractalNoise baseFrequency "0.010 0.28", numOctaves 2, seeds 5 / 13 / 17, stitched + tiled, saturate 0,
+                     contrast x2 about 0.5, constant alpha 0.30, feBlend overlay onto the displaced bands, feComposite in (crop to the bands).
+       Band layout (strip y, 0 = north pole, 88 = south pole; disc y = strip y - 44). 9 visible bands, cream / tan / brown / dark:
+         1  0-9    brown  C (polar N)        6  49-57  brown  A  (belt S)
+         2  9-18   tan    C                  7  57-69  cream  C  (pale S zone)
+         3  18-31  cream  B  + storm spot    8  69-79  tan    C
+         4  31-40  dark   B  (dark belt N)   9  79-88  brown  C  (polar S)
+         5  40-49  tan    A  (equatorial zone)
+       Overdraw so a receding wave never shows a wrong colour: C = brown -8..9 | tan 9..54 | cream 54..69 | tan 69..79 | brown 79..96;
+       B = cream 18..31 | dark 31..46 (A covers 40..46); A = tan 40..49 | brown 49..58 (C is cream from 54 under A's bottom edge).
+       Storm spot (group B, drifts with its band): ellipse 0.28 r x 0.16 r = rx 6.16, ry 3.52 at latitude -0.35 r = strip y 28.6, strip x 98.6
+       (= disc x +10.6 at t = 0, on the lit side) AND again at strip x 98.6 + P = 374.6 (the strip is two periods wide, so every discrete
+       feature is drawn once per period or the loop is not seamless); fill #D9623E, with a paler eye (rx 3.4, ry 1.8, #F2D9B8 a0.30) - it
+       leaves the disc at about 24 s and re-enters from the right limb about 75 s later (110 s cycle).
+
+       Draw order:
+       1. base     circle r 44, #E3B07C.
+       2. bands    inside clip #gbClip: group C, group B, group A (each: anim <g> -> phase <g> -> filtered <g> of rects).
+       3. squash   circle r 44, radial from the centre, #E3B07C: 0.88 a0 | 1.00 a0.45 (fades the texture to 55 % in the outer 12 % of r).
+       4. shade    SOFT terminator (gas giant): radial, userSpace centre 0.36 r L = (15.84, -15.84), radius 1.25 r = 55:
+                   0.00 #F5D7B0 a0.55 | 0.40 #E3B07C a0 | 0.64 #4A2E1E a0.30 | 0.86 #4A2E1E a0.90 | 1.00 #4A2E1E a1.0
+                   (v1.1 has 0.70 a0.55; starting the shadow earlier and lower makes the terminator wider and softer).
+       5. limb     circle r 43.5, stroke 1, #F5D7B0 a0.16.
+       6. rim      circle r 1.12 r = 49.28, radial from the centre, #F5D7B0: 0.00 a0 | 0.80 a0 | 0.87 a0.55 | 0.92 a0.30 | 1.00 a0,
+                   alpha-masked by a linear gradient along L from +1.12 r L (34.85,-34.85) = 1.0 to -1.12 r L = 0.35 (v1.1).
+       Static renders show t = 0. No halo (glow is reserved for the star and planet X). -->
+  <defs>
+    <clipPath id="gbClip"><circle r="44"/></clipPath>
+    <filter id="gbWaveC" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-8" y="-8" width="568" height="104" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.012 0.08" numOctaves="2" seed="31" stitchTiles="stitch" x="0" y="0" width="276" height="88" result="gbCd1"/>
+      <feTile in="gbCd1" x="-8" y="-8" width="568" height="104" result="gbCd2"/>
+      <feComponentTransfer in="gbCd2" result="gbCd">
+        <feFuncR type="linear" slope="2" intercept="-0.5"/>
+        <feFuncG type="linear" slope="2" intercept="-0.5"/>
+        <feFuncA type="linear" slope="0" intercept="1"/>
+      </feComponentTransfer>
+      <feDisplacementMap in="SourceGraphic" in2="gbCd" scale="6" xChannelSelector="G" yChannelSelector="R" result="gbCw"/>
+      <feGaussianBlur in="gbCw" stdDeviation="0.6" result="gbCs"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.010 0.28" numOctaves="2" seed="5" stitchTiles="stitch" x="0" y="0" width="276" height="88" result="gbCt1"/>
+      <feTile in="gbCt1" x="-8" y="-8" width="568" height="104" result="gbCt2"/>
+      <feColorMatrix in="gbCt2" type="saturate" values="0" result="gbCt3"/>
+      <feComponentTransfer in="gbCt3" result="gbCt">
+        <feFuncR type="linear" slope="2" intercept="-0.5"/>
+        <feFuncG type="linear" slope="2" intercept="-0.5"/>
+        <feFuncB type="linear" slope="2" intercept="-0.5"/>
+        <feFuncA type="linear" slope="0" intercept="0.30"/>
+      </feComponentTransfer>
+      <feBlend in="gbCt" in2="gbCs" mode="overlay" result="gbCb"/>
+      <feComposite in="gbCb" in2="gbCs" operator="in"/>
+    </filter>
+    <filter id="gbWaveB" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-8" y="-8" width="568" height="104" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.012 0.08" numOctaves="2" seed="37" stitchTiles="stitch" x="0" y="0" width="276" height="88" result="gbBd1"/>
+      <feTile in="gbBd1" x="-8" y="-8" width="568" height="104" result="gbBd2"/>
+      <feComponentTransfer in="gbBd2" result="gbBd">
+        <feFuncR type="linear" slope="2" intercept="-0.5"/>
+        <feFuncG type="linear" slope="2" intercept="-0.5"/>
+        <feFuncA type="linear" slope="0" intercept="1"/>
+      </feComponentTransfer>
+      <feDisplacementMap in="SourceGraphic" in2="gbBd" scale="6" xChannelSelector="G" yChannelSelector="R" result="gbBw"/>
+      <feGaussianBlur in="gbBw" stdDeviation="0.6" result="gbBs"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.010 0.28" numOctaves="2" seed="13" stitchTiles="stitch" x="0" y="0" width="276" height="88" result="gbBt1"/>
+      <feTile in="gbBt1" x="-8" y="-8" width="568" height="104" result="gbBt2"/>
+      <feColorMatrix in="gbBt2" type="saturate" values="0" result="gbBt3"/>
+      <feComponentTransfer in="gbBt3" result="gbBt">
+        <feFuncR type="linear" slope="2" intercept="-0.5"/>
+        <feFuncG type="linear" slope="2" intercept="-0.5"/>
+        <feFuncB type="linear" slope="2" intercept="-0.5"/>
+        <feFuncA type="linear" slope="0" intercept="0.30"/>
+      </feComponentTransfer>
+      <feBlend in="gbBt" in2="gbBs" mode="overlay" result="gbBb"/>
+      <feComposite in="gbBb" in2="gbBs" operator="in"/>
+    </filter>
+    <filter id="gbWaveA" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-8" y="-8" width="568" height="104" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.012 0.08" numOctaves="2" seed="41" stitchTiles="stitch" x="0" y="0" width="276" height="88" result="gbAd1"/>
+      <feTile in="gbAd1" x="-8" y="-8" width="568" height="104" result="gbAd2"/>
+      <feComponentTransfer in="gbAd2" result="gbAd">
+        <feFuncR type="linear" slope="2" intercept="-0.5"/>
+        <feFuncG type="linear" slope="2" intercept="-0.5"/>
+        <feFuncA type="linear" slope="0" intercept="1"/>
+      </feComponentTransfer>
+      <feDisplacementMap in="SourceGraphic" in2="gbAd" scale="6" xChannelSelector="G" yChannelSelector="R" result="gbAw"/>
+      <feGaussianBlur in="gbAw" stdDeviation="0.6" result="gbAs"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.010 0.28" numOctaves="2" seed="17" stitchTiles="stitch" x="0" y="0" width="276" height="88" result="gbAt1"/>
+      <feTile in="gbAt1" x="-8" y="-8" width="568" height="104" result="gbAt2"/>
+      <feColorMatrix in="gbAt2" type="saturate" values="0" result="gbAt3"/>
+      <feComponentTransfer in="gbAt3" result="gbAt">
+        <feFuncR type="linear" slope="2" intercept="-0.5"/>
+        <feFuncG type="linear" slope="2" intercept="-0.5"/>
+        <feFuncB type="linear" slope="2" intercept="-0.5"/>
+        <feFuncA type="linear" slope="0" intercept="0.30"/>
+      </feComponentTransfer>
+      <feBlend in="gbAt" in2="gbAs" mode="overlay" result="gbAb"/>
+      <feComposite in="gbAb" in2="gbAs" operator="in"/>
+    </filter>
+    <radialGradient id="gbSquash" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="44">
+      <stop offset="0.88" stop-color="#E3B07C" stop-opacity="0"/>
+      <stop offset="1" stop-color="#E3B07C" stop-opacity="0.45"/>
+    </radialGradient>
+    <radialGradient id="gbShade" gradientUnits="userSpaceOnUse" cx="15.84" cy="-15.84" r="55">
+      <stop offset="0" stop-color="#F5D7B0" stop-opacity="0.55"/>
+      <stop offset="0.40" stop-color="#E3B07C" stop-opacity="0"/>
+      <stop offset="0.64" stop-color="#4A2E1E" stop-opacity="0.30"/>
+      <stop offset="0.86" stop-color="#4A2E1E" stop-opacity="0.90"/>
+      <stop offset="1" stop-color="#4A2E1E" stop-opacity="1"/>
+    </radialGradient>
+    <radialGradient id="gbRim" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="49.28">
+      <stop offset="0" stop-color="#F5D7B0" stop-opacity="0"/>
+      <stop offset="0.80" stop-color="#F5D7B0" stop-opacity="0"/>
+      <stop offset="0.87" stop-color="#F5D7B0" stop-opacity="0.55"/>
+      <stop offset="0.92" stop-color="#F5D7B0" stop-opacity="0.30"/>
+      <stop offset="1" stop-color="#F5D7B0" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="gbRimLit" gradientUnits="userSpaceOnUse" x1="34.85" y1="-34.85" x2="-34.85" y2="34.85">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="1"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.35"/>
+    </linearGradient>
+    <mask id="gbRimMask" mask-type="alpha" maskUnits="userSpaceOnUse" x="-52" y="-52" width="104" height="104">
+      <rect x="-52" y="-52" width="104" height="104" fill="url(#gbRimLit)"/>
+    </mask>
+  </defs>
+  <g id="gasBanded" transform="translate(80 80)">
+    <circle r="44" fill="#E3B07C"/>
+    <g clip-path="url(#gbClip)">
+      <g id="gbAnimC">
+        <animateTransform attributeName="transform" type="translate" from="0 0" to="276 0" dur="180s" repeatCount="indefinite"/>
+        <g id="gbStripC" transform="translate(-364 -44)">
+          <g filter="url(#gbWaveC)">
+            <rect y="-8" width="552" height="17" fill="#B9794B"/>
+            <rect y="9" width="552" height="45" fill="#E3B07C"/>
+            <rect y="54" width="552" height="15" fill="#F2D9B8"/>
+            <rect y="69" width="552" height="10" fill="#E3B07C"/>
+            <rect y="79" width="552" height="17" fill="#B9794B"/>
+          </g>
+        </g>
+      </g>
+      <g id="gbAnimB">
+        <animateTransform attributeName="transform" type="translate" from="0 0" to="-276 0" dur="110s" repeatCount="indefinite"/>
+        <g id="gbStripB" transform="translate(-88 -44)">
+          <g filter="url(#gbWaveB)">
+            <rect y="18" width="552" height="13" fill="#F2D9B8"/>
+            <rect y="31" width="552" height="15" fill="#8C5A3C"/>
+            <ellipse cx="98.6" cy="28.6" rx="6.16" ry="3.52" fill="#D9623E"/>
+            <ellipse cx="98.6" cy="28.6" rx="3.4" ry="1.8" fill="#F2D9B8" fill-opacity="0.30"/>
+            <ellipse cx="374.6" cy="28.6" rx="6.16" ry="3.52" fill="#D9623E"/>
+            <ellipse cx="374.6" cy="28.6" rx="3.4" ry="1.8" fill="#F2D9B8" fill-opacity="0.30"/>
+          </g>
+        </g>
+      </g>
+      <g id="gbAnimA">
+        <animateTransform attributeName="transform" type="translate" from="0 0" to="276 0" dur="150s" repeatCount="indefinite"/>
+        <g id="gbStripA" transform="translate(-364 -44)">
+          <g filter="url(#gbWaveA)">
+            <rect y="40" width="552" height="9" fill="#E3B07C"/>
+            <rect y="49" width="552" height="9" fill="#B9794B"/>
+          </g>
+        </g>
+      </g>
+    </g>
+    <circle r="44" fill="url(#gbSquash)"/>
+    <circle r="44" fill="url(#gbShade)"/>
+    <circle r="43.5" fill="none" stroke="#F5D7B0" stroke-opacity="0.16" stroke-width="1"/>
+    <circle r="49.28" fill="url(#gbRim)" mask="url(#gbRimMask)"/>
+  </g>
+</svg>

@@ -1,10 +1,10 @@
-# Slingshot — Canvas 2D drawing notes (v1.2)
+# Slingshot — Canvas 2D drawing notes (v1.3)
 
 How to draw every element of the visual style in plain Canvas 2D (TypeScript, no engine) and hold a steady 60 fps on an integrated GPU. Every number below is taken from `design/style.md`, the asset SVGs in `design/assets/` and the shared brief; every colour is a palette token written as hex. Snippets are valid TypeScript with no imports — `ctx` is always a `CanvasRenderingContext2D`.
 
-v1.1 was the realism pass: the three bodies and the sky got richer, and all of that richness is paid **once**, at build time, into cached bitmaps (background, star sprite, planet sprites). v1.2 is the planet pass: each planet's cached sprite becomes a cached **texture strip** (land / clouds, basins / wisps, polar caps; period P = round(2π r)) that scrolls under a cached **lighting overlay** (limb squash, glint, terminator, limb line, rim) — the surface rotates at 64–120 s per turn, the light never moves, and the per-frame cost is 1 clip + 3 blits per planet (§4). Planet X's halo now breathes with the ring. Star, sky, ship, trail, path, arrow, HUD and overlays (§1–§3, §5–§11) are exactly v1.1.
+v1.1 was the realism pass: the three bodies and the sky got richer, and all of that richness is paid **once**, at build time, into cached bitmaps (background, star sprite, planet sprites). v1.2 is the planet pass: each planet's cached sprite becomes a cached **texture strip** (land / clouds, basins / wisps, polar caps; period P = round(2π r)) that scrolls under a cached **lighting overlay** (limb squash, glint, terminator, limb line, rim) — the surface rotates at 64–120 s per turn, the light never moves, and the per-frame cost is 1 clip + 3 blits per planet (§4). Planet X's halo now breathes with the ring. Star, sky, ship, trail, path, arrow, HUD and overlays (§1–§3, §5–§11) are exactly v1.1. v1.3 is the body library: §3b adds prominence loops and a flare to every main-sequence star (cached pre-blurred sprites scaled and faded by time, one live triangle), §3c draws the three compact objects (white dwarf, neutron star, black hole — sprite stacks with one rotation each), and §4b lists every library body's parameters and the small extensions the §4 pipeline needs for them (three terminator recipes, rim peaks, craters, gas bands, the ring, the lava pulse, the double planet's orbit). Nothing in §1–§11 changes for the original scene.
 
-Scene reference used throughout (world units = screen px at zoom 1, 1440×900 mockup): star centre (760, 470) r 46; start planet (250, 690) r 34; planet X (1190, 210) r 30, capture ring r 78; ship 22 px long. The unit vector from a planet toward the star is called **L** (start planet: (+0.7071, −0.7071), upper-right; planet X: (−0.7071, +0.7071), lower-left).
+Scene reference used throughout (world units = screen px at zoom 1, 1440×900 mockup): star centre (760, 470) r 46; start planet (250, 690) r 34; planet X (1190, 210) r 30, capture ring r 78; ship 22 px long. The unit vector from a planet toward the star is called **L** (start planet: (+0.7071, −0.7071), upper-right; planet X: (−0.7071, +0.7071), lower-left). v1.3 scenes swap bodies in and out (`scene-variant`: red dwarf (700, 480) r 40, ringed gas giant (1000, 640) r 44, moon (420, 300) r 14, rocky start (230, 700) r 30, X (1210, 190); `scene-blackhole`: black hole (720, 460) r 22, ice start (230, 690) r 28, moon (900, 250) r 14, X (1200, 200)); L is always computed toward the scene's star (§4 `towardStar`), and `crashRadius` is the solid disc (§4b).
 
 ---
 
@@ -33,14 +33,16 @@ Do not call `clearRect`. The background layer (§1) is an opaque offscreen canva
 
 ### Draw order (back to front, every frame)
 1. background (cached: edge + vignette + Milky Way + starfield) — one `drawImage`
-2. star (cached sprite, breathing scale)
-3. planets (cached texture strips scrolled through a circular clip + cached lighting overlay: start, then X with its **live** breathing halo under the strips)
+2. star (cached sprite, breathing scale; v1.3: a breathing envelope sprite, ≤ 3 loop sprites + 1 cached flare sprite, then a static body sprite, §3b — or a compact object's sprite stack, §3c)
+3. planets (cached texture strips scrolled through a circular clip + cached lighting overlay: start, then X with its **live** breathing halo under the strips; v1.3 library bodies likewise, back to front — the ringed giant's back ring before it and front ring after it, the double pair's companion before or after its primary, §4b)
 4. capture ring (dashed, pulsing, live)
 5. predicted path (planning) **or** trail (flight)
 6. drag arrow (planning only)
 7. thrust flash (flight, `lighter`), then ship
 8. HUD (wordmark, mode label, fuel bar, buttons, telemetry)
 9. result overlay (cached card, faded in) — only when a result exists
+
+**One scene clock.** Every animation in these notes — star breathe, loops, flare, planet X's ring and halo, strips, bands, orbits, beams, the disk — reads the same `tS`: seconds since the scene started, accumulated from the frame `dt` and clamped to ≤ 0.1 s per frame (so a tab switch pauses the sky instead of jumping it), and never simulation time (1x / 2x / 4x do not change it). `performance.now()` is used only to compute `dt`, to time the result overlay's fade-in (§11) and to measure the frame.
 
 ### Per-frame budget (CSS 1440×900, DPR 2, Intel Iris Xe / Apple M-series integrated GPU)
 
@@ -50,12 +52,16 @@ Do not call `clearRect`. The background layer (§1) is an opaque offscreen canva
 | Star | 0.10 | one `drawImage` of a 400×400 sprite — richer interior (streamers, chromosphere, limb darkening, granulation), same blit |
 | Planets (2) | 0.16 | per planet **1 `arc` clip + 2 strip `drawImage` with a dt-based x offset + 1 lighting-overlay `drawImage`** (≈ 0.08 ms each, §4) — the strips (428 × 68 / 376 × 60 at zoom 1) and overlays (81 / 72 px) are cached, rebuilt only when the zoom bucket changes (§12), never on resize; only the 2r window inside the clip is rasterised |
 | Planet X halo + ring | 0.15 | one gradient fill (radius breathing ±4 %) + one dashed stroke, both live |
+| Star flares (v1.3, §3b) | 0.05 | ≤ 3 `drawImage` of pre-blurred 96 × 64 loop sprites (scaled, alpha-faded by the wall clock) + 1 `drawImage` of the cached flare sprite — ≤ 4 per star; the star itself becomes 2 blits (envelope + body) instead of 1 |
+| Compact object (v1.3, §3c, in place of the star) | 0.05–0.15 | white dwarf 2 blits, neutron star 3 (one rotated 80 px sprite), black hole 5 (2 atlas cells + the ring sprite twice under axis-aligned half clips + 1 front-half Doppler overlay) |
+| Library planets (v1.3, §4b, per body) | 0.08–0.25 | as the v1.2 planets: 1 clip + **1–3** strip blits + 1 overlay — the second strip is optional (rocky, ice, cracked, moon, dwarf and both double bodies have one strip; ocean and toxic have clouds; lava's vein strip is its second strip, drawn at a pulsing `globalAlpha`, plus **1 halo blit** before it); gas giants 3 / 2 band strips (`drawGasGiant`, + 2 static ring blits on the ringed one); the double planet = two one-strip planets at moving centres (2 clips + 4 blits) |
 | Predicted path (≤ 400 dots) **or** trail (≤ 240 segs) | 0.60 | one `Path2D` fill / 20 gradient-chunk strokes |
 | Drag arrow | 0.05 | 3 strokes, 1 fill, 1 `fillText` |
 | Ship + thrust | 0.10 | 3 small polygons + 2 triangles |
 | HUD | 0.60 | ≤ 10 `fillText` (flight mode has 9), ≤ 6 rounded rects; in the letter-spacing fallback ≤ 21 single-character `fillText` and **zero** `measureText` (advances cached, §10) |
 | Result overlay | 0.30 | scrim `fillRect` + one `drawImage` |
 | **Render total** | **≈ 2.3 ms** | leaves > 3.5 ms of the 6 ms target for physics and GC |
+| Render total, `scene-variant` (red dwarf + flares, ringed giant, moon, rocky, X) | ≈ 2.7 ms | the extra loops / flare, the second band strip and the two ring blits add ≈ 0.4 ms over the original scene |
 
 Target ≤ 6 ms of render per frame, so a 16.7 ms frame keeps slack even when the browser is busy. Measure with `performance.now()` around the draw and show it in the telemetry line while developing.
 
@@ -67,6 +73,9 @@ Target ≤ 6 ms of render per frame, so a 16.7 ms frame keeps slack even when th
 | Star sprite (§3): 2 gradient discs, 12 wedges, 3 rings, body gradient, 128² noise tile `multiply` | 1.5 | resize (fixed 400 px bitmap that `drawImage` scales; see §3 if the game ever zooms past 2×) |
 | Planet strips + lighting overlay (§4), each planet: 2 noise fields stretched from the 128² tiles (`getImageData` once each), 3 thresholded layers (`putImageData` + 2 blits each), polar-cap bands, overlay (squash, glint, terminator, limb, rim in 2 passes) | ≈ 2 | when the zoom bucket changes (§12: buckets at 1.25^k, 25 % apart, flipping ±11.8 % about each centre) — not on resize; both planets ≈ 4 ms in the same frame |
 | Noise tiles (§4 `makeNoiseTile`), each: 128² value noise, 2–4 octaves, `putImageData` | 0.3–0.4 | once per (seed, cells, octaves): 3 (star), 7 / 6, 19 / 12 (start), 11 / 7, 23 / 9 (X) — five tiles, kept across strip rebuilds |
+| v1.3 star sprites (§3b): envelope (layers 1–4, S = ceil(2 · max(glowR, 200 k)) = 400 / 348 / 480 px, streamers blurred once in a scratch canvas) + body (layers 5–7) + 3 loop sprites (96 × 64 · k, three strokes each) + 1 flare sprite (0.7 r × (3 k + 2) px) | ≈ 2.5 | once per star kind present in the scene (sun / red dwarf / blue giant) |
+| v1.3 compact objects (§3c): white dwarf 2 sprites, neutron star 3, black hole 2-cell atlas (320 × 160) + ring texture at 2× (ramp, 68 streak wedges × 2 fills, radial fade, mottle loop) + Doppler overlay | 0.3 / 0.3 / ≈ 3 | once |
+| v1.3 library planets (§4b): as the v1.2 planets per body, plus craters (circles, baked twice), gas band strips (9 polygon bands per group from a noise row, streak overlay), ring back / front sprites (gradient + shadow wedge) | 2 per body (gas giants ≈ 4, double ≈ 4) | when the zoom bucket changes; noise tiles for the new seeds (5, 9, 13, 17, 21, 29, 31, 37, 41, 43, 47, 53, 59, 61 …) once each |
 
 ### Cached offscreen vs. drawn live
 | Cached (rebuilt only on resize / state change) | Drawn live every frame |
@@ -76,6 +85,9 @@ Target ≤ 6 ms of render per frame, so a 16.7 ms frame keeps slack even when th
 | Planet texture strips 428×68 / 376×60 (×DPR, two per planet, at the current zoom bucket) | The strips' scroll: a dt-based source offset on two clipped blits per planet — the pixels themselves are never touched |
 | Planet lighting overlays 81×81 / 72×72 (×DPR, at the current zoom bucket) | HUD text and bars, scrim |
 | Result card 520×232 (+ 64 px shadow margin) | |
+| v1.3 star envelope + body sprites, 3 loop sprites and 1 flare sprite per star (§3b) | The loops' and the flare's per-frame transform and `globalAlpha` (blits only — no gradient, path or fill per frame) |
+| v1.3 compact-object sprites: white dwarf glow + disc, neutron star glow + magnetosphere + body, black hole 2-cell atlas + ring texture + front-half Doppler overlay (§3c) | The glow breathe (a scale), the magnetosphere rotation and the disk-ring rotation (a `rotate` under a clip) |
+| v1.3 library strips and overlays per body, the lava halo sprite, ring back / front sprites — all at the zoom bucket (§4b) | The double planet's orbit (two moving centres), the lava vein strip's `globalAlpha` |
 
 ### The rule
 **Never call `shadowBlur` on moving things.** `shadowBlur` forces a full-size readback and a two-pass Gaussian for every draw call that uses it; on a moving object it runs every frame. The one permitted use is the result card (§11), drawn once into an offscreen canvas and then blitted. The same goes for everything v1.1 added: noise, blend modes (`multiply`, `destination-in`) and gradient wedges run only inside the sprite builds, never in the frame loop — and for v1.2's rotation, which is nothing but a changing `drawImage` offset on a cached strip (plus the one `getImageData`/`putImageData` per layer at build time that thresholds the noise). Realism comes from richer cached pixels, not from more draw calls; motion comes from where the cached pixels are drawn, not from redrawing them.
@@ -314,7 +326,7 @@ A `shadowBlur` of 40 on a 100 px circle makes the browser allocate a (100 + 2·4
 |---|---|---|---|
 | 1 | glow | disc r 200 | 0.00 `#FF5A1F` α 0.50 · 0.23 α 0.45 · 0.65 α 0.12 · 1.00 α 0 (as v1) |
 | 2 | corona | disc r 130 | 0.00 `#FF8C2E` α 0.90 · 0.35 α 0.70 · 0.62 α 0.22 · 1.00 α 0 (as v1; the SVG blurs it σ 3, Canvas does not) |
-| 3 | streamers | 10 wedges `(48, −w/2) → (T, 0) → (48, w/2)` rotated by A | fill `star.corona #FF8C2E`; **linear gradient along the wedge, α a at the base (r 48) → 0 at the tip** instead of the SVG's σ 6 blur |
+| 3 | streamers | 10 wedges `(48, −w/2) → (T, 0) → (48, w/2)` rotated by A | fill `star.corona #FF8C2E`, **blurred once at build time** to match the SVG's σ 6 (`bakeStreamers`): the wedges go into a scratch canvas that is composited onto the sprite through `ctx.filter = "blur(6k·DPR px)"` where supported — flat α a, exactly the SVG's wedge; where the filter is missing, a **mandatory** three-fill fallback: each wedge filled with a linear gradient α a·share at the base (r 48) → 0 at the tip, at width w + 12 k / w + 6 k / w with share 0.25 / 0.35 / 0.40. Hard-edged unblurred wedges read as a busy starburst (the blue giant's 14 most of all) and are not acceptable |
 | 4 | helmet lobes | 2 wedges, base 40 at r 48, tip r 150 | `#FF8C2E` α 0.06 → 0, angles 122° and 292° — hand-placed inside the two widest streamer gaps (89.2° → 158.9°, centre 124.0°; 264.0° → 311.3°, centre 287.6°) and rounded, not computed |
 | 5 | chromosphere | three 1 px rings at r 46 / 47 / 48 | `#FF8C2E` α 0.60 / 0.35 / 0.15 (the SVG: one 3 px ring at r 47, α 0.60, σ 1.5) |
 | 6 | body (limb darkening) | disc r 46, radial from the centre | 0.00 `star.core #FFF8E1` · 0.45 `star.body #FFC857` · 0.78 `#FFC857` · 0.90 `star.corona #FF8C2E` · 1.00 `star.limb #FF5A1F` |
@@ -341,6 +353,44 @@ Granulation contrast is ×2 (the planets use ×3): fractal noise clusters around
 
 ```ts
 let starSprite: HTMLCanvasElement;
+
+// Build-time blur for the streamers (and lobes). ctx.filter is allowed HERE because this runs once per sprite build;
+// §13 bans it in the frame loop only. Feature-test once; the three-fill fallback is mandatory where filter is missing.
+const CAN_FILTER = ((): boolean => {
+  const t = document.createElement("canvas").getContext("2d")!;
+  t.filter = "blur(1px)";
+  return t.filter === "blur(1px)";
+})();
+
+// Draws the wedges [A°, w, T, α] (base at r 48 k, centre S/2) soft onto dst (an S × S CSS-px sprite built at DPR).
+function bakeStreamers(dst: CanvasRenderingContext2D, S: number, k: number,
+                       streamers: [number, number, number, number][], colour: string): void {
+  const c = S / 2, b = 48 * k;
+  const scratch = document.createElement("canvas");
+  scratch.width = scratch.height = Math.round(S * DPR);
+  const g = scratch.getContext("2d")!;
+  g.setTransform(DPR, 0, 0, DPR, 0, 0);
+  const passes: [number, number][] = CAN_FILTER ? [[0, 1]] : [[12 * k, 0.25], [6 * k, 0.35], [0, 0.40]];   // [extra width, α share]
+  for (const [A, w, T, a] of streamers) {
+    for (const [extra, share] of passes) {
+      g.save(); g.translate(c, c); g.rotate((A * Math.PI) / 180);
+      if (CAN_FILTER) g.fillStyle = rgba(colour, a);                      // flat α, as the SVG's wedges; the blur fades them
+      else {                                                              // fallback: α a·share at the base → 0 at the tip, 3 widths
+        const lg = g.createLinearGradient(b, 0, T, 0);
+        lg.addColorStop(0, rgba(colour, a * share)); lg.addColorStop(1, rgba(colour, 0));
+        g.fillStyle = lg;
+      }
+      const hw = (w + extra) / 2;
+      g.beginPath(); g.moveTo(b, -hw); g.lineTo(T, 0); g.lineTo(b, hw); g.closePath(); g.fill();
+      g.restore();
+    }
+  }
+  dst.save();
+  dst.setTransform(1, 0, 0, 1, 0, 0);                                     // device px 1 : 1 (filter lengths are canvas px)
+  if (CAN_FILTER) dst.filter = `blur(${6 * k * DPR}px)`;                  // σ 6 k CSS px = the SVG's streamer blur
+  dst.drawImage(scratch, 0, 0);
+  dst.restore();                                                          // restores filter = "none" and the DPR transform
+}
 
 // [A°, w, T, α] — 10 streamers from mulberry32(0x5747) (see table) + 2 helmet lobes. Part of the sprite; they breathe with it.
 const STAR_STREAMERS: [number, number, number, number][] = [
@@ -369,15 +419,7 @@ function buildStarSprite(): void {
   layer(130, [[0, rgba("#FF8C2E", 0.90)], [0.35, rgba("#FF8C2E", 0.70)],
               [0.62, rgba("#FF8C2E", 0.22)], [1, rgba("#FF8C2E", 0)]]);     // 2. star.corona
 
-  for (const [A, w, T, a] of STAR_STREAMERS) {                             // 3+4. streamers + lobes, no blur
-    g.save();
-    g.translate(c, c); g.rotate((A * Math.PI) / 180);
-    const lg = g.createLinearGradient(48, 0, T, 0);                        // α a at the base → 0 at the tip
-    lg.addColorStop(0, rgba("#FF8C2E", a)); lg.addColorStop(1, rgba("#FF8C2E", 0));
-    g.fillStyle = lg;
-    g.beginPath(); g.moveTo(48, -w / 2); g.lineTo(T, 0); g.lineTo(48, w / 2); g.closePath(); g.fill();
-    g.restore();
-  }
+  bakeStreamers(g, S, 1, STAR_STREAMERS, "#FF8C2E");                        // 3+4. streamers + lobes, blurred σ 6 once
 
   g.lineWidth = 1;                                                         // 5. chromosphere: 3 rings for the SVG's σ 1.5
   for (const [r, a] of [[46, 0.60], [47, 0.35], [48, 0.15]] as [number, number][]) {
@@ -396,15 +438,377 @@ function buildStarSprite(): void {
   g.restore();
 }
 
-// Breathe: ±3 % over 6 s. tMs = performance.now(). Pass the star's screen position and zoom.
-function drawStar(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, tMs: number): void {
-  const breathe = 1 + 0.03 * Math.sin((tMs / 6000) * Math.PI * 2);
+// Breathe: ±3 % over 6 s. tS = the scene clock in seconds (§0). Pass the star's screen position and zoom.
+function drawStar(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, tS: number): void {
+  const breathe = 1 + 0.03 * Math.sin((tS / 6) * Math.PI * 2);
   const size = 400 * zoom * breathe;
   ctx.drawImage(starSprite, sx - size / 2, sy - size / 2, size, size);
 }
 ```
 
-The sprite is built for r 46 at zoom 1 in a fixed 400 px canvas (`S = 400`, every radius in CSS px — there is no size parameter); `drawImage` scales it for other zooms, and this prototype never zooms past 2× (§12). If it ever did, give `buildStarSprite` a scale `k` (S = 400 k, every radius, the 92 px granulation rect and the tile pattern × k) and rebuild at k = 2 so the body edge, the 1 px chromosphere rings and the granulation stay crisp — not implemented here. If the wedge edges read hard at DPR 2 (they should not at α ≤ 0.16 over the corona), draw each wedge twice — once at `w + 6` and half its alpha, then at `w` — a two-fill fake blur that is still build-time only. No rotation, no flicker: the only motion is the breathe.
+The sprite is built for r 46 at zoom 1 in a fixed 400 px canvas (`S = 400`, every radius in CSS px — there is no size parameter); `drawImage` scales it for other zooms, and this prototype never zooms past 2× (§12). If it ever did, give `buildStarSprite` a scale `k` (S = 400 k, every radius, the 92 px granulation rect and the tile pattern × k) and rebuild at k = 2 so the body edge, the 1 px chromosphere rings and the granulation stay crisp — not implemented here. The streamers are always soft: `bakeStreamers` blurs them once at build time (filter where supported, the three-fill fallback otherwise), never per frame. No rotation, no flicker: the only motion is the breathe.
+
+v1.3 (§3b) splits this sprite into an **envelope** (layers 1–4, the only part that breathes) and a **body** (layers 5–7, static) so that the prominence loops can be drawn between them, exactly as `star.svg` now layers them; `buildStarSprites` there generalises `buildStarSprite` to the three main-sequence stars. For a scene that uses the yellow sun without flares, this section's single sprite is still correct.
+
+---
+
+## 3b. Flares & prominences (v1.3, all three stars)
+
+v1.3 adds two kinds of motion to every main-sequence star (`star.svg`, `bodies/red-dwarf.svg`, `bodies/blue-giant.svg`): three **prominence loops** that rise from the limb and fade, and one **flare**, a thin bright spike that pops once per 22 s. Both are cheap by construction: a loop is a **cached, pre-blurred sprite** drawn with a time-based scale and alpha, and the flare is one **cached gradient-wedge sprite** drawn with a time-based alpha — **≤ 4 extra `drawImage` per star per frame, no gradient, path, fill or blur at runtime**. The SVGs are the canon; their header comments list every angle, span, peak, path and timing, and the tables below copy them.
+
+### What changes in the star sprite
+
+In the SVG the loops sit **between the chromosphere and the body** so that their feet, which start exactly on the limb, are hidden by the disc at every scale; and the body, chromosphere, loops and flare **do not breathe** — only the glow / corona / streamer layers do (the crash radius never moves; the flares ride on top of the breathe). The v1.1 `drawStar` scales the whole 400 px sprite, body included. v1.3 therefore splits `buildStarSprite` into two bitmaps, built from the same layer list as §3:
+
+- **envelope** sprite — layers 1–4 (glow, corona, streamers blurred once by `bakeStreamers` (§3), lobes), S × S with **S = ceil(2 · max(glowR, 200 k))** = 400 (sun) / 348 (red dwarf) / 480 (blue giant, whose glow reaches r 240), drawn first at `S · zoom · breathe`, scaled by the breathe;
+- **body** sprite — layers 5–7 (chromosphere rings, limb-darkened body, granulation), (2 · 48 k + 8) px square, drawn last, never scaled by the breathe.
+
+Per star per frame: envelope → 3 loops → flare → body = **6 `drawImage`** (≤ 4 of them the flares), ≈ 0.15 ms. The loops' feet and the flare's base fall under the body sprite exactly as in the SVG; the chromosphere rings (1 px, α ≤ 0.35 at r 47 / 48) now go down after the loops instead of before — the only ordering difference, invisible.
+
+### Per-star tables
+
+A loop lives in the frame `rotate(A) translate(r 0)`: its base point is the limb at angle **A** (SVG degrees, clockwise from +x, y down — the Canvas convention), x points radially outward, y tangentially. The path is `M x₀ −y₀ C c_x −c_y c_x c_y x₀ y₀` with feet at `x₀ = r cos(s/2) − r`, `y₀ = r sin(s/2)` (span s on the limb), peak height `h = (k − 1) r` and controls `c_x = (8h − 2x₀)/6` (so the cubic's midpoint is exactly the peak), `c_y = 0.8 r sin(s/2)`. Stroke 2.5 k, round caps, colour = corona token, blur σ 1.5 k (baked). Seeds: `mulberry32(seed)`, draws in order angle A = 360u (rejected and redrawn while < 70° from an accepted loop), span s = 18 + 10u °, peak k = 1.25 + 0.20u; the flare angle is the next draw, rejected while < 30° from a loop.
+
+| Star | r · k | seed | Loop | A (°) | s (°) | k | x₀ | y₀ | c_x | c_y | dur (s) | begin (s) | peak at |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Yellow sun (`star.svg`) | 46 · 1 | `0x5750` | P1 | 147.5 | 20.5 | 1.313 | −0.74 | 8.19 | 19.43 | 6.56 | 12 | 0 | 6 + 12n |
+| | | | P2 | 243.6 | 26.7 | 1.345 | −1.25 | 10.63 | 21.60 | 8.51 | 16 | 5 | 13 + 16n |
+| | | | P3 | 314.8 | 20.2 | 1.435 | −0.71 | 8.07 | 26.94 | 6.45 | 14 | 9 | 16 + 14n |
+| Red dwarf (`red-dwarf.svg`) | 40 · 0.8696 | `0x5250` | P1 | 338.8 | 26.6 | 1.421 | −1.07 | 9.21 | 22.83 | 7.36 | 12 | 0 | 6 + 12n |
+| | | | P2 | 248.0 | 20.2 | 1.440 | −0.62 | 7.02 | 23.69 | 5.62 | 16 | 5 | 13 + 16n |
+| | | | P3 | 167.2 | 22.0 | 1.378 | −0.74 | 7.64 | 20.41 | 6.11 | 14 | 9 | 16 + 14n |
+| Blue giant (`blue-giant.svg`) | 54 · 1.1739 | `0x4250` | P1 | 332.7 | 21.7 | 1.329 | −0.96 | 10.15 | 24.04 | 8.12 | 12 | 0 | 6 + 12n |
+| | | | P2 | 243.5 | 22.9 | 1.314 | −1.08 | 10.74 | 22.95 | 8.59 | 16 | 5 | 13 + 16n |
+| | | | P3 | 168.7 | 27.0 | 1.387 | −1.49 | 12.60 | 28.37 | 10.08 | 14 | 9 | 16 + 14n |
+
+| Star | Stroke · σ | Loop colour | Flare A (°) | Flare wedge (base 3 k on the limb, tip at 1.7 r) | Flare gradient (limb → tip) |
+|---|---|---|---|---|---|
+| Yellow sun | 2.5 · 1.5 | `star.corona #FF8C2E` | 25.0 | `M46 −1.5 L78.2 0 L46 1.5 Z` | `#FFF8E1` → `#FFC857` |
+| Red dwarf | 2.2 · 1.3 | `redDwarf.corona #E0432F` | 117.9 | `M40 −1.3 L68 0 L40 1.3 Z` | `#FFD9B0` → `#FF7A4D` |
+| Blue giant | 2.9 · 1.8 | `blueGiant.corona #5EA0FF` | 278.3 | `M54 −1.75 L91.8 0 L54 1.75 Z` | `#FFFFFF` → `#B8CCFF` |
+
+**Timing.** Each loop: scale about its base point 0.6 → 1.0 → 0.6 and α 0 → 0.55 → 0 over `dur`, starting at `begin`, repeating for ever, SMIL splines `0.42 0 0.58 1` on both halves. The Canvas form uses the same ease-in-out hump: `hump = sin²(π · u)` with `u = frac((t − begin) / dur)`, `s = 0.6 + 0.4 hump`, `a = 0.55 hump`; before `begin` the loop is invisible (its SVG base attributes are `scale(0.6)`, `opacity 0`, so t = 0 shows a plain star; P1 begins at 0 s and is already at α ≈ 0.14 by 2 s). Peaks fall at 6 + 12n, 13 + 16n and 16 + 14n s — never all three at once. The flare: α `0; 0; 0.7; 0; 0` at keyTimes `0; 0.5909; 0.6318; 0.6727; 1` of a 22 s cycle = invisible until **13.0 s**, peak 0.7 at **13.9 s**, gone at **14.8 s** — a triangle of half-width 0.9 s centred on 13.9 s (not on 13 s: 13 s is where it starts rising).
+
+### Other stars' streamers (the sun's are in §3)
+
+The red dwarf and blue giant scale the v1.1 construction by k = r / 46: base r 48 k, `w = (10 + 8u) k`, `T = (110 + 65u) k`, `α = 0.10 + 0.06u` (× 0.7 on the red dwarf — the "calmer corona"); lobes base 40 k at r 48 k, tip 150 k, α 0.06 (0.042 red dwarf), angles 122° / 292°. The blue giant has **14** streamers with a **14°** minimum spacing (the 20° rule cannot place 14 wedges). `[A°, w, T, α]`:
+
+```ts
+// red dwarf: mulberry32(0x5244), 10 streamers (α × 0.7) + 2 lobes (base 34.8 at r 41.7, tip 130.4)
+const RED_DWARF_STREAMERS: [number, number, number, number][] = [
+  [ 97.8, 14.8, 106.9, 0.096], [174.8, 13.0, 149.8, 0.071], [302.6,  9.7, 131.8, 0.103],
+  [148.9, 14.1, 136.2, 0.109], [228.4, 11.6, 126.1, 0.107], [119.0, 13.6, 140.2, 0.082],
+  [ 57.4,  9.5, 134.0, 0.109], [ 36.2, 10.4, 130.0, 0.084], [360.0, 15.5, 133.5, 0.101],
+  [336.7, 12.8, 130.9, 0.081],
+  [122.0, 34.8, 130.4, 0.042], [292.0, 34.8, 130.4, 0.042],
+];
+// blue giant: mulberry32(0x4247), 14 streamers (≥ 14° apart) + 2 lobes (base 47 at r 56.3, tip 176)
+const BLUE_GIANT_STREAMERS: [number, number, number, number][] = [
+  [ 29.0, 19.6, 163.1, 0.126], [328.9, 14.5, 145.3, 0.134], [111.1, 17.5, 155.5, 0.143],
+  [247.7, 18.6, 142.9, 0.160], [ 51.5, 14.7, 154.7, 0.137], [ 74.7, 17.0, 142.1, 0.135],
+  [184.2, 13.1, 205.2, 0.145], [219.5, 15.5, 202.3, 0.121], [128.4, 17.4, 144.4, 0.156],
+  [358.9, 16.0, 184.3, 0.112], [310.5, 19.9, 147.0, 0.145], [152.8, 20.9, 177.9, 0.153],
+  [292.9, 17.7, 174.6, 0.140], [265.7, 20.7, 152.8, 0.105],
+  [122.0, 47.0, 176.0, 0.060], [292.0, 47.0, 176.0, 0.060],
+];
+```
+
+### Spec and loop sprites
+
+```ts
+interface LoopSpec { A: number; x0: number; y0: number; cx: number; cy: number; dur: number; begin: number }
+interface FlareSpec { A: number; core: string; body: string }
+
+interface StarSpec {
+  r: number;                                   // 46 / 40 / 54 (zoom 1)
+  crashRadius: number;                         // = r for every star: 46 / 40 / 54 (contact = the solid disc, §4b)
+  core: string; body: string; corona: string; glow: string;
+  glowR: number; coronaR: number;              // 200 / 130 · 174 / 113 · 240 / 153
+  streamers: [number, number, number, number][];
+  granulation: { seed: number; cells: number; alpha: number };   // sun 3 / 14 / 0.16 · red dwarf 5 / 9 / 0.22 · blue giant 9 / 20 / 0.12
+  loops: LoopSpec[]; stroke: number; blur: number;             // stroke 2.5 k, σ 1.5 k
+  flare: FlareSpec;
+}
+
+const SUN: StarSpec = {
+  r: 46, crashRadius: 46, core: "#FFF8E1", body: "#FFC857", corona: "#FF8C2E", glow: "#FF5A1F", glowR: 200, coronaR: 130,
+  streamers: STAR_STREAMERS, granulation: { seed: 3, cells: 14, alpha: 0.16 },
+  loops: [ { A: 147.5, x0: -0.74, y0: 8.19,  cx: 19.43, cy: 6.56, dur: 12, begin: 0 },
+           { A: 243.6, x0: -1.25, y0: 10.63, cx: 21.60, cy: 8.51, dur: 16, begin: 5 },
+           { A: 314.8, x0: -0.71, y0: 8.07,  cx: 26.94, cy: 6.45, dur: 14, begin: 9 } ],
+  stroke: 2.5, blur: 1.5, flare: { A: 25.0, core: "#FFF8E1", body: "#FFC857" },
+};
+const RED_DWARF: StarSpec = {
+  r: 40, crashRadius: 40, core: "#FFD9B0", body: "#FF7A4D", corona: "#E0432F", glow: "#8C1E2A", glowR: 174, coronaR: 113,
+  streamers: RED_DWARF_STREAMERS, granulation: { seed: 5, cells: 9, alpha: 0.22 },        // 0.07 · 128 ≈ 9
+  loops: [ { A: 338.8, x0: -1.07, y0: 9.21, cx: 22.83, cy: 7.36, dur: 12, begin: 0 },
+           { A: 248.0, x0: -0.62, y0: 7.02, cx: 23.69, cy: 5.62, dur: 16, begin: 5 },
+           { A: 167.2, x0: -0.74, y0: 7.64, cx: 20.41, cy: 6.11, dur: 14, begin: 9 } ],
+  stroke: 2.2, blur: 1.3, flare: { A: 117.9, core: "#FFD9B0", body: "#FF7A4D" },
+};
+const BLUE_GIANT: StarSpec = {
+  r: 54, crashRadius: 54, core: "#FFFFFF", body: "#B8CCFF", corona: "#5EA0FF", glow: "#2C4FBF", glowR: 240, coronaR: 153,
+  streamers: BLUE_GIANT_STREAMERS, granulation: { seed: 9, cells: 20, alpha: 0.12 },     // 0.16 · 128 ≈ 20
+  loops: [ { A: 332.7, x0: -0.96, y0: 10.15, cx: 24.04, cy: 8.12,  dur: 12, begin: 0 },
+           { A: 243.5, x0: -1.08, y0: 10.74, cx: 22.95, cy: 8.59,  dur: 16, begin: 5 },
+           { A: 168.7, x0: -1.49, y0: 12.60, cx: 28.37, cy: 10.08, dur: 14, begin: 9 } ],
+  stroke: 2.9, blur: 1.8, flare: { A: 278.3, core: "#FFFFFF", body: "#B8CCFF" },
+};
+
+// One loop sprite: 96 × 64 CSS px at r 46 (× k, × DPR); the base point sits at (16 k, 32 k) so the whole arc
+// (peak ≤ 0.435 r = 20 px, half-span ≤ 12.6 px, plus stroke and 3σ of blur) fits. The blur is baked here, once:
+// three strokes of decreasing width stand in for the SVG's feGaussianBlur (no ctx.filter dependency, no shadowBlur).
+const LOOP_W = 96, LOOP_H = 64, LOOP_OX = 16, LOOP_OY = 32;
+
+function buildLoopSprite(star: StarSpec, l: LoopSpec): HTMLCanvasElement {
+  const k = star.r / 46;
+  const c = document.createElement("canvas");
+  c.width = Math.ceil(LOOP_W * k * DPR); c.height = Math.ceil(LOOP_H * k * DPR);
+  const g = c.getContext("2d")!;
+  g.setTransform(DPR, 0, 0, DPR, LOOP_OX * k * DPR, LOOP_OY * k * DPR);   // origin = the base point
+  g.lineCap = "round"; g.lineJoin = "round";
+  const path = new Path2D(`M${l.x0} ${-l.y0} C${l.cx} ${-l.cy} ${l.cx} ${l.cy} ${l.x0} ${l.y0}`);
+  const passes: [number, number][] = [[4 * star.blur, 0.18], [2 * star.blur, 0.30], [0, 1]];   // extra width, alpha share
+  for (const [extra, a] of passes) {
+    g.strokeStyle = rgba(star.corona, a);
+    g.lineWidth = star.stroke + extra;
+    g.stroke(path);
+  }
+  return c;
+}
+
+// One flare sprite per star kind: the wedge base 3 k on the limb → tip at 1.7 r, i.e. 0.7 r long, in a 0.7 r × (3 k + 2) px box
+// (1 px of padding above and below), core → body gradient along it, built once at DPR. Drawn at the flare angle with globalAlpha.
+function buildFlareSprite(star: StarSpec): { canvas: HTMLCanvasElement; w: number; h: number } {
+  const k = star.r / 46, w = 0.7 * star.r, h = 3 * k + 2;
+  const c = document.createElement("canvas");
+  c.width = Math.ceil(w * DPR); c.height = Math.ceil(h * DPR);
+  const g = c.getContext("2d")!;
+  g.setTransform(c.width / w, 0, 0, c.height / h, 0, 0);                    // draw in CSS px, exactly filling the bitmap
+  const lg = g.createLinearGradient(0, 0, w, 0);
+  lg.addColorStop(0, star.flare.core); lg.addColorStop(1, star.flare.body);
+  g.fillStyle = lg;
+  g.beginPath(); g.moveTo(0, h / 2 - 1.5 * k); g.lineTo(w, h / 2); g.lineTo(0, h / 2 + 1.5 * k); g.closePath(); g.fill();
+  return { canvas: c, w, h };
+}
+
+interface StarSprites {
+  S: number;                                   // envelope size in CSS px at zoom 1: 400 / 348 / 480
+  envelope: HTMLCanvasElement; body: HTMLCanvasElement; bodySize: number;
+  loops: HTMLCanvasElement[];
+  flare: HTMLCanvasElement; flareW: number; flareH: number;
+}
+
+// envelope = §3 layers 1–4 (S px), body = layers 5–7 ((2 · 48 k + 8) px), 3 loop sprites, 1 flare sprite. ≈ 2.5 ms once per star kind.
+function buildStarSprites(star: StarSpec): StarSprites {
+  const k = star.r / 46;
+  const S = Math.ceil(2 * Math.max(star.glowR, 200 * k)), c = S / 2;        // 400 / 348 / 480 — the whole glow fits
+  const envelope = document.createElement("canvas");
+  envelope.width = envelope.height = S * DPR;
+  const g = envelope.getContext("2d")!;
+  g.setTransform(DPR, 0, 0, DPR, 0, 0);
+  const layer = (ctx: CanvasRenderingContext2D, cx: number, r: number, stops: [number, string][]) => {
+    const grad = ctx.createRadialGradient(cx, cx, 0, cx, cx, r);
+    for (const [o, col] of stops) grad.addColorStop(o, col);
+    ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(cx, cx, r, 0, Math.PI * 2); ctx.fill();
+  };
+  layer(g, c, star.glowR,   [[0, rgba(star.glow, 0.50)],   [0.23, rgba(star.glow, 0.45)],
+                             [0.65, rgba(star.glow, 0.12)], [1, rgba(star.glow, 0)]]);          // 1. glow
+  layer(g, c, star.coronaR, [[0, rgba(star.corona, 0.90)], [0.35, rgba(star.corona, 0.70)],
+                             [0.62, rgba(star.corona, 0.22)], [1, rgba(star.corona, 0)]]);      // 2. corona
+  bakeStreamers(g, S, k, star.streamers, star.corona);                                         // 3+4. wedges α a → 0, blurred σ 6 k once (§3)
+
+  const bodySize = Math.ceil(2 * 48 * k + 8), bc = bodySize / 2;
+  const body = document.createElement("canvas");
+  body.width = body.height = bodySize * DPR;
+  const h = body.getContext("2d")!;
+  h.setTransform(DPR, 0, 0, DPR, 0, 0);
+  h.lineWidth = 1;                                                                              // 5. chromosphere rings
+  for (const [rr, a] of [[46, 0.60], [47, 0.35], [48, 0.15]] as [number, number][]) {
+    h.strokeStyle = rgba(star.corona, a); h.beginPath(); h.arc(bc, bc, rr * k, 0, Math.PI * 2); h.stroke();
+  }
+  layer(h, bc, star.r, [[0, star.core], [0.45, star.body], [0.78, star.body], [0.90, star.corona], [1, star.glow]]);   // 6. body
+  h.save();                                                                                     // 7. granulation
+  h.beginPath(); h.arc(bc, bc, star.r, 0, Math.PI * 2); h.clip();
+  h.globalCompositeOperation = "multiply"; h.globalAlpha = star.granulation.alpha;
+  h.fillStyle = h.createPattern(makeNoiseTile(128, star.granulation.seed, 2, 2, star.granulation.cells), "repeat")!;
+  h.fillRect(bc - star.r, bc - star.r, 2 * star.r, 2 * star.r);
+  h.restore();
+
+  const fl = buildFlareSprite(star);
+  return { S, envelope, body, bodySize, loops: star.loops.map((l) => buildLoopSprite(star, l)),
+           flare: fl.canvas, flareW: fl.w, flareH: fl.h };
+}
+```
+
+### Per-frame draw
+
+```ts
+const hump = (u: number): number => { const s = Math.sin(Math.PI * u); return s * s; };   // 0 → 1 → 0, ease-in-out
+const tri = (x: number, hw: number): number => Math.max(0, 1 - Math.abs(x) / hw);
+
+// tS = the scene clock in seconds (§0: dt-accumulated, clamped, never simulation time). sx, sy = screen centre.
+// Per frame: drawImage, clip-free transforms and globalAlpha only — no gradient, path, fill or closure is created.
+function drawLibraryStar(ctx: CanvasRenderingContext2D, star: StarSpec, sp: StarSprites,
+                         sx: number, sy: number, zoom: number, tS: number): void {
+  const k = star.r / 46;
+  const breathe = 1 + 0.03 * Math.sin((tS / 6) * Math.PI * 2);                 // ±3 % / 6 s, envelope only
+  const es = sp.S * zoom * breathe;                                            // the bitmap's own size, never a rounded 400 k
+  ctx.drawImage(sp.envelope, sx - es / 2, sy - es / 2, es, es);                // 1. glow + corona + soft streamers
+
+  const r = star.r * zoom;
+  for (let i = 0; i < star.loops.length; i++) {                                // 2. prominences: scale + alpha about the base point
+    const l = star.loops[i];
+    if (tS < l.begin) continue;
+    const hmp = hump(frac((tS - l.begin) / l.dur));
+    const s = 0.6 + 0.4 * hmp, a = 0.55 * hmp;
+    if (a < 0.005) continue;
+    const A = (l.A * Math.PI) / 180;
+    ctx.save();
+    ctx.translate(sx + r * Math.cos(A), sy + r * Math.sin(A));                // base point on the (un-breathed) limb
+    ctx.rotate(A);
+    ctx.scale(s * zoom, s * zoom);
+    ctx.globalAlpha = a;
+    ctx.drawImage(sp.loops[i], -LOOP_OX * k, -LOOP_OY * k, LOOP_W * k, LOOP_H * k);
+    ctx.restore();
+  }
+
+  const fa = 0.7 * tri(((tS % 22) + 22) % 22 - 13.9, 0.9);                     // 3. flare: 13.0 → 13.9 (peak) → 14.8 s of 22
+  if (fa > 0) {
+    ctx.save();
+    ctx.translate(sx, sy); ctx.rotate((star.flare.A * Math.PI) / 180); ctx.scale(zoom, zoom);
+    ctx.globalAlpha = fa;
+    ctx.drawImage(sp.flare, star.r, -sp.flareH / 2, sp.flareW, sp.flareH);     // cached wedge: limb (r) → tip (1.7 r)
+    ctx.restore();
+  }
+
+  const bs = sp.bodySize * zoom;                                               // 4. chromosphere + body + granulation, no breathe
+  ctx.drawImage(sp.body, sx - bs / 2, sy - bs / 2, bs, bs);
+}
+```
+
+Everything is a blit: the flare is a cached sprite like the loops (built once at DPR and scaled by `drawImage`, §12), so the frame loop allocates nothing — no gradient, no path, no closure (a plain `for`, not `forEach`). It stays crisp because it is drawn at its built size × zoom and its only motion is `globalAlpha`. `tS` is the scene clock of §0 (the same one as the planet strips: `dt`-accumulated, clamped after a tab switch), so 1x / 2x / 4x do not change the cadence. At `tS = 0` every loop and the flare are at α 0 (a plain star, exactly like the SVG); P1 (begin 0 s) is at α ≈ 0.14 by 2 s and peaks at 6 s; the flare first pops at 13.9 s.
+
+### Cost
+
+Per star per frame: 2 sprite blits + ≤ 3 loop blits (each a 96 k × 64 k source scaled ≤ 1.0; with the a < 0.005 cutoff each is drawn ≈ 94 % of its cycle — the sin² hump is below 0.005 / 0.55 only for ≈ 6 % of it) + ≤ 1 flare blit (only 1.8 s of every 22 s) ≈ **0.15 ms** (the brief's "≈ 0.05 ms per star" for the flares alone holds: ≤ 4 scaled blits of small bitmaps). Build, once per star kind: envelope ≈ 2 ms (the blurred streamer pass included), body ≈ 0.3 ms, three loop sprites ≈ 0.1 ms, flare sprite ≈ 0.02 ms. Memory: three 96 × 64 and one ≈ 32 × 5 (× k × DPR) bitmaps per star — negligible. Zoom: all five bitmaps are fixed-size and scaled by `drawImage` like the v1.1 star sprite; at zoom 2 the loops are 2× upsampled, which on a blurred stroke is invisible.
+
+---
+
+## 3c. Black hole, white dwarf, neutron star (v1.3 compact objects)
+
+Three emissive bodies without a terminator, granulation, streamers, prominences or flares. Each is a small stack of cached sprites; the only live motion is a scale (white dwarf glow), a rotation of one sprite (neutron star beams) and a rotation of one ring sprite drawn twice (black hole disk). Zero `shadowBlur`, zero per-frame blur; the SVGs' `feGaussianBlur`s (white-dwarf corona σ 3, beams σ 0.6, haze σ 1, photon ring σ 1, arcs σ 1, streaks σ 0.7) are baked into the sprites with the three-stroke fake blur of §3b's loops / the multi-fill fallback of §3 `bakeStreamers` (or `ctx.filter` at build time where supported) or skipped where the gradient's own falloff is enough. The headers of `bodies/white-dwarf.svg`, `bodies/neutron-star.svg` and `bodies/black-hole.svg` are the canon. Gameplay: all three crash at their solid disc — **crashRadius 16 / 8 / 22** — and the black hole's gravity is star-class (§4b).
+
+### White dwarf — r 16, two sprites, 2 blits
+
+| Layer | Geometry | Stops / values |
+|---|---|---|
+| glow (sprite A, breathes) | disc r 6 r = 96 → sprite 200 px | `#7FB8FF` 0.00 α 0.55 · 0.10 α 0.42 · 0.30 α 0.16 · 0.60 α 0.04 · 1.00 α 0; **scale 1 → 1.05 → 1 → 0.95 → 1 over 4 s** (sine), t = 0 = rest |
+| corona (sprite B) | disc r 2.25 r = 36 | `#B8CCFF` 0.00 α 0.85 · 0.45 α 0.45 · 0.75 α 0.12 · 1.00 α 0 (the SVG blurs σ 3; the gradient falloff stands in) |
+| spikes (B) | 4 lines, 1 px, at 0° / 90° / 180° / 270°, from r 16 to r 64 (4 r) | `#E9EEF8` α 0.30 at the base → 0 at the tip (linear gradient per line), static |
+| bloom (B) | disc r 1.4 r = 22.4 | `#FFFFFF` 0.00 α 0.45 · 0.70 α 0.45 · 1.00 α 0 |
+| body (B) | disc r 16 | 0.00 `#FFFFFF` · 0.55 `#FFFFFF` · 0.85 `#E9EEF8` · 1.00 `#B8CCFF` |
+| limb (B) | 1 px ring at r 15.5 | `#B8CCFF` α 0.85 — the hard thin limb |
+
+Sprite B (corona + spikes + bloom + body + limb, 136 px square) is static; only sprite A scales, so the crash disc never moves (the SVG breathes the glow alone too). Blitting the whole thing with the ±5 % breathe would also be fine visually (0.8 px on the body), but two blits keep the rule "the solid disc never animates".
+
+```ts
+let wdGlow: HTMLCanvasElement, wdDisc: HTMLCanvasElement;       // 200 px and 136 px CSS, × DPR, built once (≈ 0.3 ms)
+
+function drawWhiteDwarf(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, tS: number): void {
+  const b = 1 + 0.05 * Math.sin((tS / 4) * Math.PI * 2);        // glow breathe ±5 % / 4 s
+  const gs = 200 * zoom * b, ds = 136 * zoom;
+  ctx.drawImage(wdGlow, sx - gs / 2, sy - gs / 2, gs, gs);
+  ctx.drawImage(wdDisc, sx - ds / 2, sy - ds / 2, ds, ds);
+}
+```
+
+### Neutron star — r 8, three sprites, 3 blits
+
+| Layer | Geometry | Stops / values |
+|---|---|---|
+| glow (sprite A, static) | disc r 5 r = 40 → 84 px sprite | `#B48CFF` 0.00 α 0.60 · 0.18 α 0.42 · 0.45 α 0.14 · 1.00 α 0 |
+| magnetosphere (sprite B, **rotates**) | 80 px sprite, drawn with `rotate(30° + 360° · t / 6 s)` — clockwise, t = 0 = the magnetic axis 30° from vertical, top pole toward the upper-right | **haze:** ellipse rx 2.5 r = 20, ry 0.6 r = 4.8, `#B48CFF` α 0.12 (σ 1 baked: fill twice, 22 × 5.5 at α 0.05 then 20 × 4.8 at α 0.09); **beams:** two trapezoids, north `(−3.2, −7) (3.2, −7) (7, −36) (−7, −36)`, south = the same rotated 180° — base width 0.8 r = 6.4 at y −7 (1 px inside the limb), length 3.5 r = 28 (tip at 4.5 r), tip width 14; fill = linear gradient along the axis, base `#DCE4FF` α 0.35 → tip `#B48CFF` α 0 |
+| body + limb (sprite C, static) | 20 px sprite | body disc r 8: 0.00 `#FFFFFF` · 0.50 `#FFFFFF` · 0.85 `#DCE4FF` · 1.00 `#B48CFF`; limb 1 px at r 7.5 `#DCE4FF` α 0.9 |
+
+The beams go **under** the body, so the body is its own sprite (or two live ops — a radial fill and a 1 px stroke — which cost the same). The haze turns with the beams: the SVG treats the equatorial belt as tied to the magnetic axis, which keeps every phase coherent (a fixed haze would read as a mismatch twice per turn).
+
+```ts
+let nsGlow: HTMLCanvasElement, nsMag: HTMLCanvasElement, nsBody: HTMLCanvasElement;   // 84 / 80 / 20 px CSS, × DPR
+
+function drawNeutronStar(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, tS: number): void {
+  const gs = 84 * zoom, ms = 80 * zoom, bs = 20 * zoom;
+  ctx.drawImage(nsGlow, sx - gs / 2, sy - gs / 2, gs, gs);
+  ctx.save();
+  ctx.translate(sx, sy);
+  ctx.rotate(Math.PI / 6 + ((tS % 6) / 6) * Math.PI * 2);        // 30° at t = 0, one turn per 6 s, clockwise
+  ctx.drawImage(nsMag, -ms / 2, -ms / 2, ms, ms);
+  ctx.restore();
+  ctx.drawImage(nsBody, sx - bs / 2, sy - bs / 2, bs, bs);
+}
+```
+
+### Black hole — r 22, two static cells + one ring sprite drawn twice + one overlay, 5 blits
+
+The SVG's draw order is glow → top lensed arc → **back** half of the disk → shadow → photon ring → **front** half of the disk → bottom lensed arc → Einstein ring, split along the disk's horizontal axis (front = lower half). Because the shadow must occlude the back half and the front half must cover the shadow, the static layers are cached in **one atlas with two cells** and blitted around the two ring draws. The brief caps the black hole at **≤ 5 `drawImage` per frame**; this is the 5-call form (the SVG's bottom arc + Einstein ring are folded into cell B, i.e. drawn *before* the front half instead of after it — see the note below the code):
+
+| Cell | Contents (all static; 160 px square each, centred; built in this order inside the cell) |
+|---|---|
+| A (before the back half) | **glow** disc r 3 r = 66, `#FF8C2E` 0.00 α 0.20 · 0.45 α 0.09 · 1.00 α 0; **top lensed arc**: annulus sector r 25.3–28.6 (1.15–1.3 r), 190° → 350°, ramp 25.3 `#FFC857` α 0.90 · 26.6 `#FF8C2E` α 0.75 · 28.6 `#B48CFF` α 0.30, multiplied by a vertical alpha 0 at y = 0 → 1 at \|y\| ≥ 20 and by the Doppler mask (below, baked), group α **0.70**, σ 1 (two-fill fake blur) |
+| B (between the halves) | 1. **back-half Doppler darkening**: the upper half (y < 0) of the disk's elliptical annulus (outer rx 57.2 × ry 12.1, inner rx 30.8 × ry 6.5 — exactly the disk's edges), filled `#000000` with a linear alpha 0 at x = −57.2 → 0.45 at x = +57.2, then the top-arc band cut out of it (`destination-out` with the arc's annulus sector) so the arc, which has the mask baked in A, is not darkened twice; 2. **shadow** disc r 22 `#000000`; 3. **photon ring** 1.5 px at r 24, `#FFFFFF` α 0.90, σ 1 (stroke 3.5 at α 0.3 under stroke 1.5 at α 0.9) — drawn after the darkening, so it stays at full strength like the SVG's; 4. **bottom lensed arc**: same as the top one, 10° → 170°, Doppler baked, group α **0.50** (the secondary image is weaker — the asymmetric silhouette); 5. **Einstein ring** 1 px at r 2.1 r = 46.2, `#7FB8FF` α 0.12 |
+
+**Ring texture sprite** — the accretion disk as a flat annulus in a *circular* frame, inner 1.4 r = 30.8, outer 2.6 r = 57.2, built at 2× (so the squash does not blur it): colour ramp radial 0.538 (= 30.8/57.2) `#FFF8E1` α 0.90 · 0.62 `#FFC857` α 0.85 · 0.78 `#FF8C2E` α 0.60 · 0.92 `#B48CFF` α 0.28 · 1.00 `#B48CFF` α 0.10 — a hard hot inner edge (clip the annulus at 30.8), a soft violet outer edge; then **radial streaks** from `mulberry32(0xB1AC)`: 40 bright `#FFF8E1` α 0.10–0.24 at angles i · 9° ± 3° and 28 dark `#000000` α 0.10–0.22 at i · 12.86° + 6.4° ± 4°, each a tapered wedge with base width 0.5–1.1 px at a base radius 30.8–38.8, tip width 1.0–2.4 px, length 8–34 px (clamped at 57.2), σ 0.7 (draw each wedge twice: 1 px wider at half alpha, then as is), the whole streak layer faded radially by `destination-in` (α 1.0 at r 30.8 · 0.8 at 48.6 · 0.35 at 57.2); then a **dark mottle** — the 128 px value-noise tile (seed 5, 2 octaves, cells ≈ 0.08 · 115 ≈ 9) painted black with α = clamp(0.9 v − 0.25, 0, 1) per pixel (the SVG's 0.30 (R + G + B) − 0.25 on a grey field; `paintLayer`-style loop at build time) and composited `source-atop` so it darkens ring pixels only. The asset realises the brief's "stretched turbulence 0.9 / 0.02" as these explicit wedges because an SVG filter cannot wrap a strip into a ring; Canvas may bake either look, the wedges are simply what the canon shows. The exact per-streak draw order of the asset's generator is not needed — matching the look is.
+
+**Squash and rotation.** The sprite is drawn with `translate(sx, sy) → scale(1, 0.2115) → rotate(phase)`, phase = 2π · (t mod 24) / 24, **clockwise**. 0.2115 = ry / rx = 0.55 r / 2.6 r: the brief's "ctx.scale(1, 0.55)" is ry **in units of r**, not the squash factor — at a 0.55 squash the back disk would hide the top arc entirely. On screen the outer ellipse is rx 57.2 × ry 12.1, the inner rx 30.8 × ry 6.5. The rotation sits inside the squash, so the motion is correctly elliptical and both halves share one phase (the forced mid-rotation renders show the streaks advancing identically across the split).
+
+**Doppler beaming** — the SVG multiplies the disk and the arcs by a static linear alpha 1.0 at x = −57.2 (the approaching left half) → 0.55 at x = +57.2. Canvas cannot `destination-in` on the main canvas, so the equivalent is a **darkening** in `#000000` at α 0 (left) → 0.45 (right), drawn `source-over` over the disk only: over the near-black field that equals the multiply by 1.0 → 0.55 to within 1 %. It is split by half so it never touches the rings: the **back** half's darkening is baked into cell B *under* the shadow and the photon ring (B step 1); the **front** half's is the cached overlay `bhDoppler` drawn last — the lower half (y ≥ 0) of the same annulus (outer 57.2 × 12.1, inner 30.8 × 6.5), with the bottom-arc band cut out. The arcs carry the mask baked in (cells A and B). Residuals, all invisible at 1×: where the photon ring's lower arc and the Einstein ring show *through* the semi-transparent front half (disk α ≥ 0.6 there) the overlay dims that see-through share too, exactly as the front half itself would.
+
+```ts
+let bhAtlas: HTMLCanvasElement;         // 2 cells of 160 × 160 CSS px side by side (320 × 160, × DPR): A | B
+let bhRing: HTMLCanvasElement;          // 120 × 120 CSS px annulus r 30.8–57.2, built at 2 × DPR
+let bhDoppler: HTMLCanvasElement;       // 160 × 160 CSS px front-half darkening (lower half of the disk annulus, α 0 → 0.45 left → right)
+const BH_SQUASH = 0.2115;               // ry / rx = 0.55 r / 2.6 r
+
+function bhCell(ctx: CanvasRenderingContext2D, cell: number, sx: number, sy: number, zoom: number): void {
+  const s = 160 * zoom;
+  ctx.drawImage(bhAtlas, cell * 160 * DPR, 0, 160 * DPR, 160 * DPR, sx - s / 2, sy - s / 2, s, s);
+}
+
+function bhHalf(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, phase: number, upper: boolean): void {
+  ctx.save();
+  ctx.beginPath();                                                   // clip to one half-plane: back = y < sy, front = y ≥ sy
+  ctx.rect(sx - 70 * zoom, upper ? sy - 20 * zoom : sy, 140 * zoom, 20 * zoom);
+  ctx.clip();
+  ctx.translate(sx, sy);
+  ctx.scale(zoom, zoom * BH_SQUASH);                                 // squash outside …
+  ctx.rotate(phase);                                                 // … rotation inside → elliptical motion, one phase for both halves
+  ctx.drawImage(bhRing, -60, -60, 120, 120);
+  ctx.restore();
+}
+
+// 5 drawImage (the brief's cap), zero shadowBlur, ≈ 0.13 ms. tS = the scene clock (§0).
+function drawBlackHole(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, tS: number): void {
+  const phase = ((tS % 24) / 24) * Math.PI * 2;                      // 360° / 24 s, clockwise (positive in Canvas, y down)
+  bhCell(ctx, 0, sx, sy, zoom);                                      // 1. A: glow + top lensed arc
+  bhHalf(ctx, sx, sy, zoom, phase, true);                            // 2. back half of the disk
+  bhCell(ctx, 1, sx, sy, zoom);                                      // 3. B: back Doppler + shadow + photon ring + bottom arc + Einstein ring
+  bhHalf(ctx, sx, sy, zoom, phase, false);                           // 4. front half of the disk
+  const s = 160 * zoom;
+  ctx.drawImage(bhDoppler, sx - s / 2, sy - s / 2, s, s);            // 5. front-half Doppler: left brighter (1.0 → 0.55)
+}
+```
+
+Order: A → back half → B (+ the SVG's last two layers) → front half → Doppler overlay = **5 `drawImage`**, which is what the brief and `black-hole.svg`'s header specify. Folding the bottom lensed arc and the Einstein ring into B moves them *under* the front half; the only pixels where that matters are where they overlap the front disk — the arc's lowest-α tail at \|y\| < 12 (already faded below α 0.3 × 0.5 by the vertical mask) and the 1 px α 0.12 Einstein ring near y ≈ 0 at x ≈ ±46 — so the difference is invisible at every zoom the prototype uses. **Optional 6-call variant** (the SVG's exact stacking, one blit over the cap): keep the bottom arc and the Einstein ring in a third cell C (atlas 480 × 160) and blit it after the front half, before the Doppler overlay. The half-plane clips are axis-aligned rects, so they cost nothing; the ring sprite is 120 px at 2 × DPR = 480² device px (≈ 0.9 MB), built once (≈ 2 ms: ramp, 68 wedges × 2 fills, fade, mottle loop). Static renders show t = 0 = streak phase 0.
+
+### Cost (per frame)
+
+| Body | Draw calls | ≈ ms |
+|---|---|---|
+| White dwarf | 2 blits (glow scaled by the 4 s breathe, disc static) | 0.05 |
+| Neutron star | 3 blits (glow, rotated 80 px magnetosphere, body) | 0.05 |
+| Black hole | **5 blits**: 2 atlas cells + 2 clipped ring draws + 1 front-half Doppler overlay (optional 6-call variant: + cell C) | 0.13 |
+
+All three scale like the star sprite — fixed bitmaps that `drawImage` scales (the prototype never zooms past 2×, §12).
 
 ---
 
@@ -508,31 +912,34 @@ interface StripLayer { seed: number; cells: number; octaves: number; color: stri
 
 interface PlanetSpec {
   r: number; base: string; highlight: string; shadow: string; atmo: string; limbAlpha: number;
+  crashRadius: number;                        // contact radius next to r: = r for every planet (§4b table)
   surface: StripLayer[];                      // drawn over the base fill, in order
-  caps: { color: string; frac: number };      // polar bands, fraction of the disc diameter each
-  cloud: StripLayer;                          // second strip, transparent background, alpha baked
+  caps: { color: string; frac: number } | null;   // polar bands, fraction of the disc diameter each (null: none)
+  cloud?: StripLayer[];                       // OPTIONAL second strip, transparent background, alpha baked (clouds, wisps,
+                                              // lava veins); omitted for single-strip bodies (rocky, ice, cracked, moon, dwarf, double)
+  cloudAlpha?: (tS: number) => number;        // optional per-frame alpha of the second strip (lava veins: lavaVeinAlpha, §4b)
   specular: boolean;                          // ocean glint in the overlay (start only)
-  surfacePeriod: number; cloudPeriod: number; // seconds per rotation
+  surfacePeriod: number; cloudPeriod?: number;    // seconds per rotation; no cloudPeriod = locked to the surface (lava)
 }
 
 const PLANET_START: PlanetSpec = {
-  r: 34, base: "#3D8BFF", highlight: "#9CCBFF", shadow: "#142B5E", atmo: "#7FB8FF", limbAlpha: 0.16,
+  r: 34, base: "#3D8BFF", highlight: "#9CCBFF", shadow: "#142B5E", atmo: "#7FB8FF", limbAlpha: 0.16, crashRadius: 34,
   surface: [
     { seed: 7, cells: 6, octaves: 4, color: "#8FB07A", alpha: 1,    sel: { kind: "above", cover: 0.32, ramp: 12 } },   // planet.start.land
     { seed: 7, cells: 6, octaves: 4, color: "#142B5E", alpha: 0.22, sel: { kind: "above", cover: 0.10, ramp: 46 } },   // highlands
   ],
   caps: { color: "#E9EEF8", frac: 0.12 },                                                                              // planet.start.ice
-  cloud: { seed: 19, cells: 12, octaves: 4, color: "#F2F5FF", alpha: 0.5, sel: { kind: "above", cover: 0.40, ramp: 24 } }, // planet.start.cloud
+  cloud: [{ seed: 19, cells: 12, octaves: 4, color: "#F2F5FF", alpha: 0.5, sel: { kind: "above", cover: 0.40, ramp: 24 } }], // planet.start.cloud
   specular: true, surfacePeriod: 90, cloudPeriod: 64,
 };
 const PLANET_X: PlanetSpec = {
-  r: 30, base: "#3DE0C2", highlight: "#B5FFF0", shadow: "#0E4A40", atmo: "#8FFFE6", limbAlpha: 0.18,
+  r: 30, base: "#3DE0C2", highlight: "#B5FFF0", shadow: "#0E4A40", atmo: "#8FFFE6", limbAlpha: 0.18, crashRadius: 30,
   surface: [
     { seed: 11, cells: 7, octaves: 4, color: "#0E4A40", alpha: 0.60, sel: { kind: "above", cover: 0.28, ramp: 22 } },  // planet.x.mineral basins
     { seed: 11, cells: 7, octaves: 4, color: "#0E4A40", alpha: 0.35, sel: { kind: "crease", cover: 0.05 } },           // veins
   ],
   caps: { color: "#B5FFF0", frac: 0.18 },                                                                              // planet.x.ice
-  cloud: { seed: 23, cells: 9, octaves: 2, color: "#B5FFF0", alpha: 0.35, sel: { kind: "crease", cover: 0.15 } },     // planet.x.wisp
+  cloud: [{ seed: 23, cells: 9, octaves: 2, color: "#B5FFF0", alpha: 0.35, sel: { kind: "crease", cover: 0.15 } }],   // planet.x.wisp
   specular: false, surfacePeriod: 120, cloudPeriod: 80,
 };
 
@@ -552,7 +959,7 @@ Everything here is device pixels (`W = P · zoomB · DPR`, `H = 2r · zoomB · D
 ```ts
 interface PlanetStrips {
   surface: HTMLCanvasElement;   // 2W × H device px: base + land/basins + caps, two identical tiles side by side
-  cloud: HTMLCanvasElement;     // 2W × H, transparent background, alpha baked (0.5 clouds / 0.35 wisps)
+  cloud: HTMLCanvasElement | null;   // 2W × H, transparent background, alpha baked (0.5 clouds / 0.35 wisps); null = single-strip body
   overlay: HTMLCanvasElement;   // S × S (× DPR): squash, glint, shade, limb, rim — fixed to L
   size: number;                 // S in CSS px at the bucket zoom (81 / 72 at zoom 1)
   r: number; P: number;         // CSS px at the bucket zoom
@@ -703,7 +1110,7 @@ function buildPlanetStrips(spec: PlanetSpec, lx: number, ly: number, zoomB: numb
   const P = Math.round(2 * Math.PI * r);                                // 214 (start) / 188 (X) at zoom 1 — one full rotation
   const W = Math.round(P * DPR), H = Math.round(2 * r * DPR);           // one tile in device px
   const surface = buildStrip(spec.surface, spec.base, spec.caps, W, H);
-  const cloud   = buildStrip([spec.cloud], null, null, W, H);
+  const cloud   = spec.cloud ? buildStrip(spec.cloud, null, null, W, H) : null;   // only bodies that have a second strip
   const ov = buildLightingOverlay(spec, lx, ly, zoomB);
   return { surface, cloud, overlay: ov.canvas, size: ov.size, r, P, zoom: zoomB };
 }
@@ -720,16 +1127,21 @@ const frac = (x: number): number => x - Math.floor(x);
 // dtS = seconds since the last frame (clamp to ≤ 0.1 s after a tab switch so the planet does not jump).
 function advanceSpin(spin: Spin, spec: PlanetSpec, dtS: number): void {
   spin.surface = frac(spin.surface + dtS / spec.surfacePeriod);         // 90 s / 120 s
-  spin.cloud   = frac(spin.cloud   + dtS / spec.cloudPeriod);           // 64 s / 80 s — drifts relative to the surface
+  spin.cloud   = spec.cloudPeriod ? frac(spin.cloud + dtS / spec.cloudPeriod) : spin.surface;   // 64 s / 80 s; locked (lava) or unused
 }
 
-// 1 clip + 3 drawImage. sx, sy = screen centre; zoom = current camera zoom (residual k inside the bucket: 0.894 … 1.118).
-function drawPlanet(ctx: CanvasRenderingContext2D, st: PlanetStrips, spin: Spin, sx: number, sy: number, zoom: number): void {
+// 1 clip + 2 drawImage (single strip) or 3 (with the second strip). sx, sy = screen centre; zoom = current camera zoom
+// (residual k inside the bucket: 0.894 … 1.118). cloudAlpha: per-frame alpha of the second strip (1 = baked only; lava veins pulse).
+function drawPlanet(ctx: CanvasRenderingContext2D, st: PlanetStrips, spin: Spin, sx: number, sy: number, zoom: number,
+                    cloudAlpha = 1): void {
   const k = zoom / st.zoom, r = st.r * k, P = st.P * k, D = 2 * r;
   ctx.save();
   ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI * 2); ctx.clip();
   ctx.drawImage(st.surface, sx - r - P + spin.surface * P, sy - r, 2 * P, D);   // west→east: offset grows with time
-  ctx.drawImage(st.cloud,   sx - r - P + spin.cloud   * P, sy - r, 2 * P, D);   // alpha baked (0.5 / 0.35)
+  if (st.cloud) {                                                               // optional second strip
+    ctx.globalAlpha = cloudAlpha;                                               // restored by restore()
+    ctx.drawImage(st.cloud, sx - r - P + spin.cloud * P, sy - r, 2 * P, D);     // alpha baked (0.5 / 0.35) × cloudAlpha
+  }
   ctx.restore();
   const s = st.size * k;
   ctx.drawImage(st.overlay, sx - s / 2, sy - s / 2, s, s);                      // squash + glint + shade + limb + rim, never rotates
@@ -775,9 +1187,9 @@ Halo: radial gradient `#3DE0C2`, radius **1.8 · r** (54 at r 30), α 0.35 from 
 Ring: radius 78 at zoom 1, `#3DE0C2`, stroke 1.5 px, `setLineDash([6, 6])`. Two motions, both continuous and now also in the SVG: the dashes **crawl** via `lineDashOffset` at **−12 px/s** (one 12 px dash period per second, so the pattern never jumps), **and** the ring **pulses** over **2.4 s** (sine): α 0.35 ↔ 0.70, radius ±2 px. The sine form below has its rest point at α 0.525; the asset's keyframes (`0.55; 0.70; 0.55; 0.35; 0.55`) start from v1's static 0.55 — 0.025 apart, invisible. `setLineDash` is context state: **reset it to `[]`** (and `lineDashOffset` to 0) afterwards or the trail and HUD hairlines will come out dashed.
 
 ```ts
-function drawPlanetX(ctx: CanvasRenderingContext2D, p: Body, zoom: number, tMs: number): void {
+function drawPlanetX(ctx: CanvasRenderingContext2D, p: Body, zoom: number, tS: number): void {   // tS = the scene clock (§0)
   const r = p.r * zoom;
-  const w = Math.sin((tMs / 2400) * Math.PI * 2);                      // −1..1 over 2.4 s — one clock for halo and ring
+  const w = Math.sin((tS / 2.4) * Math.PI * 2);                        // −1..1 over 2.4 s — one clock for halo and ring
   const haloR = 1.8 * r * (1 + 0.04 * w);                              // halo breathe ±4 %
   const halo = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, haloR);
   halo.addColorStop(0, rgba("#3DE0C2", 0.35));
@@ -793,13 +1205,190 @@ function drawPlanetX(ctx: CanvasRenderingContext2D, p: Body, zoom: number, tMs: 
   ctx.strokeStyle = rgba("#3DE0C2", 0.525 + 0.175 * w);                // α 0.35 ↔ 0.70
   ctx.lineWidth = 1.5;
   ctx.setLineDash([6, 6]);
-  ctx.lineDashOffset = -((tMs / 1000) * 12) % 12;                      // dash crawl −12 px/s (one 12 px period per second)
+  ctx.lineDashOffset = -(tS * 12) % 12;                                // dash crawl −12 px/s (one 12 px period per second)
   ctx.beginPath(); ctx.arc(p.x, p.y, ringR, 0, Math.PI * 2); ctx.stroke();
   ctx.setLineDash([]); ctx.lineDashOffset = 0;                         // always reset
 }
 ```
 
 On the win overlay the pulse and the crawl stop and the ring is drawn at **full α 1.0** (radius 78, `lineDashOffset` 0), as in `result-win.svg` — the one moment the boundary reads as solid. The halo breathe and the surface rotation continue under the scrim.
+
+---
+
+## 4b. Body library parameters (v1.3)
+
+One row per body in `design/assets/bodies/` (plus `planet-x.svg` and `star.svg`), with everything the pipeline needs: radius and crash radius, strip periods, the noise fields with their SVG parameters (type, `baseFrequency`, octaves, seed, threshold → coverage, alpha), the tokens, and what is special. Every planet uses the §4 pipeline (`buildPlanetStrips` → `drawPlanet`); the rows marked *special* need the additions described after the table. Noise `cells` for `makeNoiseTile` = `P · baseFrequency` as in §4 (for an anisotropic `baseFrequency "fx fy"` stretch the tile non-uniformly so the feature size is 1/fx along x and 1/fy along y — `fieldFromTile` gets a second scale). Thresholds are given as the SVG's (slope / intercept → threshold = percentile) and the **coverage** Canvas should reproduce by percentile, as §4 does. `strip period` is the surface; `secondary` is the second strip or the non-strip motion. Lit side L = (+0.7071, −0.7071) for every library planet (the game computes L toward the scene's star).
+
+| Body (file) | r | crash | strip period | secondary | noise params (SVG; Canvas = same coverage by percentile) | colours | special |
+|---|---|---|---|---|---|---|---|
+| **rocky** (`rocky.svg`) | 30 | 30 | 110 s (P 188, 376 × 60, start tile x 40) | — | dunes fractalNoise `0.008 0.09` · 2 oct · seed 5: light bands slope 8 / −4.084 (0.573 = p75) × 0.40, dark bands slope −8 / 3.892 (< 0.424 = p25) × 0.40; craters fractalNoise 0.12 · 2 oct · seed 31: pits slope 40 / −23.5 (0.600 = p80 → 20 %) × 0.8; walls = pit − offset(±1.2) × 0.6 | base `#C98B5A` · dark `#7A4E33` · highlight `#F0C9A0` · atmo `#E8B07A` | rim peak **0.40**; no caps; soft shade (highlight α 0.90) |
+| **ocean** (`ocean.svg` = `planet-start.svg`) | 34 | 34 | 90 s (P 214, 428 × 68) | clouds 64 s | §4 `PLANET_START` | `planet.start.*` | glint; caps 12 %; rim 0.55 |
+| **ice** (`ice.svg`) | 28 | 28 | 140 s (P 176, 352 × 56, tile x 24) | — | sheets fractalNoise 0.03 · 4 oct · seed 41: dark plates slope 5 / −2.25 (0.55 = p64) × 0.45, bright plates slope −5 / 2.75 (< 0.45 = p38) × 0.35; cracks turbulence 0.06 · 2 oct · seed 43: veins slope −40 / 4.4 (< 0.085–0.110 = p15 → 15 %) α 1, cores slope −40 / 2.36 (< 0.034–0.059 = p5) × 0.6, lit edge = vein − offset(+0.8, −0.8) × 0.6 | base `#CFE6F5` · dark `#7FA6C9` · highlight `#FFFFFF` · atmo `#BFE3FF` · shadow `#35567A` | caps **30 %** (16.8 px); rim 0.55; crease-type cracks (§4 "crease", 15 %) |
+| **lava** (`lava.svg`) | 26 | 26 | 95 s (P 163, 326 × 52, tile x 20) | vein pulse 5 s (same strip group) | crust fractalNoise 0.04 · 4 oct · seed 53: plates slope 6 / −2.5 (0.5 = p49 → 45 %) × 0.8; veins turbulence 0.05 · 2 oct · seed 59: vein slope −12.3 / 1.4 (< 0.114 = p18 → 18 %), hot slope −25.5 / 1.4 (< 0.055 = p5), bloom = vein α blur σ 1.2 × 0.45 under | crust `#3A2A2A` · crustLight `#5A4040` · vein `#FF6A2A` · veinHot `#FFC857` · atmo `#FF8C2E` · shadow `#1E1414` | **halo** r 1.4 r α 0.18 static (the only non-X halo); vein strip at `globalAlpha` 0.85 + 0.15 cos(2π t / 5); rim **0.35**; shade highlight α **0.55**; no caps |
+| **toxic** (`toxic.svg`) | 32 | 32 | 120 s (P 201, 402 × 64, tile x 60) | clouds 75 s (tile x 0, α 0.6) | surface fractalNoise 0.035 · 4 oct · seed 29: lowlands slope 12 / −6.088 (0.549 = p70 → 30 %) × 0.60; clouds fractalNoise `0.016 0.070` · 4 oct · seed 37, displaced scale 14 by fractalNoise 0.010 · 2 oct · seed 43, slope 8 / −3.30 (0.475 = p43 → 55 %), blur 0.8; deck shadow = cloud mask offset (−1.5, +1.5) `#2F5A2A` × 0.5 under the clouds | base `#5E8F3A` · dark `#2F5A2A` · cloud `#E6F2C8` · atmo `#C7E97A` | shade highlight = atmo at α **0.70**; cloud alpha 0.6 and the deck shadow baked into the cloud strip; no caps |
+| **cracked** (`cracked.svg`) | 27 | 27 | 100 s (P 170, 340 × 54, tile x 30) | night cracks (same strip, same phase) | mottling fractalNoise 0.040 · 4 oct · seed 41: slope 12 / −6.412 (0.576 = p70 → 30 %) × 0.60; cracks fractalNoise 0.035 · 3 oct · seed 61 → **iso-contour** at 0.50 (band 0.48–0.52 → ≈ 10 %, ≈ 1.5 px lines): glow = blur 1.5 × 0.50, lines × 0.80 | base `#4F5B73` · dark `#2A3245` · crack `#FFC857` · atmo `#8FA3C9` | shade highlight = atmo α 0.90; optional 3rd blit: crack-only strip at `globalAlpha` 0.35 clipped to the night half-disc; static glow, no pulse; no caps |
+| **gasBanded** (`gas-banded.svg`) | 44 | 44 | bands C 180 s +P · B 110 s −P · A 150 s +P (P 276, 552 × 88 each) | storm spot rides band B | per group: wavy edges fractalNoise `0.012 0.08` · 2 oct · seeds 31 / 37 / 41, contrast ×2, displacement scale 6 (±3 px), blur 0.6; zonal streaks fractalNoise `0.010 0.28` · 2 oct · seeds 5 / 13 / 17, grey, contrast ×2, α 0.30, `overlay` | cream `#F2D9B8` · tan `#E3B07C` (base) · brown `#B9794B` · dark `#8C5A3C` · storm `#D9623E` · atmo `#F5D7B0` · shadow `#4A2E1E` | 3 band strips, counter-flow; 9 bands (layout in `style.md` §8); storm ellipse 6.16 × 3.52 at strip (98.6, 28.6) and (374.6, 28.6); **gas shade** (0.64 α 0.30); rim 0.55; no halo |
+| **gasRinged** (`gas-ringed.svg`) | 44 | 44 | bands A 160 s +P · B 120 s −P | ring static | per group as above, wave seeds 43 / 47, streak seeds 21 / 29 | cream `#D5EFEA` · light `#9FD3C7` (base) · mid `#6FA8A0` · dark `#3F7A74` · atmo `#BFE8E0` · ring `#D8E6E3` · shadow `#1C3A36` · ring shadow `bg.base` | 2 band strips; **ring** 1.35–2.2 r, tilt 22°, ry = 0.28 rx, gaps at 1.60 / 1.95 r (0.05 r), α 0.55 peak; back ring + shadow wedge (α 0.80) **before** the planet, front ring (clipped to the lower half-disc) **after** — two cached ring sprites; gas shade; no halo |
+| **moon** (`moon.svg`) | 14 | 14 | 180 s (P 88, 176 × 28, tile x 30) | — | maria fractalNoise 0.05 · 3 oct · seed 7: slope 3 / −1.3 × 0.14; pits fractalNoise 0.30 · 1 oct · seed 9: slope 30 / −19.3 (0.66 = p93 → 7 %) × 0.50; **37 craters** seed `0x4D4F4F` (15.2 % of the tile; radii 4.2 … 0.9) | base `#9A9AA6` · crater `#5E5E6B` · highlight `#D8D8E0` · night `bg.base` | **airless shade** (1.5 r, hard step 0.62–0.70); no rim, no caps; limb α 0.14; craters = geometry baked twice (x, x + P) |
+| **dwarf** (`dwarf.svg`) | 10 | 10 | 160 s (P 63, 126 × 20, tile x 20) | — | mottle fractalNoise 0.10 · 3 oct · seed 13: dark slope 8 / −4.48 (≈ 22 %) × 0.60, light slope −8 / 3.2 (< 0.40 ≈ 15 %) × 0.45; specks fractalNoise 0.28 · 1 oct · seed 17 (≈ 7 %) × 0.50; **8 pits** seed `0x445741` (3.9 %) | base `#B8A48E` · dark `#6E6052` · highlight `#E8DCC8` · night `bg.base` | airless shade; no rim, no caps |
+| **double** (`double.svg`) | 18 + 11 | 18 and 11, moving | big 80 s (P 113, 226 × 36, tile x 40); small 60 s (P 69, 138 × 22, tile x 25) | **orbit 40 s** | big: deep water fractalNoise 0.07 · 3 oct · seed 29: slope 14 / −8.07 (0.612 = p78 → 22 %) × 0.40; pack ice fractalNoise 0.035 · 4 oct · seed 21: slope 30 / −17.4 (0.596 = p70 → 30 %) × 0.80; caps 22 %. small: mottle fractalNoise 0.12 · 2 oct · seed 31: slope 14 / −7.84 (≈ 25 %) × 0.55; specks 0.30 · 1 oct · seed 37 (≈ 8 %) × 0.50; **9 craters** seed `0x534D4C` (4.2 %) | big base `#5E9ED6` · dark `#2C4F7A` · highlight `#DCEFFF` · atmo `#9CCBFF`; small base `#C98B5A` · dark `#7A4E33` (+ `rocky.highlight #F0C9A0`, night `bg.base`) | positions from the orbit (below); big = soft shade + rim 0.55 + caps; small = airless; z-order swap at sin θ = 0 |
+| **planetX** (`planet-x.svg`) | 30 | 30 | 120 s (P 188) | wisps 80 s | §4 `PLANET_X` | `planet.x.*` | live halo + ring (§4); L lower-left on the original scene |
+| **sunYellow** (`star.svg`) | 46 | 46 | breathe 6 s | loops 12 / 16 / 14 s (begin 0 / 5 / 9), flare 22 s | granulation 0.11 · 2 oct · seed 3 · α 0.16; streamers `0x5747` | `star.*` | §3 + §3b |
+| **redDwarf** (`red-dwarf.svg`) | 40 | 40 | breathe 6 s | same | granulation **0.07** · seed 5 · α **0.22**; streamers `0x5244` α × 0.7 | core `#FFD9B0` · body `#FF7A4D` · corona `#E0432F` · glow `#8C1E2A` | §3b; glow r 174, corona r 113 |
+| **blueGiant** (`blue-giant.svg`) | 54 | 54 | breathe 6 s | same | granulation **0.16** · seed 9 · α **0.12**; **14** streamers `0x4247` (≥ 14° apart) | core `#FFFFFF` · body `#B8CCFF` · corona `#5EA0FF` · glow `#2C4FBF` | §3b; glow r **240**, corona r 153 |
+| **whiteDwarf** (`white-dwarf.svg`) | 16 | 16 | — | glow breathe ±5 % / 4 s | none (smooth) | core `#FFFFFF` · body `#E9EEF8` · corona `#B8CCFF` · glow `#7FB8FF` | §3c: glow to 6 r, 4 spikes to 4 r, bloom 1.4 r, hard limb |
+| **neutronStar** (`neutron-star.svg`) | 8 | 8 | — | beams 360° / 6 s | none | core `#FFFFFF` · body `#DCE4FF` · glow `#B48CFF` | §3c: glow to 5 r, two beam cones 3.5 r, haze 2.5 r × 0.6 r |
+| **blackHole** (`black-hole.svg`) | 22 (horizon) | 22 | — | disk 360° / 24 s | mottle fractalNoise 0.08 · 2 oct · seed 5; streaks `0xB1AC` | `#000000` · `#FFFFFF` · `#FFF8E1` · `#FFC857` · `#FF8C2E` · `#B48CFF` · `#7FB8FF` | §3c; **gravity star-class**, crash at the horizon only; disk 1.4–2.6 r, squash 0.2115, Doppler 1.0 → 0.55 |
+
+### Extending `PlanetSpec` for the library
+
+Three things the §4 pipeline did not need: a **shade recipe** (soft / gas / airless, with a highlight-alpha override), a **rim peak** (0.55 / 0.40 / 0.35 / none) and an optional **halo** (lava). `buildLightingOverlay` switches on them; everything else (squash, limb line, rim mask, strips, clip, phase) is unchanged.
+
+```ts
+type ShadeKind = "soft" | "gas" | "airless";
+
+interface BodyLighting {
+  shade: ShadeKind;        // soft = v1.1 (ocean, ice, rocky, cracked, toxic, lava, double.big, X); gas = both giants; airless = moon, dwarf, double.small
+  highlightAlpha: number;  // soft 0.90 (toxic 0.70, lava 0.55); gas 0.55; airless 0.55
+  rimPeak: number;         // 0.55 default, rocky 0.40, lava 0.35, airless 0 (no rim)
+  limbAlpha: number;       // 0.16 / 0.18, airless 0.14
+  halo?: { color: string; alpha: number };   // lava only: r 1.4 r, α 0.18 flat to the disc edge → 0.07 at 0.86 → 0 — its OWN cached sprite
+}
+
+// Terminator stops per recipe: [offset, which colour, alpha]. "dark" = the body's dark token, "night" = bg.base #050710.
+const SHADE_STOPS: Record<ShadeKind, { radius: number; stops: [number, "highlight" | "base" | "shadow" | "dark" | "night", number][] }> = {
+  soft:    { radius: 1.25, stops: [[0, "highlight", 0.90], [0.40, "base", 0], [0.70, "shadow", 0.55], [0.86, "shadow", 0.92], [1, "shadow", 1]] },
+  gas:     { radius: 1.25, stops: [[0, "highlight", 0.55], [0.40, "base", 0], [0.64, "shadow", 0.30], [0.86, "shadow", 0.90], [1, "shadow", 1]] },
+  airless: { radius: 1.5,  stops: [[0, "highlight", 0.55], [0.40, "base", 0], [0.62, "dark", 0.30], [0.70, "night", 0.84], [1, "night", 0.92]] },
+};
+// In buildLightingOverlay: const rec = SHADE_STOPS[l.shade]; radius rec.radius · r; replace the alpha of the first stop by
+// l.highlightAlpha; rim: skip when l.rimPeak === 0, else stops 0.87 → rimPeak and 0.92 → rimPeak · 0.545 (0.55 → 0.30, 0.40 → 0.22, 0.35 → 0.19);
+// halo (lava): NOT in the overlay (its (2.24 r + 4) px box cannot hold a 2.8 r disc) — a separate cached sprite, ceil(2.8 r + 4) px
+// square (× DPR, 77 px at zoom 1), radial 1.4 r, #FF8C2E 0 α 0.18 · 0.714 α 0.18 · 0.86 α 0.07 · 1 α 0, built with the strips per
+// zoom bucket and blitted BEFORE drawPlanet: lava = 1 halo blit + 1 clip + 2 strip blits (crust, veins at lavaVeinAlpha) + 1 overlay.
+```
+
+The airless radius is **1.5 r** (the brief's 1.25 r with the 0.62 → 0.70 step turned the lit side into a small round blob; 1.5 r lands the hard step where v1.1's 0.78 mid-stop lands, so the night stays the usual crescent). The overlay bitmap for airless bodies is still (2 · 1.12 r + 4) px: the shade's 1.5 r radius only matters inside the disc clip.
+
+### Craters (moon, dwarf, double.small) — baked geometry, no per-frame cost
+
+Craters are plain circles drawn into the surface strip **after** the noise layers, once per zoom bucket, at x and at x + P (the strip is two periods wide, so every discrete feature must appear once per period or the loop seams). Each: an outer circle R in the highlight colour (α 0.55 moon, 0.5 dwarf / double.small) + a bowl circle 0.82 R offset (+0.18 R, −0.18 R) toward L, filled with a linear gradient from its upper-right (dark α 0.95) via 0.55 α 0.72 to its lower-left (α 0.55) — the uncovered lower-left crescent is the sun-lit inner wall. The tables of (x, y, R) per body are in the headers of `moon.svg` (37), `dwarf.svg` (8) and `double.svg` (9); they were generated with `mulberry32(seed)` — radii largest first, random x in [0, P), y in [R + 0.5, H − R − 0.5], rejected while closer than 0.95 (R₁ + R₂) to an accepted crater — so a Canvas build can either copy the tables or re-run the rule.
+
+```ts
+// Bake one crater at (x, y) with radius R into the strip context g (strip space, y down). lx, ly = L.
+function bakeCrater(g: CanvasRenderingContext2D, x: number, y: number, R: number, highlight: string, dark: string,
+                    rimAlpha: number, lx: number, ly: number): void {
+  g.fillStyle = rgba(highlight, rimAlpha);
+  g.beginPath(); g.arc(x, y, R, 0, Math.PI * 2); g.fill();                          // rim wall
+  const bx = x + 0.18 * R * lx, by = y + 0.18 * R * ly, b = 0.82 * R;
+  const lg = g.createLinearGradient(bx + b * lx, by + b * ly, bx - b * lx, by - b * ly);   // upper-right → lower-left
+  lg.addColorStop(0, rgba(dark, 0.95)); lg.addColorStop(0.55, rgba(dark, 0.72)); lg.addColorStop(1, rgba(dark, 0.55));
+  g.fillStyle = lg;
+  g.beginPath(); g.arc(bx, by, b, 0, Math.PI * 2); g.fill();                        // shadowed bowl
+}
+```
+
+### Lava vein pulse and the cracked world's night cracks
+
+The lava world's veins are their **own strip** in the same animated group as the crust (same phase, same 95 s), drawn at a pulsing alpha: the SVG animates the group opacity `1 → 0.7 → 1` over 5 s (sine), t = 0 = full glow. The bloom (σ 1.2, × 0.45) is part of the vein strip, so it pulses with it and costs nothing at runtime.
+
+```ts
+const lavaVeinAlpha = (tS: number): number => 0.85 + 0.15 * Math.cos((tS / 5) * Math.PI * 2);   // 1 → 0.7 → 1 over 5 s, 1 at t = 0
+
+// The veins are lava's optional second strip (spec.cloud = the vein + hot + bloom layers, no cloudPeriod → locked to the crust's
+// 95 s phase, spec.cloudAlpha = lavaVeinAlpha). Per frame:
+//   ctx.drawImage(lavaHalo, sx - hs / 2, sy - hs / 2, hs, hs);                       // halo sprite first (hs = haloSize · k)
+//   drawPlanet(ctx, lavaStrips, lavaSpin, sx, sy, zoom, LAVA.cloudAlpha!(tS));       // crust, veins × pulse, overlay
+```
+
+The cracked world's crack glow is **static** (no pulse). Its cracks are emissive, so the SVG draws the crack-only strip a second time at group α 0.35, masked to the night side (linear along −L: 0 at +0.5 r · L → 1 at −0.5 r · L). Canvas: an optional third `drawImage` of a crack-only strip at `globalAlpha 0.35`, clipped to the half-disc beyond the terminator (or masked by the same linear gradient baked as `destination-in` into a copy of the strip) — or skip it: the lit cracks already carry the look, and the brief's "2 drawImage + 1 clip" budget is per strip.
+
+### Gas giants — band strips built from rects, waves and streaks
+
+A gas giant has **no base noise layer**: each band group is a stack of horizontal rects (the 9-band layouts and overdraw ranges in `style.md` §8) whose edges wave ±3 px. The SVG does it with a displacement map; Canvas does it at build time by drawing each band as a polygon whose top and bottom edges are polylines sampled from a noise row — the same look, no filter:
+
+```ts
+// One band group strip, 2W × H DEVICE px (W = P · zoomB · DPR, H = 2r · zoomB · DPR, as §4). bands = [y0, y1, colour] in
+// strip px at zoom 1 (the style.md §8 layouts, overdraw included); u = H / (2 r) = zoomB · DPR converts them to device px, and the
+// ±3 px wave is ±3 strip px, i.e. ±3 u device px — so the layout fills the whole strip and the wave keeps its size at any DPR / zoom.
+// edge: the grey field of this group's wave tile (cells ≈ 276 · 0.012 ≈ 3, 2 octaves, contrast ×2), W × H device px, wrapping at W.
+// base: the planet's base token for the FIRST group (the SVG's base disc under the bands), null for the others.
+function buildBandStrip(bands: [number, number, string][], edge: Uint8ClampedArray, W: number, H: number, u: number,
+                        base: string | null, streaks: HTMLCanvasElement): HTMLCanvasElement {
+  const strip = document.createElement("canvas"); strip.width = 2 * W; strip.height = H;
+  const g = strip.getContext("2d")!;
+  if (base) { g.fillStyle = base; g.fillRect(0, 0, 2 * W, H); }
+  const n = (x: number, y: number): number => edge[((((y | 0) % H) + H) % H * W + (((x | 0) % W) + W) % W) * 4] / 255;
+  const A = 6 * u;                                                                     // wave amplitude ±3 strip px
+  for (const [y0, y1, col] of bands) {
+    const Y0 = y0 * u, Y1 = y1 * u;                                                    // strip px → device px
+    g.fillStyle = col;
+    g.beginPath();
+    for (let x = 0; x <= 2 * W; x++) g.lineTo(x, Y0 + A * (n(x, Y0) - 0.5));          // top edge, left → right
+    for (let x = 2 * W; x >= 0; x--) g.lineTo(x, Y1 + A * (n(x, Y1) - 0.5));          // bottom edge, right → left
+    g.closePath(); g.fill();
+  }
+  g.globalCompositeOperation = "overlay"; g.globalAlpha = 0.30;                        // zonal streaks: grey, contrast ×2
+  g.drawImage(streaks, 0, 0, 2 * W, H);                                                // a tile stretched ≈ 100 px along x, 3.6 px along y
+  g.globalCompositeOperation = "source-over"; g.globalAlpha = 1;
+  return strip;
+}
+```
+
+Edge field: `fieldFromTile` of the group's wave tile (seeds 31 / 37 / 41 banded, 43 / 47 ringed), drawn **anisotropically** (≈ 83 px features along x = 1/0.012, ≈ 12 px along y = 1/0.08) — the y frequency decorrelates neighbouring edges, which is what makes each edge wave independently. Streak tile: seeds 5 / 13 / 17 (banded), 21 / 29 (ringed), 2 octaves, grey, contrast ×2, stretched to ≈ 100 px × 3.6 px features, drawn with `overlay` at α 0.30 (supported in every Canvas 2D). The SVG's 0.6 px edge blur is skipped (a `ctx.filter = "blur(0.6px)"` at build time is optional where supported); at 1× the ±3 px waves read soft already. Per frame a giant is **1 clip + 3 (banded) / 2 (ringed) strip blits + 1 overlay** — each band group with its own phase and direction (`+` groups: offset grows; `−` groups: offset shrinks, i.e. `phase = frac(phase − dt / period)`): banded C 180 s +, B 110 s −, A 150 s +; ringed A 160 s +, B 120 s −. The storm spot is baked into band group B's strip twice (strip x 98.6 and 374.6, y 28.6, rx 6.16, ry 3.52, `#D9623E`, eye rx 3.4 ry 1.8 `#F2D9B8` α 0.30 — all × u like the bands).
+
+`PlanetStrips` has room for two strips and `Spin` for two phases, so a giant gets its own pair — one strip and one signed phase per band group, sharing the §4 clip and lighting overlay (built by `buildLightingOverlay` with the gas recipe):
+
+```ts
+interface BandGroup { bands: [number, number, string][]; waveSeed: number; streakSeed: number; period: number; dir: 1 | -1 }
+interface GasStrips { groups: HTMLCanvasElement[]; overlay: HTMLCanvasElement; size: number; r: number; P: number; zoom: number }
+
+// banded: C 180 s +1, B 110 s −1, A 150 s +1 (3 groups) · ringed: A 160 s +1, B 120 s −1 (2 groups). One phase per group, in [0, 1).
+function advanceBands(phases: number[], groups: BandGroup[], dtS: number): void {
+  for (let i = 0; i < groups.length; i++) phases[i] = frac(phases[i] + groups[i].dir * dtS / groups[i].period);
+}
+
+// 1 clip + 3 (banded) / 2 (ringed) strip blits + 1 overlay; the ringed giant adds its back ring before and front ring after.
+function drawGasGiant(ctx: CanvasRenderingContext2D, st: GasStrips, phases: number[], sx: number, sy: number, zoom: number): void {
+  const k = zoom / st.zoom, r = st.r * k, P = st.P * k, D = 2 * r;
+  ctx.save();
+  ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI * 2); ctx.clip();
+  for (let i = 0; i < st.groups.length; i++)                          // group 0 carries the base fill; later groups are transparent
+    ctx.drawImage(st.groups[i], sx - r - P + phases[i] * P, sy - r, 2 * P, D);
+  ctx.restore();
+  const s = st.size * k;
+  ctx.drawImage(st.overlay, sx - s / 2, sy - s / 2, s, s);
+}
+```
+
+**Ring (gasRinged):** two cached sprites that never animate — a **back** sprite (the ring + the planet's shadow wedge, with the front half-disc of radius 1.12 r = 49.28 erased: `destination-out` of that half-disc) drawn before the planet and a **front** sprite (the ring clipped to that same lower half-disc of radius 1.12 r in ring orientation) drawn after the planet's overlay — so the front ring stays in front of the atmosphere rim where it leaves the limb, as in `gas-ringed.svg`. Build both in "ring space": `translate(c, c) → rotate(−22°) → scale(1, 0.28)`, fill the circle r 96.8 with the radial gradient of `style.md` §8 (`#D8E6E3`, peak α 0.55, gaps at 1.60 / 1.95 r), then for the back sprite the shadow: the half-ellipse `M0 −44 A117 44 0 0 1 0 44 Z` rotated 230° in ring space, `#050710` α 0.80, masked `destination-in` by the ring gradient normalised to peak 1 so it darkens ring material only (two-fill fake blur for the σ 1 × 3.5). Sprite size: the ellipse's bounding box is ≈ 180 × 88 px at zoom 1 (rx 96.8, ry 27.1, tilted 22°) — use 200 × 100 **× zoomB** (× DPR). Both ring sprites belong to the **zoom bucket** like the band strips: build them in `ensure…Strips` with the same `zoomB` and rebuild them with the strips, so the 0.05 r (2.2 px at zoom 1) gaps and the shadow wedge are never upsampled more than the bucket residual (≤ 1.118×) — a ring built once at zoom 1 would be blurred 2× at zoom 2. Draw order: back ring → planet (strips + overlay) → front ring: **2 extra blits** per frame.
+
+### Double planet — orbit, z-order swap, two rotating bodies
+
+Both bodies are ordinary §4 planets (big: soft shade, rim, caps 22 %, P 113 / 80 s; small: airless, craters, P 69 / 60 s) whose **screen centres move**: period **T = 40 s**, uniform angular rate, clockwise on screen. Masses ∝ r³ (5832 : 1331), centre separation d = 38 → the small body's semi-major axis A_s = 0.8142 d = 30.94, the big one's A_b = 0.1858 d = 7.06, 180° apart; the orbit plane is tilted so the screen ellipse has ry = 0.36 rx. θ = 2π · (t mod 40) / 40; small at (A_s cos θ, 0.36 A_s sin θ), big at (−A_b cos θ, −0.36 A_b sin θ) relative to the barycentre. The small body is **in front** while sin θ ≥ 0 (θ 0 → 180°, the lower half of the ellipse) and **behind** while sin θ < 0 — the same rule the SVG implements with two copies and discrete opacity toggles at θ = 0 / 180°, where the limbs are 9 px apart, so the swap is never visible. Lighting on both stays fixed to L; the bodies only translate (the SVG's epicycle of three rotates is just its way of getting an ellipse without an anisotropic scale — Canvas computes the position directly).
+
+```ts
+const DOUBLE_T = 40, DOUBLE_AS = 30.94, DOUBLE_AB = 7.06, DOUBLE_RY = 0.36;   // s, px at zoom 1, px, ry/rx
+const DOUBLE_R = { big: 18, small: 11 }, DOUBLE_CRASH = { big: 18, small: 11 };  // radius and crashRadius (at the MOVING centres)
+
+// bx, by = the barycentre on screen; bigStrips/smallStrips and their spins come from buildPlanetStrips as in §4.
+function drawDoublePlanet(ctx: CanvasRenderingContext2D, bx: number, by: number, zoom: number, tS: number,
+                          big: PlanetStrips, bigSpin: Spin, small: PlanetStrips, smallSpin: Spin): void {
+  const th = ((tS % DOUBLE_T) / DOUBLE_T) * Math.PI * 2;
+  const sxS = bx + DOUBLE_AS * zoom * Math.cos(th), syS = by + DOUBLE_AS * DOUBLE_RY * zoom * Math.sin(th);
+  const sxB = bx - DOUBLE_AB * zoom * Math.cos(th), syB = by - DOUBLE_AB * DOUBLE_RY * zoom * Math.sin(th);
+  const smallInFront = Math.sin(th) >= 0;
+  if (!smallInFront) drawPlanet(ctx, small, smallSpin, sxS, syS, zoom);      // behind (upper half of the ellipse)
+  drawPlanet(ctx, big, bigSpin, sxB, syB, zoom);
+  if (smallInFront)  drawPlanet(ctx, small, smallSpin, sxS, syS, zoom);      // in front (lower half)
+}
+```
+
+Per frame: 2 × (1 clip + 2 blits) = 2 clips + 4 blits — both bodies are single-strip (`cloud` omitted in both specs, so `st.cloud` is null and `drawPlanet` skips the second blit). Physics: both discs are solid at their own radii (18 / 11) **at their current positions** — the game must test contact against the moving centres, and a path prediction has to integrate the pair's motion (it is deterministic in wall-clock `tS`, so the predictor can sample it). Gravity: use the barycentre with the combined mass unless the simulation wants the two-body detail.
+
+### Per-scene draw order and L
+
+A level names its star (one of six) and its bodies; `towardStar` (§4) gives each planet its L at build time (the library assets all use the upper-right L = (+0.7071, −0.7071) because the gallery has no star; in a scene L follows the scene's star — the two scene mockups do the same by wrapping only the lighting-overlay layers of the mis-lit bodies in `rotate(angle(L_scene) − angle(L_library))`: the ringed giant −106.9° and the moon +77.7° toward the red dwarf, the moon +175.6° toward the black hole; Canvas simply builds each overlay with the scene's L). Draw order stays §0's: background → star (§3 / §3b / §3c) → planets back to front by y (back ring before its planet, front ring after; double pair as above) → capture ring → path / trail → arrow → thrust + ship → HUD → overlay.
 
 ---
 
@@ -1241,11 +1830,12 @@ A single camera `{ x, y, zoom }` maps world → screen: `sx = (wx − cam.x) · 
 | Scales with zoom (world) | Fixed in screen px (UI / legibility) |
 |---|---|
 | Body radii (star 46, planets 34 / 30, halo 1.8 r, ring 78) | Ship **minimum** size (`max(12, 22·zoom)`) |
-| Star sprite size (400 · zoom · breathe) | All line widths: ring 1.5, trail 2, path dots r 1.5, arrow 2, outline 1, planet limb line 1 (baked at the bucket zoom) |
+| Star sprite size (400 · zoom · breathe; library stars `sp.S` · zoom · breathe, S = 400 / 348 / 480) | All line widths: ring 1.5, trail 2, path dots r 1.5, arrow 2, outline 1, planet limb line 1 (baked at the bucket zoom) |
 | Planet strip and overlay blit sizes (`2P · zoom / bucketZoom`, `size · zoom / bucketZoom`, §4) | Dot spacing on the predicted path (10 px) and the 400-dot cap |
 | Positions of trail samples, path dots, ship, planets | Ring pulse amplitude (±2 px), dash pattern `[6, 6]` and dash crawl (−12 px/s) |
 | Strip period P = round(2π r) at the bucket zoom (214 / 188 at zoom 1) and the texture feature size (cells per P) — so the surface speed in px/s scales with zoom while the **rotation periods (90 / 64 / 120 / 80 s) are wall-clock** and never change | Rotation periods: seconds per turn, independent of zoom and of the 1x/2x/4x simulation speed |
 | Overlay geometry — squash 0.88–1.0 r, glint 0.45 r·L and 0.22 r × 0.12 r, shade centre 0.36 r·L, shade radius 1.25 r, rim 1.12 r — all in r, baked at the bucket zoom | Drag arrow (tick at 242 · power from the ship centre), head, tick, label |
+| v1.3 (§4b): library radii and crash radii; the airless shade radius 1.5 r; the ring ellipse (1.35–2.2 r, ry = 0.28 rx, tilt 22°); the black hole's disk (rx 2.6 r, ry 0.55 r), photon ring r 1.09 r, arcs 1.15–1.3 r, Einstein ring 2.1 r; the neutron star's beams (3.5 r) and haze (2.5 r); the white dwarf's glow (6 r) and spikes (4 r); loop sprites (× zoom × s); the double planet's orbit (30.94 / 7.06 px at zoom 1) | v1.3 periods, all wall-clock: strips 60–180 s, bands 110–180 s, orbit 40 s, loops 12 / 16 / 14 s, flare cycle 22 s, breathes 6 s / 4 s, beams 6 s, disk 24 s, vein pulse 5 s; the 1 px / 1.5 px lines inside the compact-object sprites (photon ring, Einstein ring, spikes, hard limbs) are baked and scale with `drawImage` like the star sprite |
 | | HUD, fuel bar, buttons, telemetry, result card |
 
 ```ts
@@ -1273,19 +1863,23 @@ When zoom changes, nothing else needs rebuilding: the star sprite is a fixed 400
 | Cheap — use freely | Expensive — avoid or cache |
 |---|---|
 | `drawImage` of an opaque cached canvas (0.1–0.2 ms full screen) | `shadowBlur` on anything that moves (2–5 ms per call) |
-| `createRadialGradient` / `createLinearGradient` per frame (µs) | `ctx.filter = "blur(...)"` (worse than shadowBlur) |
+| `createRadialGradient` / `createLinearGradient` per frame (µs) — for the few live layers only (X halo); sprites cache theirs | `ctx.filter = "blur(...)"` **per frame** (worse than shadowBlur); once inside a sprite build it is fine (§3 `bakeStreamers`) |
 | One `Path2D` with hundreds of arcs + one `fill()` | Hundreds of separate `beginPath/arc/fill` calls with changing `fillStyle` |
 | `setLineDash` + `lineDashOffset` (but reset to `[]`) | `getImageData` / `putImageData` anywhere in the loop |
 | `globalCompositeOperation = "lighter"` on two small triangles | `"lighter"` over large areas or many layers |
 | `"multiply"` / `"destination-in"` **inside a sprite build** (§3, §4) | Blend modes on a live layer every frame |
 | A 128² noise tile built once with `putImageData` and reused as a pattern; one `getImageData` per strip layer **at build time** to threshold it (§4) | Noise, `feTurbulence`-style filters or `ctx.filter` per frame |
 | Planet strips (428 × 68 / 376 × 60) + lighting overlays (81 / 72 px), rebuilt only when the zoom bucket changes (buckets 25 % apart, flipping at ±11.8 %) | Rebuilding a strip per zoom tick, or drawing the noise + terminator + rim live |
-| Rotating a planet by moving the `drawImage` x offset of a cached, 2-tile strip through a circular clip (1 clip + 3 blits, dt-based phase, modulo wrap) | Re-rendering the texture per frame, rotating with `ctx.rotate` (the lighting would turn), or a per-frame `ctx.filter`/mask for the "sphere" |
+| Rotating a planet by moving the `drawImage` x offset of a cached, 2-tile strip through a circular clip (1 clip + 2–3 blits, dt-based phase, modulo wrap) | Re-rendering the texture per frame, rotating with `ctx.rotate` (the lighting would turn), or a per-frame `ctx.filter`/mask for the "sphere" |
 | `fillText` ≤ 10 per frame at integer positions | Measuring and laying out text every frame (`measureText` in a loop) |
 | `translate/rotate/scale` + `save/restore` per sprite | Deep `save/restore` nesting; re-setting `font` for every string |
 | Opaque context `{ alpha: false }`, DPR capped at 2 | DPR 3 canvases, transparent contexts, `clearRect` + redraw of a static background |
 | Rebuilding sprites on resize | Rebuilding sprites per frame, or per zoom tick |
 | Ring buffers and `Float32Array` for trail/path | Allocating arrays per frame (GC pauses show up as dropped frames) |
 | ~1005 dots, 12 halos and 3 band gradients **once** into the background (≈ 2.5 ms) | Any starfield, halo or band drawing in the frame loop |
+| Three pre-blurred 96 × 64 loop sprites and one cached flare sprite per star, scaled and alpha-faded by the scene clock (§3b) | Stroking blurred arcs live, `ctx.filter = "blur()"` or `shadowBlur` on a prominence, or animating the loops by simulation steps |
+| The black hole's ring texture drawn twice under two axis-aligned half-plane clips with `scale → rotate` (§3c) | Re-rendering the disk per frame, rotating the squashed ellipse (wrong motion), or masking the Doppler gradient with `destination-in` on the main canvas |
+| One 80 px magnetosphere sprite under `ctx.rotate` (§3c); craters as circles baked into the strip (§4b) | Drawing beams or craters live every frame |
+| Band strips built once from 9 waved polygons + an `overlay` streak pass; two static ring sprites around the planet (§4b) | A per-frame displacement map, or drawing the ring's front half with a path clip through the planet every frame |
 
-If a frame ever exceeds 6 ms, the order to look at is: (1) a stray `shadowBlur`, (2) the background being redrawn instead of blitted, (3) the planet strips being rebuilt every frame (check that `zoomBucket` is stable and that `ensurePlanetStrips` compares the bucket, not the raw zoom), (4) the trail drawn per segment with 240 strokes, (5) text drawn with letter-spacing fallback per character. Fix in that order; each one alone can double the frame cost. If a planet's surface visibly steps instead of gliding, something is rounding the strip offset — keep it fractional (§4).
+If a frame ever exceeds 6 ms, the order to look at is: (1) a stray `shadowBlur`, (2) the background being redrawn instead of blitted, (3) the planet strips being rebuilt every frame (check that `zoomBucket` is stable and that `ensurePlanetStrips` compares the bucket, not the raw zoom), (4) the trail drawn per segment with 240 strokes, (5) text drawn with letter-spacing fallback per character. Fix in that order; each one alone can double the frame cost. If a planet's surface visibly steps instead of gliding, something is rounding the strip offset — keep it fractional (§4). v1.3 adds two more suspects: (6) a library star's loops drawn with `ctx.filter` / `shadowBlur` instead of the pre-blurred sprites, and (7) the black hole's ring texture or a gas giant's band strips rebuilt per frame (§3b, §3c, §4b).

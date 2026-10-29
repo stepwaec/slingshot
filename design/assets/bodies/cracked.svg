@@ -1,0 +1,141 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+  <!-- Cracked world, v1.3 body library (tidally stressed, animated). ONE group #cracked at translate(60 60); geometry relative to (0,0).
+       r 27, disc diameter H = 54. Lit side faces the star: L = (+0.7071, -0.7071) (upper-right). Lighting never rotates.
+       Tokens: base #4F5B73 - dark #2A3245 - crack glow #FFC857 (a0.8, ~10 %, static, no pulse) - atmo #8FA3C9 (rim, limb, lit-side highlight).
+       Texture strip: period P = round(2*pi*r) = 170 px (one full rotation). Each strip is ONE rect 2P x 2r = 340x54 (never two abutting rects);
+       its filter computes the noise once over a 170x54 subregion (stitchTiles stitch -> periodic in exactly P) and feTile repeats it across the
+       340 px region. Scrolled west->east (translate 0 -> +P) through the circular clip #crClip. The visible window covers strip x in [0, P + 2r] =
+       [0, 224] for every phase, so neither strip edge is ever inside the disc. Start phase: tile x 30 (strip x 200) at the disc's left edge for
+       BOTH strips (inner translate(-227 -27) = -(r + P + 30), -r); the crack strip is the same strip twice (see 2 and 5), so it must share the phase.
+
+       Draw order:
+       1. base     circle r 27, #4F5B73.
+       2. surface  strip, SMIL translate 0 -> 170 over 100 s. Strip = rect 340x54, fill #4F5B73, filter #crSurface (region 0..340 x 0..54):
+                   mottling: feTurbulence fractalNoise baseFrequency 0.040, numOctaves 4, seed 41, stitch on subregion 0..170 x 0..54, feTile to 340x54;
+                             alpha -> linear slope 12, intercept -6.412 (soft threshold at 0.576 = p70 -> ~30 % dark basins), then x0.60, colour #2A3245.
+                   cracks:   iso-contour of a second field: feTurbulence fractalNoise baseFrequency 0.035, numOctaves 3, seed 61, stitch, feTile;
+                             alpha -> table with 51 entries (step 0.02), all 0 except entry 25 (= field 0.50) = 1: a triangular band 0.48..0.52
+                             (p45..p55 of the field -> ~10 % of the area, alpha-weighted ~5 %), i.e. the 0.5 contour lines of the noise = one connected,
+                             branching network of thin (~1.5 px) crack lines; colour #FFC857:
+                             glow  = feGaussianBlur 1.5 of the crack mask, x0.50  (the "glow" - baked into the strip, static)
+                             lines = crack mask x0.80.
+                   feMerge: base, mottling, glow, lines. No polar caps.
+       3. squash   circle r 27, radial from the centre, #4F5B73: 0.88 a0 | 1.00 a0.45  (fades the texture to 55 % in the outer 12 % of r).
+       4. shade    radial, userSpace centre 0.36 r L = (6.87, -6.87), radius 1.25 r = 33.75 (v1.1 numbers):
+                   0.00 #8FA3C9 a0.90 | 0.40 #4F5B73 a0 | 0.70 #2A3245 a0.55 | 0.86 #2A3245 a0.92 | 1.00 #2A3245 a1.0  (0.70-0.86 is the terminator).
+       5. night    the cracks are emissive, so they stay visible in the shadow: the SAME strip again (rect 340x54, filter #crCracks = glow + lines only,
+                   no base), same SMIL (0 -> 170, 100 s), in the clip, group opacity 0.35, masked by #crNightMask = linear gradient along -L
+                   (0 at +0.5 r L (9.55,-9.55) -> 1 at -0.5 r L) so it only shows beyond the terminator. Canvas: third drawImage of the crack-only
+                   strip at globalAlpha 0.35 clipped to the dark half-disc (or skip it: the lit cracks already carry the look).
+       6. limb     circle r 26.5, stroke 1, #8FA3C9 a0.18.
+       7. rim      circle r 1.12 r = 30.24, radial from the planet centre, #8FA3C9: 0.00 a0 | 0.80 a0 | 0.87 a0.55 | 0.92 a0.30 | 1.00 a0,
+                   multiplied (alpha mask) by a linear gradient along L from +1.12 r L (21.38,-21.38) = 1.0 to -1.12 r L = 0.35 (v1.1).
+       No specular, no halo, no pulse. Static renders show t = 0. Ids: cr*. -->
+  <defs>
+    <clipPath id="crClip"><circle r="27"/></clipPath>
+    <filter id="crSurface" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="0" y="0" width="340" height="54" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.040" numOctaves="4" seed="41" stitchTiles="stitch" x="0" y="0" width="170" height="54" result="crN1"/>
+      <feTile in="crN1" x="0" y="0" width="340" height="54" result="crN"/>
+      <feColorMatrix in="crN" type="matrix" values="0 0 0 0 0.165  0 0 0 0 0.196  0 0 0 0 0.271  0 0 0 1 0" result="crDarkRGB"/>
+      <feComponentTransfer in="crDarkRGB" result="crDarkCut">
+        <feFuncA type="linear" slope="12" intercept="-6.412"/>
+      </feComponentTransfer>
+      <feComponentTransfer in="crDarkCut" result="crDark">
+        <feFuncA type="linear" slope="0.60" intercept="0"/>
+      </feComponentTransfer>
+      <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="3" seed="61" stitchTiles="stitch" x="0" y="0" width="170" height="54" result="crK1"/>
+      <feTile in="crK1" x="0" y="0" width="340" height="54" result="crK"/>
+      <feColorMatrix in="crK" type="matrix" values="0 0 0 0 1  0 0 0 0 0.784  0 0 0 0 0.341  0 0 0 1 0" result="crKRGB"/>
+      <feComponentTransfer in="crKRGB" result="crKMask">
+        <feFuncA type="table" tableValues="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"/>
+      </feComponentTransfer>
+      <feGaussianBlur in="crKMask" stdDeviation="1.5" result="crKBlur"/>
+      <feComponentTransfer in="crKBlur" result="crGlow">
+        <feFuncA type="linear" slope="0.50" intercept="0"/>
+      </feComponentTransfer>
+      <feComponentTransfer in="crKMask" result="crLines">
+        <feFuncA type="linear" slope="0.80" intercept="0"/>
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode in="SourceGraphic"/>
+        <feMergeNode in="crDark"/>
+        <feMergeNode in="crGlow"/>
+        <feMergeNode in="crLines"/>
+      </feMerge>
+    </filter>
+    <filter id="crCracks" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="0" y="0" width="340" height="54" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="3" seed="61" stitchTiles="stitch" x="0" y="0" width="170" height="54" result="crE1"/>
+      <feTile in="crE1" x="0" y="0" width="340" height="54" result="crE"/>
+      <feColorMatrix in="crE" type="matrix" values="0 0 0 0 1  0 0 0 0 0.784  0 0 0 0 0.341  0 0 0 1 0" result="crERGB"/>
+      <feComponentTransfer in="crERGB" result="crEMask">
+        <feFuncA type="table" tableValues="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"/>
+      </feComponentTransfer>
+      <feGaussianBlur in="crEMask" stdDeviation="1.5" result="crEBlur"/>
+      <feComponentTransfer in="crEBlur" result="crEGlow">
+        <feFuncA type="linear" slope="0.50" intercept="0"/>
+      </feComponentTransfer>
+      <feComponentTransfer in="crEMask" result="crELines">
+        <feFuncA type="linear" slope="0.80" intercept="0"/>
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode in="crEGlow"/>
+        <feMergeNode in="crELines"/>
+      </feMerge>
+    </filter>
+    <radialGradient id="crSquash" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="27">
+      <stop offset="0.88" stop-color="#4F5B73" stop-opacity="0"/>
+      <stop offset="1" stop-color="#4F5B73" stop-opacity="0.45"/>
+    </radialGradient>
+    <radialGradient id="crShade" gradientUnits="userSpaceOnUse" cx="6.87" cy="-6.87" r="33.75">
+      <stop offset="0" stop-color="#8FA3C9" stop-opacity="0.90"/>
+      <stop offset="0.40" stop-color="#4F5B73" stop-opacity="0"/>
+      <stop offset="0.70" stop-color="#2A3245" stop-opacity="0.55"/>
+      <stop offset="0.86" stop-color="#2A3245" stop-opacity="0.92"/>
+      <stop offset="1" stop-color="#2A3245" stop-opacity="1"/>
+    </radialGradient>
+    <linearGradient id="crNightLit" gradientUnits="userSpaceOnUse" x1="9.55" y1="-9.55" x2="-9.55" y2="9.55">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="1"/>
+    </linearGradient>
+    <mask id="crNightMask" mask-type="alpha" maskUnits="userSpaceOnUse" x="-30" y="-30" width="60" height="60">
+      <rect x="-30" y="-30" width="60" height="60" fill="url(#crNightLit)"/>
+    </mask>
+    <radialGradient id="crRim" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="30.24">
+      <stop offset="0" stop-color="#8FA3C9" stop-opacity="0"/>
+      <stop offset="0.80" stop-color="#8FA3C9" stop-opacity="0"/>
+      <stop offset="0.87" stop-color="#8FA3C9" stop-opacity="0.55"/>
+      <stop offset="0.92" stop-color="#8FA3C9" stop-opacity="0.30"/>
+      <stop offset="1" stop-color="#8FA3C9" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="crRimLit" gradientUnits="userSpaceOnUse" x1="21.38" y1="-21.38" x2="-21.38" y2="21.38">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="1"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.35"/>
+    </linearGradient>
+    <mask id="crRimMask" mask-type="alpha" maskUnits="userSpaceOnUse" x="-32" y="-32" width="64" height="64">
+      <rect x="-32" y="-32" width="64" height="64" fill="url(#crRimLit)"/>
+    </mask>
+  </defs>
+  <g id="cracked" transform="translate(60 60)">
+    <circle r="27" fill="#4F5B73"/>
+    <g clip-path="url(#crClip)">
+      <g id="crSurfaceAnim">
+        <animateTransform attributeName="transform" type="translate" from="0 0" to="170 0" dur="100s" repeatCount="indefinite"/>
+        <g id="crSurfaceStrip" transform="translate(-227 -27)">
+          <rect width="340" height="54" fill="#4F5B73" filter="url(#crSurface)"/>
+        </g>
+      </g>
+    </g>
+    <circle r="27" fill="url(#crSquash)"/>
+    <circle r="27" fill="url(#crShade)"/>
+    <g clip-path="url(#crClip)" mask="url(#crNightMask)">
+      <g id="crNightAnim" opacity="0.35">
+        <animateTransform attributeName="transform" type="translate" from="0 0" to="170 0" dur="100s" repeatCount="indefinite"/>
+        <g id="crNightStrip" transform="translate(-227 -27)">
+          <rect width="340" height="54" fill="none" filter="url(#crCracks)"/>
+        </g>
+      </g>
+    </g>
+    <circle r="26.5" fill="none" stroke="#8FA3C9" stroke-opacity="0.18" stroke-width="1"/>
+    <circle r="30.24" fill="url(#crRim)" mask="url(#crRimMask)"/>
+  </g>
+</svg>

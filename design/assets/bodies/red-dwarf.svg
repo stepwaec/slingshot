@@ -1,0 +1,135 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="360" viewBox="0 0 360 360">
+  <!-- Red dwarf (v1.3 body library). ONE group #redDwarf at translate(180 180); all geometry relative to (0,0). Ids rd*.
+       = the v1.1 star construction scaled by k = 40/46 = 0.8696 (body r 40, corona to r 113, glow to r 174), re-coloured, calmer corona
+       (streamer/lobe alpha x0.7), larger slow granulation spots, plus the v1.3 prominences and flare. Lighting is self-emitted (no terminator).
+       Tokens: core #FFD9B0 . body #FF7A4D . corona #E0432F . glow #8C1E2A (limb = glow).
+       Draw order (back to front):
+       1. glow    circle r 174, #8C1E2A  stops 0.00 a0.50 | 0.23 a0.45 | 0.65 a0.12 | 1.00 a0
+       2. corona  circle r 113, #E0432F  stops 0.00 a0.90 | 0.35 a0.70 | 0.62 a0.22 | 1.00 a0   blur sd 2.6
+       3. streamers  10 wedges, fill #E0432F, blur sd 5.2. Base width w centred at r 41.7 (= 48 k), tip at r T, rotated by A (SVG degrees).
+          From mulberry32(0x5244), draws in order angle, [reject if < 20 deg from an accepted angle], w = (10 + 8u) k, T = (110 + 65u) k,
+          alpha = (0.10 + 0.06u) x 0.7 (the "calmer corona"):
+            S1  A  97.8  w 14.8  T 106.9  a 0.096      S6  A 119.0  w 13.6  T 140.2  a 0.082
+            S2  A 174.8  w 13.0  T 149.8  a 0.071      S7  A  57.4  w  9.5  T 134.0  a 0.109
+            S3  A 302.6  w  9.7  T 131.8  a 0.103      S8  A  36.2  w 10.4  T 130.0  a 0.084
+            S4  A 148.9  w 14.1  T 136.2  a 0.109      S9  A 360.0  w 15.5  T 133.5  a 0.101
+            S5  A 228.4  w 11.6  T 126.1  a 0.107      S10 A 336.7  w 12.8  T 130.9  a 0.081
+       4. helmet lobes  2 wedges, base 34.8 at r 41.7, tip r 130.4, #E0432F a0.042 (0.06 x 0.7), angles 122 and 292, same blur sd 5.2.
+          Layers 1-4 sit in <g id="rdBreathe">: SMIL scale 1 -> 1.03 -> 1 -> 0.97 -> 1 over 6 s (sine, +-3 %, t = 0 is the rest size).
+       5. chromosphere  ring r 40.9, stroke 2.6, #E0432F a0.60, blur sd 1.3.
+       5b. prominences  3 loops footed on the limb (r 40), stroke 2.2 (2.5 k), #E0432F, round caps, blur sd 1.3, drawn before the body.
+          Loop i in <g transform="rotate(A_i) translate(40 0)">, path relative to its base point (x radial, y tangential), same construction as
+          star.svg (feet at r cos(s/2) - r, -+ r sin(s/2); peak (k_i - 1) r; cubic controls (hc, -+ 0.8 r sin(s/2)), hc = (8 h - 2 x_foot) / 6).
+          From mulberry32(0x5250): A = 360u [reject if < 70 deg from an accepted loop], s = 18 + 10u deg, k = 1.25 + 0.20u:
+            P1  A 338.8  s 26.6  k 1.421   d="M-1.07 -9.21 C22.83 -7.36 22.83 7.36 -1.07 9.21"    dur 12 s  begin 0 s
+            P2  A 248.0  s 20.2  k 1.440   d="M-0.62 -7.02 C23.69 -5.62 23.69 5.62 -0.62 7.02"    dur 16 s  begin 5 s
+            P3  A 167.2  s 22.0  k 1.378   d="M-0.74 -7.64 C20.41 -6.11 20.41 6.11 -0.74 7.64"    dur 14 s  begin 9 s
+          Per loop: scale about the base point 0.6 -> 1.0 -> 0.6 and opacity 0 -> 0.55 -> 0 over dur from begin, repeatCount indefinite, sine splines.
+          Base attributes (before begin, t = 0): scale(0.6), opacity 0. Peaks: P1 6 s + 12 n, P2 13 s + 16 n, P3 16 s + 14 n.
+       5c. flare  wedge M40 -1.3 L68 0 L40 1.3 Z (base 2.6 px on the limb, tip at 1.7 r) rotated to A 117.9 (next mulberry32(0x5250) draw, rejected
+          if < 30 deg from a loop), linear gradient along the wedge #FFD9B0 (limb) -> #FF7A4D (tip), no blur.
+          Opacity over a 22 s cycle: 0 until 13 s, 0.7 at 13.9 s, 0 at 14.8 s (keyTimes 0 | 0.5909 | 0.6318 | 0.6727 | 1), repeatCount indefinite.
+       6. body  circle r 40, radial (0.5,0.5): 0.00 #FFD9B0 | 0.45 #FF7A4D | 0.78 #FF7A4D | 0.90 #E0432F | 1.00 #8C1E2A (limb)
+       7. granulation  feTurbulence fractalNoise baseFrequency 0.07, numOctaves 2, seed 5, saturate 0, contrast x2 about 0.5, constant alpha 0.22,
+          blend multiply, clipped to the body (larger, slower-looking spots than the sun's 0.11 / 0.16).
+       Canvas: as star.svg (cached envelope + body sprites, 3 pre-blurred loop sprites scaled by 40/46 + 1 cached flare sprite; streamers blurred once at build time), colours and the tables above. -->
+  <defs>
+    <radialGradient id="rdGlow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#8C1E2A" stop-opacity="0.50"/>
+      <stop offset="0.23" stop-color="#8C1E2A" stop-opacity="0.45"/>
+      <stop offset="0.65" stop-color="#8C1E2A" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#8C1E2A" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="rdCorona" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#E0432F" stop-opacity="0.90"/>
+      <stop offset="0.35" stop-color="#E0432F" stop-opacity="0.70"/>
+      <stop offset="0.62" stop-color="#E0432F" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#E0432F" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="rdBody" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#FFD9B0"/>
+      <stop offset="0.45" stop-color="#FF7A4D"/>
+      <stop offset="0.78" stop-color="#FF7A4D"/>
+      <stop offset="0.90" stop-color="#E0432F"/>
+      <stop offset="1" stop-color="#8C1E2A"/>
+    </radialGradient>
+    <linearGradient id="rdFlareFill" gradientUnits="userSpaceOnUse" x1="40" y1="0" x2="68" y2="0">
+      <stop offset="0" stop-color="#FFD9B0"/>
+      <stop offset="1" stop-color="#FF7A4D"/>
+    </linearGradient>
+    <filter id="rdCoronaBlur" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur stdDeviation="2.6"/>
+    </filter>
+    <filter id="rdStreamerBlur" x="-15%" y="-15%" width="130%" height="130%">
+      <feGaussianBlur stdDeviation="5.2"/>
+    </filter>
+    <filter id="rdChromoBlur" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur stdDeviation="1.3"/>
+    </filter>
+    <filter id="rdPromBlur" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="1.3"/>
+    </filter>
+    <filter id="rdGranulation" x="-5%" y="-5%" width="110%" height="110%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.07" numOctaves="2" seed="5" result="rdNoise"/>
+      <feColorMatrix in="rdNoise" type="saturate" values="0" result="rdGrey"/>
+      <feComponentTransfer in="rdGrey" result="rdGrain">
+        <feFuncR type="linear" slope="2" intercept="-0.5"/>
+        <feFuncG type="linear" slope="2" intercept="-0.5"/>
+        <feFuncB type="linear" slope="2" intercept="-0.5"/>
+        <feFuncA type="linear" slope="0" intercept="0.22"/>
+      </feComponentTransfer>
+      <feBlend in="rdGrain" in2="SourceGraphic" mode="multiply" result="rdShaded"/>
+      <feComposite in="rdShaded" in2="SourceGraphic" operator="in"/>
+    </filter>
+  </defs>
+  <g id="redDwarf" transform="translate(180 180)">
+    <g id="rdBreathe">
+      <animateTransform attributeName="transform" type="scale" values="1;1.03;1;0.97;1" keyTimes="0;0.25;0.5;0.75;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1" dur="6s" repeatCount="indefinite"/>
+      <circle r="174" fill="url(#rdGlow)"/>
+      <circle r="113" fill="url(#rdCorona)" filter="url(#rdCoronaBlur)"/>
+      <g fill="#E0432F" filter="url(#rdStreamerBlur)">
+        <path d="M41.7 -7.39 L106.9 0 L41.7 7.39 Z" transform="rotate(97.8)" fill-opacity="0.096"/>
+        <path d="M41.7 -6.5 L149.8 0 L41.7 6.5 Z" transform="rotate(174.8)" fill-opacity="0.071"/>
+        <path d="M41.7 -4.85 L131.8 0 L41.7 4.85 Z" transform="rotate(302.6)" fill-opacity="0.103"/>
+        <path d="M41.7 -7.05 L136.2 0 L41.7 7.05 Z" transform="rotate(148.9)" fill-opacity="0.109"/>
+        <path d="M41.7 -5.78 L126.1 0 L41.7 5.78 Z" transform="rotate(228.4)" fill-opacity="0.107"/>
+        <path d="M41.7 -6.79 L140.2 0 L41.7 6.79 Z" transform="rotate(119)" fill-opacity="0.082"/>
+        <path d="M41.7 -4.73 L134 0 L41.7 4.73 Z" transform="rotate(57.4)" fill-opacity="0.109"/>
+        <path d="M41.7 -5.19 L130 0 L41.7 5.19 Z" transform="rotate(36.2)" fill-opacity="0.084"/>
+        <path d="M41.7 -7.72 L133.5 0 L41.7 7.72 Z" transform="rotate(360)" fill-opacity="0.101"/>
+        <path d="M41.7 -6.41 L130.9 0 L41.7 6.41 Z" transform="rotate(336.7)" fill-opacity="0.081"/>
+        <path d="M41.7 -17.4 L130.4 0 L41.7 17.4 Z" transform="rotate(122)" fill-opacity="0.042"/>
+        <path d="M41.7 -17.4 L130.4 0 L41.7 17.4 Z" transform="rotate(292)" fill-opacity="0.042"/>
+      </g>
+    </g>
+    <circle r="40.9" fill="none" stroke="#E0432F" stroke-opacity="0.60" stroke-width="2.6" filter="url(#rdChromoBlur)"/>
+    <g id="rdProminences" fill="none" stroke="#E0432F" stroke-width="2.2" stroke-linecap="round">
+      <g transform="rotate(338.8) translate(40 0)">
+        <g id="rdProm1" transform="scale(0.6)" opacity="0">
+          <animateTransform attributeName="transform" type="scale" values="0.6;1;0.6" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="12s" begin="0s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0;0.55;0" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="12s" begin="0s" repeatCount="indefinite"/>
+          <path d="M-1.07 -9.21 C22.83 -7.36 22.83 7.36 -1.07 9.21" filter="url(#rdPromBlur)"/>
+        </g>
+      </g>
+      <g transform="rotate(248) translate(40 0)">
+        <g id="rdProm2" transform="scale(0.6)" opacity="0">
+          <animateTransform attributeName="transform" type="scale" values="0.6;1;0.6" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="16s" begin="5s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0;0.55;0" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="16s" begin="5s" repeatCount="indefinite"/>
+          <path d="M-0.62 -7.02 C23.69 -5.62 23.69 5.62 -0.62 7.02" filter="url(#rdPromBlur)"/>
+        </g>
+      </g>
+      <g transform="rotate(167.2) translate(40 0)">
+        <g id="rdProm3" transform="scale(0.6)" opacity="0">
+          <animateTransform attributeName="transform" type="scale" values="0.6;1;0.6" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="14s" begin="9s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0;0.55;0" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="14s" begin="9s" repeatCount="indefinite"/>
+          <path d="M-0.74 -7.64 C20.41 -6.11 20.41 6.11 -0.74 7.64" filter="url(#rdPromBlur)"/>
+        </g>
+      </g>
+    </g>
+    <g id="rdFlare" transform="rotate(117.9)" opacity="0">
+      <animate attributeName="opacity" values="0;0;0.7;0;0" keyTimes="0;0.5909;0.6318;0.6727;1" dur="22s" repeatCount="indefinite"/>
+      <path d="M40 -1.3 L68 0 L40 1.3 Z" fill="url(#rdFlareFill)"/>
+    </g>
+    <circle r="40" fill="url(#rdBody)" filter="url(#rdGranulation)"/>
+  </g>
+</svg>
