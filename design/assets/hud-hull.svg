@@ -1,0 +1,132 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="360" viewBox="0 0 520 360" font-family="-apple-system, 'Segoe UI', Inter, Roboto, 'Helvetica Neue', Arial, sans-serif">
+  <!-- Hull HUD and tidal-stress warning (ship systems). ONE group #hudHull at translate(0 0) (a sample sheet). Ids: hh* (none needed).
+       Placement in the game HUD (style.md §6): the hull block sits under the fuel block, x 1180-1400: "HULL" 11 px uppercase muted weight 500 at
+       baseline 96, percentage 12 px mono right-aligned at x 1400, bar of 10 segments at y 104 (each 20.2 × 8, gap 2, radius 2), track #FFFFFF α 0.08.
+       Segmented so it never reads as the (continuous) fuel bar. Fill: hull.ok #9FC4FF at >= 60 %, hull.warn #FFC857 at 30-59 %, hull.critical
+       #FF5A5F below 30 % (bar and percentage pulse α 1 -> 0.45, 1 s). A hit flashes the lost segment #FFFFFF for 120 ms, then it empties (140 ms ease-out).
+       Tidal-stress chip, 220 × 26 at y 122 (radius 7, panel fill #0A0D1A, 1 px border in the stress colour), only while stress > 0: stretch icon
+       (double arrow + dot, 1.4 px), "TIDAL STRESS" 11 px weight 500 letter-spacing 1.3, three level cells 9 × 12 at the right. Levels 1-2 stress.warn
+       #FF9F43; level 3 (the hull is losing points) stress.critical #FF5A5F and the chip pulses α 1 -> 0.5 over 0.8 s.
+       In the world (flight and planning): two pairs of chevrons 15-24 px from the ship centre, pointing OUTWARD along the stretch axis (the line to
+       the mass causing it), stroke 1.6 in the stress colour, pulsing α 1 -> 0.35 every 0.8 s (0.5 s at level 3). Screen-space, never scaled.
+       Tokens: style.md §8 Ship systems (hull.*, stress.*). -->
+  <defs><linearGradient id="hhSHull" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#B9C6E4"/><stop offset="0.3" stop-color="#E9EEF9"/><stop offset="0.5" stop-color="#FFFFFF"/><stop offset="0.7" stop-color="#E9EEF9"/><stop offset="1" stop-color="#B9C6E4"/></linearGradient> <radialGradient id="hhSCanopy" cx="0.4" cy="0.3" r="0.8"><stop offset="0" stop-color="#CFE8FF"/><stop offset="0.45" stop-color="#5EA0FF"/><stop offset="1" stop-color="#1E4FB8"/></radialGradient> <linearGradient id="hhSSteel" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8496C4"/><stop offset="0.5" stop-color="#DCE4F6"/><stop offset="1" stop-color="#8496C4"/></linearGradient> <linearGradient id="hhSArmor" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#4E66A0"/><stop offset="0.5" stop-color="#7F98CF"/><stop offset="1" stop-color="#4E66A0"/></linearGradient> <linearGradient id="hhSSolar" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2E62D8"/><stop offset="0.55" stop-color="#1E3F9E"/><stop offset="1" stop-color="#15307E"/></linearGradient> <linearGradient id="hhSTank" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#B9C6E4"/><stop offset="0.45" stop-color="#FFFFFF"/><stop offset="1" stop-color="#A9B8DC"/></linearGradient> <linearGradient id="hhSPlumeChem" gradientUnits="userSpaceOnUse" x1="0" y1="28" x2="0" y2="70"><stop offset="0" stop-color="#F7FBFF"/><stop offset="0.22" stop-color="#D6C8FF" stop-opacity="0.9"/><stop offset="0.55" stop-color="#A06BFF" stop-opacity="0.55"/><stop offset="1" stop-color="#7A4AD8" stop-opacity="0"/></linearGradient> <linearGradient id="hhSPlumeIon" gradientUnits="userSpaceOnUse" x1="0" y1="25" x2="0" y2="80"><stop offset="0" stop-color="#E6F4FF"/><stop offset="0.3" stop-color="#8FC2FF" stop-opacity="0.75"/><stop offset="0.7" stop-color="#A06BFF" stop-opacity="0.3"/><stop offset="1" stop-color="#A06BFF" stop-opacity="0"/></linearGradient> <radialGradient id="hhSPulse" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#FFFFFF"/><stop offset="0.35" stop-color="#E2D4FF" stop-opacity="0.9"/><stop offset="0.7" stop-color="#A06BFF" stop-opacity="0.45"/><stop offset="1" stop-color="#7A4AD8" stop-opacity="0"/></radialGradient> <radialGradient id="hhSScorch" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#1E1410" stop-opacity="0.75"/><stop offset="0.6" stop-color="#3A2418" stop-opacity="0.45"/><stop offset="1" stop-color="#3A2418" stop-opacity="0"/></radialGradient> <radialGradient id="hhSBreach" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#FFB45A"/><stop offset="0.4" stop-color="#FF6A2A"/><stop offset="1" stop-color="#141A33"/></radialGradient></defs>
+  <rect width="520" height="360" fill="#050710"/>
+  <g id="hudHull">
+  <text x="20" y="26" font-size="11" fill="#8B95B5">Healthy</text>
+  <text x="20" y="50" font-size="11" font-weight="500" letter-spacing="1.54" fill="#8B95B5">HULL</text>
+<text x="240" y="50" text-anchor="end" font-size="12" fill="#ECF0FA" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace">100 %</text>
+<rect x="20.0" y="58" width="20.2" height="8" rx="2" fill="#FFFFFF" fill-opacity="0.08"/>
+<rect x="20.0" y="58" width="20.2" height="8" rx="2" fill="#9FC4FF"></rect>
+<rect x="42.2" y="58" width="20.2" height="8" rx="2" fill="#FFFFFF" fill-opacity="0.08"/>
+<rect x="42.2" y="58" width="20.2" height="8" rx="2" fill="#9FC4FF"></rect>
+<rect x="64.4" y="58" width="20.2" height="8" rx="2" fill="#FFFFFF" fill-opacity="0.08"/>
+<rect x="64.4" y="58" width="20.2" height="8" rx="2" fill="#9FC4FF"></rect>
+<rect x="86.6" y="58" width="20.2" height="8" rx="2" fill="#FFFFFF" fill-opacity="0.08"/>
+<rect x="86.6" y="58" width="20.2" height="8" rx="2" fill="#9FC4FF"></rect>
+<rect x="108.8" y="58" width="20.2" height="8" rx="2" fill="#FFFFFF" fill-opacity="0.08"/>
+<rect x="108.8" y="58" width="20.2" height="8" rx="2" fill="#9FC4FF"></rect>
+<rect x="131.0" y="58" width="20.2" height="8" rx="2" fill="#FFFFFF" fill-opacity="0.08"/>
+<rect x="131.0" y="58" width="20.2" height="8" rx="2" fill="#9FC4FF"></rect>
+<rect x="153.2" y="58" width="20.2" height="8" rx="2" fill="#FFFFFF" fill-opacity="0.08"/>
+<rect x="153.2" y="58" width="20.2" height="8" rx="2" fill="#9FC4FF"></rect>
+<rect x="175.4" y="58" width="20.2" height="8" rx="2" fill="#FFFFFF" fill-opacity="0.08"/>
+<rect x="175.4" y="58" width="20.2" height="8" rx="2" fill="#9FC4FF"></rect>
+<rect x="197.6" y="58" width="20.2" height="8" rx="2" fill="#FFFFFF" fill-opacity="0.08"/>
+<rect x="197.6" y="58" width="20.2" height="8" rx="2" fill="#9FC4FF"></rect>
+<rect x="219.8" y="58" width="20.2" height="8" rx="2" fill="#FFFFFF" fill-opacity="0.08"/>
+<rect x="219.8" y="58" width="20.2" height="8" rx="2" fill="#9FC4FF"></rect>
+  <text x="280" y="26" font-size="11" fill="#8B95B5">Damaged · mild stress</text>
+  <text x="280" y="50" font-size="11" font-weight="500" letter-spacing="1.54" fill="#8B95B5">HULL</text>
+<text x="500" y="50" text-anchor="end" font-size="12" fill="#ECF0FA" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace">64 %</text>
+<rect x="280.0" y="58" width="20.2" height="8" rx="2" fill="#FFFFFF" fill-opacity="0.08"/>
+<rect x="280.0" y="58" width="20.2" height="8" rx="2" fill="#9FC4FF"></rect>
+<rect x="302.2" y="58" width="20.2" height="8" rx="2" fill="#FFFFFF" fill-opacity="0.08"/>
+<rect x="302.2" y="58" width="20.2" height="8" rx="2" fill="#9FC4FF"></rect>
+<rect x="324.4" y="58" width="20.2" height="8" rx="2" fill="#FFFFFF" fill-opacity="0.08"/>
+<rect x="324.4" y="58" width="20.2" height="8" rx="2" fill="#9FC4FF"></rect>
+<rect x="346.6" y="58" width="20.2" height="8" rx="2" fill="#FFFFFF" fill-opacity="0.08"/>
+<rect x="346.6" y="58" width="20.2" height="8" rx="2" fill="#9FC4FF"></rect>
+<rect x="368.8" y="58" width="20.2" height="8" rx="2" fill="#FFFFFF" fill-opacity="0.08"/>
+<rect x="368.8" y="58" width="20.2" height="8" rx="2" fill="#9FC4FF"></rect>
+<rect x="391.0" y="58" width="20.2" height="8" rx="2" fill="#FFFFFF" fill-opacity="0.08"/>
+<rect x="391.0" y="58" width="20.2" height="8" rx="2" fill="#9FC4FF"></rect>
+<rect x="413.2" y="58" width="20.2" height="8" rx="2" fill="#FFFFFF" fill-opacity="0.08"/>
+<rect x="413.2" y="58" width="8.1" height="8" rx="2" fill="#9FC4FF"></rect>
+<rect x="435.4" y="58" width="20.2" height="8" rx="2" fill="#FFFFFF" fill-opacity="0.08"/>
+<rect x="457.6" y="58" width="20.2" height="8" rx="2" fill="#FFFFFF" fill-opacity="0.08"/>
+<rect x="479.8" y="58" width="20.2" height="8" rx="2" fill="#FFFFFF" fill-opacity="0.08"/>
+  <g><rect x="280.5" y="76.5" width="219" height="25" rx="7" fill="#0A0D1A" stroke="#FF9F43" stroke-width="1"/>
+<g transform="translate(294 89)" fill="none" stroke="#FF9F43" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M0 -7 L0 7 M-3 -4 L0 -7 L3 -4 M-3 4 L0 7 L3 4"/><circle r="1.6" fill="#FF9F43" stroke="none"/></g>
+<text x="308" y="93" font-size="11" font-weight="500" letter-spacing="1.3" fill="#FF9F43">TIDAL STRESS</text>
+<rect x="456" y="83" width="9" height="12" rx="2" fill="#FF9F43" fill-opacity="1"/>
+<rect x="469" y="83" width="9" height="12" rx="2" fill="#FFFFFF" fill-opacity="0.08"/>
+<rect x="482" y="83" width="9" height="12" rx="2" fill="#FFFFFF" fill-opacity="0.08"/>
+</g>
+  <text x="20" y="156" font-size="11" fill="#8B95B5">Worn · strong stress</text>
+  <text x="20" y="180" font-size="11" font-weight="500" letter-spacing="1.54" fill="#8B95B5">HULL</text>
+<text x="240" y="180" text-anchor="end" font-size="12" fill="#ECF0FA" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace">38 %</text>
+<rect x="20.0" y="188" width="20.2" height="8" rx="2" fill="#FFFFFF" fill-opacity="0.08"/>
+<rect x="20.0" y="188" width="20.2" height="8" rx="2" fill="#FFC857"></rect>
+<rect x="42.2" y="188" width="20.2" height="8" rx="2" fill="#FFFFFF" fill-opacity="0.08"/>
+<rect x="42.2" y="188" width="20.2" height="8" rx="2" fill="#FFC857"></rect>
+<rect x="64.4" y="188" width="20.2" height="8" rx="2" fill="#FFFFFF" fill-opacity="0.08"/>
+<rect x="64.4" y="188" width="20.2" height="8" rx="2" fill="#FFC857"></rect>
+<rect x="86.6" y="188" width="20.2" height="8" rx="2" fill="#FFFFFF" fill-opacity="0.08"/>
+<rect x="86.6" y="188" width="16.2" height="8" rx="2" fill="#FFC857"></rect>
+<rect x="108.8" y="188" width="20.2" height="8" rx="2" fill="#FFFFFF" fill-opacity="0.08"/>
+<rect x="131.0" y="188" width="20.2" height="8" rx="2" fill="#FFFFFF" fill-opacity="0.08"/>
+<rect x="153.2" y="188" width="20.2" height="8" rx="2" fill="#FFFFFF" fill-opacity="0.08"/>
+<rect x="175.4" y="188" width="20.2" height="8" rx="2" fill="#FFFFFF" fill-opacity="0.08"/>
+<rect x="197.6" y="188" width="20.2" height="8" rx="2" fill="#FFFFFF" fill-opacity="0.08"/>
+<rect x="219.8" y="188" width="20.2" height="8" rx="2" fill="#FFFFFF" fill-opacity="0.08"/>
+  <g><rect x="20.5" y="206.5" width="219" height="25" rx="7" fill="#0A0D1A" stroke="#FF9F43" stroke-width="1"/>
+<g transform="translate(34 219)" fill="none" stroke="#FF9F43" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M0 -7 L0 7 M-3 -4 L0 -7 L3 -4 M-3 4 L0 7 L3 4"/><circle r="1.6" fill="#FF9F43" stroke="none"/></g>
+<text x="48" y="223" font-size="11" font-weight="500" letter-spacing="1.3" fill="#FF9F43">TIDAL STRESS</text>
+<rect x="196" y="213" width="9" height="12" rx="2" fill="#FF9F43" fill-opacity="1"/>
+<rect x="209" y="213" width="9" height="12" rx="2" fill="#FF9F43" fill-opacity="1"/>
+<rect x="222" y="213" width="9" height="12" rx="2" fill="#FFFFFF" fill-opacity="0.08"/>
+</g>
+  <text x="280" y="156" font-size="11" fill="#8B95B5">Critical · tearing</text>
+  <text x="280" y="180" font-size="11" font-weight="500" letter-spacing="1.54" fill="#8B95B5">HULL</text>
+<text x="500" y="180" text-anchor="end" font-size="12" fill="#FF5A5F" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace">16 %</text>
+<rect x="280.0" y="188" width="20.2" height="8" rx="2" fill="#FFFFFF" fill-opacity="0.08"/>
+<rect x="280.0" y="188" width="20.2" height="8" rx="2" fill="#FF5A5F"><animate attributeName="opacity" values="1;0.45;1" dur="1s" repeatCount="indefinite"/></rect>
+<rect x="302.2" y="188" width="20.2" height="8" rx="2" fill="#FFFFFF" fill-opacity="0.08"/>
+<rect x="302.2" y="188" width="12.1" height="8" rx="2" fill="#FF5A5F"><animate attributeName="opacity" values="1;0.45;1" dur="1s" repeatCount="indefinite"/></rect>
+<rect x="324.4" y="188" width="20.2" height="8" rx="2" fill="#FFFFFF" fill-opacity="0.08"/>
+<rect x="346.6" y="188" width="20.2" height="8" rx="2" fill="#FFFFFF" fill-opacity="0.08"/>
+<rect x="368.8" y="188" width="20.2" height="8" rx="2" fill="#FFFFFF" fill-opacity="0.08"/>
+<rect x="391.0" y="188" width="20.2" height="8" rx="2" fill="#FFFFFF" fill-opacity="0.08"/>
+<rect x="413.2" y="188" width="20.2" height="8" rx="2" fill="#FFFFFF" fill-opacity="0.08"/>
+<rect x="435.4" y="188" width="20.2" height="8" rx="2" fill="#FFFFFF" fill-opacity="0.08"/>
+<rect x="457.6" y="188" width="20.2" height="8" rx="2" fill="#FFFFFF" fill-opacity="0.08"/>
+<rect x="479.8" y="188" width="20.2" height="8" rx="2" fill="#FFFFFF" fill-opacity="0.08"/>
+  <g><rect x="280.5" y="206.5" width="219" height="25" rx="7" fill="#0A0D1A" stroke="#FF5A5F" stroke-width="1"/>
+<animate attributeName="opacity" values="1;0.5;1" dur="0.8s" repeatCount="indefinite"/>
+<g transform="translate(294 219)" fill="none" stroke="#FF5A5F" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M0 -7 L0 7 M-3 -4 L0 -7 L3 -4 M-3 4 L0 7 L3 4"/><circle r="1.6" fill="#FF5A5F" stroke="none"/></g>
+<text x="308" y="223" font-size="11" font-weight="500" letter-spacing="1.3" fill="#FF5A5F">TIDAL STRESS</text>
+<rect x="456" y="213" width="9" height="12" rx="2" fill="#FF5A5F" fill-opacity="1"/>
+<rect x="469" y="213" width="9" height="12" rx="2" fill="#FF5A5F" fill-opacity="1"/>
+<rect x="482" y="213" width="9" height="12" rx="2" fill="#FF5A5F" fill-opacity="1"/>
+</g>
+  <text x="20" y="316" font-size="11" fill="#8B95B5">In the world: chevrons along the stretch axis</text>
+  <g transform="translate(380 312) rotate(90) scale(0.453)"><g id="hhS">
+<path d="M7.2 5 L14.5 16.5 L14.5 21 L6.2 18.5 Z" fill="url(#hhSHull)" stroke="#0A0D1A" stroke-width="0.9" stroke-linejoin="round"/>
+<path d="M -7.2 5 L -14.5 16.5 L -14.5 21 L -6.2 18.5 Z" fill="url(#hhSHull)" stroke="#0A0D1A" stroke-width="0.9" stroke-linejoin="round"/>
+<path d="M12.5 16.6 L14.5 16.6 L14.5 21 L12.5 20.3 Z" fill="#5EA0FF"/><path d="M-12.5 16.6 L-14.5 16.6 L-14.5 21 L-12.5 20.3 Z" fill="#5EA0FF"/>
+<path d="M-3.2 22.4 L3.2 22.4 L5 28.2 L-5 28.2 Z" fill="url(#hhSSteel)" stroke="#0A0D1A" stroke-width="0.8" stroke-linejoin="round"/><ellipse cx="0" cy="28.2" rx="5" ry="1.1" fill="#1A2240" stroke="#0A0D1A" stroke-width="0.6"/>
+<path d="M0 -26 C3 -24 5.5 -18 6.5 -12 L7.5 6 L6 18 L3 21 L-3 21 L-6 18 L-7.5 6 L-6.5 -12 C-5.5 -18 -3 -24 0 -26 Z" fill="url(#hhSHull)" stroke="#0A0D1A" stroke-width="1" stroke-linejoin="round"/>
+<g stroke="#0A0D1A" stroke-opacity="0.32" stroke-width="0.5" fill="none"><path d="M-7.1 -3 L7.1 -3"/><path d="M-7.3 10 L7.3 10"/><path d="M0 -4 L0 20"/><path d="M-5.6 -16 L5.6 -16"/></g>
+<path d="M-4.6 -6.5 L0 -4.6 L4.6 -6.5" fill="none" stroke="#5EA0FF" stroke-width="1.1" stroke-linecap="round"/>
+<ellipse cx="0" cy="-14.5" rx="2.6" ry="5.4" fill="url(#hhSCanopy)" stroke="#0A0D1A" stroke-width="0.7"/><ellipse cx="-0.8" cy="-16.8" rx="0.8" ry="1.8" fill="#FFFFFF" fill-opacity="0.75"/>
+<rect x="-4" y="20" width="8" height="2.6" rx="0.8" fill="url(#hhSSteel)" stroke="#0A0D1A" stroke-width="0.7"/>
+</g></g>
+  <g transform="translate(380.0 312.0) rotate(0.0)" fill="none" stroke="#FF9F43" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <animate attributeName="opacity" values="1;0.35;1" dur="0.8s" repeatCount="indefinite"/>
+  <path d="M15 -4 L19 0 L15 4"/><path d="M20 -4 L24 0 L20 4"/>
+  <path d="M-15 -4 L-19 0 L-15 4"/><path d="M-20 -4 L-24 0 L-20 4"/>
+</g>
+  <circle cx="440" cy="312" r="7" fill="#FFFFFF"/><circle cx="440" cy="312" r="14" fill="#B8CCFF" fill-opacity="0.25"/>
+  </g>
+</svg>

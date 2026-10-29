@@ -4,7 +4,7 @@ How to build the v1.5 realistic look in the game's actual renderer: the orthogra
 
 Read with: `style.md` (tokens and rules), `assets.md` (one row per asset), the asset SVG header comments (the canon for every number), and in the code `src/render/visual.ts`, `src/render/visuals/index.ts`, `src/render/theme.ts`, `src/render/palette.ts`.
 
-Sections: §0 how the renderer is put together · §1 rules for the realistic visuals · §2 translating SVG filter recipes to GLSL · §3 planets · §4 stars · §5 compact objects · §6 moons and moon chains · §7 environment (nebulae, debris, rings) · §8 palette and colour · §9 budget · §10 asset → factory map, with what WP8 needs · §11 the magnetism map and fuzzy prediction (WP9) · §12 comets and the solar recharge indicator (WP10).
+Sections: §0 how the renderer is put together · §1 rules for the realistic visuals · §2 translating SVG filter recipes to GLSL · §3 planets · §4 stars · §5 compact objects · §6 moons and moon chains · §7 environment (nebulae, debris, rings) · §8 palette and colour · §9 budget · §10 asset → factory map, with what WP8 needs · §11 the magnetism map and fuzzy prediction (WP9) · §12 comets and the solar recharge indicator (WP10) · §13 the modular ship, damage, hull HUD and upgrade screen (ship systems).
 
 ---
 
@@ -142,6 +142,7 @@ One quad as today (`span 400`, scaled `r / 46`), with layers back to front match
 - New WP8 tokens are listed in `style.md` §8 (binary hot and cool, red giant, drag atmosphere).
 - New WP9 tokens are listed in `style.md` §8 WP9 (pulsar, magnetar, `magmap.*` zones, `path.ghost`).
 - New WP10 tokens are listed in `style.md` §8 WP10 (`comet.*`, `solar.*`).
+- Ship systems tokens are in `style.md` §10 (`ship.*`, `plume.*`, `damage.*`, `hull.*`, `stress.*`).
 
 ## 9. Budget (targets for an integrated GPU, 1440×900 at DPR 2)
 
@@ -174,6 +175,8 @@ One quad as today (`span 400`, scaled `r / 46`), with layers back to front match
 | `overlays/magnetism-heatmap.svg` (new, WP9) | — | new `createMagnetism` visual on M; fuzzy spread on the predicted path (§11) |
 | `bodies/comet.svg` (new, WP10) | — | new `createComets` visual: head sprite + tail quads turned away from the star (§12) |
 | `solar-recharge.svg` (new, WP10) | path visual, HUD | gold path dots, fuel-block glyph and shimmer, ship pulse (§12) |
+| `ship/*.svg` (new, ship systems) | `createShip` (v1 polygons) | layered part sprites per build, one plume per engine, damage overlay by hull % (§13) |
+| `hud-hull.svg` (new, ship systems) | HUD (DOM) | hull bar, tidal-stress chip; tidal chevrons as a screen-space visual (§13) |
 | `space/*` nebulae, asteroid field, wreck | — | WP10 / WP11 layers (§7) |
 | `starfield.svg` | `createStarfield` (canvas texture) | add the v1.1 magnitude tints and the faint band when the sky is next touched |
 | ship, thrust, path, arrow, HUD | existing factories | unchanged by this design update (the game's own plume already moved past v1). The flown trail was removed from the game in PR #16; `trail.svg` stays as a design reference only |
@@ -234,3 +237,31 @@ Mirror the tail quad's y when the comet's angular velocity around the star chang
 - **Ship pulse**: a ring quad under the ship sprite, radius 9 → 18 and alpha 0.75 → 0 every 1.2 s, while `rate > 0` in flight.
 
 **Budget.** Comet: 2 quads and 2–3 texture samples, under 0.1 ms each. Recharge: per-dot colour on the existing path, so it is free.
+
+## 13. Modular ship, damage and hull HUD (ship systems)
+
+The designs are `assets/ship/*.svg`, `assets/hud-hull.svg`, `mockups/upgrade-screen.svg` and `mockups/flight-damaged.svg`; values and tokens are in `style.md` §10. `preview/ship.html` shows the parts stacked.
+
+**Building the ship.** Keep `createShip` in screen space with the heading lerp. Replace the three v1 polygons with layered quads, one per part, all sharing the 96 × 160 frame (centre at (48, 64)), so every quad has the same size and anchor:
+
+1. Bake each part SVG once into a texture at `scale × DPR` (the base hull is 48.6 units → 22 px, so scale 0.453 × zoom bucket). Rebake only when the build or the zoom bucket changes, never per frame.
+2. Add quads in the draw order: back modules → plume → hull (with the nozzle) → front modules → damage. Plating has `#shipModPlatingBack` and `#shipModPlatingFront`; bake them as two textures.
+3. The build comes from the ship's upgrade state (level or save data); the visual never changes the sim.
+
+**Plumes.** Keep the existing plume shader for the chemical engine (it already matches `plume.chem`). Add two parameter sets:
+- **Ion:** half-width 6 → 6.6, length about 55 units, turbulence near 0, a slow 2 s shimmer. Burns last longer with low thrust, so the beam stays on for the whole burn.
+- **Pulse:** no continuous plume. Draw one flash quad per fuel pulse (every 0.6 s of sim time while burning), radius growing 5 → 17 units and fading, plus the plate glow. Key it to sim time so pause and slow motion freeze it.
+
+The burn wind-up and tail timings (`theme.burn`) apply to all three. No separate bloom halo behind the plume.
+
+**Module states** (cosmetic, `frame.now` unless noted): solar frame glows `#FFE08A` while `rechargeRate > 0`; scoop rims pulse while scooping; the shield arc flashes to α 1 for 0.2 s on a hit (sim event); the sensors tip blinks 1.4 s; cryo windows breathe 4 s.
+
+**Damage.** Pick one overlay texture from hull %: none ≥ 80, `damage-75` ≥ 50, `damage-45` ≥ 25, else `damage-15`. The venting puffs, sparks and beacon animate in the overlay; drive them with `frame.now`. On a hit, flash the ship white for 80 ms.
+
+**Hull HUD.** DOM next to the fuel block: 10 segment `div`s, colour by threshold, the critical pulse as a CSS animation. The tidal-stress chip shows only while stress > 0, with its level from the same tidal function the damage uses (`tidalStrength`, WP7c).
+
+**Tidal chevrons.** A screen-space visual: two chevron pairs at 15–24 px from the ship, rotated to the direction of the strongest tidal source (the body with the largest `GM / r³` at the ship), pulsing every 0.8 s (0.5 s at level 3). They are shown in flight and, for the predicted path, at the first predicted point where stress starts.
+
+**Upgrade screen.** DOM over a dimmed sky. The ship preview reuses the same baked part textures at 5.8×, so the shipyard and the game always show the same build. Cards are plain DOM with the thumbnails baked from the module SVGs.
+
+**Budget.** At most 10 small quads plus one plume for the ship: well under 0.1 ms. Part rebakes are under 5 ms total, on build or zoom-bucket change only.

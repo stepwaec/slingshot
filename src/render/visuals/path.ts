@@ -30,7 +30,7 @@ varying vec2 vUv;
 uniform float uSpan;
 void main() {
   float d = length(vUv - vec2(0.5)) * uSpan;
-  float alpha = 1.0 - smoothstep(1.05, 1.7, d);
+  float alpha = 1.0 - smoothstep(2.15, 2.85, d);
   if (alpha <= 0.01) discard;
   gl_FragColor = vec4(vColor.rgb, vColor.a * alpha);
 }

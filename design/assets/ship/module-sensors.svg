@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="160" viewBox="0 0 96 160">
+  <!-- Modular ship: Sensors module. ONE group #shipModSensors at translate(48 64). Ids: sxMn*.
+       Shared ship frame: viewBox 0 0 96 160, ship centre at (48, 64), nose UP (-y) at local y -26, tail at +22.6. Every ship part uses this frame, so parts stack exactly: translate(48 64) on each file's one top-level group. Base hull length 48.6 units = 22 px at zoom 1 (scale 0.453, theme.ship.lengthAtZoom1); minimum 12 px. Lighting is symmetric (bright ridge, cooler edges), so the sprite can rotate with the heading.
+       Draw order for a build: 1 back modules (solar, tanks, plating back) -> 2 engine plume -> 3 fins + engine nozzle + hull (hull-base) -> 4 front modules (plating front, cryo, scoop, sensors, shield) -> 5 one damage overlay. 
+       Front. Nose antenna to y -36 (#DCE4FF 0.9) with a cross-bar and a tip light r 1.3 #5EF2FF blinking 1.4 s; a dish rx 3.6 ry 1.7 #DCE4FF with a #5EA0FF feed at y 14.
+       Tokens: style.md §8 Ship systems (ship.*). -->
+  <defs>
+    
+  </defs>
+  <g id="shipModSensors" transform="translate(48 64)">
+    <g id="shipModSensorsFront">
+    <line x1="0" y1="-26" x2="0" y2="-36" stroke="#DCE4FF" stroke-width="0.9"/><line x1="-1.8" y1="-31" x2="1.8" y2="-31" stroke="#DCE4FF" stroke-width="0.7"/>
+    <circle cx="0" cy="-36.4" r="1.3" fill="#5EF2FF"><animate attributeName="opacity" values="1;0.25;1" dur="1.4s" repeatCount="indefinite"/></circle>
+    <ellipse cx="0" cy="14" rx="3.6" ry="1.7" fill="#DCE4FF" stroke="#0A0D1A" stroke-width="0.6"/><circle cx="0" cy="14" r="0.7" fill="#5EA0FF"/>
+    </g>
+  </g>
+</svg>

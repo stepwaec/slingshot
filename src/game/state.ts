@@ -121,6 +121,27 @@ export function cycleGravity(game: Game): GravityView {
   return next;
 }
 
+/** Button copy for the gravity cycle. Matches `cycleGravity` one to one. */
+export function gravityLabel(view: GravityView): string {
+  if (view === "grid") return "Gravity grid";
+  if (view === "sheet") return "Gravity sheet";
+  return "Gravity off";
+}
+
+/**
+ * G cycles the map. Repeat and modifier chords do not, so a held key
+ * cannot skip a mode. Returns whether the key was consumed.
+ */
+export function applyGravityKey(
+  game: Game,
+  event: { key: string; repeat?: boolean; metaKey?: boolean; ctrlKey?: boolean; altKey?: boolean },
+): boolean {
+  if (event.repeat || event.metaKey || event.ctrlKey || event.altKey) return false;
+  if (event.key !== "g" && event.key !== "G") return false;
+  cycleGravity(game);
+  return true;
+}
+
 /** Clock-rate overlay for the flat grid. Ignored by the sim. */
 export function setGravityClock(game: Game, on: boolean): void {
   game.gravityClock = on;

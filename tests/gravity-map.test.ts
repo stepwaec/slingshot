@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { createGame, cycleGravity, launch, setGravityClock, setPlan, tick } from "../src/game/state";
+import { bindInput, type InputElements } from "../src/game/input";
+import { applyGravityKey, createGame, cycleGravity, gravityLabel, launch, setGravityClock, setPlan, tick } from "../src/game/state";
 import { passage, rescue, simConfigFromLevel } from "../src/level/catalog";
 import { safePlan, slingshotPlan } from "../src/level/solutions";
 import {
@@ -8,12 +9,14 @@ import {
   type SimConfig,
 } from "../src/sim/physics";
 import {
+  clampPinch,
   gridX,
   gridY,
   pinchTowardMasses,
   sampleGravityGrid,
   scaleWellDepth,
   wellHeight,
+  PINCH_CELL,
   WELL_SOFTNESS,
   type GridBounds,
 } from "../src/render/gravityField";
@@ -71,10 +74,11 @@ describe("gravity grid", () => {
             expect(grid.scale[i]).toBe(scaleWellDepth(grid.depth[i], grid.knee));
             expect(grid.rate[i]).toBe(properTimeRate(x, y, 0, 0, item.config, time));
             const pinch = pinchTowardMasses(x, y, item.config, time, grid.knee);
+            const shown = clampPinch(pinch.dx, pinch.dy, grid.stepX, grid.stepY);
             expect(Number.isFinite(grid.pinchX[i])).toBe(true);
             expect(Number.isFinite(grid.pinchY[i])).toBe(true);
-            expect(grid.pinchX[i]).toBe(x + pinch.dx);
-            expect(grid.pinchY[i]).toBe(y + pinch.dy);
+            expect(grid.pinchX[i]).toBe(x + shown.dx);
+            expect(grid.pinchY[i]).toBe(y + shown.dy);
             if (grid.depth[i] !== other.depth[i]) moved = true;
           }
         }
@@ -177,9 +181,145 @@ describe("gravity grid", () => {
     expect(shownGap).toBeLessThan(restGap);
     expect(shownGap).toBeGreaterThan(0);
   });
+
+  it("keeps neighbouring vertices in order so cells cannot fold or spike", () => {
+    const hole: SimConfig = {
+      ...empty,
+      c: 40,
+      bodies: [
+        {
+          id: "hole",
+          name: "the black hole",
+          kind: "blackhole",
+          x: 0,
+          y: 0,
+          mass: 1e6,
+          radius: 8,
+        },
+        {
+          id: "star",
+          name: "star",
+          kind: "star",
+          x: 36,
+          y: -12,
+          mass: 400000,
+          radius: 20,
+        },
+      ],
+    };
+    const cases = [
+      sampleGravityGrid(simConfigFromLevel(passage), 0, { minX: -200, maxX: 900, minY: -200, maxY: 800 }, 48, 36),
+      sampleGravityGrid(simConfigFromLevel(rescue), 0, { minX: -400, maxX: 500, minY: -300, maxY: 300 }, 48, 36),
+      sampleGravityGrid(hole, 0, { minX: -80, maxX: 80, minY: -80, maxY: 80 }, 41, 41),
+    ];
+    for (const grid of cases) {
+      const limitX = Math.abs(grid.stepX) * PINCH_CELL + 1e-9;
+      const limitY = Math.abs(grid.stepY) * PINCH_CELL + 1e-9;
+      for (let row = 0; row < grid.rows; row++) {
+        for (let col = 0; col < grid.cols; col++) {
+          const i = row * grid.cols + col;
+          const x = gridX(grid, col);
+          const y = gridY(grid, row);
+          expect(Math.abs(grid.pinchX[i] - x)).toBeLessThanOrEqual(limitX);
+          expect(Math.abs(grid.pinchY[i] - y)).toBeLessThanOrEqual(limitY);
+          if (col + 1 < grid.cols) expect(grid.pinchX[i + 1]).toBeGreaterThan(grid.pinchX[i]);
+          if (row + 1 < grid.rows) expect(grid.pinchY[i + grid.cols]).toBeGreaterThan(grid.pinchY[i]);
+        }
+      }
+    }
+  });
 });
 
 describe("gravity map toggle", () => {
+  it("cycles off, grid, sheet, and back to off from the button and the G key", () => {
+    const game = createGame(passage);
+    expect(gravityLabel(game.gravity)).toBe("Gravity off");
+
+    expect(cycleGravity(game)).toBe("grid");
+    expect(gravityLabel(game.gravity)).toBe("Gravity grid");
+    expect(cycleGravity(game)).toBe("sheet");
+    expect(gravityLabel(game.gravity)).toBe("Gravity sheet");
+    expect(cycleGravity(game)).toBe("off");
+    expect(gravityLabel(game.gravity)).toBe("Gravity off");
+
+    const press = { repeat: false, metaKey: false, ctrlKey: false, altKey: false };
+    expect(applyGravityKey(game, { key: "g", ...press })).toBe(true);
+    expect(gravityLabel(game.gravity)).toBe("Gravity grid");
+    expect(applyGravityKey(game, { key: "G", ...press })).toBe(true);
+    expect(gravityLabel(game.gravity)).toBe("Gravity sheet");
+    expect(applyGravityKey(game, { key: "g", repeat: true, metaKey: false, ctrlKey: false, altKey: false })).toBe(false);
+    expect(game.gravity).toBe("sheet");
+    expect(applyGravityKey(game, { key: "g", repeat: false, metaKey: true, ctrlKey: false, altKey: false })).toBe(false);
+    expect(applyGravityKey(game, { key: "g", ...press })).toBe(true);
+    expect(gravityLabel(game.gravity)).toBe("Gravity off");
+    expect(applyGravityKey(game, { key: "c", ...press })).toBe(false);
+    expect(game.gravity).toBe("off");
+  });
+
+  it("wires the gravity button and the G key to that same cycle", () => {
+    const game = createGame(passage);
+    const gravityClicks: Array<() => void> = [];
+    const keys: Array<(event: { key: string; repeat: boolean; metaKey: boolean; ctrlKey: boolean; altKey: boolean; preventDefault: () => void }) => void> = [];
+    const quietButton = () => ({ addEventListener() {} });
+    const canvas = {
+      addEventListener() {},
+      classList: { add() {}, remove() {} },
+    };
+    const previous = {
+      window: globalThis.window,
+      HTMLInputElement: globalThis.HTMLInputElement,
+      HTMLTextAreaElement: globalThis.HTMLTextAreaElement,
+      HTMLSelectElement: globalThis.HTMLSelectElement,
+    };
+    globalThis.HTMLInputElement = class HTMLInputElement {} as unknown as typeof globalThis.HTMLInputElement;
+    globalThis.HTMLTextAreaElement = class HTMLTextAreaElement {} as unknown as typeof globalThis.HTMLTextAreaElement;
+    globalThis.HTMLSelectElement = class HTMLSelectElement {} as unknown as typeof globalThis.HTMLSelectElement;
+    globalThis.window = {
+      addEventListener(type: string, fn: (event: { key: string; repeat: boolean; metaKey: boolean; ctrlKey: boolean; altKey: boolean; preventDefault: () => void }) => void) {
+        if (type === "keydown") keys.push(fn);
+      },
+    } as unknown as Window & typeof globalThis;
+    try {
+      bindInput(
+        game,
+        {
+          canvas,
+          launchButton: quietButton(),
+          deleteButton: quietButton(),
+          nodeRemove: quietButton(),
+          resetButtons: [],
+          clearButtons: [],
+          speedButtons: [],
+          pauseButton: quietButton(),
+          resumeButton: quietButton(),
+          slowButton: quietButton(),
+          gravityButton: {
+            addEventListener(type: string, fn: () => void) {
+              if (type === "click") gravityClicks.push(fn);
+            },
+          },
+          gravityClockButton: quietButton(),
+          magnetismButton: quietButton(),
+        } as unknown as InputElements,
+        () => ({ width: 800, height: 600 }),
+      );
+      const quiet = { repeat: false, metaKey: false, ctrlKey: false, altKey: false, preventDefault() {} };
+      for (const label of ["Gravity grid", "Gravity sheet", "Gravity off"]) {
+        gravityClicks[0]();
+        expect(gravityLabel(game.gravity)).toBe(label);
+      }
+      for (const label of ["Gravity grid", "Gravity sheet", "Gravity off"]) {
+        keys[0]({ key: "g", ...quiet });
+        expect(gravityLabel(game.gravity)).toBe(label);
+      }
+    } finally {
+      globalThis.window = previous.window;
+      globalThis.HTMLInputElement = previous.HTMLInputElement;
+      globalThis.HTMLTextAreaElement = previous.HTMLTextAreaElement;
+      globalThis.HTMLSelectElement = previous.HTMLSelectElement;
+    }
+  });
+
   it("cycles the view and leaves the sim and the prediction untouched", () => {
     const game = createGame(rescue);
     setPlan(game, safePlan);

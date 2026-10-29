@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="160" viewBox="0 0 96 160">
+  <!-- Modular ship: damage overlay, hull 75 %. ONE group #shipDamage75 at translate(48 64). Ids: sxD1*.
+       Shared ship frame: viewBox 0 0 96 160, ship centre at (48, 64), nose UP (-y) at local y -26, tail at +22.6. Every ship part uses this frame, so parts stack exactly: translate(48 64) on each file's one top-level group. Base hull length 48.6 units = 22 px at zoom 1 (scale 0.453, theme.ship.lengthAtZoom1); minimum 12 px. Lighting is symmetric (bright ridge, cooler edges), so the sprite can rotate with the heading.
+       Draw order for a build: 1 back modules (solar, tanks, plating back) -> 2 engine plume -> 3 fins + engine nozzle + hull (hull-base) -> 4 front modules (plating front, cryo, scoop, sensors, shield) -> 5 one damage overlay. 
+       Layer 5, shown for hull 50-79 %. Two scorch marks (radial #1E1410 α 0.75 | 0.6 #3A2418 α 0.45 | 1 α 0) and a dented plate #AEBBDD.
+       Tokens: style.md §8 Ship systems (ship.*). -->
+  <defs>
+    <radialGradient id="sxD1Scorch" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#1E1410" stop-opacity="0.75"/><stop offset="0.6" stop-color="#3A2418" stop-opacity="0.45"/><stop offset="1" stop-color="#3A2418" stop-opacity="0"/></radialGradient>
+  </defs>
+  <g id="shipDamage75" transform="translate(48 64)">
+    <ellipse cx="4.2" cy="2" rx="2.8" ry="4" fill="url(#sxD1Scorch)"/><ellipse cx="-3.8" cy="14" rx="2.4" ry="2" fill="url(#sxD1Scorch)"/>
+    <path d="M-6.2 -9 L-4.4 -8.2 L-4.8 -6 L-6.5 -6.6 Z" fill="#AEBBDD"/>
+  </g>
+</svg>

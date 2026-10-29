@@ -135,10 +135,10 @@ export const theme = {
   path: {
     spacingPx: 10,
     maxDots: 400,
-    /** Quad the dot is drawn into; the visible radius stays ~1.5 px. */
-    dotSpanPx: 5,
-    sureAlpha: 0.7,
-    dimAlpha: 0.35,
+    /** Quad the dot is drawn into. The visible radius is ~2.4 px, still a dot at the 10 px spacing. */
+    dotSpanPx: 8,
+    sureAlpha: 0.95,
+    dimAlpha: 0.62,
     dimAfter: 0.8,
     endRingInner: 5.25,
     endRingOuter: 6.75,

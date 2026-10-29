@@ -18,6 +18,9 @@ export function shader(fragment: string, uniforms: Record<string, THREE.IUniform
     depthTest: false,
     depthWrite: false,
     toneMapped: false,
+    // Desktop WebGL2 is highp. Asking for it keeps the sphere solve from
+    // collapsing when a WebKit context would otherwise drop to mediump.
+    precision: "highp",
   });
 }
 

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="160" viewBox="0 0 96 160">
+  <!-- Modular ship: Hull plating module. ONE group #shipModPlating at translate(48 64). Ids: sxMp*.
+       Shared ship frame: viewBox 0 0 96 160, ship centre at (48, 64), nose UP (-y) at local y -26, tail at +22.6. Every ship part uses this frame, so parts stack exactly: translate(48 64) on each file's one top-level group. Base hull length 48.6 units = 22 px at zoom 1 (scale 0.453, theme.ship.lengthAtZoom1); minimum 12 px. Lighting is symmetric (bright ridge, cooler edges), so the sprite can rotate with the heading.
+       Draw order for a build: 1 back modules (solar, tanks, plating back) -> 2 engine plume -> 3 fins + engine nozzle + hull (hull-base) -> 4 front modules (plating front, cryo, scoop, sensors, shield) -> 5 one damage overlay. 
+       Back: armour shell 1.5-3 units outside the hull (#4E66A0 | #7F98CF | #4E66A0, outline #0A0D1A). Front: plate seams (#0A0D1A 0.8) and edge highlights #AFC2EE. Draw #shipModPlatingBack before the hull and #shipModPlatingFront after it.
+       Tokens: style.md §8 Ship systems (ship.*). -->
+  <defs>
+    <linearGradient id="sxMpArmor" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#4E66A0"/><stop offset="0.5" stop-color="#7F98CF"/><stop offset="1" stop-color="#4E66A0"/></linearGradient>
+  </defs>
+  <g id="shipModPlating" transform="translate(48 64)">
+    <g id="shipModPlatingBack">
+    <path d="M0 -29.5 C4.4 -27 7.6 -19.5 9 -12.6 L10.6 6 L8.8 19.8 L4 23.4 L-4 23.4 L-8.8 19.8 L-10.6 6 L-9 -12.6 C-7.6 -19.5 -4.4 -27 0 -29.5 Z" fill="url(#sxMpArmor)" stroke="#0A0D1A" stroke-width="1" stroke-linejoin="round"/>
+    </g>
+    <g id="shipModPlatingFront">
+    <g stroke="#0A0D1A" stroke-width="0.8"><path d="M-6.8 -16 L-8.4 -17 M-7.4 -6 L-9.8 -6.4 M-7.6 4 L-10.5 4 M-7.2 13 L-9.6 13.6 M6.8 -16 L8.4 -17 M7.4 -6 L9.8 -6.4 M7.6 4 L10.5 4 M7.2 13 L9.6 13.6"/></g><g stroke="#AFC2EE" stroke-width="0.6" stroke-opacity="0.9"><path d="M-8.7 -12 L-9.9 5 M8.7 -12 L9.9 5"/></g>
+    </g>
+  </g>
+</svg>
