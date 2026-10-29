@@ -1209,4 +1209,25 @@ Bodies should never look like still pictures. The game now animates the sun's ri
 
 **Gas giants:** three band groups flowing in opposite directions (`#gbAnimA` / `B` / `C` at 180 / 110 / 150 s). The storm spot rides its band.
 
+**Per body type** (periods from each asset header; all cosmetic, `frame.now`):
+
+| Body | Surface motion | Extra life |
+|---|---|---|
+| Sun (`star.svg`) | Plasma flows 90 / 140 s, cells boil on a 9 s cycle, faculae twinkle | Flame ring +360° / 200 s, wisp ring −360° / 300 s, haze breathes ±3 % / 6 s; prominences on 12 / 16 / 14 s; the flare peaks every 22 s |
+| Red dwarf | Plasma and cell periods × 1.4 (calm, deep red) | Flames 260 s, wisps 390 s; its own loops and flare |
+| Blue giant | Periods × 0.8, cell frequency × 1.3 (fine, fast) | Flames 200 s, wisps 300 s; loops and flare |
+| Red giant | Frequencies × 0.5, periods × 1.6 (big, slow cells) | Drag edge crawls −8 px/s; atmosphere breathes ±2 % / 10 s |
+| Binary pair | Each star its own look's values, offset by half a cycle | Orbit from the sim |
+| White dwarf | None: perfectly smooth | Glow breathes ±5 % / 4 s |
+| Neutron star / pulsar / magnetar | None on the disc | Beams 6 s / 4 s (sim time for the pulsar); magnetar dashes, flicker 1.7–3.4 s, starquake every 18 s |
+| Black hole | Accretion disk turns once per 24 s (inner faster, if the shader allows) | Photon ring steady; lensed arcs follow the disk |
+| Rocky / ocean / ice / cracked worlds | Surface strip scrolls west → east: rocky 110 s, ocean 90 s, ice 140 s, cracked 100 s | Ocean clouds 64 s with their cast shadow; ice and cracked crack-glints are static |
+| Lava world | Surface 95 s | Emissive cracks pulse over 5 s (never faster) |
+| Toxic world | Surface 120 s, cloud deck 75 s | — |
+| Planet X | Surface 120 s, wisps 80 s | Halo breathes ±4 % / 2.4 s; capture ring crawls and pulses (§2) |
+| Gas giants | Band groups counter-flow 180 / 110 / 150 s (banded), 160 / 120 s (ringed) | Storm spot rides its band; rings stay still |
+| Moons | Barren 180 s, icy 150 s, volcanic 120 s, dwarf 160 s | Volcanic glow pulses slowly; moons in a chain keep their lit side to the star |
+| Comet | Coma breathes ×1.04 / 5 s | Ion streaks 2.2–3.1 s, knot every 9 s, dust sparkles 9–14 s |
+| Nebulae | Two textures cross-fade over 40 s (slow morph) | Never brighter than their α caps |
+
 Never animate the lighting, the crash radius or anything a player reads as a hazard edge.
