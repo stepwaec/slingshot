@@ -4,7 +4,7 @@ How to build the v1.5 realistic look in the game's actual renderer: the orthogra
 
 Read with: `style.md` (tokens and rules), `assets.md` (one row per asset), the asset SVG header comments (the canon for every number), and in the code `src/render/visual.ts`, `src/render/visuals/index.ts`, `src/render/theme.ts`, `src/render/palette.ts`.
 
-Sections: §0 how the renderer is put together · §1 rules for the realistic visuals · §2 translating SVG filter recipes to GLSL · §3 planets · §4 stars · §5 compact objects · §6 moons and moon chains · §7 environment (nebulae, debris, rings) · §8 palette and colour · §9 budget · §10 asset → factory map, with what WP8 needs.
+Sections: §0 how the renderer is put together · §1 rules for the realistic visuals · §2 translating SVG filter recipes to GLSL · §3 planets · §4 stars · §5 compact objects · §6 moons and moon chains · §7 environment (nebulae, debris, rings) · §8 palette and colour · §9 budget · §10 asset → factory map, with what WP8 needs · §11 the magnetism map and fuzzy prediction (WP9) · §12 comets and the solar recharge indicator (WP10).
 
 ---
 
@@ -119,7 +119,9 @@ One quad as today (`span 400`, scaled `r / 46`), with layers back to front match
 ## 5. Compact objects
 
 - **Black hole** (today: dark disc + one photon ring): add the accretion disk as its own ring quad, in polar coordinates and scaled `(1, 0.55)` for the tilt. Draw it in two meshes: the back half (`y > 0` in disk space) before the shadow, the front half after it. Apply a Doppler factor (left side brighter, 1.0 → 0.55), a fiery filament texture scrolling in angle, the lensed arcs over and under the shadow, and the faint Einstein ring at 2.1 r. The horizon radius stays `body.radius`. Numbers are in `black-hole.svg`.
-- **Neutron star**: two beam cones rotating 360° per 6 s about a 30°-tilted axis, plus a tight violet glow (`neutron-star.svg`).
+- **Neutron star** (quiet): two beam cones rotating 360° per 6 s about a 30°-tilted axis, plus a tight violet glow (`neutron-star.svg`). No beam damage.
+- **Pulsar** (WP9, `pulsar.svg`): three layers like the neutron star, but the beam layer is two long narrow cones (base 4, tip 18, reach 228) plus the afterglow fan, in one quad rotated by `2π · simTime / period`. Use **sim time**, not `frame.now`, because the beam is a hazard: what is drawn must be where the damage is, in prediction as in flight. Reach and period come from level data.
+- **Magnetar** (WP9, `magnetar.svg`): body and glow as a sprite; the field lines are static, so bake them once into a texture with one channel per line group and animate in the shader: flowing dashes as `step(fract(s / period − t · speed), duty)` along each line's arc length `s` (bake `s` into a second channel), and the uneven flicker as a per-line alpha from `frame.now`. The static grain is one noise texture sampled at two offsets and cross-faded over 5 s, thresholded at about 3 % cover, masked to r 24–120. The starquake ring is cosmetic (`frame.now`).
 
 ## 6. Moons and moon chains
 
@@ -138,6 +140,8 @@ One quad as today (`span 400`, scaled `r / 46`), with layers back to front match
 - Keep writing sRGB hex straight out of the shaders (`srgbVec`), with `NoToneMapping`.
 - `palette.ts` still holds the v1 tokens (`starBody #FFC857`, `planetStartBase #3D8BFF` and so on). The v1.5 tokens in `style.md` replace them for bodies: ocean `#1E5BD6`, shallow `#36B9D8`, land `#5FA84A`, forest `#3B7E3B`, desert `#D8B26E`, warm terminator `#FF9455`, night `#050B1E` / `#08122E`, sun body `#FFB43A` / `#FF8F1F` / `#FF7A14`, filament `#FFE7A0`, flame `#FFB347` / `#FF6A1A`, and the rest. **UI tokens are unchanged.**
 - New WP8 tokens are listed in `style.md` §8 (binary hot and cool, red giant, drag atmosphere).
+- New WP9 tokens are listed in `style.md` §8 WP9 (pulsar, magnetar, `magmap.*` zones, `path.ghost`).
+- New WP10 tokens are listed in `style.md` §8 WP10 (`comet.*`, `solar.*`).
 
 ## 9. Budget (targets for an integrated GPU, 1440×900 at DPR 2)
 
@@ -164,7 +168,69 @@ One quad as today (`span 400`, scaled `r / 46`), with layers back to front match
 | `bodies/moon-chain.svg` (new, WP8) | `createPlanets` (moons) | per-moon look; resonant orbits are level data |
 | `bodies/white-dwarf.svg` | — | small bright disc, wide glow, spikes; hard crash radius |
 | `bodies/black-hole.svg` | `createPlanets` (`holeFrag`) | accretion disk halves, Doppler, lensed arcs (WP9) |
-| `bodies/neutron-star.svg` | — | rotating beams (WP9) |
+| `bodies/neutron-star.svg` | — | quiet neutron star: rotating faint beams (WP9) |
+| `bodies/pulsar.svg` (new, WP9) | — | beam quad rotated by sim time; reach and period from level data (§5) |
+| `bodies/magnetar.svg` (new, WP9) | — | baked field lines + shader dashes and flicker, static grain, starquake (§5) |
+| `overlays/magnetism-heatmap.svg` (new, WP9) | — | new `createMagnetism` visual on M; fuzzy spread on the predicted path (§11) |
+| `bodies/comet.svg` (new, WP10) | — | new `createComets` visual: head sprite + tail quads turned away from the star (§12) |
+| `solar-recharge.svg` (new, WP10) | path visual, HUD | gold path dots, fuel-block glyph and shimmer, ship pulse (§12) |
 | `space/*` nebulae, asteroid field, wreck | — | WP10 / WP11 layers (§7) |
 | `starfield.svg` | `createStarfield` (canvas texture) | add the v1.1 magnitude tints and the faint band when the sky is next touched |
 | ship, thrust, path, arrow, HUD | existing factories | unchanged by this design update (the game's own plume already moved past v1). The flown trail was removed from the game in PR #16; `trail.svg` stays as a design reference only |
+
+## 11. Magnetism map and fuzzy prediction (WP9)
+
+The design is `overlays/magnetism-heatmap.svg` (one body) and `mockups/magnetism-map.svg` (in context); values and tokens are in `style.md` §8 WP9.
+
+**Field.** Give each magnetic body `magnet { b1Reach, tilt, averaged? }` in level data: `b1Reach` is R1, the polar reach of the Fuzzy zone; `tilt` is the axis angle from vertical. Choose `k` so that |B| = B1 at r = R1 on the axis: `k = B1 · R1³ / 2`. Then for a point `p`, sum the dipole vectors (not magnitudes), so neighbouring fields can cancel or reinforce:
+
+```glsl
+// m = unit magnetic axis, d = p - centre, r = length(d), n = d / r
+vec2 dipole(vec2 d, vec2 m, float k) {
+  float r = max(length(d), 1.0);
+  vec2 n = d / r;
+  return k * (3.0 * dot(m, n) * n - m) / (r * r * r);   // |B| = k * sqrt(1 + 3 cos^2) / r^3
+}
+```
+
+A pulsar's axis spins with its beams, so use the rotation-averaged magnitude `k · 0.894^3 · 2 / r³` (circular zones) rather than a flickering field. Put the field in a pure function next to the physics (`fieldAt(p, time, bodies)`), so the map, the fuzzy prediction and the tests all read the same numbers.
+
+**Map shader.** One screen-space quad (or one quad per magnetic body, padded to 1.1 R1) in the world scene, drawn after the gravity grid and before the bodies. In the fragment shader compute `x = |B| / B1` from up to 8 dipoles in a uniform array, pick the zone with steps on `x` (1, 2.5, 6, 15), and draw the edge where the zone index changes, with a line one pixel wide using `fwidth`:
+
+```glsl
+float z = step(1.0, x) + step(2.5, x) + step(6.0, x) + step(15.0, x);   // 0 = safe … 4 = lethal
+float lx = log2(max(x, 1e-4));
+// distance to the nearest threshold, in log space, converted to pixels
+float e = min(min(abs(lx - 0.0), abs(lx - 1.3219)), min(abs(lx - 2.585), abs(lx - 3.9069)));
+float edge = 1.0 - smoothstep(0.5, 1.5, e / fwidth(lx));
+```
+
+Fill with the zone's colour at its fill alpha, then the edge at its edge alpha. Dash the Fuzzy edge by arc angle around the strongest body (`fract(atan(d.y, d.x) · R / 11.0 − t)`, crawling 11 px/s) and breathe the Lethal edge over 2.4 s with `frame.now`. Keep the zone fills flat: no gradient inside a zone, so the map stays crisp at every zoom.
+
+**Toggle.** M key and a "Magnetism" HUD button next to the gravity button, with `aria-pressed`, shown only when the level has a magnetic body. The legend panel shows while it is on. Like G, the toggle is visual only: tests must show the sim and the prediction are identical with the map on or off.
+
+**Fuzzy prediction.** After predicting the path as today, walk it in 10 px steps and accumulate `σ += 6.0 · log2(max(x, 1.0)) · step / 100.0`, never decreasing. This is deterministic, so prediction and flight still match bit for bit; only the drawing changes. Draw the normal dots while σ < 0.6 px, then fade them, add the ±σ envelope as a triangle strip, and scatter two sets of ghost dots inside it, seeded by sample index so they do not swim, swapping every 0.3 s. Grow the end ring to r 6 + σ. The Sensors upgrade can scale the 6.0 factor down.
+
+**Budget.** One full-screen pass with up to 8 dipoles is about 40 ALU per pixel, well under 0.2 ms on an integrated GPU at DPR 2. Skip the pass entirely when M is off.
+
+## 12. Comets and solar recharge (WP10)
+
+The designs are `bodies/comet.svg`, `solar-recharge.svg` and `mockups/comet-recharge.svg`; values and tokens are in `style.md` §8 WP10.
+
+**Comet orbit.** Comets need eccentric orbits. Suggested level data: `orbit { kind: "ellipse", centerId, a, e, periapsisAngle, phase }`, solved per frame with Kepler's equation (a few Newton steps on `M = E − e sin E`), so the comet is fast near the star and slow far out. Keep it in `bodyPose` so prediction and flight stay bit-for-bit identical.
+
+**Comet visual.** One group per comet in world space, built from three pieces:
+
+1. **Head**: one quad with the coma, core and jets as a baked sprite, plus the nucleus drawn with the airless planet shader (lit from the star).
+2. **Tails**: one quad from the nucleus out to the tail length, rotated each frame to `atan2(p.y − star.y, p.x − star.x)` and scaled by `s = clamp(Rperi / d, 0.35, 1)` along the tail. Bake the dust strands and ion rays into a texture (dust in one channel, ion in another, strand index in a third), then colour them in the shader with the two gradients from the asset header.
+3. **Motion in the shader**: the solar-wind streaks are `step(fract(x / 100 − t / 2.5), 0.4)` along the ion channel; the disconnection knot is a soft ellipse moving out every 9 s; the dust sparkles are 8 points sampled along strand curves. All of it is cosmetic, so drive it with `frame.now`.
+
+Mirror the tail quad's y when the comet's angular velocity around the star changes sign, so the dust always lags the motion. The harvest ring is a ring quad like Planet X's capture ring, shown in planning and pause only.
+
+**Solar recharge.** Put the rate in a pure function next to the physics, `rechargeRate(p, bodies, ship)`, returning `rateMax · Σ L · min(1, (Rref / d)²)` over stars, so the HUD, the path tint and the fuel integration all read the same number. It must be in the prediction, because fuel collected changes what burns are affordable.
+
+- **Path dots**: after predicting, compute `t = rate / rateMax` per dot and use the colour, radius and alpha rule from `style.md` (a per-instance colour and size on the existing dot mesh). Sum the predicted gain for the end-ring label and the planning ghost segment.
+- **HUD**: the glyph, shimmer, sliver and rate text are DOM, next to the fuel bar. Animate the shimmer with a CSS gradient whose `background-position` moves every 1.8 s, or 0.9 s on a close pass (rate ≥ 0.6 · rateMax).
+- **Ship pulse**: a ring quad under the ship sprite, radius 9 → 18 and alpha 0.75 → 0 every 1.2 s, while `rate > 0` in flight.
+
+**Budget.** Comet: 2 quads and 2–3 texture samples, under 0.1 ms each. Recharge: per-dot colour on the existing path, so it is free.

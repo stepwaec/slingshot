@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="320" viewBox="0 0 520 320" font-family="-apple-system, 'Segoe UI', Inter, Roboto, 'Helvetica Neue', Arial, sans-serif">
+  <!-- Solar recharge indicator (WP10 design; the mechanic lands with the ship systems package). ONE group #solarRecharge at translate(0 0)
+       (a sample sheet: the pieces are placed where the game draws them, see notes). Ids: rc*.
+       Rate model (design default, tune in level / ship data): rate = rateMax * L * min(1, (Rref / d)^2), d = distance to the star centre,
+       Rref = 85 world px for the yellow sun (scale with the star's luminance L: red dwarf 0.4, blue giant 2.5, white dwarf 0.2, red giant 1.5,
+       compact objects and black holes 0). Below 8 % of rateMax the panels count as not charging. The Solar panels upgrade raises rateMax.
+       Pieces (top to bottom in this sheet):
+       A. HUD fuel block, three flight states (canvas-notes §10 position x 1180-1400, label baseline 48, bar 220 x 8 at y 56):
+          - not charging   sun glyph at (label x + 44, baseline - 4) as an empty ring r 3, #4B5470 (ui.textDim), 1.2 px
+          - charging       glyph lit: disc r 3 + 8 rays r 4.6 -> 6.2, #FFD27A (sun.limb), 1.2 px round caps; a 40 px white-gold shimmer
+                           (#FFF6D6 a0 | 0.85 | 0) sweeps the filled part every 1.8 s, clipped to the fill; a 3 px #FFE08A sliver right of the
+                           fill pulses a1 -> 0.35 -> 1; the rate "+0.4 %/s" in 11 px mono #FFE08A right-aligned at (1400, 80)
+          - close pass     rays to r 7.5 and turning 45 deg per 2 s; shimmer every 0.9 s; rate "+1.6 %/s"
+          The shimmer is white-gold, never the deeper #FFC857 of fuel.low, so a low (gold) bar still reads as charging.
+       B. HUD fuel block, PLANNING: glyph lit but still; a ghost segment #FFE08A a0.9 from the current fill to the fuel this plan would end
+          with (capped at 100 %), under the fill; "+8 % on this path" in 11 px mono #FFE08A at (1400, 80).
+       C. Predicted path: each dot whose rate t = rate / rateMax >= 0.08 turns gold: colour = mix(#DCE4FF, #FFD86E, min(1, sqrt(1.6 t))),
+          radius 1.5 + 1.3 min(1, 1.4 t), alpha 1 (normal dots stay #DCE4FF r 1.5 a0.7). No band or glow under the dots: low-alpha gold
+          over navy reads olive-grey. The end ring keeps its colour; the total gain sits next to it in 12 px mono #FFE08A.
+       D. Ship charging (flight only): a ring r 9 -> 18, #FFE08A 1.2 px, alpha 0.75 -> 0 every 1.2 s, over a still disc r 13 #FFE08A a0.12,
+          drawn under the ship sprite.
+       Tokens: style.md §8 WP10 (solar.*). -->
+  <defs>
+    <linearGradient id="rcShimmer" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#FFF6D6" stop-opacity="0"/><stop offset="0.5" stop-color="#FFF6D6" stop-opacity="0.85"/><stop offset="1" stop-color="#FFF6D6" stop-opacity="0"/></linearGradient>
+  </defs>
+  <rect width="520" height="320" fill="#050710"/>
+  <g id="solarRecharge">
+    <text x="20" y="24" font-size="11" fill="#8B95B5">A. Flight: not charging · charging · close pass</text>
+    <text x="20" y="60" font-size="11" font-weight="500" letter-spacing="1.54" fill="#8B95B5">FUEL</text>
+    <text x="240" y="60" text-anchor="end" font-size="12" fill="#ECF0FA" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace">64 %</text>
+    <rect x="20" y="68" width="220" height="8" rx="4" fill="#FFFFFF" fill-opacity="0.08"/>
+    <g transform="translate(64 56)"><circle r="3" fill="none" stroke="#4B5470" stroke-width="1.2"/></g>
+    <rect x="20" y="68" width="140.8" height="8" rx="4" fill="#3DE0C2"/>
+    <text x="20" y="120" font-size="11" font-weight="500" letter-spacing="1.54" fill="#8B95B5">FUEL</text>
+    <text x="240" y="120" text-anchor="end" font-size="12" fill="#ECF0FA" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace">64 %</text>
+    <rect x="20" y="128" width="220" height="8" rx="4" fill="#FFFFFF" fill-opacity="0.08"/>
+    <g transform="translate(64 116)"><circle r="3" fill="#FFD27A"/><g stroke="#FFD27A" stroke-width="1.2" stroke-linecap="round"><line x1="4.60" y1="0.00" x2="6.20" y2="0.00"/><line x1="3.25" y1="3.25" x2="4.38" y2="4.38"/><line x1="0.00" y1="4.60" x2="0.00" y2="6.20"/><line x1="-3.25" y1="3.25" x2="-4.38" y2="4.38"/><line x1="-4.60" y1="0.00" x2="-6.20" y2="0.00"/><line x1="-3.25" y1="-3.25" x2="-4.38" y2="-4.38"/><line x1="-0.00" y1="-4.60" x2="-0.00" y2="-6.20"/><line x1="3.25" y1="-3.25" x2="4.38" y2="-4.38"/></g></g>
+    <rect x="20" y="128" width="140.8" height="8" rx="4" fill="#3DE0C2"/>
+    <clipPath id="rcA2"><rect x="20" y="128" width="140.8" height="8" rx="4"/></clipPath>
+    <g clip-path="url(#rcA2)"><rect x="-20" y="128" width="40" height="8" fill="url(#rcShimmer)"><animate attributeName="x" from="-20" to="161" dur="1.8s" repeatCount="indefinite"/></rect></g>
+    <rect x="161.8" y="128" width="3" height="8" rx="1.5" fill="#FFE08A"><animate attributeName="opacity" values="1;0.35;1" dur="1.8s" repeatCount="indefinite"/></rect>
+    <text x="240" y="152" text-anchor="end" font-size="11" fill="#FFE08A" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace">+0.4 %/s</text>
+    <text x="20" y="180" font-size="11" font-weight="500" letter-spacing="1.54" fill="#8B95B5">FUEL</text>
+    <text x="240" y="180" text-anchor="end" font-size="12" fill="#ECF0FA" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace">64 %</text>
+    <rect x="20" y="188" width="220" height="8" rx="4" fill="#FFFFFF" fill-opacity="0.08"/>
+    <g transform="translate(64 176)"><circle r="3" fill="#FFD27A"/><g stroke="#FFD27A" stroke-width="1.2" stroke-linecap="round"><animateTransform attributeName="transform" type="rotate" from="0" to="45" dur="2s" repeatCount="indefinite"/><line x1="4.60" y1="0.00" x2="7.50" y2="0.00"/><line x1="3.25" y1="3.25" x2="5.30" y2="5.30"/><line x1="0.00" y1="4.60" x2="0.00" y2="7.50"/><line x1="-3.25" y1="3.25" x2="-5.30" y2="5.30"/><line x1="-4.60" y1="0.00" x2="-7.50" y2="0.00"/><line x1="-3.25" y1="-3.25" x2="-5.30" y2="-5.30"/><line x1="-0.00" y1="-4.60" x2="-0.00" y2="-7.50"/><line x1="3.25" y1="-3.25" x2="5.30" y2="-5.30"/></g></g>
+    <rect x="20" y="188" width="140.8" height="8" rx="4" fill="#3DE0C2"/>
+    <clipPath id="rcA3"><rect x="20" y="188" width="140.8" height="8" rx="4"/></clipPath>
+    <g clip-path="url(#rcA3)"><rect x="-20" y="188" width="40" height="8" fill="url(#rcShimmer)"><animate attributeName="x" from="-20" to="161" dur="0.9s" repeatCount="indefinite"/></rect></g>
+    <rect x="161.8" y="188" width="3" height="8" rx="1.5" fill="#FFE08A"><animate attributeName="opacity" values="1;0.35;1" dur="0.9s" repeatCount="indefinite"/></rect>
+    <text x="240" y="212" text-anchor="end" font-size="11" fill="#FFE08A" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace">+1.6 %/s</text>
+    <text x="20" y="244" font-size="11" fill="#8B95B5">B. Planning: fuel this path collects</text>
+    <text x="20" y="280" font-size="11" font-weight="500" letter-spacing="1.54" fill="#8B95B5">FUEL</text>
+    <text x="240" y="280" text-anchor="end" font-size="12" fill="#ECF0FA" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace">72 %</text>
+    <rect x="20" y="288" width="220" height="8" rx="4" fill="#FFFFFF" fill-opacity="0.08"/>
+    <g transform="translate(64 276)"><circle r="3" fill="#FFD27A"/><g stroke="#FFD27A" stroke-width="1.2" stroke-linecap="round"><line x1="4.60" y1="0.00" x2="6.20" y2="0.00"/><line x1="3.25" y1="3.25" x2="4.38" y2="4.38"/><line x1="0.00" y1="4.60" x2="0.00" y2="6.20"/><line x1="-3.25" y1="3.25" x2="-4.38" y2="4.38"/><line x1="-4.60" y1="0.00" x2="-6.20" y2="0.00"/><line x1="-3.25" y1="-3.25" x2="-4.38" y2="-4.38"/><line x1="-0.00" y1="-4.60" x2="-0.00" y2="-6.20"/><line x1="3.25" y1="-3.25" x2="4.38" y2="-4.38"/></g></g>
+    <rect x="174.4" y="288" width="21.6" height="8" rx="4" fill="#FFE08A" fill-opacity="0.9"/>
+    <rect x="20" y="288" width="158.4" height="8" rx="4" fill="#3DE0C2"/>
+    <text x="240" y="312" text-anchor="end" font-size="11" fill="#FFE08A" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace">+8 % on this path</text>
+    <text x="300" y="24" font-size="11" fill="#8B95B5">C. Path dots near a star (rate 0 → 1 → 0)</text>
+    <circle cx="400" cy="200" r="22" fill="#FF8F1F"/><circle cx="400" cy="200" r="22" fill="none" stroke="#FFD27A" stroke-width="1" stroke-opacity="0.8"/>
+    <circle cx="259.0" cy="159.0" r="1.50" fill="#DCE4FF" opacity="0.7"/>
+    <circle cx="264.1" cy="149.3" r="1.50" fill="#DCE4FF" opacity="0.7"/>
+    <circle cx="270.1" cy="140.0" r="1.50" fill="#DCE4FF" opacity="0.7"/>
+    <circle cx="277.1" cy="131.2" r="1.65" fill="#E9E0CA" opacity="1.0"/>
+    <circle cx="285.1" cy="122.9" r="1.75" fill="#ECDEBC" opacity="1.0"/>
+    <circle cx="293.9" cy="115.1" r="1.85" fill="#EFDDAF" opacity="1.0"/>
+    <circle cx="303.6" cy="108.1" r="1.97" fill="#F2DCA2" opacity="1.0"/>
+    <circle cx="314.0" cy="101.7" r="2.10" fill="#F5DB96" opacity="1.0"/>
+    <circle cx="325.0" cy="96.1" r="2.24" fill="#F8DA8A" opacity="1.0"/>
+    <circle cx="336.6" cy="91.2" r="2.40" fill="#FBD97E" opacity="1.0"/>
+    <circle cx="348.7" cy="87.2" r="2.56" fill="#FED873" opacity="1.0"/>
+    <circle cx="361.2" cy="84.1" r="2.74" fill="#FFD86E" opacity="1.0"/>
+    <circle cx="374.0" cy="81.8" r="2.80" fill="#FFD86E" opacity="1.0"/>
+    <circle cx="386.9" cy="80.5" r="2.80" fill="#FFD86E" opacity="1.0"/>
+    <circle cx="400.0" cy="80.0" r="2.80" fill="#FFD86E" opacity="1.0"/>
+    <circle cx="413.1" cy="80.5" r="2.80" fill="#FFD86E" opacity="1.0"/>
+    <circle cx="426.0" cy="81.8" r="2.80" fill="#FFD86E" opacity="1.0"/>
+    <circle cx="438.8" cy="84.1" r="2.74" fill="#FFD86E" opacity="1.0"/>
+    <circle cx="451.3" cy="87.2" r="2.56" fill="#FED873" opacity="1.0"/>
+    <circle cx="463.4" cy="91.2" r="2.40" fill="#FBD97E" opacity="1.0"/>
+    <circle cx="475.0" cy="96.1" r="2.24" fill="#F8DA8A" opacity="1.0"/>
+    <circle cx="486.0" cy="101.7" r="2.10" fill="#F5DB96" opacity="1.0"/>
+    <circle cx="496.4" cy="108.1" r="1.97" fill="#F2DCA2" opacity="1.0"/>
+    <circle cx="506.1" cy="115.1" r="1.85" fill="#EFDDAF" opacity="1.0"/>
+    <circle cx="514.9" cy="122.9" r="1.75" fill="#ECDEBC" opacity="1.0"/>
+    <circle cx="522.9" cy="131.2" r="1.65" fill="#E9E0CA" opacity="1.0"/>
+    <circle cx="529.9" cy="140.0" r="1.50" fill="#DCE4FF" opacity="0.7"/>
+    <circle cx="535.9" cy="149.3" r="1.50" fill="#DCE4FF" opacity="0.7"/>
+    <circle cx="541.0" cy="159.0" r="1.50" fill="#DCE4FF" opacity="0.7"/>
+    <text x="300" y="250" font-size="11" fill="#8B95B5">D. Ship charging (flight)</text>
+    <g transform="translate(330 280)">
+      <circle r="9" fill="none" stroke="#FFE08A" stroke-width="1.2" opacity="0"><animate attributeName="r" values="9;18" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.75;0" dur="1.2s" repeatCount="indefinite"/></circle>
+      <circle r="13" fill="#FFE08A" opacity="0.12"/>
+      <g transform="rotate(60) translate(-12 -12)"><g stroke="#0A0D1A" stroke-width="1" stroke-linejoin="round"><polygon fill="#F2F5FF" points="8.2,12.5 4,19.2 7,19.6"/><polygon fill="#F2F5FF" points="15.8,12.5 20,19.2 17,19.6"/><polygon fill="#F2F5FF" points="12,2 18.5,21 12,16.5 5.5,21"/></g><rect x="11.2" y="7.5" width="1.6" height="4" rx="0.8" fill="#5EA0FF"/></g>
+    </g>
+  </g>
+</svg>

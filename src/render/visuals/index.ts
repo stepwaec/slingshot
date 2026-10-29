@@ -6,6 +6,7 @@ import { createPlanets } from "./planets";
 import { createRelativity } from "./relativity";
 import { createShip } from "./ship";
 import { createStar } from "./star";
+import { createScenery } from "./scenery";
 import { createStarfield } from "./starfield";
 
 /**
@@ -20,6 +21,7 @@ export const visualFactories = {
   relativity: createRelativity,
   gravity: createGravity,
   star: createStar,
+  scenery: createScenery,
   planets: createPlanets,
   path: createPath,
   ship: createShip,

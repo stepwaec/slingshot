@@ -23,6 +23,7 @@ uniform float uGlowR;
 uniform float uCoronaR;
 uniform float uBodyR;
 uniform float uSpikes;
+uniform float uTime;
 
 void over(inout vec3 dst, inout float da, vec3 src, float sa) {
   dst = src * sa + dst * (1.0 - sa);
@@ -54,9 +55,16 @@ void main() {
     over(col, a, uCore, spike * 0.9);
   }
   if (r < uBodyR) {
-    float t = r / uBodyR;
-    vec3 bc = t < 0.55 ? mix(uCore, uBody, t / 0.55) : mix(uBody, uEdge, (t - 0.55) / 0.45);
-    over(col, a, bc, 1.0);
+    float ang = atan(vLocal.y, vLocal.x);
+    float n = sin(ang * 7.0 + uTime * 0.45) * sin(ang * 13.0 - uTime * 0.22);
+    float limb = uBodyR * (1.0 + 0.035 * n);
+    if (r < limb) {
+      float t = r / limb;
+      vec3 bc = t < 0.55 ? mix(uCore, uBody, t / 0.55) : mix(uBody, uEdge, (t - 0.55) / 0.45);
+      float fil = pow(abs(sin(ang * 9.0 + r * 0.12 + uTime * 0.18)), 10.0);
+      bc = mix(bc, uCore, fil * 0.45);
+      over(col, a, bc, 1.0);
+    }
   }
   if (a < 0.004) discard;
   gl_FragColor = vec4(col, a);
@@ -113,6 +121,7 @@ interface StarView {
   bodyR: number;
   atmosphere: THREE.Mesh | null;
   ring: THREE.Mesh | null;
+  time: THREE.IUniform<number>;
 }
 
 function recipeFor(look: BodyLook | undefined, theme: Theme): StarRecipe {
@@ -219,15 +228,17 @@ class StarVisual implements Visual {
           uCoronaR: { value: look.coronaR },
           uBodyR: { value: look.bodyR },
           uSpikes: { value: look.spikes },
+          uTime: { value: 0 },
         }),
       );
+      const timeUniform = (mesh.material as THREE.ShaderMaterial).uniforms.uTime as THREE.IUniform<number>;
       mesh.position.set(body.x, body.y, 0);
       mesh.scale.setScalar(body.radius / look.bodyR);
       mesh.renderOrder = order++;
       mesh.name = body.id;
       mesh.userData.asset = look.asset;
       this.object.add(mesh);
-      this.stars.push({ body, mesh, bodyR: look.bodyR, atmosphere, ring });
+      this.stars.push({ body, mesh, bodyR: look.bodyR, atmosphere, ring, time: timeUniform });
     }
   }
 
@@ -238,7 +249,9 @@ class StarVisual implements Visual {
     const star = this.theme.star;
     const breathe = 1 + star.breathe * Math.sin((frame.now / star.periodMs) * Math.PI * 2);
     const dash = -((frame.now / 1000) * 8);
+    const plasma = frame.now * 0.001;
     for (const view of this.stars) {
+      view.time.value = plasma;
       const pose = bodyPose(view.body, time, bodies);
       view.mesh.position.set(pose.x, pose.y, 0);
       view.mesh.scale.setScalar((view.body.radius / view.bodyR) * breathe);

@@ -144,6 +144,12 @@ export const theme = {
     shaftWidth: 2,
     shaftAlpha: 0.9,
   },
+  /** Decorative sky around every level. Not part of the simulation. */
+  scenery: {
+    asteroidCount: 40,
+    wreckCount: 12,
+    nebulaSpan: 1100,
+  },
   gravity: {
     /** Even samples across the framed chart. The flat view draws every `flatStride` line. */
     cols: 48,
