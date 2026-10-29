@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { beamAxis, bodyPose, type Body } from "../../sim/physics";
 import type { Theme } from "../theme";
 import { disposeObject, type Visual, type VisualFactory, type VisualFrame } from "../visual";
+import { artForBody } from "../art-sprite";
 import { shader, srgbVec } from "./materials";
 
 /**
@@ -163,6 +164,7 @@ class CompactVisual implements Visual {
     let order = 4;
     for (const body of level.bodies) {
       if (body.look !== "neutron" && body.look !== "pulsar" && body.look !== "magnetar") continue;
+      if (artForBody(body, theme)) continue;
       const paint = paintFor(body);
       const glowR = body.look === "pulsar" ? 36 : body.look === "magnetar" ? 48 : 40;
       const glow = new THREE.Mesh(

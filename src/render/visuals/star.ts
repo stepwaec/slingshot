@@ -2,13 +2,13 @@ import * as THREE from "three";
 import { bodyPose, type Body, type BodyLook } from "../../sim/physics";
 import type { Theme } from "../theme";
 import { disposeObject, type Visual, type VisualFactory, type VisualFrame } from "../visual";
+import { artForBody } from "../art-sprite";
 import { shader, srgbVec } from "./materials";
 
 /**
- * One quad per star. Passage's sun keeps the original radial gradient.
- * Binary stars are a hot primary and a cool secondary. A white dwarf is a
- * small disc, a wide glow and four spikes. A red giant is the same disc in
- * deep red, with the drag atmosphere drawn behind it when the body sets one.
+ * One quad per star for looks that are still shaded here. The sun, binaries,
+ * white dwarf and red giant are Claude's SVGs, drawn by the art gallery, so
+ * this factory skips them. A red giant's drag atmosphere is in that SVG too.
  */
 export const createStar: VisualFactory = (theme, level) => new StarVisual(theme, level);
 
@@ -200,6 +200,7 @@ class StarVisual implements Visual {
     for (const body of level.bodies) {
       if (body.kind !== "star") continue;
       if (body.look === "neutron" || body.look === "pulsar" || body.look === "magnetar") continue;
+      if (artForBody(body, theme)) continue;
       const look = recipeFor(body.look, theme);
       const atmo = body.atmosphereRadius;
       let atmosphere: THREE.Mesh | null = null;
