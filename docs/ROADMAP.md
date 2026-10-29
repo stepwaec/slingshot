@@ -1,0 +1,145 @@
+# Slingshot: roadmap
+
+Repository: [stepwaec/slingshot](https://github.com/stepwaec/slingshot). Game design, physics rules and architecture are in [DESIGN.md](DESIGN.md).
+
+Last updated: 2026-10-29 (Europe/Zurich).
+
+Status values: **Done** (merged, with PR link), **In progress**, **On hold**, **Planned**. Every planned package is scoped with Stephan before it is built.
+
+Note on numbering: Brainstormer's first draft called the flight loop "WP2" and relativity "WP3". By the time they were scoped, WP2 (maneuver nodes) and WP3 (Three.js visuals) were already merged, so they were renamed WP4 and WP5.
+
+## Work packages
+
+| Package | Status | Scope |
+| --- | --- | --- |
+| WP1: prototype (gravity-assist flight) | Done, merged 2026-10-28 in [PR #1](https://github.com/stepwaec/slingshot/pull/1) | Browser prototype in TypeScript, Vite and HTML Canvas, no engine. Dark starfield with pan and zoom. Fixed bodies: start planet, target Planet X and one star or planet in between for a slingshot. Newtonian gravity on a fixed, deterministic time step shared by prediction and flight. Ship starts in orbit around the start planet with a fixed fuel budget. Drag from the ship to set a launch burn, with a live dotted prediction and fuel cost. Launch, trail, Reset, sim speed 1x/2x/4x. Outcomes: crash, "Lost in space" (out of bounds or timeout), and a win that requires capture into a stable orbit around Planet X (bound, periapsis above the surface, apoapsis inside the capture radius). Tests: prediction matches flight; the slingshot route uses less fuel than the direct route. |
+| Claude design: visual style v1 | Closed without merge: [PR #2](https://github.com/stepwaec/slingshot/pull/2). Its files were merged through PR #4. | Claude's `design/` folder: `style.md` (palette tokens, typography, glow rules, motion, HUD layout), `assets.md`, `canvas-notes.md` (written for Canvas 2D), SVG assets (ship, thrust, planets, star, starfield, trail, predicted path, drag arrow) and 1440x900 mockups of the planning, flight, win, crash and lost screens. No code. Stephan found the designs not realistic enough yet; realistic visuals are to be swapped in later. |
+| WP2: maneuver nodes (multi-burn planning) | Done, merged 2026-10-28 in [PR #3](https://github.com/stepwaec/slingshot/pull/3) | The plan becomes a list of burn nodes along the predicted path (like Kerbal Space Program). Click the dotted path to add a node, drag the handle to aim the burn, drag the marker to move it, delete it with a button or the Delete key. Capture is just another node. Prediction applies each node at its exact sim step and caches the state at each node, so editing node k only recomputes from k onward. Fuel adds up across all burns. |
+| WP3: Three.js visual pass | Done, merged 2026-10-28 in [PR #4](https://github.com/stepwaec/slingshot/pull/4) | Replaces the Canvas 2D view with an orthographic Three.js scene and an HTML/CSS HUD, and brings in Claude's design pack. Simulation, plan state and node logic unchanged; a test locks the camera projection to the previous screen mapping. Each visual is a swappable factory in `src/render/visuals/index.ts`, with colours, sizes and asset paths in `src/render/theme.ts`. 60 fps on a real GPU was not formally confirmed. |
+| WP4: flight loop (horizon, pause, moving bodies) | Done, merged 2026-10-29 in [PR #5](https://github.com/stepwaec/slingshot/pull/5) | Planets and moons on deterministic analytic orbits keyed by sim time (nested orbits work). Limited prediction horizon that shortens near big masses. At most 2 burns queued at once. Tactical pause with three configurable rules (unlimited, a few free per level, or a score cost per pause) plus slow motion. New level Relay that can only be won by pausing and adding a capture burn mid-flight (fuel budget 50, reference plan 48.87). Stable orbit around Planet X still required. 18 tests, including bit-for-bit prediction and pause-equals-uninterrupted. |
+| WP5: relativity and scoring | Done, merged 2026-10-29 in [PR #6](https://github.com/stepwaec/slingshot/pull/6) | Lowered, per-level speed of light. Ship time (proper time) vs outside time from speed and gravity, `dτ/dt = sqrt(1 - 2Φ/c² - v²/c²)`, clamped at 0, inside the pure physics step. Black hole horizon at `r_s = 2GM/c²`. HUD clock panel with both clocks, rate gauge, gap and deadline bar. Path tinted by clock rate in planning. Scoring: stable orbit required, outside-time deadline is a hard fail, crew-time and fuel bonuses, pause cost subtracted, three stars (deadline, crew time, fuel) weighted per level. Relativistic sky effects in flight view only. New level Rescue shows the deep-dive dilemma. 26 tests. |
+| WP6: gravity map view | Done, merged 2026-10-29 in [PR #7](https://github.com/stepwaec/slingshot/pull/7) | Planning and pause view toggle (G key or Gravity button) cycling off, a flat heatmap coloured by well depth, and a tilted 3D sheet (warped grid sinking by the real potential, log-scaled so black holes stay readable, planned path drawn on the sheet). C key or Clock rate button adds rest-frame clock-rate contours. Depth reads the same physics potential; tests prove grid depth equals the potential and that toggling never changes the sim or prediction. On a test machine without a GPU the map dropped from 23 to 16 fps; real-hardware speed is unproven. 30 tests. |
+| WP6b: gravity grid (curvature grid) | Done, merged 2026-10-29 in [PR #8](https://github.com/stepwaec/slingshot/pull/8) | Replaces the flat heatmap with the classic curvature diagram: an evenly spaced grid whose lines bend and bunch toward masses by the real potential, more tightly near deep wells, kept finite at black holes, moving with the bodies. Tilted sheet and clock-rate lines kept. G cycles off, grid and sheet. Visual only; 31 tests. |
+| WP7: burn animation, burn delete and plume | Done, merged 2026-10-29 in [PR #9](https://github.com/stepwaec/slingshot/pull/9) | Wind-up starting 0.5 s of sim time before each burn (engine glow and flicker, pulsing node marker) and a thrust tail after it, timings in `theme.burn`. Delete an unfired planned burn: click its dot, then press Delete or Backspace or the small x; prediction recomputes and fuel comes back; fired burns cannot be deleted. Plume starts at the nozzle and shows only behind the hull; wider and turbulent; blue-white core fading to violet with glow. Purely visual; tests prove flights and fuel are identical with or without the animation, and deleting a burn equals never placing it. 39 tests. |
+| WP7b: plume duration and trail | Done, merged 2026-10-29 in [PR #10](https://github.com/stepwaec/slingshot/pull/10) | Plume lasts longer for bigger burns: `min(tailMax, tailBase + tailPerDv * abs(dv))` with 1.15 s base, 0.16 s per unit delta-v, 4.2 s cap. The flown trail behind the ship becomes a narrower version of the plume (blue-white to violet glow) that fades after a while. Predicted line, physics, fuel and determinism unchanged. 41 tests. |
+| WP7c: levels as JSON and physics knobs | In progress (cloud agent started 2026-10-29) | 1) Every level as a plain JSON file with a typed, validated schema and a loader; Passage, Relay and Rescue play bit-for-bit identically. 2) A per-level physics block, each knob optional and defaulting to today's behaviour: speed of light c, gravity strength multiplier, gravity falloff shaping (softening length and exponent near 2), time-dilation strength, time-dilation cap (for example 10x) with smooth saturation, tidal damage strength and drag strength (schema only until tides and drag exist). 3) HUD shows rounded values and rising or falling trend arrows for clock rate and gaps. Done when each knob has a test showing its effect and that prediction still matches flight, the cap is continuous, monotonic and never above the cap, old levels are bit-identical, and all tests and the build pass. |
+| WP8: stellar variety | On hold until Claude's next design update lands. Brainstormer will then list the missing object designs, Stephan asks Claude for them, and WP8 starts. Scope approved by Stephan. | Binary stars (two stars orbiting their shared centre of mass on deterministic orbits, with a level where slingshot timing around the pair matters). White dwarfs (small, very dense, sharp gravity well, hard crash radius). Red giants (huge, soft outer atmosphere with deterministic drag that is in the prediction and only ever slows the ship). Gas giants with chains of 3 to 5 moons on resonant orbits for cheap course changes. Simple visuals for each via the swappable visual layer, shown on the gravity grid. Two or three new levels, each requiring a stable orbit around Planet X, winnable with a reference solution. One PR. (The "levels as JSON" step moved to WP7c.) |
+| Ship systems package (after WP8; number not assigned yet) | Planned | Hull health. Damage from collisions, close passes and tidal stress (the gravity gradient across the ship, strongest near white dwarfs, neutron stars and black holes), with a HUD stress warning and a red zone on the gravity grid. Solar recharge near stars (moved here from WP10). A basic upgrade screen, with upgrades bought with stars or points. Wires up the tidal damage knob from WP7c. |
+| WP9: compact objects plus magnetism layer | Planned | Neutron stars and pulsars (small and very heavy; beams damage on a rhythm), magnetars (fields scramble instruments so the prediction gets fuzzy), black holes with event horizons and lensing. Magnetism layer: a magnetic field model per body (dipole falling off with distance cubed), a danger heatmap from safe to dangerous for magnetars, neutron stars and gas giants, with its own toggle (M key and a HUD button, separate from G); the same field drives the magnetar fuzziness. Tests check field values and that the toggle never changes the sim. |
+| WP10: environment and resources | Planned | Nebulae (scoop fuel; they hide what is inside) and comets (ride them or harvest ice). Solar recharge was originally here and moved to the ship systems package. |
+| WP11: hazards plus radiation | Planned | Asteroid and Kuiper belts in density tiers, rogue planets, stray asteroids, solar flares. Radiation: sources are stars and flares, magnetic radiation belts, pulsars and magnetars, accretion disks and quasars, and background cosmic rays. Crew dose meter (too much fails the mission, a low dose earns a bonus), shielding as an upgrade that costs mass, hiding in a planet's shadow during flares, and a radiation heatmap toggle next to gravity and magnetism. |
+| WP12: dramatic events | Planned | Supernova countdowns (get out before the star explodes), shockwaves from supernova remnants, quasars. |
+| WP13: three-body chaos | Planned | Multi-sun systems (Trisolaran style) where three-body chaos means planning uses widening probability cones instead of exact lines. |
+| WP14: world builder | Planned | Build and share levels, using the JSON level format from WP7c. |
+| WP15: galaxy map | Planned | A galaxy-scale mission map where galaxies move relative to each other; each level stays one solar system. |
+| Late game: easter eggs and megastructures (after WP13) | Planned, no package number | Rare, optional easter eggs and the megastructures and exotic objects listed below. Scope with Stephan later. |
+
+## Full object list
+
+**In the game today**
+- Spaceship with fuel and up to two queued burns.
+- Start planet (Home) and Planet X (must be reached and orbited).
+- Stars and planets that bend the path for slingshots.
+- Moons; planets and moons move on orbits (WP4).
+- A black hole with a horizon in the Rescue level (WP5). *Uncertain:* full black hole visuals with lensing are still planned for WP9.
+
+**Planned, by package**
+- WP8: binary stars, white dwarfs, red giants (drag), gas giants with moon chains.
+- WP9: neutron stars, pulsars, magnetars, black holes with event horizons and lensing.
+- WP10: nebulae, comets.
+- WP11: asteroid belts and the Kuiper belt (density tiers: sparse, medium, dense), rogue planets, stray asteroids, solar flares, radiation belts.
+- WP12: supernovae, supernova remnant shockwaves, quasars.
+- WP13: multi-sun (three-body) systems.
+- WP15: star clusters, galaxies and galaxy clusters as the zooming mission map; supermassive black holes as the anchor of a galaxy-level map.
+- Other ideas mentioned, not assigned: gas clouds to scoop (original design doc), pickups such as fuel caches and derelict probes, in-flight surprises such as a sensor glitch.
+
+Inspiration list: [Wikipedia, Lists of astronomical objects](https://en.wikipedia.org/wiki/Lists_of_astronomical_objects).
+
+## Ship systems and the upgrade tree
+
+The ship systems package (after WP8) adds hull health, damage (collisions, close passes, tidal stress), solar recharge and a basic upgrade screen. Upgrades are bought with stars or points earned in levels, and new upgrades are added as each later package brings its hazards.
+
+**Key rule:** every upgrade has a trade-off, mainly mass. A heavier ship needs more fuel, so players cannot max everything and must pick a build per mission.
+
+| Upgrade | What it does | Trade-off |
+| --- | --- | --- |
+| Hull strength | Resists tidal stress and impacts. | Mass. |
+| Shielding | Radiation, magnetic and impact protection (for example for dense asteroid belts). | Mass (stated explicitly for radiation shielding). |
+| Engines | Chemical, then ion (efficient but weak), then pulse (powerful but thirsty). | Ion: low thrust. Pulse: high fuel use. Mass otherwise. |
+| Fuel tanks | More capacity. | Heavier. |
+| Solar panels | Faster recharge near stars. | Mass. |
+| Gas scoop | Harvests fuel from nebulae and gas giants. | Mass. |
+| Sensors | Longer planning horizon, less fuzziness near magnetars. | Mass. |
+| Cryosleep (time systems) | Slows crew ageing, which helps the ship-time score. | Mass. |
+
+*Uncertain:* the exact trade-off per upgrade beyond "mainly mass" was not specified.
+
+## Megastructures and exotic objects
+
+Confirmed by Stephan on 2026-10-29 for the late game (no build yet, scope later):
+
+- **Stellar engine:** a star turned into a rocket, with a fuel-rich jet to scoop from.
+- **Dyson swarm:** a cloud of solar collectors to weave through; dims the star, so solar recharge drops.
+- **Ringworld:** a giant ring around a star that you can fly through.
+- **Shkadov thruster:** a huge mirror slowly pushing a star, so the whole system drifts.
+- **Space elevator or orbital ring:** a free launch boost from a planet.
+- **Wormholes:** shortcuts whose exit lands you somewhere with a different clock.
+
+## Easter eggs
+
+Rare and optional, so they feel like real discoveries; placed after WP13.
+
+- **Dyson sphere:** a star partly wrapped in a shell; it dims the star (less solar recharge) and has gaps to slingshot through.
+- **Alien probes:** other ships flying their own slingshot routes; following one may reveal a shortcut.
+- **Derelict ships:** wrecks to salvage for rare upgrades.
+- **Ringworld or space station:** a refuel stop, or a secret level behind it.
+- **Signal beacons:** decode a pattern of pulses to unlock lore or a bonus mission.
+- **Wormhole:** a rare portal across the map with its own time-dilation twist.
+- **Sci-fi nods:** a monolith, a Voyager-style golden record, a Trisolaran fleet.
+
+### Pop-culture references
+
+- **Star Trek:** a "Kobayashi Maru" level you can only win with a trick; a Dyson sphere nod (there is one in The Next Generation); a "Make it so" achievement; a warp-bubble ship with a saucer-like silhouette.
+- **Star Wars:** a "Never tell me the odds" achievement for an asteroid belt; a Kessel Run level finished in under 12 parsecs; a twin-sun desert planet in the binary star levels.
+- **The Hitchhiker's Guide to the Galaxy:** a planet at coordinates 42; a towel as a hidden collectible; "Don't panic" on the crash screen.
+- **Interstellar:** a water planet near a black hole where 1 hour costs 7 years.
+- **2001: A Space Odyssey:** a black monolith orbiting a gas giant (Jupiter).
+- **The Three-Body Problem:** a Trisolaran fleet in the three-sun levels.
+- **The Expanse:** a ring gate as the wormhole design.
+
+**Copyright note:** keep these as playful hints only: names, quotes and silhouettes. No logos, actual ship designs or characters, to avoid copyright trouble if the game is ever published.
+
+## Backlog ideas
+
+Kept in mind, not scheduled:
+
+- Matrioshka brain (nested shells around a star, glowing with waste heat).
+- Jump gates (a fixed network of portals).
+- Alcubierre warp bubble (a short faster-than-light dash with odd time effects).
+- Mass drivers (launch rails that fling you at a set speed and angle).
+- Gravity tugs (alien ships that drag asteroids or bend your path).
+- Generation ships (slow arks drifting between stars).
+- Von Neumann probes (self-copying machines that multiply over time).
+- Ruins (shattered planets or broken Dyson shells).
+- Mining colonies on asteroids (refuel stop or trading post).
+- Beacons and buoys (lore and hints).
+- Cosmic strings (thin lines of extreme gravity that bend space sharply).
+- White holes (push you away; theoretical, never observed).
+- Negative-gravity fields (exotic matter areas that push instead of pull).
+
+Other gameplay ideas raised by Brainstormer and not yet scheduled: realistic visuals pass (textured lit planets, bloom, real starfields, lensing black holes, a 3D ship); menus and settings; saved plan snapshots and a parallax layer (original design doc); in-flight surprises and pickups; multi-stop missions; ghost runs; a daily challenge with a leaderboard; a campaign from a calm solar system to black holes and three-sun chaos; levels where the player places planets; a black hole "waiting room" to skip outside time.
+
+## Open decisions
+
+- **Game name:** not chosen. Dilation leads; Proper Time is the other favourite (see DESIGN.md). Availability checks not done.
+- **WP8 object designs:** waiting for Claude's next design update; then compare existing designs against WP8 needs and ask Claude for the missing ones.
+- **Ship systems package number** and exact placement relative to WP9 numbering.
+- **Upgrade currency and costs:** "stars or points" is not decided in detail.
+- **Gravity map performance:** 60 fps on a real GPU not yet confirmed (the no-GPU test machine showed 23 to 16 fps with the map on).
+- **Realistic visuals:** when to do the realism pass, and whether Claude's next update covers it.
+- **Gravity map cost in flight:** Brainstormer suggested it could be free in planning but cost energy in flight, or be unlocked by a tutorial; not decided.
+- **Easter eggs and megastructures:** which package(s) they go in after WP13.
+
+## How this document is maintained
+
+Engineering Manager keeps ROADMAP.md and DESIGN.md current in the repo. When a package lands, it updates the status and PR link in the table, moves scope changes into the right section, and tells Stephan what changed. New ideas from Stephan or Brainstormer go into the backlog or the relevant package after Stephan confirms them.
