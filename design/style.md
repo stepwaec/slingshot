@@ -1,6 +1,6 @@
 # Slingshot — visual style v1.5
 
-Calm, cinematic space for Slingshot. This file is the look; `canvas-notes.md` is the pixel-exact drawing reference (how each SVG recipe looks and what it costs, written for Canvas 2D); `threejs-notes.md` maps it onto the game's Three.js renderer (WP3); `assets.md` indexes every file. Sections: §1 mood · §2 palette (background, sky, the sun, the two original planets, the shared lighting tokens, UI) · §3 typography · §4 glow and blur rules, with **§4.1 Realism, vibrancy and crispness rules** · §5 motion · §6 layout · §7 asset index · §8 the **body library** (31 bodies: 12 planets, 6 stars and compact objects, 4 moons, 3 ringed planets, the 3 WP8 objects: binary star, red giant, moon chain, the 2 WP9 compact objects: pulsar, magnetar, and the WP10 comet) plus the WP9 **magnetism map** and the WP10 **solar recharge indicator** · §9 the **space environment** (nebulae, asteroid field, wreck debris) · §10 **ship systems** (modular ship, damage states, hull HUD, tidal-stress warning, upgrade screen). Assets live in `design/assets` (bodies in `design/assets/bodies`, the environment in `design/assets/space`, map overlays in `design/assets/overlays`, the modular ship in `design/assets/ship`), mockups (1440×900, PNG = 2× render) in `design/mockups`, animated previews in `design/preview/planets.html`, `bodies.html` and `space.html`.
+Calm, cinematic space for Slingshot. This file is the look; `canvas-notes.md` is the pixel-exact drawing reference (how each SVG recipe looks and what it costs, written for Canvas 2D); `threejs-notes.md` maps it onto the game's Three.js renderer (WP3); `assets.md` indexes every file. Sections: §1 mood · §2 palette (background, sky, the sun, the two original planets, the shared lighting tokens, UI) · §3 typography · §4 glow and blur rules, with **§4.1 Realism, vibrancy and crispness rules** · §5 motion · §6 layout · §7 asset index · §8 the **body library** (31 bodies: 12 planets, 6 stars and compact objects, 4 moons, 3 ringed planets, the 3 WP8 objects: binary star, red giant, moon chain, the 2 WP9 compact objects: pulsar, magnetar, and the WP10 comet) plus the WP9 **magnetism map** and the WP10 **solar recharge indicator** · §9 the **space environment** (nebulae, asteroid field, wreck debris) · §10 **ship systems** (modular ship, damage states, hull HUD, tidal-stress warning, upgrade screen) · §11 **WP11** (asteroid belts, Kuiper belt, rogue planet, radiation map, dose meter). Coding agents: read `IMPLEMENTING.md` first. Assets live in `design/assets` (bodies in `design/assets/bodies`, the environment in `design/assets/space`, map overlays in `design/assets/overlays`, the modular ship in `design/assets/ship`), mockups (1440×900, PNG = 2× render) in `design/mockups`, animated previews in `design/preview/planets.html`, `bodies.html` and `space.html`.
 
 **History in one paragraph.** v1 set the layout, UI and the two-glow rule. v1.1 was the first realism pass (limb-darkened star, planets with a terminator and a rim, a tinted starfield with a Milky Way). v1.2 made the planets rotate: a seamless texture strip slides under a lighting overlay that never moves. v1.3 built the body library (12 planets, 6 stars and compact objects) and gave the stars prominences and a flare. v1.4 adds moons, ringed planets, nebulae and debris fields (§8, §9). **v1.5 (revised) is the realism, vibrancy and crispness pass**, agreed with the client on two approved reference assets — the ocean world "variant F" and the sun "variant J" — and applied to every body: vivid multi-zone surfaces with crisp edges, elongated clouds with cast shadows, a warm terminator band, a lit-side haze and rim, a fiery plasma sun with ragged flame rings and an irregular rim, and no untinted grey anywhere. The earlier v1.5 "crispness pass" numbers (halve blurs, ±12 % lightness, limb line at α 0.30) were rejected as indistinguishable from v1.2 and are **not** used; §4.1 holds the rules that replaced them.
 
@@ -369,7 +369,7 @@ One row per top-level file in `design/assets`; the 23 library bodies in `design/
 
 ## 8. Body library (v1.3 set, v1.4 moons and rings, all built to the v1.5 rules)
 
-**31 bodies**: 12 planets, 6 stars and compact objects (v1.3), 4 moons and 3 ringed planets (v1.4), 3 WP8 objects (v2): a binary star, a red giant and a gas giant with a resonant moon chain, 2 WP9 compact objects (v2.1): a pulsar and a magnetar, and the WP10 comet (v2.2). Each lives in `design/assets/bodies/<name>.svg` (the ocean world is `bodies/ocean.svg`, a copy of `planet-start.svg` with ids `ps*` → `oc*`; planet X stays `planet-x.svg`; the sun stays `star.svg`). Each = `<defs>` with ids prefixed by the body's short code + **one** top-level group with geometry relative to (0, 0), a header comment listing every parameter (the canon), and its SMIL inside. Prefixes, unique across all assets because galleries inline them together: `rk ic lv tx cr oc gb gr mn dw db rd bg wd ns bh mi mv mc ms rs dr sh bn rg mk pu mg cm` + `star* px*` (`ps*` only in `planet-start.svg`).
+**32 bodies**: 12 planets, 6 stars and compact objects (v1.3), 4 moons and 3 ringed planets (v1.4), 3 WP8 objects (v2): a binary star, a red giant and a gas giant with a resonant moon chain, 2 WP9 compact objects (v2.1): a pulsar and a magnetar, the WP10 comet (v2.2), and the WP11 rogue planet (v2.4). Each lives in `design/assets/bodies/<name>.svg` (the ocean world is `bodies/ocean.svg`, a copy of `planet-start.svg` with ids `ps*` → `oc*`; planet X stays `planet-x.svg`; the sun stays `star.svg`). Each = `<defs>` with ids prefixed by the body's short code + **one** top-level group with geometry relative to (0, 0), a header comment listing every parameter (the canon), and its SMIL inside. Prefixes, unique across all assets because galleries inline them together: `rk ic lv tx cr oc gb gr mn dw db rd bg wd ns bh mi mv mc ms rs dr sh bn rg mk pu mg cm rp` + `star* px*` (`ps*` only in `planet-start.svg`).
 
 **Direction (client decision, unchanged): stay realistic**, now also **vibrant and crisp** (§4.1). Kurzgesagt is inspiration only, for colour harmony on deep navy and bold silhouettes; nothing of theirs is copied.
 
@@ -400,6 +400,7 @@ r is the radius at zoom 1. **`crashRadius`** is the contact radius: the solid di
 | `magnetar` | Magnetar (WP9) | `magnetar.svg` · `#magnetar` · `mg*` | 9 | 9 | field flicker 1.7–3.4 s, static 5 s, starquake 18 s | compact · extreme field that scrambles the prediction |
 | `blackHole` | Black hole | `black-hole.svg` · `#blackHole` · `bh*` | 22 (horizon) | 22 | disk 24 s | compact · star-class gravity, horizon-size crash |
 | `comet` | Comet (WP10) | `comet.svg` · `#comet` · `cm*` | 5 (nucleus) | 5 | ion flow 2.2–3.1 s, knot 9 s, coma 5 s, dust sparkles 9–14 s | small · a moving body to ride or harvest ice from; tails always point away from the star |
+| `roguePlanet` | Rogue planet (WP11) | `rogue-planet.svg` · `#roguePlanet` · `rp*` | 36 | 36 | thermal bands 90 s, hot spots 2.6–4.3 s | dark · a starless planet drifting in a straight line; a mass with no light and no recharge |
 | `moonIcy` | Icy moon (v1.4) | `moon-icy.svg` · `#moonIcy` · `mi*` | 12 | 12 | surface 150 s | moon · a bright cracked-ice nudge body |
 | `moonVolcanic` | Volcanic moon (v1.4) | `moon-volcanic.svg` · `#moonVolcanic` · `mv*` | 13 | 13 | surface 120 s; hot spots 6 s | moon · an Io-like sulphur moon |
 | `moonCaptured` | Captured asteroid moon (v1.4) | `moon-captured.svg` · `#moonCaptured` · `mc*` | 9 (equal-area mean; outline 6.7–11.9) | 9 (circle; a polygon test is an optional refinement) | tumble 70 s | moon · the only non-circular body |
@@ -1008,3 +1009,83 @@ The stress chip uses a 1 px coloured border on the panel fill, never a tinted fi
 - **Left:** the live ship at 5.8×, docked with its engine idle, on a blue pad (`#5EA0FF` α 0.28 → 0, dashed ring). Under it a stats panel: mass (with "+13 t vs base hull" in `stress.warn`), fuel range ("−11 % from mass") and solar recharge. Every upgrade costs mass, so mass and range lead.
 - **Right:** eight cards, two columns, 392 × 150. Each card has a thumbnail (the module in full colour over a blueprint of the base hull: fill `#0B1024`, outline `#5EA0FF` α 0.6), name, effect, tier pips (3), mass, star cost and one action: "Fitted" (accent with a check), "Upgrade to 2" or "Fit" (panel button), locked ("Need 1 more star", padlock, muted), or for engines a Chemical | Ion | Pulse segmented control. Fitted cards get an accent border.
 - **Bottom:** "Back" and "Launch" (primary), with the next level named.
+
+## 11. WP11 (v2.4): asteroid belts, Kuiper belt, rogue planet, radiation map, dose meter
+
+Files: `assets/space/belt-sparse.svg`, `belt-medium.svg`, `belt-dense.svg`, `kuiper-belt.svg`, `assets/bodies/rogue-planet.svg`, `assets/overlays/radiation-map.svg`, `assets/hud-dose.svg`, mockup `mockups/belts-radiation.svg`. Renderer notes: `threejs-notes.md` §14; implementation rules: `IMPLEMENTING.md` §5.
+
+### Asteroid belts
+
+- **A belt is an arc of a ring around its star.** Rocks are placed in polar coordinates about the star, with radius spread across the band and seeded from the level. A slow drift rotates the whole belt about its star (0 → −0.5° → 0 over 60 s).
+- **Every rock is lit toward its star.** The 6 seeded silhouettes per type are drawn lit from −x and each instance is rotated to point that side at the star. The shape is random, so rotating it costs nothing, and the lighting is always right.
+- **Rock construction** (as the v1.4 asteroid field, simplified for instancing): a rim polygon, the face shifted 0.9 units away from the light (so a crisp sunward rim shows), 2–4 accent spots, 1–2 craters, a terminator band with a thin warm `#FF9455` line, and a dark outline.
+- **Density tiers** read at a glance:
+
+| Tier | Per 100 px of arc (large / small / dust) | Gap | Haze | Read |
+|---|---|---|---|---|
+| Sparse | 1.3 / 1.9 / 7 | wide (+30) | none | big rocks, wide gaps: weave through |
+| Medium | 2.6 / 7.4 / 26 | +10 | α 0.035 | mixed sizes: pick a gap |
+| Dense | 3.7 / 20 / 96 | none | α 0.07 | packed with dust: shielding or go around |
+
+- **Edges** (planning and pause only): two dashed arcs at R ± 0.9 w, `#C9BBA8` α 0.4, 1 px, dash 5 6.
+- **Solidity:** rocks with r ≥ 7 are crash bodies; small rocks and dust are visual unless the level gives the tier a dust-damage rate.
+
+| Token | Rim / light / base / dark / night | Accent | Used for |
+|---|---|---|---|
+| `belt.rockS` | `#F0DCC0` / `#C8A684` / `#9A7A5E` / `#5A4636` / `#120E14` | rust `#C0562A` α 0.45 | Stony rocks (warm) |
+| `belt.rockC` | `#D8CCBE` / `#8E8478` / `#62584E` / `#3A332D` / `#0C0B12` | `#2A2420` α 0.5 | Carbonaceous rocks (dark) |
+| `belt.rockM` | `#EEF2FA` / `#B6BFD2` / `#8690A8` / `#4E566C` / `#0A0D18` | `#DCE4F6` α 0.35 | Metallic rocks (cool silver) |
+| `belt.haze` | `#C9B79E` | | Dust haze arcs (medium, dense) |
+| `belt.edge` | `#C9BBA8` | | Planning edges (= `rock.highlight`) |
+
+### Kuiper belt
+
+The outer belt: far out, wide (w 95), faint and mostly ice dust (60 % of specks `#DCEBF5`), with few small bodies (per 100 px of arc: 3.0 large, 8.5 small, 78 dust). Bodies are red-brown tholin crusts patched with bright frost, as real Kuiper objects are. A dwarf planet (r 13) can sit in it as a small mass.
+
+| Token | Hex | Used for |
+|---|---|---|
+| `kuiper.rock` | `#FFE6D8` / `#C88870` / `#9A5A46` / `#5A2E26` / `#120A10` | Rim / light / base / dark / night |
+| `kuiper.frost` | `#DCEBF5` | Frost patches (α 0.75) and ice dust |
+| `kuiper.haze` | `#BFD8E8` | Ice haze arcs (α 0.035) |
+| `kuiper.dwarf` | `#FFE9DC` → `#D6A08A` → `#5A2E26` | Dwarf planet; ice plain `#F4FAFF`, tholin `#8A3E2E`, night `#0C0A12` |
+
+### Rogue planet
+
+A planet with no star (r 36, crash 36). Nothing lights it, so it is read by its cold rim, its own faint heat, and the stars it hides. It still has gravity but gives no recharge, and it travels in a straight line through the level.
+
+| Token | Hex | Used for |
+|---|---|---|
+| `rogue.body` | `#1C1024` → `#100C1C` → `#070912` | Dark disc |
+| `rogue.thermal` | `#4A1428` / `#2E0C1E` / `#6A2034` / `#22091A` | Thermal bands (α 0.18–0.42), drifting 2 r per 90 s |
+| `rogue.hot` | `#FF6A3A` | Hot spots, flickering α 0.5 → 0.15 |
+| `rogue.rim` | `#6E7FA6` / `#AFC2EE` | Cold rim (full circle α 0.6) and upper arc (α 0.85) |
+| `rogue.airglow` | `#3A5A9A` / `#4E6FB8` | Thin airglow ring (peak α 0.35 at 0.82 of r 43.9) |
+| `rogue.drift` | `#8B95B5` | Planning drift arrow (dash 4 5, crawling) |
+
+### Radiation map (R)
+
+A third map, beside Gravity (G) and Magnetism (M), shown in planning and pause. Its grammar is a **halftone dot field** on a fixed 12 px screen grid, so it never reads like the gravity grid (lines) or the magnetism map (flat zones), and it stays crisp at every zoom.
+
+| Zone | Dose rate D (× D1) | Dot radius | Token | Hex |
+|---|---|---|---|---|
+| Background | < 1 | 0.5 px speck, α 0.25 | `rad.bg` | `#9BE15D` |
+| Low | ≥ 1 | 1.0 | `rad.low` | `#9BE15D` |
+| Raised | ≥ 3 | 1.6 | `rad.raised` | `#D4F03C` |
+| High | ≥ 8 | 2.3 | `rad.high` | `#FFE83A` |
+| Severe | ≥ 20 | 3.0 | `rad.severe` | `#FFF4B8` |
+
+- **Sources** (design defaults; the sim owns the numbers): stars `k (r0/d)²` scaled with luminosity; flares add a directed 20° cone; gas giants and magnetars carry radiation belts (an inner and an outer annulus at 2.1 R and 3.2 R); pulsars add their beam; accretion disks add a ring; a constant cosmic background.
+- **Shadows:** any body between a point and the star blocks the star and flare terms. The empty strip behind a planet during a flare is the safe place to hide.
+- **Sample placeholders:** `radiation-map.svg` stands in plain discs for the star (`#FF8F1F`, rim `#FFD27A`) and the planet (`#3A5A7A`, lit half `#C8A684`) so it shares no ids with the body assets; the game draws the real bodies.
+- **Legend** under the map toggles: "RADIATION", the key hint "R", four dots with labels. Dots stay out of the HUD rectangles.
+- The lime-to-pale-gold ramp is kept clear of the gravity map's blue-to-orange, the magnetism map's violet-to-pink and solar recharge's gold.
+
+### Dose meter
+
+The third block of the right-hand status stack (fuel 48 · hull 96 · dose 144); status chips move below it to y 170.
+
+- **Bar:** continuous (the hull bar is the segmented one), 220 × 8. `rad.doseOk #9BE15D` below the bonus mark, `rad.doseWarn #FFE83A` to 75 %, `rad.doseCrit #FF5A5F` from 75 % with a 1 s pulse.
+- **Marks:** a white tick and a gold star (`#FFD27A`, the star currency) at 25 % of the limit (finish below it for the bonus); a red tick at 100 % (the limit fails the mission).
+- **Header:** "DOSE", a trefoil in the bar colour, the total in mSv (red from 75 %).
+- **Rate line:** "+2.4 mSv/s · belt" with the dominant source, coloured by its map zone; "0.0 mSv/s · shadow" in `ui.textMuted` while a body shields the ship.
+- **Planning:** a ghost segment `#D4F03C` α 0.9 showing the dose the plan will add, and "+10 mSv on this path".

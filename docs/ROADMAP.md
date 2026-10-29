@@ -169,6 +169,18 @@ Stephan points Claude at this section for the next visual pack.
 
 **Guidelines:** a realistic and vibrant style matching v1.5 and v2; SVG files under `design/assets/`; easter eggs only as hints, never logos or characters.
 
+**For the implementing agents (Cursor, Grok):** before building any design pack, read [design/IMPLEMENTING.md](../design/IMPLEMENTING.md). It sets the order of precedence (the asset header is canon), the fidelity rules (exact tokens, crisp edges, no grey, hazards on sim time) and the realism rules for the engine (field laws, determinism, seeded placement). Claude reviewed `main` against the designs, including PR #32, in [design/IMPLEMENTATION-REVIEW.md](../design/IMPLEMENTATION-REVIEW.md), which lists each gap with its file, line and fix. Top fixes, in priority order:
+
+1. Ship sprites are anchored on the frame middle instead of the ship centre (`ship.ts:77`): translate the frame by −16.
+2. Since PR #32, every SVG body is a frozen picture, so the sun's flames, the turning planets, the gas-giant bands and the comet flow no longer move. Bake each animated layer separately and replay its header timing (layer ids are in the review).
+3. The SVG rasters soften above zoom 1 and alias when zoomed out: bake by DPR × zoom bucket, or use mips.
+4. The pulsar's drawn beams (228) are longer than its damage reach (180): draw the beams as their own quad scaled to `beam.reach`.
+5. The comet's tails don't scale with distance, and its dust tail isn't mirrored to trail the motion.
+6. Solar recharge: add the 8 % cutoff and luminosity term on the path, and build the HUD glyph, shimmer and ghost (`path.ts`, `main.ts`).
+7. Relay's moon orbits 6.8× faster than Kepler allows: set ω to 0.1607, and add an orbit lint.
+8. The shipyard cards lack thumbnails, tiers, mass and cost: follow `upgrade-screen.svg`.
+9. Nebulae draw above the bodies: give them a negative renderOrder.
+
 ## How this document is maintained
 
 Engineering Manager keeps ROADMAP.md and DESIGN.md current in the repo. When a package lands, it updates the status and PR link in the table, moves scope changes into the right section, and tells Stephan what changed. New ideas from Stephan or Brainstormer go into the backlog or the relevant package after Stephan confirms them.
