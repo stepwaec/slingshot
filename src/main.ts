@@ -6,6 +6,7 @@ import {
   canPause,
   createGame,
   cycleGravity,
+  gravityLabel,
   isEditing,
   launch,
   loadLevel,
@@ -188,11 +189,17 @@ function loop(now: number): void {
 }
 
 function syncGravity(current: Game): void {
-  const label = current.gravity === "grid" ? "Gravity grid" : current.gravity === "sheet" ? "Gravity sheet" : "Gravity off";
-  gravityButton.textContent = label;
-  gravityButton.setAttribute("aria-pressed", current.gravity === "off" ? "false" : "true");
+  const label = gravityLabel(current.gravity);
+  // Rewriting the text node every frame makes Safari drop the next click:
+  // mousedown and mouseup land on different nodes, so the map stays on.
+  if (gravityButton.textContent !== label) gravityButton.textContent = label;
+  const pressed = current.gravity === "off" ? "false" : "true";
+  if (gravityButton.getAttribute("aria-pressed") !== pressed) gravityButton.setAttribute("aria-pressed", pressed);
   gravityClockButton.hidden = current.gravity !== "grid";
-  gravityClockButton.setAttribute("aria-pressed", current.gravityClock ? "true" : "false");
+  const clockPressed = current.gravityClock ? "true" : "false";
+  if (gravityClockButton.getAttribute("aria-pressed") !== clockPressed) {
+    gravityClockButton.setAttribute("aria-pressed", clockPressed);
+  }
 }
 
 function syncHud(current: Game): void {
