@@ -25,6 +25,11 @@ import { scoreMission, type MissionScore } from "../sim/score";
 
 export type GameMode = "planning" | "flying" | "paused" | "finished";
 
+/** Gravity map. View only — cycling it must not touch the ship or the plan. */
+export type GravityView = "off" | "heat" | "sheet";
+
+const GRAVITY_VIEWS: readonly GravityView[] = ["off", "heat", "sheet"];
+
 export interface Game {
   level: Level;
   mode: GameMode;
@@ -53,6 +58,10 @@ export interface Game {
   cursor: { index: number };
   /** How many nodes have already spent fuel during this flight. */
   spentNodes: number;
+  /** Planning gravity map. Does not affect prediction or flight. */
+  gravity: GravityView;
+  /** Rest-frame clock-rate contours on the flat heatmap. */
+  gravityClock: boolean;
 }
 
 /** Planning, or a tactical pause mid-flight. Burns can be edited in both. */
@@ -92,7 +101,22 @@ export function createGame(level: Level = passage, camera: Camera = { x: 0, y: 0
     frameSamples: [],
     cursor: { index: 0 },
     spentNodes: 0,
+    gravity: "off",
+    gravityClock: false,
   };
+}
+
+/** Off → flat heatmap → tilted sheet → off. View state only. */
+export function cycleGravity(game: Game): GravityView {
+  const index = GRAVITY_VIEWS.indexOf(game.gravity);
+  const next = GRAVITY_VIEWS[(index + 1) % GRAVITY_VIEWS.length];
+  game.gravity = next;
+  return next;
+}
+
+/** Clock-rate overlay for the heatmap. Ignored by the sim. */
+export function setGravityClock(game: Game, on: boolean): void {
+  game.gravityClock = on;
 }
 
 export function loadLevel(game: Game, level: Level): void {
