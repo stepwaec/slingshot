@@ -80,6 +80,9 @@ function paint(theme: Theme, width: number, height: number, dpr: number): HTMLCa
   vignette.addColorStop(1, theme.colors.bg);
   g.fillStyle = vignette;
   g.fillRect(0, 0, width, height);
+  paintNebula(g, width * 0.28, height * 0.42, width * 0.42, height * 0.28, "#3A2A78", 0.28);
+  paintNebula(g, width * 0.72, height * 0.3, width * 0.36, height * 0.22, "#1C4E72", 0.22);
+  paintNebula(g, width * 0.55, height * 0.72, width * 0.5, height * 0.16, "#6A3058", 0.16);
 
   const rnd = mulberry32(sky.seed);
   const scale = (width * height) / (sky.referenceWidth * sky.referenceHeight);
@@ -87,8 +90,9 @@ function paint(theme: Theme, width: number, height: number, dpr: number): HTMLCa
   for (let layer = 0; layer < sky.layers.length; layer++) {
     const { color, radius, alpha, count } = sky.layers[layer];
     const n = Math.round(count * scale);
+    const tint = layer === 0 ? "#6E8FD0" : layer === 1 ? "#F0C48A" : color;
     g.globalAlpha = alpha;
-    g.fillStyle = color;
+    g.fillStyle = layer === sky.layers.length - 1 ? color : tint;
     g.beginPath();
     for (let i = 0; i < n; i++) {
       const x = rnd() * width;
@@ -113,4 +117,27 @@ function paint(theme: Theme, width: number, height: number, dpr: number): HTMLCa
   g.stroke();
   g.globalAlpha = 1;
   return canvas;
+}
+
+function paintNebula(
+  g: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  rx: number,
+  ry: number,
+  color: string,
+  alpha: number,
+): void {
+  g.save();
+  g.translate(x, y);
+  g.scale(1, ry / Math.max(rx, 1));
+  const wash = g.createRadialGradient(0, 0, 0, 0, 0, rx);
+  wash.addColorStop(0, color);
+  wash.addColorStop(1, "rgba(0,0,0,0)");
+  g.globalAlpha = alpha;
+  g.fillStyle = wash;
+  g.beginPath();
+  g.arc(0, 0, rx, 0, Math.PI * 2);
+  g.fill();
+  g.restore();
 }
