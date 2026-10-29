@@ -13,8 +13,11 @@ import veilData from "../levels/veil.json";
 import driftData from "../levels/drift.json";
 import shadeData from "../levels/shade.json";
 import wanderData from "../levels/wander.json";
+import weaveData from "../levels/weave.json";
+import frostData from "../levels/frost.json";
 import { loadLevelData, type Level, type LevelPhysics } from "./schema";
 import { shipLoadout } from "../game/upgrades";
+import { placeBelts } from "../sim/belts";
 
 /**
  * Shipped levels, loaded from `src/levels/*.json`.
@@ -35,8 +38,10 @@ export const veil: Level = loadLevelData(veilData, "src/levels/veil.json");
 export const drift: Level = loadLevelData(driftData, "src/levels/drift.json");
 export const shade: Level = loadLevelData(shadeData, "src/levels/shade.json");
 export const wander: Level = loadLevelData(wanderData, "src/levels/wander.json");
+export const weave: Level = loadLevelData(weaveData, "src/levels/weave.json");
+export const frost: Level = loadLevelData(frostData, "src/levels/frost.json");
 
-export const LEVELS: readonly Level[] = [passage, relay, rescue, pair, ember, chain, pulse, quake, needle, ice, veil, drift, shade, wander];
+export const LEVELS: readonly Level[] = [passage, relay, rescue, pair, ember, chain, pulse, quake, needle, ice, veil, drift, shade, wander, weave, frost];
 
 function bodyById(level: Level, id: string): Body {
   const body = level.bodies.find((item) => item.id === id);
@@ -94,6 +99,10 @@ export function simConfigFromLevel(level: Level, upgrades: readonly string[] = [
   if (physics?.doseLimit !== undefined) config.doseLimit = physics.doseLimit;
   if (load.shield < 1) config.shield = load.shield;
   if (level.nebulae && level.nebulae.length > 0) config.nebulae = level.nebulae;
+  if (level.belts && level.belts.length > 0) {
+    config.belts = level.belts;
+    config.beltRocks = placeBelts(level.belts);
+  }
   return config;
 }
 

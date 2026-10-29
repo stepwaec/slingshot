@@ -1,3 +1,4 @@
+import type { Belt, BeltTier } from "../sim/belts";
 import {
   BODY_LOOKS,
   type Beam,
@@ -103,6 +104,8 @@ export interface Level {
   physics?: LevelPhysics;
   /** Fuel clouds. Omitted means the level has none. */
   nebulae?: readonly Nebula[];
+  /** Asteroid or Kuiper belts. Omitted means the level has none. */
+  belts?: readonly Belt[];
 }
 
 /** A level file failed to parse or failed the schema. `issues` names each field. */
@@ -141,6 +144,7 @@ const LEVEL_KEYS = [
   "pause",
   "physics",
   "nebulae",
+  "belts",
 ] as const;
 
 const BODY_KEYS = [
@@ -169,6 +173,8 @@ const BEAM_KEYS = ["reach", "period", "base", "tip", "damage"] as const;
 const BODY_ORBIT_KEYS = ["centerId", "cx", "cy", "radius", "phase", "omega", "kind", "a", "e", "periapsisAngle"] as const;
 const NEBULA_KEYS = ["id", "x", "y", "rx", "ry", "angle", "scoop", "look"] as const;
 const NEBULA_LOOKS = ["emission", "reflection", "dark"] as const;
+const BELT_KEYS = ["id", "centerId", "radius", "width", "tier", "seed", "arcStart", "arcSpan", "dustDamage"] as const;
+const BELT_TIERS: readonly BeltTier[] = ["sparse", "medium", "dense", "kuiper"];
 const SHIP_KEYS = ["x", "y", "vx", "vy"] as const;
 const SHIP_ORBIT_KEYS = ["bodyId", "radius"] as const;
 const BOUNDS_KEYS = ["minX", "maxX", "minY", "maxY"] as const;
@@ -708,6 +714,18 @@ export function loadLevelData(data: unknown, source = "level"): Level {
   const orbitScale = g !== undefined && physics?.gravityScale !== undefined ? g * physics.gravityScale : g;
   if (orbitScale !== undefined) stampOrbits(bodies, orbitScale, issues);
 
+  const belts: Belt[] = [];
+  if (Object.prototype.hasOwnProperty.call(data, "belts")) {
+    if (!Array.isArray(data.belts)) issues.push("level.belts must be an array");
+    else {
+      const ids = new Set(bodies.map((body) => body.id));
+      for (let i = 0; i < data.belts.length; i++) {
+        const belt = readBelt(data.belts[i], `level.belts[${i}]`, issues, ids);
+        if (belt) belts.push(belt);
+      }
+    }
+  }
+
   if (
     issues.length > 0 ||
     id === undefined ||
@@ -751,7 +769,39 @@ export function loadLevelData(data: unknown, source = "level"): Level {
   if (pause) level.pause = pause;
   if (physics) level.physics = physics;
   if (nebulae.length > 0) level.nebulae = nebulae;
+  if (belts.length > 0) level.belts = belts;
   return level;
+}
+
+function readBelt(value: unknown, path: string, issues: string[], bodyIds: ReadonlySet<string>): Belt | undefined {
+  if (!isObject(value)) {
+    issues.push(`${path} must be an object`);
+    return undefined;
+  }
+  rejectUnknown(value, BELT_KEYS, path, issues);
+  const id = readString(value, "id", path, issues);
+  const centerId = readString(value, "centerId", path, issues);
+  const radius = readFinite(value, "radius", path, issues, { min: 0, exclusiveMin: true });
+  const width = readFinite(value, "width", path, issues, { min: 0, exclusiveMin: true });
+  const seed = readFinite(value, "seed", path, issues, { min: 0, integer: true });
+  const tierRaw = value.tier;
+  if (!Object.prototype.hasOwnProperty.call(value, "tier")) issues.push(`${path}.tier is required`);
+  else if (typeof tierRaw !== "string" || !BELT_TIERS.includes(tierRaw as BeltTier)) {
+    issues.push(`${path}.tier must be one of ${BELT_TIERS.join(", ")}`);
+  }
+  const arcStart = readOptionalFinite(value, "arcStart", path, issues, {});
+  const arcSpan = readOptionalFinite(value, "arcSpan", path, issues, { min: 0, exclusiveMin: true, max: Math.PI * 2 });
+  const dustDamage = readOptionalFinite(value, "dustDamage", path, issues, { min: 0 });
+  if (centerId !== undefined && bodyIds.size > 0 && !bodyIds.has(centerId)) {
+    issues.push(`${path}.centerId "${centerId}" does not match a body`);
+  }
+  if (id === undefined || centerId === undefined || radius === undefined || width === undefined || seed === undefined) return undefined;
+  if (typeof tierRaw !== "string" || !BELT_TIERS.includes(tierRaw as BeltTier)) return undefined;
+  const belt: Belt = { id, centerId, radius, width, tier: tierRaw as BeltTier, seed };
+  if (arcStart !== undefined) belt.arcStart = arcStart;
+  if (arcSpan !== undefined) belt.arcSpan = arcSpan;
+  if (dustDamage !== undefined) belt.dustDamage = dustDamage;
+  return belt;
 }
 
 /** Parse JSON text, then validate it. Malformed JSON names the syntax error. */

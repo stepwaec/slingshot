@@ -1,4 +1,5 @@
 import type { VisualFactory } from "../visual";
+import { createBelts } from "./belts";
 import { createGallery } from "./gallery";
 import { createClouds } from "./clouds";
 import { createComet } from "./comet";
@@ -32,6 +33,7 @@ export const visualFactories = {
   radiation: createRadiation,
   star: createStar,
   scenery: createScenery,
+  belts: createBelts,
   gallery: createGallery,
   planets: createPlanets,
   rogue: createRogue,

@@ -41,6 +41,10 @@ import nebulaReflectionUrl from "../../design/assets/space/nebula-reflection.svg
 import nebulaDarkUrl from "../../design/assets/space/nebula-dark.svg?url";
 import rogueUrl from "../../design/assets/bodies/rogue-planet.svg?url";
 import radiationUrl from "../../design/assets/overlays/radiation-map.svg?url";
+import beltSparseUrl from "../../design/assets/space/belt-sparse.svg?url";
+import beltMediumUrl from "../../design/assets/space/belt-medium.svg?url";
+import beltDenseUrl from "../../design/assets/space/belt-dense.svg?url";
+import kuiperUrl from "../../design/assets/space/kuiper-belt.svg?url";
 import { palette } from "./palette";
 
 /**
@@ -77,6 +81,10 @@ export const theme = {
     nebulaDark: nebulaDarkUrl,
     rogue: rogueUrl,
     radiation: radiationUrl,
+    beltSparse: beltSparseUrl,
+    beltMedium: beltMediumUrl,
+    beltDense: beltDenseUrl,
+    kuiper: kuiperUrl,
     starfield: starfieldUrl,
     predictedPath: predictedPathUrl,
     dragArrow: dragArrowUrl,

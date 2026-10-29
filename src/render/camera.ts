@@ -151,6 +151,15 @@ export function frameLevel(camera: Camera, width: number, height: number, level:
     minY = Math.min(minY, cover.y - cover.reach - pad);
     maxY = Math.max(maxY, cover.y + cover.reach + pad);
   }
+  for (const belt of level.belts ?? []) {
+    const center = level.bodies.find((body) => body.id === belt.centerId);
+    if (!center) continue;
+    const reach = belt.radius + belt.width;
+    minX = Math.min(minX, center.x - reach);
+    maxX = Math.max(maxX, center.x + reach);
+    minY = Math.min(minY, center.y - reach);
+    maxY = Math.max(maxY, center.y + reach);
+  }
   const worldW = Math.max(1, maxX - minX);
   const worldH = Math.max(1, maxY - minY);
   camera.zoom = Math.min(width / worldW, height / worldH) * 0.9;
