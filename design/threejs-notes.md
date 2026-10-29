@@ -4,7 +4,7 @@ How to build the v1.5 realistic look in the game's actual renderer: the orthogra
 
 Read with: `style.md` (tokens and rules), `assets.md` (one row per asset), the asset SVG header comments (the canon for every number), and in the code `src/render/visual.ts`, `src/render/visuals/index.ts`, `src/render/theme.ts`, `src/render/palette.ts`.
 
-Sections: §0 how the renderer is put together · §1 rules for the realistic visuals · §2 translating SVG filter recipes to GLSL · §3 planets · §4 stars · §5 compact objects · §6 moons and moon chains · §7 environment (nebulae, debris, rings) · §8 palette and colour · §9 budget · §10 asset → factory map, with what WP8 needs · §11 the magnetism map and fuzzy prediction (WP9).
+Sections: §0 how the renderer is put together · §1 rules for the realistic visuals · §2 translating SVG filter recipes to GLSL · §3 planets · §4 stars · §5 compact objects · §6 moons and moon chains · §7 environment (nebulae, debris, rings) · §8 palette and colour · §9 budget · §10 asset → factory map, with what WP8 needs · §11 the magnetism map and fuzzy prediction (WP9) · §12 comets and the solar recharge indicator (WP10).
 
 ---
 
@@ -141,6 +141,7 @@ One quad as today (`span 400`, scaled `r / 46`), with layers back to front match
 - `palette.ts` still holds the v1 tokens (`starBody #FFC857`, `planetStartBase #3D8BFF` and so on). The v1.5 tokens in `style.md` replace them for bodies: ocean `#1E5BD6`, shallow `#36B9D8`, land `#5FA84A`, forest `#3B7E3B`, desert `#D8B26E`, warm terminator `#FF9455`, night `#050B1E` / `#08122E`, sun body `#FFB43A` / `#FF8F1F` / `#FF7A14`, filament `#FFE7A0`, flame `#FFB347` / `#FF6A1A`, and the rest. **UI tokens are unchanged.**
 - New WP8 tokens are listed in `style.md` §8 (binary hot and cool, red giant, drag atmosphere).
 - New WP9 tokens are listed in `style.md` §8 WP9 (pulsar, magnetar, `magmap.*` zones, `path.ghost`).
+- New WP10 tokens are listed in `style.md` §8 WP10 (`comet.*`, `solar.*`).
 
 ## 9. Budget (targets for an integrated GPU, 1440×900 at DPR 2)
 
@@ -171,6 +172,8 @@ One quad as today (`span 400`, scaled `r / 46`), with layers back to front match
 | `bodies/pulsar.svg` (new, WP9) | — | beam quad rotated by sim time; reach and period from level data (§5) |
 | `bodies/magnetar.svg` (new, WP9) | — | baked field lines + shader dashes and flicker, static grain, starquake (§5) |
 | `overlays/magnetism-heatmap.svg` (new, WP9) | — | new `createMagnetism` visual on M; fuzzy spread on the predicted path (§11) |
+| `bodies/comet.svg` (new, WP10) | — | new `createComets` visual: head sprite + tail quads turned away from the star (§12) |
+| `solar-recharge.svg` (new, WP10) | path visual, HUD | gold path dots, fuel-block glyph and shimmer, ship pulse (§12) |
 | `space/*` nebulae, asteroid field, wreck | — | WP10 / WP11 layers (§7) |
 | `starfield.svg` | `createStarfield` (canvas texture) | add the v1.1 magnitude tints and the faint band when the sky is next touched |
 | ship, thrust, path, arrow, HUD | existing factories | unchanged by this design update (the game's own plume already moved past v1). The flown trail was removed from the game in PR #16; `trail.svg` stays as a design reference only |
@@ -209,3 +212,25 @@ Fill with the zone's colour at its fill alpha, then the edge at its edge alpha. 
 **Fuzzy prediction.** After predicting the path as today, walk it in 10 px steps and accumulate `σ += 6.0 · log2(max(x, 1.0)) · step / 100.0`, never decreasing. This is deterministic, so prediction and flight still match bit for bit; only the drawing changes. Draw the normal dots while σ < 0.6 px, then fade them, add the ±σ envelope as a triangle strip, and scatter two sets of ghost dots inside it, seeded by sample index so they do not swim, swapping every 0.3 s. Grow the end ring to r 6 + σ. The Sensors upgrade can scale the 6.0 factor down.
 
 **Budget.** One full-screen pass with up to 8 dipoles is about 40 ALU per pixel, well under 0.2 ms on an integrated GPU at DPR 2. Skip the pass entirely when M is off.
+
+## 12. Comets and solar recharge (WP10)
+
+The designs are `bodies/comet.svg`, `solar-recharge.svg` and `mockups/comet-recharge.svg`; values and tokens are in `style.md` §8 WP10.
+
+**Comet orbit.** Comets need eccentric orbits. Suggested level data: `orbit { kind: "ellipse", centerId, a, e, periapsisAngle, phase }`, solved per frame with Kepler's equation (a few Newton steps on `M = E − e sin E`), so the comet is fast near the star and slow far out. Keep it in `bodyPose` so prediction and flight stay bit-for-bit identical.
+
+**Comet visual.** One group per comet in world space, built from three pieces:
+
+1. **Head**: one quad with the coma, core and jets as a baked sprite, plus the nucleus drawn with the airless planet shader (lit from the star).
+2. **Tails**: one quad from the nucleus out to the tail length, rotated each frame to `atan2(p.y − star.y, p.x − star.x)` and scaled by `s = clamp(Rperi / d, 0.35, 1)` along the tail. Bake the dust strands and ion rays into a texture (dust in one channel, ion in another, strand index in a third), then colour them in the shader with the two gradients from the asset header.
+3. **Motion in the shader**: the solar-wind streaks are `step(fract(x / 100 − t / 2.5), 0.4)` along the ion channel; the disconnection knot is a soft ellipse moving out every 9 s; the dust sparkles are 8 points sampled along strand curves. All of it is cosmetic, so drive it with `frame.now`.
+
+Mirror the tail quad's y when the comet's angular velocity around the star changes sign, so the dust always lags the motion. The harvest ring is a ring quad like Planet X's capture ring, shown in planning and pause only.
+
+**Solar recharge.** Put the rate in a pure function next to the physics, `rechargeRate(p, bodies, ship)`, returning `rateMax · Σ L · min(1, (Rref / d)²)` over stars, so the HUD, the path tint and the fuel integration all read the same number. It must be in the prediction, because fuel collected changes what burns are affordable.
+
+- **Path dots**: after predicting, compute `t = rate / rateMax` per dot and use the colour, radius and alpha rule from `style.md` (a per-instance colour and size on the existing dot mesh). Sum the predicted gain for the end-ring label and the planning ghost segment.
+- **HUD**: the glyph, shimmer, sliver and rate text are DOM, next to the fuel bar. Animate the shimmer with a CSS gradient whose `background-position` moves every 1.8 s, or 0.9 s on a close pass (rate ≥ 0.6 · rateMax).
+- **Ship pulse**: a ring quad under the ship sprite, radius 9 → 18 and alpha 0.75 → 0 every 1.2 s, while `rate > 0` in flight.
+
+**Budget.** Comet: 2 quads and 2–3 texture samples, under 0.1 ms each. Recharge: per-dot colour on the existing path, so it is free.
