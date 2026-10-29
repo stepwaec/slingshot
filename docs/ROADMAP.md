@@ -33,7 +33,7 @@ Note on numbering: Brainstormer's first draft called the flight loop "WP2" and r
 | Implementation review | Done, merged 2026-10-29 in [PR #35](https://github.com/stepwaec/slingshot/pull/35) | Follows `design/IMPLEMENTING.md` through the visual items in `design/IMPLEMENTATION-REVIEW.md`. The sun's haze breathes and its flame and wisp rings turn. The ship frame is centred on the ship, and the longer plume still starts at the engine throat. SVG rasters bake at DPR × zoom bucket with mipmaps. The comet's dust tail mirrors with its orbit. Nebulae draw behind bodies. Prediction is unchanged. |
 | Remaining visual review | In progress, opened 2026-10-29 in [PR #38](https://github.com/stepwaec/slingshot/pull/38) | Home, Planet X and gas giants scroll their strips under a separate light layer. The comet's ion wind, knot and coma move. The magnetar's dashes, grain and starquake run. The red giant's drag edge crawls. The recharge HUD and the shipyard follow their SVG headers. The recharge cutoff, Kepler speeds and every other physics note stay unchanged. |
 | WP11: hazards plus radiation | Done, merged 2026-10-29 in [PR #42](https://github.com/stepwaec/slingshot/pull/42) and [PR #43](https://github.com/stepwaec/slingshot/pull/43). | Radiation: stars, flares, magnetic belts, pulsar beams, black-hole disks and cosmic background feed one dose field. Crew dose integrates in the sim step (the limit fails the mission), shielding halves it and adds mass, a planet's disc shadows a star and its flare, and a Radiation button draws the halftone map. Levels Shade and Wander. Rogue planets drift in a straight line. This pass adds seeded asteroid belts (sparse, medium, dense) and the Kuiper belt: rocks with r ≥ 7 crash (Kuiper r ≥ 5), dense dust can drain hull, shielding halves that, and the edges show in planning. Levels Weave and Frost. |
-| WP12: dramatic events | Planned, next | Supernova countdowns (get out before the star explodes), shockwaves from supernova remnants, quasars. |
+| WP12: dramatic events | Done, 2026-10-29 in [PR #46](https://github.com/stepwaec/slingshot/pull/46) | Supernova countdowns (get out before the star explodes), shockwaves from supernova remnants, quasars. Flash: the sun detonates at a sim time, the blast is lethal, and the remnant shell crosses the ship once. A quasar jet burns hull on sim time. There is no art for either in `design/`, so the rings and the jet bar are placeholders. |
 | WP13: three-body chaos | Planned | Multi-sun systems (Trisolaran style) where three-body chaos means planning uses widening probability cones instead of exact lines. |
 | WP14: world builder | Planned | Build and share levels, using the JSON level format from WP7c. |
 | WP15: galaxy map | Planned | A galaxy-scale mission map where galaxies move relative to each other; each level stays one solar system. |
@@ -68,11 +68,11 @@ Physics stays game-like but true to its real shape, and prediction always matche
 - A rogue planet (Wander) that drifts in a straight line, has gravity, and gives no recharge.
 - Asteroid belts (Weave) and a Kuiper belt (Frost). Seeded rocks. The large ones are solid. Dense dust can drain the hull, and shielding halves that.
 - Planet X on a Kepler orbit around its sun (Lead). A plain ring, a placeholder until Claude designs the marker, shows where a moving body will be at each burn and under the cursor.
+- A supernova with a lethal blast and a remnant shock, and a quasar jet (Flash). The drawings are placeholders.
 
 **Planned, by package**
 - Asteroid belts in sparse, medium and dense tiers, and a Kuiper belt (Weave, Frost). Rocks are seeded. Large ones crash the ship. Dense dust can drain hull, and shielding halves that.
 - Stray asteroids that are not part of a belt are still open.
-- WP12: supernovae, supernova remnant shockwaves, quasars.
 - WP13: multi-sun (three-body) systems.
 - WP15: star clusters, galaxies and galaxy clusters as the zooming mission map; supermassive black holes as the anchor of a galaxy-level map.
 - Other ideas mentioned, not assigned: gas clouds to scoop (original design doc), pickups such as fuel caches and derelict probes, in-flight surprises such as a sensor glitch.
@@ -190,6 +190,7 @@ Stephan points Claude at this section for the next visual pack.
 1. **Collisions and consumption** (LU3). Impact flash, debris, a planet's tidal-disruption stream, burning up in a star, and a star falling into an accretion disk. `design/` has none of these.
 2. **Ghost markers** (LU2) for where a moving body will be. The path ghosts, the recharge planning ghost and the dose ghost are already specified. A marker on a body's future position is not.
 3. **A lone stray asteroid**, outside a belt. The WP11 note above still stands: `design/` has the belt fields and the rogue planet, not a stray rock.
+4. **Supernova and quasar art.** The countdown, the remnant shock, and the quasar jet are in the game as placeholders. `design/` has no asset for them.
 
 **Guidelines:** a realistic and vibrant style matching v1.5 and v2; SVG files under `design/assets/`; easter eggs only as hints, never logos or characters.
 

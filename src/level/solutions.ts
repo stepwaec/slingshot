@@ -182,3 +182,9 @@ export const leadPlan: readonly BurnNode[] = [
   { step: 0, dvx: 6, dvy: 0 },
   { step: 230, dvx: -12.457725858549999, dvy: -19.6212337239022 },
 ];
+
+/** Flash: stay outside the blast, take the remnant shock, and capture. */
+export const flashPlan: readonly BurnNode[] = [
+  { step: 0, dvx: 11.737771208805668, dvy: 2.494940289813112 },
+  { step: 7520, dvx: 2.8813474188411083, dvy: 3.210953879851165 },
+];

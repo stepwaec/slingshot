@@ -165,9 +165,13 @@ const BODY_KEYS = [
   "harvestRadius",
   "drift",
   "flare",
+  "supernova",
+  "quasar",
 ] as const;
 const DRIFT_KEYS = ["vx", "vy"] as const;
 const FLARE_KEYS = ["angle", "period", "start", "duration"] as const;
+const SUPERNOVA_KEYS = ["at", "blast", "speed", "damage"] as const;
+const QUASAR_KEYS = ["angle", "cone", "reach", "damage", "period", "sweep"] as const;
 const MAGNET_KEYS = ["b1Reach", "tilt", "averaged"] as const;
 const BEAM_KEYS = ["reach", "period", "base", "tip", "damage"] as const;
 const BODY_ORBIT_KEYS = ["centerId", "cx", "cy", "radius", "phase", "omega", "kind", "a", "e", "periapsisAngle"] as const;
@@ -474,6 +478,12 @@ function readBody(value: unknown, path: string, issues: string[]): Body | undefi
   if (Object.prototype.hasOwnProperty.call(value, "drift")) drift = readDrift(value.drift, `${path}.drift`, issues);
   let flare: Body["flare"];
   if (Object.prototype.hasOwnProperty.call(value, "flare")) flare = readFlare(value.flare, `${path}.flare`, issues);
+  let supernova: Body["supernova"];
+  if (Object.prototype.hasOwnProperty.call(value, "supernova")) {
+    supernova = readSupernova(value.supernova, `${path}.supernova`, issues);
+  }
+  let quasar: Body["quasar"];
+  if (Object.prototype.hasOwnProperty.call(value, "quasar")) quasar = readQuasar(value.quasar, `${path}.quasar`, issues);
   let look: BodyLook | undefined;
   if (Object.prototype.hasOwnProperty.call(value, "look")) {
     const raw = value.look;
@@ -507,10 +517,45 @@ function readBody(value: unknown, path: string, issues: string[]): Body | undefi
   if (kindRaw === "rogue" && orbit) issues.push(`${path} a rogue planet travels in a straight line, not an orbit`);
   if (drift) body.drift = drift;
   if (flare) body.flare = flare;
+  if (supernova) body.supernova = supernova;
+  if (quasar) body.quasar = quasar;
   if (harvestRadius !== undefined && radius !== undefined && !(harvestRadius > radius)) {
     issues.push(`${path}.harvestRadius must be greater than radius`);
   }
   return body;
+}
+
+function readSupernova(value: unknown, path: string, issues: string[]): Body["supernova"] | undefined {
+  if (!isObject(value)) {
+    issues.push(`${path} must be an object`);
+    return undefined;
+  }
+  rejectUnknown(value, SUPERNOVA_KEYS, path, issues);
+  const at = readFinite(value, "at", path, issues, { min: 0 });
+  const blast = readFinite(value, "blast", path, issues, { min: 0 });
+  const speed = readFinite(value, "speed", path, issues, { min: 0 });
+  const damage = readFinite(value, "damage", path, issues, { min: 0 });
+  if (at === undefined || blast === undefined || speed === undefined || damage === undefined) return undefined;
+  return { at, blast, speed, damage };
+}
+
+function readQuasar(value: unknown, path: string, issues: string[]): Body["quasar"] | undefined {
+  if (!isObject(value)) {
+    issues.push(`${path} must be an object`);
+    return undefined;
+  }
+  rejectUnknown(value, QUASAR_KEYS, path, issues);
+  const angle = readFinite(value, "angle", path, issues, {});
+  const cone = readFinite(value, "cone", path, issues, { min: 0, exclusiveMin: true });
+  const reach = readFinite(value, "reach", path, issues, { min: 0, exclusiveMin: true });
+  const damage = readFinite(value, "damage", path, issues, { min: 0 });
+  const period = readOptionalFinite(value, "period", path, issues, { min: 0 });
+  const sweep = readOptionalFinite(value, "sweep", path, issues, {});
+  if (angle === undefined || cone === undefined || reach === undefined || damage === undefined) return undefined;
+  const jet: NonNullable<Body["quasar"]> = { angle, cone, reach, damage };
+  if (period !== undefined) jet.period = period;
+  if (sweep !== undefined) jet.sweep = sweep;
+  return jet;
 }
 
 function readPhysics(value: unknown, path: string, issues: string[]): LevelPhysics | undefined {

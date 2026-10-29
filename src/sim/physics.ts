@@ -32,6 +32,7 @@
  */
 
 import { beltDrift, pointInBelt, type Belt, type BeltRock } from "./belts";
+import { blastHits, quasarDamage, shockCrosses, type QuasarJet, type Supernova } from "./events";
 
 export interface Vec2 {
   x: number;
@@ -168,6 +169,10 @@ export interface Body {
    * The cone is on while `(time % period)` is inside `[start, start + duration)`.
    */
   flare?: { angle: number; period: number; start: number; duration: number };
+  /** Detonation and the remnant shock. Omitted stars never explode. */
+  supernova?: Supernova;
+  /** Bipolar jet. Omitted bodies have none. */
+  quasar?: QuasarJet;
 }
 
 /** World position and velocity of one body at an instant. */
@@ -288,7 +293,7 @@ export interface PauseBudget {
 
 export type FlightStatus = "flying" | "won" | "crashed" | "lost";
 
-export type LostReason = "bounds" | "timeout" | "flyby" | "hull" | "dose";
+export type LostReason = "bounds" | "timeout" | "flyby" | "hull" | "dose" | "nova";
 
 /** What the dose meter names as the strongest source at a point. */
 export type DoseSource = "star" | "flare" | "belt" | "pulsar" | "disk" | "cosmic" | "shadow";
@@ -1646,6 +1651,54 @@ export function iceHarvestRate(x: number, y: number, time: number, bodies: reado
   return rate;
 }
 
+/**
+ * Supernova blast, remnant shock, and quasar jets. Motion is untouched.
+ * A level with neither leaves the state alone.
+ */
+function applyDramatic(state: SimState, config: SimConfig, x0: number, y0: number, t0: number, t1: number): void {
+  const bodies = config.bodies;
+  const g = gravityConstant(config);
+  for (let i = 0; i < bodies.length; i++) {
+    const body = bodies[i];
+    const nova = body.supernova;
+    const jet = body.quasar;
+    if (!nova && !jet) continue;
+    const p0 = bodyPose(body, t0, bodies, g);
+    const p1 = bodyPose(body, t1, bodies, g);
+    if (nova) {
+      const d0 = Math.hypot(x0 - p0.x, y0 - p0.y);
+      const d1 = Math.hypot(state.x - p1.x, state.y - p1.y);
+      if (blastHits(d0, d1, nova, t0, t1)) {
+        state.hull = 0;
+        state.status = "lost";
+        state.lostReason = "nova";
+        return;
+      }
+      if (shockCrosses(d0, d1, nova, t0, t1)) {
+        state.hull -= nova.damage;
+        if (!(state.hull > 0)) {
+          state.hull = 0;
+          state.status = "lost";
+          state.lostReason = "nova";
+          return;
+        }
+      }
+    }
+    if (jet && jet.damage > 0) {
+      const rate = quasarDamage(state.x - p1.x, state.y - p1.y, jet, t1);
+      if (rate > 0) {
+        state.hull -= rate * config.dt;
+        if (!(state.hull > 0)) {
+          state.hull = 0;
+          state.status = "lost";
+          state.lostReason = "hull";
+          return;
+        }
+      }
+    }
+  }
+}
+
 /** Hull per second from belt dust, after shielding. 0 when the level has no dust rate. */
 function beltDust(x: number, y: number, config: SimConfig, time: number): number {
   const belts = config.belts;
@@ -1816,6 +1869,8 @@ export function step(state: SimState, config: SimConfig): void {
 
   accrueClocks(state, rateThen, dt);
   state.rate = properTimeRate(state.x, state.y, state.vx, state.vy, config, t1);
+  applyDramatic(state, config, x0, y0, t0, t1);
+  if (state.status !== "flying") return;
   applyShipSystems(state, config, t1);
   if (state.status !== "flying") return;
 

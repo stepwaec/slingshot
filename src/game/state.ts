@@ -530,7 +530,9 @@ export function outcomeCopy(game: Game): { title: string; detail: string } | nul
       ? "The hull failed."
       : game.ship.lostReason === "dose"
         ? "The crew took a lethal dose."
-        : "The ship left the charted system.";
+        : game.ship.lostReason === "nova"
+          ? "The star exploded."
+          : "The ship left the charted system.";
   return { title: "Lost in space", detail: why };
 }
 
