@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { burnHandleOffset, nodeIncoming, nodePosition, planFuel } from "../../game/state";
+import { burnHandleOffset, isEditing, nodeIncoming, nodePosition, planFuel } from "../../game/state";
 import type { Vec2 } from "../../sim/physics";
 import { projectToScreen } from "../camera";
 import { powerHex } from "../palette";
@@ -37,7 +37,7 @@ class NodesVisual implements Visual {
 
   update(frame: VisualFrame): void {
     const { game, width, height } = frame;
-    const planning = game.mode === "planning";
+    const planning = isEditing(game);
     if (!planning) {
       for (const node of this.nodes) hide(node);
       return;

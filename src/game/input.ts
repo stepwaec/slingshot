@@ -4,13 +4,17 @@ import {
   burnHandleOffset,
   clearPlan,
   deleteSelected,
+  isEditing,
   launch,
   moveNodeAlong,
   nodeIncoming,
   nodePosition,
+  pause,
   reset,
+  resume,
   selectNode,
   setNodeBurn,
+  setSlow,
   setSpeed,
   type Game,
   type RailSample,
@@ -25,6 +29,9 @@ export interface InputElements {
   resetButtons: HTMLButtonElement[];
   clearButtons: HTMLButtonElement[];
   speedButtons: HTMLButtonElement[];
+  pauseButton: HTMLButtonElement;
+  resumeButton: HTMLButtonElement;
+  slowButton: HTMLButtonElement;
 }
 
 const HANDLE_RADIUS = 16;
@@ -60,13 +67,13 @@ export function bindInput(
     canvas.setPointerCapture(event.pointerId);
     const size = getSize();
     const hit = hitTest(game, size.width, size.height, event.offsetX, event.offsetY);
-    if (game.mode === "planning" && hit.type === "handle") {
+    if (isEditing(game) && hit.type === "handle") {
       selectNode(game, hit.index);
       drag = { kind: "handle", index: hit.index };
       canvas.classList.add("aiming");
       return;
     }
-    if (game.mode === "planning" && (hit.type === "node" || hit.type === "path")) {
+    if (isEditing(game) && (hit.type === "node" || hit.type === "path")) {
       if (hit.type === "node") selectNode(game, hit.index);
       drag = { kind: "pending", hit, x: event.offsetX, y: event.offsetY };
       return;
@@ -108,7 +115,7 @@ export function bindInput(
     pointerId = null;
     drag = null;
     canvas.classList.remove("aiming", "panning");
-    if (!finished || game.mode !== "planning") return;
+    if (!finished || !isEditing(game)) return;
     if (finished.kind === "pending" && finished.hit.type === "path") addNode(game, finished.hit.step);
     if (finished.kind === "pending" && finished.hit.type === "node") selectNode(game, finished.hit.index);
     if (finished.kind === "pan" && !finished.moved) selectNode(game, null);
@@ -133,6 +140,9 @@ export function bindInput(
   };
 
   elements.launchButton.addEventListener("click", () => launch(game));
+  elements.pauseButton.addEventListener("click", () => pause(game));
+  elements.resumeButton.addEventListener("click", () => resume(game));
+  elements.slowButton.addEventListener("click", () => setSlow(game, !game.slow));
   elements.deleteButton.addEventListener("click", () => deleteSelected(game));
   for (const button of elements.resetButtons) button.addEventListener("click", doReset);
   for (const button of elements.clearButtons) button.addEventListener("click", () => clearPlan(game));
@@ -144,14 +154,22 @@ export function bindInput(
   }
 
   window.addEventListener("keydown", (event) => {
-    if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
+    const target = event.target;
+    if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) return;
     if (event.code === "Space") {
       event.preventDefault();
-      launch(game);
+      if (game.mode === "planning") launch(game);
+      else if (game.mode === "flying") pause(game);
+      else if (game.mode === "paused") resume(game);
+    } else if (event.key === "p" || event.key === "P") {
+      if (game.mode === "flying") pause(game);
+      else if (game.mode === "paused") resume(game);
+    } else if (event.key === "s" || event.key === "S") {
+      setSlow(game, !game.slow);
     } else if (event.key === "r" || event.key === "R") {
       doReset();
     } else if (event.key === "Delete" || event.key === "Backspace") {
-      if (game.selected === null || game.mode !== "planning") return;
+      if (game.selected === null || !isEditing(game)) return;
       event.preventDefault();
       if (event.repeat) return;
       deleteSelected(game);
@@ -208,7 +226,7 @@ function slideNode(
 }
 
 function hitTest(game: Game, width: number, height: number, sx: number, sy: number): Hit {
-  if (game.mode !== "planning") return { type: "empty" };
+  if (!isEditing(game)) return { type: "empty" };
   const handle = closestHandle(game, width, height, sx, sy);
   if (handle !== null) return { type: "handle", index: handle };
   const node = closestNode(game, width, height, sx, sy);
@@ -252,11 +270,12 @@ function closestNode(game: Game, width: number, height: number, sx: number, sy: 
 function closestPathStep(game: Game, width: number, height: number, sx: number, sy: number): number | null {
   let bestStep: number | null = null;
   let bestD = PATH_RADIUS * PATH_RADIUS;
-  const origin = worldToScreen(game.camera, width, height, game.initial.x, game.initial.y);
+  const pose = game.mode === "paused" ? game.ship : game.initial;
+  const origin = worldToScreen(game.camera, width, height, pose.x, pose.y);
   const originD = (origin.x - sx) * (origin.x - sx) + (origin.y - sy) * (origin.y - sy);
   if (originD <= 16 * 16) {
     bestD = originD;
-    bestStep = game.initial.step;
+    bestStep = pose.step;
   }
   const path = game.prediction.path;
   // The step that ended the flight is already lost or won; a new burn there never fires.

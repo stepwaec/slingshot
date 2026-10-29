@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import type { Game } from "../game/state";
+import type { Level } from "../level/passage";
 import { syncTopDown, topDownCamera } from "./camera";
 import { theme } from "./theme";
 import type { Visual, VisualSpace } from "./visual";
@@ -26,7 +27,8 @@ export class SpaceView {
   private readonly worldScene = new THREE.Scene();
   private readonly screenScene = new THREE.Scene();
   private readonly screenCamera: THREE.OrthographicCamera;
-  private readonly visuals: Visual[];
+  private visuals: Visual[];
+  private readonly parents: Record<VisualSpace, THREE.Object3D>;
   private width = 1;
   private height = 1;
   private dpr = 1;
@@ -56,18 +58,32 @@ export class SpaceView {
     this.screenCamera.position.set(0, 0, 10);
     this.screenCamera.quaternion.identity();
 
-    const parent: Record<VisualSpace, THREE.Object3D> = {
+    this.parents = {
       background: this.bgScene,
       world: this.world,
       screen: this.screenScene,
     };
-    this.visuals = (Object.keys(visualFactories) as (keyof typeof visualFactories)[]).map((name) => {
-      const visual = visualFactories[name](theme, game.level);
-      parent[visual.space].add(visual.object);
-      return visual;
-    });
+    this.visuals = this.mount(game.level);
     this.worldScene.add(this.world);
     this.worldScene.add(this.rig);
+  }
+
+  /** Rebuild visuals after the level's bodies change. The renderer stays. */
+  reload(level: Level): void {
+    for (const visual of this.visuals) {
+      visual.object.removeFromParent();
+      visual.dispose();
+    }
+    this.visuals = this.mount(level);
+    for (const visual of this.visuals) visual.resize?.(this.width, this.height, this.dpr);
+  }
+
+  private mount(level: Level): Visual[] {
+    return (Object.keys(visualFactories) as (keyof typeof visualFactories)[]).map((name) => {
+      const visual = visualFactories[name](theme, level);
+      this.parents[visual.space].add(visual.object);
+      return visual;
+    });
   }
 
   resize(width: number, height: number): void {

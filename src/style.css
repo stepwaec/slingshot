@@ -101,6 +101,25 @@ html, body, #app {
   color: var(--text);
 }
 
+.level-pick {
+  position: absolute;
+  left: 40px;
+  top: 84px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+.level-pick select {
+  font: 600 12px/1 var(--ui);
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+
 .fuel-block {
   position: absolute;
   top: 28px;
@@ -158,6 +177,18 @@ html, body, #app {
   white-space: pre;
 }
 
+#plan-note {
+  position: absolute;
+  left: 40px;
+  bottom: 48px;
+  margin: 0;
+  font: 400 12px/1 var(--mono);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+#plan-note[hidden] { display: none; }
+
 #fps {
   position: absolute;
   right: 40px;
@@ -179,6 +210,7 @@ html, body, #app {
 }
 
 #app[data-mode="flying"] .dock,
+#app[data-mode="paused"] .dock,
 #app[data-mode="finished"] .dock { bottom: 62px; }
 
 #node-row {
@@ -290,9 +322,20 @@ button:disabled:active { background: var(--panel); }
   background: color-mix(in srgb, var(--accent) 92%, white);
 }
 
-#flight-actions [data-reset] {
-  width: 96px;
+#flight-actions [data-reset],
+#pause,
+#resume,
+#slow {
   height: 36px;
+  padding: 0 12px;
+}
+
+#flight-actions [data-reset] { width: 96px; }
+
+#slow[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--ink);
+  border-color: transparent;
 }
 
 #node-row button {

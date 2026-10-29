@@ -1,5 +1,6 @@
 import * as THREE from "three";
-import type { Body } from "../../sim/physics";
+import type { Game } from "../../game/state";
+import { bodyPose, type Body } from "../../sim/physics";
 import type { Theme } from "../theme";
 import { disposeObject, type Visual, type VisualFactory, type VisualFrame } from "../visual";
 import { shader, srgbVec } from "./materials";
@@ -77,7 +78,10 @@ void main() {
 
 interface PlanetView {
   body: Body;
+  mesh: THREE.Mesh;
+  halo: THREE.Mesh | null;
   radiusPx: THREE.IUniform;
+  light: THREE.Vector2;
 }
 
 interface RingView {
@@ -107,8 +111,9 @@ class PlanetsVisual implements Visual {
       if (body.kind === "star") continue;
       const target = body.kind === "target";
       this.object.userData.asset = target ? theme.assets.planetX : theme.assets.planetStart;
+      let halo: THREE.Mesh | null = null;
       if (target) {
-        const halo = new THREE.Mesh(
+        halo = new THREE.Mesh(
           new THREE.PlaneGeometry(2, 2),
           shader(haloFrag, { uColor: { value: srgbVec(theme.colors.planetXBase) } }),
         );
@@ -119,11 +124,12 @@ class PlanetsVisual implements Visual {
         this.object.add(halo);
       }
       const radiusPx = { value: body.radius };
+      const light = lightDir(body, star);
       const colors = theme.colors;
       const mesh = new THREE.Mesh(
         new THREE.PlaneGeometry(2, 2),
         shader(planetFrag, {
-          uLight: { value: lightDir(body, star) },
+          uLight: { value: light },
           uHighlight: { value: srgbVec(target ? colors.planetXHighlight : colors.planetStartHighlight) },
           uBase: { value: srgbVec(target ? colors.planetXBase : colors.planetStartBase) },
           uShadow: { value: srgbVec(target ? colors.planetXShadow : colors.planetStartShadow) },
@@ -138,7 +144,7 @@ class PlanetsVisual implements Visual {
       mesh.renderOrder = order++;
       mesh.name = body.id;
       this.object.add(mesh);
-      this.planets.push({ body, radiusPx });
+      this.planets.push({ body, mesh, halo, radiusPx, light });
 
       if (body.captureRadius !== undefined) {
         const uniforms = {
@@ -173,10 +179,27 @@ class PlanetsVisual implements Visual {
   update(frame: VisualFrame): void {
     const zoom = frame.game.camera.zoom;
     const spec = this.theme.planet;
-    for (const planet of this.planets) planet.radiusPx.value = planet.body.radius * zoom;
+    const time = simTime(frame.game);
+    const bodies = frame.game.level.bodies;
+    const star = bodies.find((body) => body.kind === "star");
+    const starPose = star ? bodyPose(star, time, bodies) : null;
+    for (const planet of this.planets) {
+      planet.radiusPx.value = planet.body.radius * zoom;
+      const pose = bodyPose(planet.body, time, bodies);
+      planet.mesh.position.set(pose.x, pose.y, 0);
+      if (planet.halo) planet.halo.position.set(pose.x, pose.y, 0);
+      if (starPose) {
+        const dx = starPose.x - pose.x;
+        const dy = starPose.y - pose.y;
+        const d = Math.hypot(dx, dy) || 1;
+        planet.light.set(dx / d, dy / d);
+      }
+    }
     const pulse = Math.sin((frame.now / spec.ringPulseMs) * Math.PI * 2) * 0.5 + 0.5;
     const locked = frame.game.mode === "finished" && frame.game.ship.status === "won";
     for (const ring of this.rings) {
+      const pose = bodyPose(ring.body, time, bodies);
+      ring.mesh.position.set(pose.x, pose.y, 0);
       const capture = ring.body.captureRadius ?? ring.body.radius;
       const pad = (8 + 4) / Math.max(zoom, 0.18);
       const reach = capture + pad;
@@ -200,6 +223,11 @@ class PlanetsVisual implements Visual {
   dispose(): void {
     disposeObject(this.object);
   }
+}
+
+function simTime(game: Game): number {
+  const step = game.mode === "planning" ? 0 : game.ship.step;
+  return step * game.level.dt;
 }
 
 function lightDir(body: Body, star: Body | undefined): THREE.Vector2 {

@@ -86,14 +86,28 @@ export function frameLevel(camera: Camera, width: number, height: number, level:
   let maxY = -Infinity;
   for (const body of level.bodies) {
     const pad = Math.max(body.captureRadius ?? 0, body.radius) + 110;
-    minX = Math.min(minX, body.x - pad);
-    maxX = Math.max(maxX, body.x + pad);
-    minY = Math.min(minY, body.y - pad);
-    maxY = Math.max(maxY, body.y + pad);
+    const cover = orbitCover(body, level.bodies);
+    minX = Math.min(minX, cover.x - cover.reach - pad);
+    maxX = Math.max(maxX, cover.x + cover.reach + pad);
+    minY = Math.min(minY, cover.y - cover.reach - pad);
+    maxY = Math.max(maxY, cover.y + cover.reach + pad);
   }
   const worldW = Math.max(1, maxX - minX);
   const worldH = Math.max(1, maxY - minY);
   camera.zoom = Math.min(width / worldW, height / worldH) * 0.9;
   camera.x = (minX + maxX) / 2;
   camera.y = (minY + maxY) / 2;
+}
+
+/** Center and extra radius swept by an analytic orbit. Fixed bodies have reach 0. */
+function orbitCover(body: Level["bodies"][number], bodies: Level["bodies"], depth = 0): { x: number; y: number; reach: number } {
+  const orbit = body.orbit;
+  if (!orbit || depth > 4) return { x: body.x, y: body.y, reach: 0 };
+  if (orbit.centerId) {
+    const center = bodies.find((item) => item.id === orbit.centerId);
+    if (!center) return { x: body.x, y: body.y, reach: orbit.radius };
+    const parent = orbitCover(center, bodies, depth + 1);
+    return { x: parent.x, y: parent.y, reach: parent.reach + orbit.radius };
+  }
+  return { x: orbit.cx ?? body.x, y: orbit.cy ?? body.y, reach: orbit.radius };
 }
