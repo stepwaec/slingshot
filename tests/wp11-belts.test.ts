@@ -130,4 +130,15 @@ describe("WP11 belts", () => {
     expectFlightMatches(weave, weavePlan);
     expectFlightMatches(frost, frostPlan);
   });
+
+  it("places each belt list once", () => {
+    const belts = frost.belts;
+    if (!belts) throw new Error("frost");
+    const first = placeBelts(belts);
+    const started = performance.now();
+    const second = placeBelts(belts);
+    expect(second).toBe(first);
+    expect(first.length).toBeGreaterThan(100);
+    expect(performance.now() - started).toBeLessThan(1);
+  });
 });
