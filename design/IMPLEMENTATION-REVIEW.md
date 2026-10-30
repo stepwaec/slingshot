@@ -173,6 +173,14 @@ Landed in [PR #64](https://github.com/stepwaec/slingshot/pull/64), from the ghos
   - a path chip where the plan crosses level 3
 - **Mockup:** the planning view should match `mockups/planning-tidal.svg`.
 
+## Cryosleep (v3.7): lifespan, sleep stretch, pods
+
+- **New work.** Follow `style.md` §23 and `threejs-notes.md` §27:
+  - the CREW lifespan block at the end of the status stack (ship-time ageing, the ice bar while asleep, the planning ghost)
+  - the sleep stretch on the predicted path with capsule handles, the wake snap before burns, and the optional wake on danger
+  - the pod states on the cryo module and the ring round a sleeping ship
+- **Mockup:** the planning view should match `mockups/planning-cryosleep.svg`.
+
 ## Priority fixes
 
 Do these first. They are the biggest visible or gameplay gaps after #32.

@@ -509,3 +509,12 @@ Designs: `overlays/tidal-stress.svg`, `mockups/planning-tidal.svg`. Values in `s
 4. **Path chip.** When the prediction spends steps at S ≥ `STRESS_WARN`, chip the longest stretch with its duration and its summed hull loss.
 5. **Layers.** Add the row to the menu table, available when `tidalStrength` > 0 and a compact body exists. Its key is T.
 
+## 27. Cryosleep
+
+Designs: `hud-crew.svg`, `cryo-segment.svg`, `ship/cryo-pods.svg`, `mockups/planning-cryosleep.svg`. Values in `style.md` §23.
+
+1. **State.** A plan holds at most one sleep per coast as two sim times, `sleepAt` and `wakeAt`, in ship time. Deterministic: the sim decides asleep from the step's ship time, never from frame time, so 1× and 32× sleep the same steps. `wakeAt` is clamped to 1 s of ship time before the next burn; an auto-wake (optional) moves it to the first predicted step inside a hazard.
+2. **Ageing.** Each step adds `dτ` (the ship-time step, already slowed by the clock rate) to `crewAge` unless the crew is asleep. Lifespan left = `lifespan − crewAge`; at 0 the mission is lost. The prediction carries `crewAge` along the path so the HUD ghost can show what the plan uses and what the sleep keeps (the same plan with and without the sleep).
+3. **HUD.** A fourth status block in the DOM stack (like `#dose`), placed after the dose block. The ice bar is a CSS gradient with a frost-needle background image and an animated shimmer; the hatch is a repeating linear gradient at −35°.
+4. **Path.** Draw the stretch over the prediction stroke: a wide soft line and a narrow core in `cryo.glow` (px-space widths, like the path dots), the dash crawling with time, the dots inside tinted `cryo.ice`, and glints as point sprites. Handles are px-space capsule quads aligned with the path tangent, hit-tested like burn nodes and dragged along the predicted points.
+5. **Ship.** While asleep, switch the cryo module to the asleep pod state and add the breathing ring and snowflake around the ship (screen-space, under the ship sprite).
