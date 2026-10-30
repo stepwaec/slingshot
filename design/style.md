@@ -1,6 +1,6 @@
 # Slingshot — visual style v1.5
 
-Calm, cinematic space for Slingshot. This file is the look; `canvas-notes.md` is the pixel-exact drawing reference (how each SVG recipe looks and what it costs, written for Canvas 2D); `threejs-notes.md` maps it onto the game's Three.js renderer (WP3); `assets.md` indexes every file. Sections: §1 mood · §2 palette (background, sky, the sun, the two original planets, the shared lighting tokens, UI) · §3 typography · §4 glow and blur rules, with **§4.1 Realism, vibrancy and crispness rules** · §5 motion · §6 layout · §7 asset index · §8 the **body library** (31 bodies: 12 planets, 6 stars and compact objects, 4 moons, 3 ringed planets, the 3 WP8 objects: binary star, red giant, moon chain, the 2 WP9 compact objects: pulsar, magnetar, and the WP10 comet) plus the WP9 **magnetism map** and the WP10 **solar recharge indicator** · §9 the **space environment** (nebulae, asteroid field, wreck debris) · §10 **ship systems** (modular ship, damage states, hull HUD, tidal-stress warning, upgrade screen) · §11 **WP11** (asteroid belts, Kuiper belt, rogue planet, radiation map, dose meter) · §12 **ship and planning view** (burn plume, burn node, gravity grid and sheet) · §13 **late game** (stellar engine, Dyson swarm, ringworld, Shkadov thruster, space elevator, wormhole pair) and **living surfaces** · §14 **collisions and consumption** (impact, debris field, tidal disruption, burning up in a star, accretion, event telegraphs) · §15 **ghost markers** (where a moving body will be) · §16 **supernova, quasar and stray asteroid** (WP12) · §17 **target zone** (orbit capture) · §18 **Sol bodies** (the Sol campaign). Coding agents: read `IMPLEMENTING.md` first. Assets live in `design/assets` (bodies in `design/assets/bodies`, the environment in `design/assets/space`, map overlays in `design/assets/overlays`, the modular ship in `design/assets/ship`, late-game structures in `design/assets/mega`, scripted events in `design/assets/events`), mockups (1440×900, PNG = 2× render) in `design/mockups`, animated previews in `design/preview/planets.html`, `bodies.html` and `space.html`.
+Calm, cinematic space for Slingshot. This file is the look; `canvas-notes.md` is the pixel-exact drawing reference (how each SVG recipe looks and what it costs, written for Canvas 2D); `threejs-notes.md` maps it onto the game's Three.js renderer (WP3); `assets.md` indexes every file. Sections: §1 mood · §2 palette (background, sky, the sun, the two original planets, the shared lighting tokens, UI) · §3 typography · §4 glow and blur rules, with **§4.1 Realism, vibrancy and crispness rules** · §5 motion · §6 layout · §7 asset index · §8 the **body library** (31 bodies: 12 planets, 6 stars and compact objects, 4 moons, 3 ringed planets, the 3 WP8 objects: binary star, red giant, moon chain, the 2 WP9 compact objects: pulsar, magnetar, and the WP10 comet) plus the WP9 **magnetism map** and the WP10 **solar recharge indicator** · §9 the **space environment** (nebulae, asteroid field, wreck debris) · §10 **ship systems** (modular ship, damage states, hull HUD, tidal-stress warning, upgrade screen) · §11 **WP11** (asteroid belts, Kuiper belt, rogue planet, radiation map, dose meter) · §12 **ship and planning view** (burn plume, burn node, gravity grid and sheet) · §13 **late game** (stellar engine, Dyson swarm, ringworld, Shkadov thruster, space elevator, wormhole pair) and **living surfaces** · §14 **collisions and consumption** (impact, debris field, tidal disruption, burning up in a star, accretion, event telegraphs) · §15 **ghost markers** (where a moving body will be) · §16 **supernova, quasar and stray asteroid** (WP12) · §17 **target zone** (orbit capture) · §18 **Sol bodies** (the Sol campaign) · §19 **Astrophage** (infected stars, the Petrova line, the spin drive, Tau Ceti, the Astrophage map). Coding agents: read `IMPLEMENTING.md` first. Assets live in `design/assets` (bodies in `design/assets/bodies`, the environment in `design/assets/space`, map overlays in `design/assets/overlays`, the modular ship in `design/assets/ship`, late-game structures in `design/assets/mega`, scripted events in `design/assets/events`), mockups (1440×900, PNG = 2× render) in `design/mockups`, animated previews in `design/preview/planets.html`, `bodies.html` and `space.html`.
 
 **History in one paragraph.** v1 set the layout, UI and the two-glow rule. v1.1 was the first realism pass (limb-darkened star, planets with a terminator and a rim, a tinted starfield with a Milky Way). v1.2 made the planets rotate: a seamless texture strip slides under a lighting overlay that never moves. v1.3 built the body library (12 planets, 6 stars and compact objects) and gave the stars prominences and a flare. v1.4 adds moons, ringed planets, nebulae and debris fields (§8, §9). **v1.5 (revised) is the realism, vibrancy and crispness pass**, agreed with the client on two approved reference assets — the ocean world "variant F" and the sun "variant J" — and applied to every body: vivid multi-zone surfaces with crisp edges, elongated clouds with cast shadows, a warm terminator band, a lit-side haze and rim, a fiery plasma sun with ragged flame rings and an irregular rim, and no untinted grey anywhere. The earlier v1.5 "crispness pass" numbers (halve blurs, ±12 % lightness, limb line at α 0.30) were rejected as indistinguishable from v1.2 and are **not** used; §4.1 holds the rules that replaced them.
 
@@ -1399,4 +1399,55 @@ Files: `assets/sol/*.svg` (16 assets), mockup `mockups/sol-moon.svg` (mission 1,
 | `pluto.heart` / `pluto.cthulhu` | `#F6EBDD` / `#6B3322` | Pluto |
 
 Every other hex value is listed in its asset's header, which is canon.
+
+## 19. Astrophage (v3.2)
+
+Files:
+- `assets/astro/`: `infected-star.svg`, `petrova-line.svg`, `astrophage-knot.svg`, `astrophage-harvest.svg`, `hud-astrophage.svg`, `tau-ceti.svg`
+- `assets/ship/engine-spin.svg`
+- `assets/overlays/astrophage-map.svg`
+- mockup `mockups/planning-astrophage.svg`
+
+Renderer notes: `threejs-notes.md` §22. This is a Project Hail Mary nod, shown in hints only: nothing is named after the book on screen, and the Taumoeba world is never labelled.
+
+**One colour for Astrophage.** Its real glow is infrared and invisible. The game shows it as crimson (`astro.crimson`, with pale highlights) so it can't be confused with the blue-white to violet engines, the magenta magnetar or the mint target. Astrophage is drawn as crisp motes, strands and sparkles, never as a wide low-alpha wash, so it never turns muddy on navy.
+
+- **Infected star.** Any star look plus the `#aiOverlay` group, scaled to the star's radius:
+  - black cells (`astro.cell`) crossing the disc, the field turning once per 240 s
+  - a ring of about 220 crimson motes twinkling just outside the limb
+
+  The star keeps its full colour, because the real dimming is a few percent. A dark veil turns it brown, so never add one. The planning chip ("infected N/10 · dims N % · recharge ×N") and the Astrophage map carry the numbers.
+- **The Petrova line.** A living river from the star to its breeding planet, built from six layers (canon in the asset header):
+  - a glow band that widens toward the planet
+  - four braided strands shimmering outward
+  - drifting motes
+  - racing white-hot glints with pink tails
+  - four-point sparkles popping in and out
+  - a breeding cloud round the planet
+
+  In the "eaten" variant (Tau Ceti), the line turns `astro.taumoeba` green past its eaten point and fades out before the planet. It is the player's trail to fuel.
+- **Knot.** A dense cluster on a line is a fuel pickup. Planning shows the harvest ring and "Astrophage · scoop to harvest · +N %". The motes thin out as the knot is drained.
+- **Harvest.** With the gas scoop fitted and the ship inside a knot, motes stream on curves into both intakes, shrinking as they go, and crimson rings pulse at the mouths.
+- **Spin drive.** A spin chamber with a crimson ring. Its beam is a photon drive: perfectly straight, white-hot at the throat, fading through pale pink to crimson and magenta, with a heat shimmer. In the game it is longer than any chemical plume. When idle, the ring breathes and there is no beam.
+- **Fuel row.** A second row in the fuel block, shown only with a spin drive. It has a crimson bar with an Astrophage speckle, a sparkle on the leading edge while harvesting, a planning ghost "+N % on this path", "spin drive ready · Δv ×N" when full, and "spin drive · burning N %/s".
+- **Tau Ceti.** The approved star at r 40, tinted slightly yellower, and clean. It has a dust disk ten times the Kuiper belt's, tilted 35° (back half behind the star), and three planets inside the disk's inner edge. Its Petrova line is eaten before it reaches the sea-green world: the mission's question, shown not told.
+- **Astrophage map (key A).** The fourth map overlay, in planning and pause only:
+  - **Ticks:** flow ticks on a 14 px screen grid; length and colour give the density (Trace, Present, Dense, Harvest, Eaten), and a head dot points along the migration.
+  - **Gauges:** infected stars get a 10-segment infection gauge; clean stars get a gold ring.
+  - **Labels:** each knot gets a fuel label; an eaten line gets "Astrophage eaten here".
+  - **Controls:** the toggle row gains an "Astrophage" button, with its legend below like the radiation legend.
+
+  Later, on the galaxy map (WP15), infected stars get a gauge badge and clean stars a gold ring.
+
+| Token | Hex | Used for |
+|---|---|---|
+| `astro.crimson` | `#FF3D6E` | Astrophage: motes, strands, glow band, beam fringe, chips, map ticks, gauge |
+| `astro.pink` | `#FF7A9C` | Strands, glint tails, Trace ticks, fuel bar end |
+| `astro.pale` | `#FFC2D2` | Highlights, Harvest ticks, knot ring and labels |
+| `astro.spark` | `#FFF2F6` | Sparkles and glint heads (cores `#FFFFFF`) |
+| `astro.cell` | `#1A0610` | Black Astrophage cells on the disc and in the fuel bar's speckle |
+| `astro.beam` | `#FFD6E0` → `#FF3D6E` → `#C0287A` | Spin drive beam (core `#FFFFFF` → `#FFF4F7`; chamber `#1C2348`) |
+| `astro.bar` | `#C8285A` → `#FF3D6E` → `#FF7A9C` | Astrophage fuel bar |
+| `astro.taumoeba` | `#6EF0A0` (pale `#C8FFD9`) | An eaten line, the Eaten ticks, the shimmer round the Taumoeba world |
+| `astro.clean` | `#FFD27A` | A clean star's ring and chip (= `solar.glyph`) |
 

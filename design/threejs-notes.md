@@ -401,3 +401,37 @@ Designs: `assets/sol/*.svg`, `mockups/sol-moon.svg`, `preview/sol.html`. Values 
 
 **Budget:** the same as the library planets: one strip bake per layer and bucket, and two quads for each ring system.
 
+## 22. Astrophage
+
+Designs: `assets/astro/*.svg`, `assets/ship/engine-spin.svg`, `assets/overlays/astrophage-map.svg`, `mockups/planning-astrophage.svg`. Values in `style.md` §19. There is no Astrophage code yet.
+
+1. **Level data (suggested):**
+   - `astrophage { level, dims }` on a star; `level` is 1–10 and `dims` is the fraction its luminosity drops.
+   - `petrova { from, to, bulge, eaten?, knots: [{ t, fuel, radius }] }`.
+   - A `spin` engine type with its own Astrophage tank.
+
+   Dimming multiplies the star's solar recharge and its radiation term. Knots are fixed points on the line: deterministic, seeded, and known to the prediction.
+2. **Infected star.** One extra layer over the star sprite: a cells texture (black specks, baked once, rotated by `frame.now`) clipped to the disc, plus about 220 shimmer points on a ring at r + 7. Don't darken the star.
+3. **Petrova line.**
+   - Build the curve once per level (a quadratic from limb to limb).
+   - Draw the glow band and the four strands as triangle strips along it; widths follow w(t), and the dash offsets scroll on `frame.now`.
+   - Draw the motes, glints and sparkles as one instanced point set, with glints moving along t and sparkles scaling in and out.
+   - Apply the fade mask along t, and the eaten variant's colour change, in the shader.
+   - Budget: a few strips and at most 300 points per line.
+4. **Knots and harvesting.**
+   - A knot is a point cloud plus the planning ring.
+   - While the ship is inside a knot's radius with the scoop fitted, the sim adds Astrophage at the knot's rate and drains the knot.
+   - The visual streams points from the knot to the two scoop mouths (module-scoop local ±7.5, −13.5) and pulses a ring at each mouth.
+5. **Spin drive.** The engine part is a normal ship part. The beam is its own quad from the throat, length L = 44 + 30 · Δv units, capped at 160. Use the beam gradient and a white core, with a cheap UV-noise shimmer instead of the SVG displacement. Idle: ring only.
+6. **Fuel row.** DOM, under the fuel bar, shown only with a spin drive. The bar fill is CSS (a gradient plus a repeating speckle), the sparkle is an animated element, and the ghost segment works like the solar-recharge ghost.
+7. **Astrophage map (A).**
+   - Sample the density on a 14 px screen grid each time the view changes (planning and pause only).
+   - Draw the ticks as one instanced line set with head dots, px-space.
+   - The gauges, the clean ring and the labels are DOM or px quads.
+   - The field formula in the asset header is the design default; the sim owns the numbers.
+8. **Tau Ceti.**
+   - The star look with a hue tint, or a dedicated `tau-ceti` look.
+   - The disk as a belt-like seeded point set, with the back half drawn before the star and the front half after.
+   - Three planets on Kepler orbits inside the disk's inner edge.
+   - The eaten Petrova line.
+

@@ -123,6 +123,19 @@ Landed in [PR #64](https://github.com/stepwaec/slingshot/pull/64), from the ghos
   - Keep the locked faces fixed.
 - **Mission 1** should match `mockups/sol-moon.svg`: the Moon in its target zone (§17), with a capture into lunar orbit.
 
+## Astrophage: the art is ready (v3.2)
+
+- **New, no code yet.** Follow `style.md` §19 and `threejs-notes.md` §22:
+  - the infection overlay on stars (no dimming veil)
+  - the living Petrova line and its knots
+  - harvesting with the scoop
+  - the spin drive part and its long straight beam
+  - the Astrophage fuel row
+  - the Astrophage map on key A
+  - Tau Ceti with its eaten line
+- **Mockup:** the planning view should match `mockups/planning-astrophage.svg`.
+- **Data:** the level fields in §22 are suggestions. Keep the knots deterministic, so the prediction knows the fuel on a path.
+
 ## Priority fixes
 
 Do these first. They are the biggest visible or gameplay gaps after #32.
