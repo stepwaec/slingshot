@@ -2,13 +2,28 @@ import { describe, expect, it } from "vitest";
 import { frost } from "../src/level/catalog";
 import { shaderFamily } from "../src/render/shaders/families";
 import { impostorSide, lightDirection, ringOctaves, shaderRendering } from "../src/render/shaders/impostor";
+import { STAR_PARAMS, starKind } from "../src/render/shaders/star-params";
 import { theme } from "../src/render/theme";
 
 describe("shader impostors", () => {
-  it("keeps the SVG sprites until a family registers", () => {
+  it("draws Frost's sun as variant J and leaves the planets as sprites", () => {
     expect(theme.rendering.shaders).toBe(true);
     expect(shaderRendering()).toBe(true);
-    for (const body of frost.bodies) expect(shaderFamily(body)).toBeNull();
+    const sun = frost.bodies.find((body) => body.id === "sun");
+    const home = frost.bodies.find((body) => body.id === "home");
+    if (!sun || !home) throw new Error("frost");
+    expect(starKind(sun)).toBe("sun");
+    expect(shaderFamily(sun)).toBe("star");
+    expect(shaderFamily(home)).toBeNull();
+    expect(STAR_PARAMS.sun.core).toBe("#FFB43A");
+    expect(STAR_PARAMS.sun.limbDark).toBe(0.18);
+    expect(STAR_PARAMS.sun.hazeR).toBe(4.35);
+    expect(STAR_PARAMS.sun.flare).toBe(1);
+    expect(STAR_PARAMS["sol-sun"].spots).toBe(1);
+    expect(STAR_PARAMS["sol-sun"].flare).toBe(0);
+    expect(STAR_PARAMS["white-dwarf"].smooth).toBe(1);
+    expect(STAR_PARAMS["red-giant"].R).toBe(120);
+    expect(STAR_PARAMS["binary-cool"].proW).toBe(1.5);
   });
 
   it("sizes a star quad to twice the haze, in body radii", () => {
