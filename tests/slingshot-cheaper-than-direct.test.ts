@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { passage, simConfigFromLevel } from "../src/level/catalog";
+import { simConfigFromLevel } from "../src/level/catalog";
+import { stage as passage } from "./support/stage";
 import {
   directLaunch,
   directPlan,
   slingshotCapture,
   slingshotLaunch,
   slingshotPlan,
-} from "../src/level/solutions";
+} from "./support/plans";
 import { canLaunch, clearPlan, createGame, launch, planFuel, reset, setPlan, tick } from "../src/game/state";
 import {
   assessPlan,
@@ -63,7 +64,7 @@ describe("Passage plans", () => {
   });
 
   it("refuses to launch a plan that exceeds the remaining fuel", () => {
-    const game = createGame();
+    const game = createGame(passage);
     setPlan(game, directPlan);
     expect(planFuel(game).affordable).toBe(false);
     expect(canLaunch(game)).toBe(false);
@@ -94,7 +95,7 @@ describe("Passage plans", () => {
   });
 
   it("flies the slingshot, then reset keeps the nodes and clear removes them", () => {
-    const game = createGame();
+    const game = createGame(passage);
     setPlan(game, slingshotPlan);
     expect(canLaunch(game)).toBe(true);
     launch(game);

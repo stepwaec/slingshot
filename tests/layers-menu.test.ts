@@ -13,7 +13,31 @@ import {
 } from "../src/game/layers";
 import { createGame, loadLevel } from "../src/game/state";
 import type { Level } from "../src/level/schema";
-import { dim, ember, needle, passage, rescue, shade } from "../src/level/catalog";
+import { observatory } from "../src/level/catalog";
+import { stage as passage } from "./support/stage";
+
+const shade = passage;
+const needle = observatory;
+const dim = observatory;
+const rescue = observatory;
+const ember: Level = {
+  ...passage,
+  id: "library-tide",
+  physics: { tidalStrength: 1 },
+  bodies: [
+    ...passage.bodies,
+    {
+      id: "dwarf",
+      name: "the white dwarf",
+      kind: "star",
+      look: "white-dwarf",
+      x: 400,
+      y: 0,
+      mass: 100000,
+      radius: 16,
+    },
+  ],
+};
 
 const press = { repeat: false, metaKey: false, ctrlKey: false, altKey: false };
 
@@ -147,7 +171,7 @@ describe("layers menu keys", () => {
   });
 
   it("ignores repeats, modifier chords, C, R, and A where there is no infection", () => {
-    const game = createGame(needle);
+    const game = createGame(passage);
     game.radiation = true;
     const panel = { open: false };
     expect(applyLayerKey(game, panel, { key: "d", repeat: true, metaKey: false, ctrlKey: false, altKey: false })).toBe(false);

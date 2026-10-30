@@ -1,37 +1,68 @@
 import { describe, expect, it } from "vitest";
-import { ash, simConfigFromLevel } from "../src/level/catalog";
-import { ashPlan } from "../src/level/solutions";
+import { simConfigFromLevel, type Level } from "../src/level/catalog";
 import {
   acceleration,
   bodyPose,
   bodyPresent,
   flyPlan,
+  keplerMeanMotion,
   makeState,
   predictPlan,
   type Body,
   type SimConfig,
 } from "../src/sim/physics";
 
+const g = 1;
+const sunMass = 100;
+const orbitRadius = 240;
+const sun: Body = { id: "sun", name: "sun", kind: "star", x: 0, y: 0, mass: sunMass, radius: 12 };
+const planet: Body = {
+  id: "x",
+  name: "x",
+  kind: "target",
+  x: orbitRadius,
+  y: 0,
+  mass: 4_000,
+  radius: 8,
+  captureRadius: 30,
+  orbit: { centerId: "sun", radius: orbitRadius, phase: 0, omega: keplerMeanMotion(g, sunMass, orbitRadius) },
+  script: { kind: "consume", centerId: "sun", start: 8, end: 36, radius: 18 },
+};
+const bodies = [sun, planet];
+const chart: Level = {
+  id: "fall-stage",
+  name: "Fall stage",
+  g,
+  dt: 1 / 60,
+  bodies,
+  targetId: "x",
+  ship: { x: 800, y: 300, vx: 0, vy: 0 },
+  orbit: { bodyId: "sun", radius: 800 },
+  fuel: 20,
+  fuelPerDv: 1,
+  bounds: { minX: -4000, maxX: 4000, minY: -4000, maxY: 4000 },
+  maxSteps: 2_000,
+  dvPerPixel: 0.2,
+  periapsisMargin: 4,
+  c: 1_000_000,
+  mission: { deadline: 800, crewLimit: 800, fuelStarMin: 0, crewWeight: 1, fuelWeight: 1 },
+};
+
 describe("LU3 scripted collisions", () => {
-  const planet = ash.bodies.find((body) => body.id === "x");
-  const sun = ash.bodies.find((body) => body.id === "sun");
-  if (!planet?.orbit || !planet.script || planet.script.kind !== "consume" || !sun) {
-    throw new Error("Ash is missing the falling planet");
-  }
+  const fall = planet.script?.kind === "consume" ? planet.script : undefined;
+  if (!planet.orbit || !fall) throw new Error("missing the falling planet");
 
   it("follows the Kepler rail until the fall, then spirals into the sun", () => {
     const orbit = planet.orbit;
     if (!orbit) throw new Error("orbit");
-    const before = bodyPose(planet, 1, ash.bodies, ash.g);
+    const before = bodyPose(planet, 1, bodies, g);
     const angle = orbit.phase + orbit.omega * 1;
     expect(before.x).toBe(sun.x + orbit.radius * Math.cos(angle));
     expect(before.y).toBe(sun.y + orbit.radius * Math.sin(angle));
 
-    const fall = planet.script?.kind === "consume" ? planet.script : undefined;
-    if (!fall) throw new Error("consume");
-    const atStart = bodyPose(planet, fall.start, ash.bodies, ash.g);
-    const mid = bodyPose(planet, 40, ash.bodies, ash.g);
-    const late = bodyPose(planet, 70, ash.bodies, ash.g);
+    const atStart = bodyPose(planet, fall.start, bodies, g);
+    const mid = bodyPose(planet, fall.start + (fall.end - fall.start) * 0.5, bodies, g);
+    const late = bodyPose(planet, fall.start + (fall.end - fall.start) * 0.8, bodies, g);
     const startR = Math.hypot(atStart.x - sun.x, atStart.y - sun.y);
     const midR = Math.hypot(mid.x - sun.x, mid.y - sun.y);
     const lateR = Math.hypot(late.x - sun.x, late.y - sun.y);
@@ -39,17 +70,15 @@ describe("LU3 scripted collisions", () => {
     expect(midR).toBeLessThan(startR);
     expect(lateR).toBeLessThan(midR);
     expect(lateR).toBeGreaterThan(sun.radius);
-    expect(bodyPresent(planet, 70)).toBe(true);
+    expect(bodyPresent(planet, fall.end - 1)).toBe(true);
     expect(bodyPresent(planet, fall.end)).toBe(false);
   });
 
   it("drops a consumed body's gravity and removes an impactor", () => {
-    const fall = planet.script?.kind === "consume" ? planet.script : undefined;
-    if (!fall) throw new Error("consume");
     const end = fall.end;
-    const near = bodyPose(planet, end - 1, ash.bodies, ash.g);
-    const before = acceleration(near.x + 30, near.y, simConfigFromLevel(ash), end - 1);
-    const after = acceleration(near.x + 30, near.y, simConfigFromLevel(ash), end + 1);
+    const near = bodyPose(planet, end - 1, bodies, g);
+    const before = acceleration(near.x + 20, near.y, simConfigFromLevel(chart), end - 1);
+    const after = acceleration(near.x + 20, near.y, simConfigFromLevel(chart), end + 1);
     expect(Math.hypot(before.ax, before.ay)).toBeGreaterThan(Math.hypot(after.ax, after.ay));
 
     const host: Body = { id: "p", name: "p", kind: "planet", x: 0, y: 0, mass: 10, radius: 8 };
@@ -79,24 +108,22 @@ describe("LU3 scripted collisions", () => {
     expect(bodyPresent(rock, 3)).toBe(false);
   });
 
-  it("matches the prediction to a capture made before the planet burns", () => {
-    const config = simConfigFromLevel(ash);
-    const state = makeState(ash.ship.x, ash.ship.y, ash.ship.vx, ash.ship.vy, config);
-    const predicted = predictPlan(state, config, ashPlan);
-    const flown = flyPlan(state, config, ashPlan, 1);
-    expect(predicted.status).toBe("won");
-    expect(flown.status).toBe("won");
-    const fall = planet.script?.kind === "consume" ? planet.script : undefined;
-    if (!fall) throw new Error("consume");
-    expect(predicted.final.t).toBeLessThan(fall.end);
+  it("matches the prediction to the flight while the planet falls", () => {
+    const config = simConfigFromLevel(chart);
+    const state = makeState(chart.ship.x, chart.ship.y, chart.ship.vx, chart.ship.vy, config);
+    const predicted = predictPlan(state, config, []);
+    const flown = flyPlan(state, config, [], 1);
+    expect(predicted.status).toBe(flown.status);
     expect(flown.path.length).toBe(predicted.path.length);
+    expect(predicted.final.t).toBeGreaterThan(fall.start);
+    expect(predicted.final.t).toBeLessThan(fall.end);
     for (let i = 0; i < flown.path.length; i++) {
       expect(flown.path[i].x).toBe(predicted.path[i].x);
       expect(flown.path[i].y).toBe(predicted.path[i].y);
       expect(flown.path[i].step).toBe(predicted.path[i].step);
     }
-    const later = bodyPose(planet, 50, ash.bodies, ash.g);
-    const early = bodyPose(planet, 0, ash.bodies, ash.g);
+    const later = bodyPose(planet, 20, bodies, g);
+    const early = bodyPose(planet, 0, bodies, g);
     expect(Math.hypot(later.x - sun.x, later.y - sun.y)).toBeLessThan(Math.hypot(early.x - sun.x, early.y - sun.y));
   });
 

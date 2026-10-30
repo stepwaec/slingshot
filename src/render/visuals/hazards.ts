@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { jetAngle, shellRadius, type QuasarJet, type Supernova } from "../../sim/events";
 import { bodyPose, type Body } from "../../sim/physics";
 import { isEditing } from "../../game/state";
-import { artForBody, artMesh, loadArtTexture, poseArt, rasterPixels, type ArtFit } from "../art-sprite";
+import { artMesh, loadArtTexture, poseArt, rasterPixels, type ArtFit } from "../art-sprite";
 import {
   blastCall,
   blastChip,
@@ -27,6 +27,9 @@ import { silenceNightRim } from "../surface-art";
 import type { Theme } from "../theme";
 import { disposeObject, type Visual, type VisualFactory, type VisualFrame } from "../visual";
 import { shader, srgbVec } from "./materials";
+import { createBodyShader } from "../shaders/families";
+import { impostorSide } from "../shaders/impostor";
+import { markEmissive } from "../shaders/bloom";
 
 /**
  * Supernova, quasar and their planning telegraphs.
@@ -317,7 +320,8 @@ interface NovaView {
   body: Body;
   nova: Supernova;
   star: THREE.Mesh;
-  fit: ArtFit;
+  /** Quad side at the body's radius. The red-giant shader draws the progenitor. */
+  side: number;
   shells: RingMesh[];
   flash: THREE.Mesh;
   flashAlpha: { value: number };
@@ -417,7 +421,9 @@ class HazardsVisual implements Visual {
     const shrink = progenitorShrink(time, nova.at, spec.shrinkLead, spec.shrinkTo);
     view.star.visible = shrink > 0.001;
     if (view.star.visible) {
-      poseArt(view.star, view.fit, pose.x, pose.y, body.radius * breathe * shrink, 0);
+      const scale = view.side * breathe * shrink;
+      view.star.position.set(pose.x, pose.y, 0);
+      view.star.scale.set(scale, scale, 1);
     }
     for (let i = 0; i < view.shells.length; i += 1) {
       const radius = oldShellRadius(body.radius, spec.shellRadii[i], seconds, spec);
@@ -617,11 +623,18 @@ class HazardsVisual implements Visual {
   private buildNova(body: Body, nova: Supernova): NovaView {
     const colors = this.theme.colors;
     const spec = this.theme.nova;
-    const fit = artForBody({ ...body, look: "red-giant" }, this.theme);
-    if (!fit) throw new Error("red giant art missing");
-    fit.bake = { tag: "nova-progenitor", prep: prepProgenitor };
-    const star = artMesh(fit, `${body.id}-progenitor`);
-    star.renderOrder = 1;
+    const progenitor = { ...body, look: "red-giant" as const };
+    const material = createBodyShader(progenitor);
+    if (!material) throw new Error("red giant shader missing");
+    const hazeR = numberOf(material.uniforms.uHazeR);
+    const smooth = numberOf(material.uniforms.uSmooth);
+    const side = impostorSide(body.radius, hazeR > 0 ? hazeR : 1, smooth);
+    const star = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), material);
+    star.name = `${body.id}-progenitor`;
+    star.frustumCulled = false;
+    star.renderOrder = -1;
+    markEmissive(star);
+    star.scale.set(side, side, 1);
     this.object.add(star);
     const shells = spec.shellRadii.map((radius, i) => {
       const ring = makeRing(colors.novaShell, 0, spec.shellAlphas[i]);
@@ -721,7 +734,7 @@ class HazardsVisual implements Visual {
       body,
       nova,
       star,
-      fit,
+      side,
       shells,
       flash,
       flashAlpha,
@@ -814,7 +827,6 @@ class HazardsVisual implements Visual {
   private bakeOnce(): void {
     const gen = ++this.bakeGen;
     const pixels = (fit: ArtFit) => rasterPixels(fit.viewW, fit.viewH, 2, 1);
-    for (const view of this.novas) void this.paint(view.star, view.fit, pixels(view.fit), gen);
     for (const view of this.quasars) {
       void this.paint(view.glow, view.glowFit, pixels(view.glowFit), gen);
       void this.paint(view.core, view.coreFit, pixels(view.coreFit), gen);
@@ -854,9 +866,8 @@ function quasarFit(theme: Theme, tag: string, prep: (doc: Document) => void): Ar
   };
 }
 
-function prepProgenitor(doc: Document): void {
-  const root = doc.getElementById("redGiant");
-  if (root) silenceNightRim(doc, root);
+function numberOf(uniform: { value: unknown } | undefined): number {
+  return typeof uniform?.value === "number" ? uniform.value : 0;
 }
 
 /** Glow only. Jets stay a shader so the sheath matches `quasarDamage`. */

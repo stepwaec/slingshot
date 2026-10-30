@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { ash } from "../src/level/catalog";
 import {
   consumeHeat,
   craterAlpha,
@@ -12,7 +11,25 @@ import {
   starBrighten,
 } from "../src/render/event-look";
 import { theme } from "../src/render/theme";
-import { bodyPose } from "../src/sim/physics";
+import { bodyPose, keplerMeanMotion, type Body } from "../src/sim/physics";
+
+const g = 1;
+const sunMass = 100;
+const orbitRadius = 240;
+const sun: Body = { id: "sun", name: "sun", kind: "star", x: 0, y: 0, mass: sunMass, radius: 12 };
+const planet: Body = {
+  id: "x",
+  name: "x",
+  kind: "target",
+  x: orbitRadius,
+  y: 0,
+  mass: 40,
+  radius: 8,
+  captureRadius: 30,
+  orbit: { centerId: "sun", radius: orbitRadius, phase: 0, omega: keplerMeanMotion(g, sunMass, orbitRadius) },
+  script: { kind: "consume", centerId: "sun", start: 8, end: 36, radius: 18 },
+};
+const bodies = [sun, planet];
 
 describe("LU3 event look", () => {
   const spec = theme.event;
@@ -57,14 +74,12 @@ describe("LU3 event look", () => {
     expect(starBrighten(spec.brightDur, spec.brightAlpha, spec.brightRise, spec.brightDur)).toBe(0);
   });
 
-  it("matches Ash's fall to the burn-up heat", () => {
-    const planet = ash.bodies.find((body) => body.id === "x");
-    const sun = ash.bodies.find((body) => body.id === "sun");
-    if (!planet?.script || planet.script.kind !== "consume" || !planet.orbit || !sun) throw new Error("ash");
+  it("matches a scripted fall to the burn-up heat", () => {
+    if (!planet.script || planet.script.kind !== "consume" || !planet.orbit) throw new Error("fall");
     const script = planet.script;
     const at = (t: number) => {
-      const pose = bodyPose(planet, t, ash.bodies, ash.g);
-      const center = bodyPose(sun, t, ash.bodies, ash.g);
+      const pose = bodyPose(planet, t, bodies, g);
+      const center = bodyPose(sun, t, bodies, g);
       return Math.hypot(pose.x - center.x, pose.y - center.y);
     };
     expect(consumeHeat(at(script.start), planet.orbit.radius, script.radius)).toBeCloseTo(0, 5);

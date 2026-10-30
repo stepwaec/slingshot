@@ -19,8 +19,7 @@ import {
   tick,
   type Game,
 } from "./game/state";
-import { burnLimit, LEVELS, observatory, passage, pauseRuleOf, rescue, simConfigFromLevel, type Level } from "./level/catalog";
-import { deepPlan, safePlan } from "./level/solutions";
+import { burnLimit, LEVELS, observatory, pauseRuleOf, simConfigFromLevel, type Level } from "./level/catalog";
 import { createClockLatches, readClocks, type ClockLatches } from "./hud/readout";
 import type { MissionScore } from "./sim/score";
 import { frameLevel, worldToScreen } from "./render/camera";
@@ -119,8 +118,6 @@ const clockStars = required<HTMLElement>("#clock-stars");
 const clockPoints = required<HTMLElement>("#clock-points");
 const deadlineFill = required<HTMLElement>("#deadline-fill");
 const routeActions = required<HTMLElement>("#route-actions");
-const routeSafe = required<HTMLButtonElement>("#route-safe");
-const routeDeep = required<HTMLButtonElement>("#route-deep");
 const layersButton = required<HTMLButtonElement>("#layers");
 const layersPanelEl = required<HTMLElement>("#layers-panel");
 const astroRow = required<HTMLElement>("#astro-row");
@@ -156,10 +153,8 @@ let overlayOpen = false;
 let spreadFor: Game["prediction"] | null = null;
 let spreadSigma = 0;
 
-addLevelGroup(levelSelect, "Campaign", LEVELS);
+if (LEVELS.length > 0) addLevelGroup(levelSelect, "Campaign", LEVELS);
 addLevelGroup(levelSelect, "Showcase", [observatory]);
-routeSafe.addEventListener("click", () => setPlan(game, safePlan));
-routeDeep.addEventListener("click", () => setPlan(game, deepPlan));
 upgradeToggle.addEventListener("click", () => {
   upgradePanel.hidden = !upgradePanel.hidden;
 });
@@ -172,7 +167,7 @@ for (let i = 0; i < 10; i++) {
 mountShipyard();
 
 levelSelect.addEventListener("change", () => {
-  const next = levels.find((level) => level.id === levelSelect.value) ?? passage;
+  const next = levels.find((level) => level.id === levelSelect.value) ?? observatory;
   loadLevel(game, next);
   resetShipLook();
   view?.reload(next);
@@ -464,7 +459,7 @@ function syncHud(current: Game): void {
   fpsValue.textContent = `${Math.round(fps)} fps`;
 
   launchButton.disabled = !canLaunch(current);
-  routeActions.hidden = !(planning && current.level.id === rescue.id);
+  routeActions.hidden = true;
   deleteButton.disabled = !editing || current.selected === null;
   for (const button of clearButtons) button.disabled = current.mode === "flying";
   syncPlanNote(current);

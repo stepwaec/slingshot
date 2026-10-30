@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { flash, simConfigFromLevel } from "../src/level/catalog";
-import { flashPlan } from "../src/level/solutions";
-import { bodyPose, flyPlan, makeState, predictPlan } from "../src/sim/physics";
+import { observatory } from "../src/level/catalog";
+import { flyPlan, makeState, predictPlan, type SimConfig } from "../src/sim/physics";
 import { theme } from "../src/render/theme";
 import {
   blastCall,
@@ -90,22 +89,34 @@ describe("WP12 hazard drawings", () => {
     if (clear?.kind === "clear") expect(clear.spare).toBeGreaterThan(0);
   });
 
-  it("keeps Flash's flight on the old prediction with the stray asteroid in the scene", () => {
-    const rock = flash.bodies.find((body) => body.look === "asteroid");
-    expect(rock?.mass).toBe(0);
-    expect(rock?.radius).toBe(15);
-    const config = simConfigFromLevel(flash);
-    const state = makeState(flash.ship.x, flash.ship.y, flash.ship.vx, flash.ship.vy, config);
-    const predicted = predictPlan(state, config, flashPlan);
-    const flown = flyPlan(state, config, flashPlan, 1);
-    expect(predicted.status).toBe("won");
-    expect(predicted.final.hull).toBe(70);
+  it("keeps a flight beside the Observatory asteroid on the prediction", () => {
+    const rock = observatory.bodies.find((body) => body.look === "asteroid");
+    if (!rock?.drift) throw new Error("observatory asteroid");
+    expect(rock.mass).toBe(0);
+    expect(rock.radius).toBe(15);
+    const config: SimConfig = {
+      g: observatory.g,
+      dt: observatory.dt,
+      c: observatory.c,
+      bodies: [{ ...rock, x: 0, y: 0 }],
+      bounds: observatory.bounds,
+      maxSteps: 80,
+      targetId: rock.id,
+      periapsisMargin: 1,
+      fuelStart: 10,
+      fuelMax: 10,
+      fuelPerDv: 1,
+    };
+    const state = makeState(200, 40, 1, 0, config);
+    const predicted = predictPlan(state, config, []);
+    const flown = flyPlan(state, config, [], 1);
+    expect(predicted.status).toBe(flown.status);
     expect(flown.path.length).toBe(predicted.path.length);
     let nearest = Infinity;
     for (const sample of flown.path) {
-      if (!rock) break;
-      const pose = bodyPose(rock, sample.step * flash.dt, flash.bodies, flash.g);
-      nearest = Math.min(nearest, Math.hypot(sample.x - pose.x, sample.y - pose.y));
+      const poseX = rock.drift.vx * sample.step * config.dt;
+      const poseY = rock.drift.vy * sample.step * config.dt;
+      nearest = Math.min(nearest, Math.hypot(sample.x - poseX, sample.y - poseY));
     }
     expect(nearest).toBeGreaterThan(80);
   });

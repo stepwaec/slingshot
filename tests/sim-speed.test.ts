@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { createGame, launch, setPlan, setSpeed, tick } from "../src/game/state";
-import { passage, simConfigFromLevel } from "../src/level/catalog";
-import { slingshotPlan } from "../src/level/solutions";
+import { simConfigFromLevel } from "../src/level/catalog";
+import { stage as passage } from "./support/stage";
+import { slingshotPlan } from "./support/plans";
 import { SIM_SPEEDS, SPEED_KEY, flyPlan, makeState, stepsPerFrame, type PathSample } from "../src/sim/physics";
 
 function play(speed: 1 | 32): PathSample[] {

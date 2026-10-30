@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { drift, ice, veil, simConfigFromLevel, type Level } from "../src/level/catalog";
-import { driftPlan, icePlan, veilPlan } from "../src/level/solutions";
+import { observatory } from "../src/level/catalog";
 import {
   advancePlan,
   bodyPose,
@@ -13,17 +12,14 @@ import {
   predictPlan,
   solarRechargeRate,
   type Body,
-  type BurnNode,
   type SimConfig,
 } from "../src/sim/physics";
 
-function expectFlightMatches(level: Level, nodes: readonly BurnNode[]): void {
-  const config = simConfigFromLevel(level);
-  const state = makeState(level.ship.x, level.ship.y, level.ship.vx, level.ship.vy, config);
-  const predicted = predictPlan(state, config, nodes);
-  const flown = flyPlan(state, config, nodes, 1);
-  expect(flown.status).toBe("won");
-  expect(predicted.status).toBe("won");
+function expectFlightMatches(config: SimConfig, x: number, y: number): void {
+  const state = makeState(x, y, 0, 0, config);
+  const predicted = predictPlan(state, config, []);
+  const flown = flyPlan(state, config, [], 1);
+  expect(flown.status).toBe(predicted.status);
   expect(flown.path.length).toBe(predicted.path.length);
   expect(predicted.final.recharged).toBeGreaterThan(0);
   expect(predicted.final.hull).toBeGreaterThan(0);
@@ -32,10 +28,10 @@ function expectFlightMatches(level: Level, nodes: readonly BurnNode[]): void {
     expect(flown.path[i].y).toBe(predicted.path[i].y);
     expect(flown.path[i].step).toBe(predicted.path[i].step);
   }
-  const replay = makeState(level.ship.x, level.ship.y, level.ship.vx, level.ship.vy, config);
+  const replay = makeState(x, y, 0, 0, config);
   const cursor = { index: 0 };
   let guard = 0;
-  while (replay.status === "flying" && guard++ < config.maxSteps + 2) advancePlan(replay, config, nodes, cursor);
+  while (replay.status === "flying" && guard++ < config.maxSteps + 2) advancePlan(replay, config, [], cursor);
   expect(replay.recharged).toBe(predicted.final.recharged);
   expect(replay.x).toBe(predicted.final.x);
   expect(replay.tank).toBe(predicted.final.tank);
@@ -118,44 +114,57 @@ describe("WP10 environment", () => {
     expect(again.vx).toBe(start.vx);
   });
 
-  it("Ice harvests the comet and the prediction matches the flight", () => {
-    const comet = ice.bodies.find((body) => body.look === "comet");
-    expect(comet?.orbit?.kind).toBe("ellipse");
-    expectFlightMatches(ice, icePlan);
-    const config = simConfigFromLevel(ice);
-    const predicted = predictPlan(makeState(ice.ship.x, ice.ship.y, ice.ship.vx, ice.ship.vy, config), config, icePlan);
-    let harvested = false;
-    for (const sample of predicted.path) {
-      if (iceHarvestRate(sample.x, sample.y, sample.step * ice.dt, ice.bodies, ice.g) > 0) harvested = true;
-    }
-    expect(harvested).toBe(true);
-  });
-
-  it("Veil scoops the nebula and Drift's dark cloud hides its centre", () => {
-    const cloud = veil.nebulae?.[0];
-    expect(cloud?.look).toBe("emission");
-    expect(nebulaScoopRate(cloud?.x ?? 0, cloud?.y ?? 0, veil.nebulae)).toBe(cloud?.scoop);
-    const rimX = (cloud?.x ?? 0) + (cloud?.rx ?? 0) * Math.cos(cloud?.angle ?? 0);
-    const rimY = (cloud?.y ?? 0) + (cloud?.rx ?? 0) * Math.sin(cloud?.angle ?? 0);
-    expect(nebulaRadius(rimX, rimY, cloud!)).toBeCloseTo(1, 6);
-    expectFlightMatches(veil, veilPlan);
-    const config = simConfigFromLevel(veil);
-    const predicted = predictPlan(makeState(veil.ship.x, veil.ship.y, veil.ship.vx, veil.ship.vy, config), config, veilPlan);
-    expect(predicted.path.some((sample) => nebulaScoopRate(sample.x, sample.y, veil.nebulae) > 0)).toBe(true);
-
-    const dark = drift.nebulae?.[0];
-    expect(dark?.look).toBe("dark");
-    expect(nebulaCover(dark?.x ?? 0, dark?.y ?? 0, drift.nebulae)).toBe(1);
-    expect(nebulaCover((dark?.x ?? 0) + (dark?.rx ?? 0) * 3, dark?.y ?? 0, drift.nebulae)).toBe(0);
-    expectFlightMatches(drift, driftPlan);
-    const hidden = drift.nebulae?.[0];
-    const parked: SimConfig = {
-      ...simConfigFromLevel(drift),
-      nebulae: hidden ? [hidden] : [],
+  it("harvests the Observatory comet and the prediction matches the flight", () => {
+    const comet = observatory.bodies.find((body) => body.look === "comet");
+    if (!comet?.harvestRadius) throw new Error("observatory comet");
+    expect(comet.harvest).toBeGreaterThan(0);
+    expect(comet.harvestRadius).toBeGreaterThan(comet.radius);
+    const x = comet.x + (comet.radius + comet.harvestRadius) / 2;
+    const y = comet.y;
+    const config: SimConfig = {
+      g: observatory.g,
+      dt: observatory.dt,
+      c: observatory.c,
+      bodies: [comet],
+      bounds: observatory.bounds,
+      maxSteps: 8,
+      targetId: comet.id,
+      periapsisMargin: 1,
       fuelStart: 10,
       fuelMax: 100,
+      fuelPerDv: 1,
     };
-    const inside = makeState(hidden?.x ?? 0, hidden?.y ?? 0, 0, 0, parked);
+    expect(iceHarvestRate(x, y, 0, config.bodies, config.g)).toBeGreaterThan(0);
+    expectFlightMatches(config, x, y);
+  });
+
+  it("scoops the Observatory emission nebula and the dark cloud hides its centre", () => {
+    const cloud = observatory.nebulae?.find((item) => item.look === "emission");
+    const dark = observatory.nebulae?.find((item) => item.look === "dark");
+    if (!cloud || !dark) throw new Error("observatory nebulae");
+    expect(nebulaScoopRate(cloud.x, cloud.y, [cloud])).toBe(cloud.scoop);
+    const rimX = cloud.x + cloud.rx * Math.cos(cloud.angle);
+    const rimY = cloud.y + cloud.rx * Math.sin(cloud.angle);
+    expect(nebulaRadius(rimX, rimY, cloud)).toBeCloseTo(1, 6);
+    expect(nebulaCover(dark.x, dark.y, [dark])).toBe(1);
+    expect(nebulaCover(dark.x + dark.rx * 3, dark.y, [dark])).toBe(0);
+
+    const parked: SimConfig = {
+      g: observatory.g,
+      dt: observatory.dt,
+      c: observatory.c,
+      bodies: [],
+      nebulae: [cloud],
+      bounds: observatory.bounds,
+      maxSteps: 4,
+      targetId: "none",
+      periapsisMargin: 1,
+      fuelStart: 10,
+      fuelMax: 100,
+      fuelPerDv: 1,
+    };
+    expectFlightMatches(parked, cloud.x, cloud.y);
+    const inside = makeState(cloud.x, cloud.y, 0, 0, parked);
     const before = inside.tank;
     advancePlan(inside, parked, [], { index: 0 });
     expect(inside.tank).toBeGreaterThan(before);

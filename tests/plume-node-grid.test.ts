@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createGame, launch, pause, setNodeBurn, setPlan, tick } from "../src/game/state";
-import { passage } from "../src/level/catalog";
-import { slingshotPlan } from "../src/level/solutions";
+import { stage as passage } from "./support/stage";
+import { slingshotPlan } from "./support/plans";
 import { sampleBurnAnim, tailFromBurn } from "../src/render/burn-anim";
 import {
   cellEdgeFade,

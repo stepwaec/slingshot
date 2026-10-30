@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { passage, simConfigFromLevel } from "../src/level/catalog";
-import { slingshotLaunch } from "../src/level/solutions";
+import { simConfigFromLevel } from "../src/level/catalog";
+import { stage as passage } from "./support/stage";
+import { slingshotLaunch } from "./support/plans";
 import { createGame, launch, setPlan, tick } from "../src/game/state";
 import {
   SIM_SPEEDS,
@@ -47,7 +48,7 @@ function assertSameFlight(actual: Prediction, expected: Prediction, label: strin
 }
 
 function flyWithGame(plan: readonly BurnNode[], speed: (typeof SIM_SPEEDS)[number]): PathSample[] {
-  const game = createGame();
+  const game = createGame(passage);
   setPlan(game, plan);
   game.speed = speed;
   expect(launch(game)).toBeUndefined();

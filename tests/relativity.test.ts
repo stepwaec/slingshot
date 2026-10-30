@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { createGame, launch, missionResult, pause, resume, setPlan, tick } from "../src/game/state";
-import { passage, relay, rescue, rescueHole, simConfigFromLevel, type Level } from "../src/level/catalog";
-import { deepPlan, relayFull, safePlan, slingshotPlan } from "../src/level/solutions";
+import { observatory, simConfigFromLevel, type Level } from "../src/level/catalog";
+import { stage as passage } from "./support/stage";
+import { slingshotPlan } from "./support/plans";
 import { scoreMission, type MissionInput } from "../src/sim/score";
 import {
-  assessPlan,
   flyPlan,
   horizonRadius,
   makeState,
@@ -98,7 +98,19 @@ describe("proper time rate", () => {
     const outside = radius * 1.25;
     const phi = mass / outside;
     expect(properTimeRate(outside, 0, 0, 0, hole, 0)).toBeCloseTo(Math.sqrt(1 - (2 * phi) / (c * c)), 10);
-    expect(rescueHole.radius).toBeCloseTo(horizonRadius(rescueHole.mass, rescue.g, rescue.c), 8);
+    const exhibit = observatory.bodies.find((body) => body.kind === "blackhole");
+    if (!exhibit) throw new Error("observatory black hole");
+    const exhibitC = observatory.c ?? 1_000_000;
+    const exhibitHorizon = horizonRadius(exhibit.mass, observatory.g, exhibitC);
+    expect(exhibitHorizon).toBeCloseTo((2 * observatory.g * exhibit.mass) / (exhibitC * exhibitC), 8);
+    expect(exhibitHorizon).toBeGreaterThan(0);
+    const exhibitScene: SimConfig = {
+      ...empty,
+      g: observatory.g,
+      c: exhibitC,
+      bodies: [{ ...exhibit, radius: exhibitHorizon }],
+    };
+    expect(properTimeRate(exhibit.x + exhibitHorizon, exhibit.y, 0, 0, exhibitScene, 0)).toBe(0);
   });
 
   it("reads an orbiting body's depth at the right time", () => {
@@ -164,10 +176,7 @@ describe("clocks", () => {
   });
 
   it("agrees between prediction and flight, including speed and the game loop", () => {
-    const cases: Array<{ level: Level; nodes: typeof deepPlan }> = [
-      { level: rescue, nodes: deepPlan },
-      { level: rescue, nodes: safePlan },
-      { level: relay, nodes: relayFull },
+    const cases: Array<{ level: Level; nodes: typeof slingshotPlan }> = [
       { level: passage, nodes: slingshotPlan },
     ];
     for (const item of cases) {
@@ -185,12 +194,12 @@ describe("clocks", () => {
       expect(flyPlan(state, config, item.nodes, 4).outsideTime, item.level.id).toBe(flown.outsideTime);
     }
 
-    const game = createGame(rescue);
-    setPlan(game, safePlan);
+    const game = createGame(passage);
+    setPlan(game, slingshotPlan);
     const forecast = game.prediction;
     launch(game);
     let guard = 0;
-    while (game.mode === "flying" && guard++ < rescue.maxSteps) tick(game);
+    while (game.mode === "flying" && guard++ < passage.maxSteps) tick(game);
     expect(game.ship.status).toBe("won");
     expect(game.ship.t).toBe(forecast.outsideTime);
     expect(game.ship.tau).toBe(forecast.shipTime);
@@ -287,53 +296,5 @@ describe("scoring", () => {
     expect(missionResult(paid).hardFail).toBeNull();
     expect(missionResult(paid).points).toBeCloseTo(missionResult(quiet).points - 10, 6);
     expect(missionResult(paid).shipTime).toBe(missionResult(quiet).shipTime);
-  });
-});
-
-describe("rescue dilemma", () => {
-  it("trades fuel and crew time for outside time", () => {
-    const config = simConfigFromLevel(rescue);
-    const state = makeState(rescue.ship.x, rescue.ship.y, rescue.ship.vx, rescue.ship.vy, config);
-    const deep = flyPlan(state, config, deepPlan, 1);
-    const safe = flyPlan(state, config, safePlan, 1);
-    const deepFuel = assessPlan(deepPlan, rescue.fuel, rescue.fuelPerDv);
-    const safeFuel = assessPlan(safePlan, rescue.fuel, rescue.fuelPerDv);
-
-    expect(deep.status).toBe("won");
-    expect(safe.status).toBe("won");
-    expect(deepFuel.affordable).toBe(true);
-    expect(safeFuel.affordable).toBe(true);
-    expect(deepFuel.left).toBeGreaterThan(safeFuel.left);
-    expect(deep.shipTime).toBeLessThan(safe.shipTime);
-    expect(deep.outsideTime).toBeGreaterThan(safe.outsideTime);
-
-    expect(safe.outsideTime).toBeLessThanOrEqual(rescue.mission.deadline);
-    expect(deep.outsideTime).toBeGreaterThan(rescue.mission.deadline);
-    expect(deep.shipTime).toBeLessThanOrEqual(rescue.mission.crewLimit);
-    expect(safe.shipTime).toBeGreaterThan(rescue.mission.crewLimit);
-    expect(deepFuel.left).toBeGreaterThanOrEqual(rescue.mission.fuelStarMin);
-    expect(safeFuel.left).toBeLessThan(rescue.mission.fuelStarMin);
-
-    const safeScore = scoreMission({
-      arrived: true,
-      outsideTime: safe.outsideTime,
-      shipTime: safe.shipTime,
-      fuelLeft: safeFuel.left,
-      pauseSpent: 0,
-      ...rescue.mission,
-    });
-    const deepScore = scoreMission({
-      arrived: true,
-      outsideTime: deep.outsideTime,
-      shipTime: deep.shipTime,
-      fuelLeft: deepFuel.left,
-      pauseSpent: 0,
-      ...rescue.mission,
-    });
-    expect(safeScore.hardFail).toBeNull();
-    expect(safeScore.stars).toEqual({ deadline: true, crew: false, fuel: false });
-    expect(deepScore.hardFail).toBe("deadline");
-    expect(deepScore.points).toBe(0);
-    expect(deepScore.stars).toEqual({ deadline: false, crew: false, fuel: false });
   });
 });

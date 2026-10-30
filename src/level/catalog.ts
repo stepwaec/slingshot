@@ -1,79 +1,20 @@
-import type { Body, PauseRule, SimConfig } from "../sim/physics";
-import passageData from "../levels/passage.json";
-import relayData from "../levels/relay.json";
-import rescueData from "../levels/rescue.json";
-import pairData from "../levels/pair.json";
-import emberData from "../levels/ember.json";
-import chainData from "../levels/chain.json";
-import pulseData from "../levels/pulse.json";
-import quakeData from "../levels/quake.json";
-import needleData from "../levels/needle.json";
-import iceData from "../levels/ice.json";
-import veilData from "../levels/veil.json";
-import driftData from "../levels/drift.json";
-import shadeData from "../levels/shade.json";
-import wanderData from "../levels/wander.json";
-import weaveData from "../levels/weave.json";
-import frostData from "../levels/frost.json";
-import leadData from "../levels/lead.json";
-import flashData from "../levels/flash.json";
-import ashData from "../levels/ash.json";
-import torchData from "../levels/torch.json";
-import hoopData from "../levels/hoop.json";
-import cableData from "../levels/cable.json";
-import foldData from "../levels/fold.json";
+import type { PauseRule, SimConfig } from "../sim/physics";
 import { observatory } from "./observatory";
-import { loadLevelData, type Level, type LevelPhysics } from "./schema";
+import type { Level, LevelPhysics } from "./schema";
 import { shipLoadout } from "../game/upgrades";
 import { placeBelts } from "../sim/belts";
 import { ASTRO_CAPACITY, ASTRO_DV, ASTRO_HARVEST_RATE, flattenKnots } from "../sim/astrophage";
-import dimData from "../levels/dim.json";
-import tauCetiData from "../levels/tau-ceti.json";
 
 /**
- * Shipped levels, loaded from `src/levels/*.json`.
- * The files are the level definitions. This module checks them at startup.
+ * Shipped levels. The Sol campaign is not built yet, so this list is empty.
+ * New missions will be assembled from the body library. The Observatory is
+ * the showcase and is not part of this list.
  */
 
-export const passage: Level = loadLevelData(passageData, "src/levels/passage.json");
-export const relay: Level = loadLevelData(relayData, "src/levels/relay.json");
-export const rescue: Level = loadLevelData(rescueData, "src/levels/rescue.json");
-export const pair: Level = loadLevelData(pairData, "src/levels/pair.json");
-export const ember: Level = loadLevelData(emberData, "src/levels/ember.json");
-export const chain: Level = loadLevelData(chainData, "src/levels/chain.json");
-export const pulse: Level = loadLevelData(pulseData, "src/levels/pulse.json");
-export const quake: Level = loadLevelData(quakeData, "src/levels/quake.json");
-export const needle: Level = loadLevelData(needleData, "src/levels/needle.json");
-export const ice: Level = loadLevelData(iceData, "src/levels/ice.json");
-export const veil: Level = loadLevelData(veilData, "src/levels/veil.json");
-export const drift: Level = loadLevelData(driftData, "src/levels/drift.json");
-export const shade: Level = loadLevelData(shadeData, "src/levels/shade.json");
-export const wander: Level = loadLevelData(wanderData, "src/levels/wander.json");
-export const weave: Level = loadLevelData(weaveData, "src/levels/weave.json");
-export const frost: Level = loadLevelData(frostData, "src/levels/frost.json");
-export const lead: Level = loadLevelData(leadData, "src/levels/lead.json");
-export const flash: Level = loadLevelData(flashData, "src/levels/flash.json");
-export const ash: Level = loadLevelData(ashData, "src/levels/ash.json");
-export const torch: Level = loadLevelData(torchData, "src/levels/torch.json");
-export const hoop: Level = loadLevelData(hoopData, "src/levels/hoop.json");
-export const cable: Level = loadLevelData(cableData, "src/levels/cable.json");
-export const fold: Level = loadLevelData(foldData, "src/levels/fold.json");
-export const dim: Level = loadLevelData(dimData, "src/levels/dim.json");
-export const tauCeti: Level = loadLevelData(tauCetiData, "src/levels/tau-ceti.json");
+export const LEVELS: readonly Level[] = [];
 
-export const LEVELS: readonly Level[] = [passage, relay, rescue, pair, ember, chain, pulse, quake, needle, ice, veil, drift, shade, wander, weave, frost, lead, flash, ash, torch, hoop, cable, fold, dim, tauCeti];
-
-/** Showcase chart. Not part of the campaign list above. */
+/** Showcase chart. The playable chart until Sol missions exist. */
 export { observatory };
-
-function bodyById(level: Level, id: string): Body {
-  const body = level.bodies.find((item) => item.id === id);
-  if (!body) throw new Error(`Level ${level.id} is missing body "${id}"`);
-  return body;
-}
-
-/** Rescue's black hole. Its radius is the horizon baked into the level file. */
-export const rescueHole: Body = bodyById(rescue, "hole");
 
 export function burnLimit(level: Level): number {
   return level.maxPlannedBurns ?? 2;

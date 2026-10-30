@@ -1,39 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { chain, ice, pair, relay, simConfigFromLevel, type Level } from "../src/level/catalog";
-import { chainPlan, icePlan, pairPlan, relayFull } from "../src/level/solutions";
 import { LevelError, loadLevelData } from "../src/level/schema";
 import {
   SOLAR_CUTOFF,
   SOLAR_RREF,
   advancePlan,
   bodyPose,
-  flyPlan,
   keplerMeanMotion,
   makeState,
-  predictPlan,
   solarRechargeRate,
   starLuminosity,
   type Body,
-  type BurnNode,
   type SimConfig,
 } from "../src/sim/physics";
 
 function star(look: Body["look"], radius = 30): Body {
   return { id: "star", name: "star", kind: "star", look, x: 0, y: 0, mass: 0, radius };
-}
-
-function expectWins(level: Level, nodes: readonly BurnNode[]): void {
-  const config: SimConfig = { ...simConfigFromLevel(level), horizon: undefined };
-  const state = makeState(level.ship.x, level.ship.y, level.ship.vx, level.ship.vy, config);
-  const predicted = predictPlan(state, config, nodes);
-  const flown = flyPlan(state, config, nodes, 1);
-  expect(flown.status).toBe("won");
-  expect(predicted.status).toBe("won");
-  expect(flown.path.length).toBe(predicted.path.length);
-  for (let i = 0; i < flown.path.length; i++) {
-    expect(flown.path[i].x).toBe(predicted.path[i].x);
-    expect(flown.path[i].y).toBe(predicted.path[i].y);
-  }
 }
 
 describe("approved sim review", () => {
@@ -57,24 +38,29 @@ describe("approved sim review", () => {
     expect(solarRechargeRate(dim, 0, 0, [sun], 10)).toBe(0);
     expect(solarRechargeRate(0, SOLAR_RREF, 0, [hole], 10)).toBe(0);
 
-    const config = simConfigFromLevel(ice);
-    config.solarStrength = 10;
-    const state = makeState(ice.ship.x, ice.ship.y, ice.ship.vx, ice.ship.vy, config);
-    const predicted = predictPlan(state, config, icePlan);
-    const flown = flyPlan(state, config, icePlan, 1);
-    expect(flown.status).toBe(predicted.status);
-    expect(predicted.final.recharged).toBeGreaterThanOrEqual(0);
+    const config: SimConfig = {
+      g: 1,
+      dt: 1 / 60,
+      c: 1_000_000,
+      bodies: [sun],
+      bounds: { minX: -1e6, maxX: 1e6, minY: -1e6, maxY: 1e6 },
+      maxSteps: 2,
+      targetId: "star",
+      periapsisMargin: 1,
+      solarStrength: 10,
+      fuelStart: 0,
+      fuelMax: 100,
+      fuelPerDv: 1,
+    };
     const step = makeState(0, 200, 0, 0, config);
     const before = step.tank;
     advancePlan(step, config, [], { index: 0 });
     const rate = solarRechargeRate(step.x, step.y, step.t, config.bodies, 10, config.g);
     expect(step.recharged).toBeCloseTo(Math.min(rate * config.dt, (config.fuelMax ?? before) - before), 8);
+    expect(step.recharged).toBeGreaterThan(0);
   });
 
-  it("keeps Relay's moon on a Kepler period and rejects a fast moon", () => {
-    const moon = relay.bodies.find((body) => body.id === "moon");
-    const planet = relay.bodies.find((body) => body.id === "x");
-    expect(moon?.orbit?.omega).toBeCloseTo(keplerMeanMotion(relay.g, planet?.mass ?? 0, moon?.orbit?.radius ?? 1), 12);
+  it("accepts a Kepler moon and rejects a fast one", () => {
     const copy = JSON.parse(JSON.stringify({
       id: "bad",
       name: "Bad",
@@ -102,23 +88,43 @@ describe("approved sim review", () => {
     } catch (error) {
       expect((error as LevelError).issues.join("\n")).toMatch(/omega/);
     }
+    const good = JSON.parse(JSON.stringify(copy)) as typeof copy;
+    const planetMass = good.bodies[0].mass as number;
+    const moonOrbit = good.bodies[1].orbit as { radius: number; omega: number };
+    moonOrbit.omega = keplerMeanMotion(good.g, planetMass, moonOrbit.radius);
+    expect(() => loadLevelData(good, "good.json")).not.toThrow();
   });
 
-  it("wins Relay, Pair and Chain after the Kepler edits, matching the flight", () => {
-    expectWins(relay, relayFull);
-    expectWins(pair, pairPlan);
-    expectWins(chain, chainPlan);
-    const hot = pair.bodies.find((body) => body.id === "hot");
-    const cool = pair.bodies.find((body) => body.id === "cool");
-    const separation = (hot?.orbit?.radius ?? 0) + (cool?.orbit?.radius ?? 0);
-    const total = (hot?.mass ?? 0) + (cool?.mass ?? 0);
-    expect(separation).toBeCloseTo(156.2, 6);
-    expect(hot?.orbit?.omega).toBeCloseTo(keplerMeanMotion(pair.g, total, separation), 3);
-    const comet = ice.bodies.find((body) => body.look === "comet");
-    const sun = ice.bodies.find((body) => body.id === "sun");
-    expect(comet?.orbit?.omega).toBeCloseTo(keplerMeanMotion(ice.g, sun?.mass ?? 0, comet?.orbit?.a ?? 1), 12);
-    const pose = bodyPose(comet!, 4, ice.bodies);
-    const posed = bodyPose(comet!, 4, ice.bodies, 99);
+  it("keeps a stored ellipse mean motion when g changes", () => {
+    const host = star("sun", 20);
+    host.mass = 5_000;
+    host.id = "sun";
+    const a = 180;
+    const omega = keplerMeanMotion(1, host.mass, a);
+    const comet: Body = {
+      id: "comet",
+      name: "comet",
+      kind: "planet",
+      look: "comet",
+      x: 0,
+      y: 0,
+      mass: 1,
+      radius: 5,
+      orbit: {
+        kind: "ellipse",
+        centerId: "sun",
+        a,
+        e: 0.6,
+        periapsisAngle: 0.4,
+        phase: 0.2,
+        radius: a * (1 - 0.6),
+        omega,
+      },
+    };
+    const bodies = [host, comet];
+    expect(omega).toBeCloseTo(Math.sqrt(host.mass / a ** 3), 12);
+    const pose = bodyPose(comet, 4, bodies);
+    const posed = bodyPose(comet, 4, bodies, 99);
     expect(pose.x).toBe(posed.x);
     expect(pose.y).toBe(posed.y);
   });

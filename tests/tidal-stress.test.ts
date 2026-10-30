@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { ember, simConfigFromLevel } from "../src/level/catalog";
 import {
   tidalGlyphAxes,
   tidalPathChip,
@@ -171,9 +170,7 @@ describe("tidal stress", () => {
     expect(chip?.text).toContain("path: tidal 3 for 0:02");
     expect(chip?.text).toContain("hull");
     expect(tidalPathChip(path.slice(0, 40), config)).toBeNull();
-
-    const emberConfig = simConfigFromLevel(ember);
-    expect(emberConfig.tidalStrength).toBe(1);
-    expect(tidalDangerRadius(emberConfig.bodies[2], 1, 1)).toBeGreaterThan(16);
+    expect(config.tidalStrength).toBe(1);
+    expect(tidalDangerRadius(config.bodies[0], 1, 1)).toBeGreaterThan(16);
   });
 });

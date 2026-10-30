@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createGame, setPlan } from "../src/game/state";
-import { movingBodies } from "../src/game/ghosts";
-import { lead } from "../src/level/catalog";
-import { leadPlan } from "../src/level/solutions";
+import { slingshotPlan } from "./support/plans";
+import { stage } from "./support/stage";
 import {
   aheadFade,
   burnsAhead,
@@ -146,19 +145,16 @@ describe("LU2 ghost markers", () => {
     expect(arrival[0].burnNumber).toBe(3);
   });
 
-  it("marks Lead's winning step as the arrival and leaves the prediction alone", () => {
-    const game = createGame(lead);
-    setPlan(game, leadPlan);
+  it("marks the winning step as the arrival and leaves the prediction alone", () => {
+    const game = createGame(stage);
+    setPlan(game, slingshotPlan);
     const prediction = game.prediction;
     expect(prediction.status).toBe("won");
-    const moving = movingBodies(lead.bodies);
-    const targetIndex = moving.findIndex((body) => body.id === lead.targetId);
-    expect(targetIndex).toBe(0);
     const capture = prediction.steps;
-    const slots = planGhosts(leadPlan, 120, 0, moving.length, targetIndex, capture);
+    const slots = planGhosts(slingshotPlan, 120, 0, 1, 0, capture);
     game.cursorStep = 120;
     expect(game.prediction).toBe(prediction);
-    const atCapture = slots.filter((slot) => slot.step === capture && slot.bodyIndex === targetIndex);
+    const atCapture = slots.filter((slot) => slot.step === capture && slot.bodyIndex === 0);
     expect(atCapture).toHaveLength(1);
     expect(atCapture[0].arrival).toBe(true);
     expect(slots.filter((slot) => slot.step === 120)).toHaveLength(1);

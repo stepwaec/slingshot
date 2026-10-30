@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createGame, setPlan, setPreviewSeconds } from "../src/game/state";
-import { relay, simConfigFromLevel } from "../src/level/catalog";
+import { simConfigFromLevel, type Level } from "../src/level/catalog";
+import { stage } from "./support/stage";
 import {
   PREDICTION_STEP_CAP,
   extensionSteps,
@@ -15,9 +16,14 @@ import {
   type SimState,
 } from "../src/sim/physics";
 
-function relayStart() {
-  const config = simConfigFromLevel(relay);
-  const state = makeState(relay.ship.x, relay.ship.y, relay.ship.vx, relay.ship.vy, config);
+const chart: Level = {
+  ...stage,
+  horizon: { seconds: 8, oneOrbit: false, shorten: 0, ref: 1 },
+};
+
+function chartStart() {
+  const config = simConfigFromLevel(chart);
+  const state = makeState(chart.ship.x, chart.ship.y, chart.ship.vx, chart.ship.vy, config);
   return { config, state };
 }
 
@@ -27,7 +33,7 @@ function endStep(path: readonly { step: number }[]): number {
 
 describe("prediction length", () => {
   it("keeps today's look-ahead when the slider is untouched and there are no nodes", () => {
-    const { config, state } = relayStart();
+    const { config, state } = chartStart();
     const steps = horizonSteps(state, config);
     const range = previewRange(state, config);
     expect(extensionSteps(state, config, null)).toBe(steps);
@@ -38,16 +44,25 @@ describe("prediction length", () => {
     expect(coast.status).toBe("flying");
     expect(endStep(coast.path)).toBe(state.step + steps);
 
-    const game = createGame(relay);
+    const game = createGame(chart);
     expect(game.previewSeconds).toBeNull();
     expect(endStep(game.prediction.path)).toBe(game.initial.step + steps);
   });
 
   it("extends a fixed time past the latest burn, and a long preview still matches the flight", () => {
-    const { config, state } = relayStart();
+    const openSpace: Level = {
+      ...stage,
+      bodies: [{ id: "x", name: "Planet X", kind: "target", x: 80_000, y: 0, mass: 1, radius: 8, captureRadius: 20 }],
+      ship: { x: 0, y: 0, vx: 12, vy: 0 },
+      bounds: { minX: -1e6, maxX: 1e6, minY: -1e6, maxY: 1e6 },
+      maxSteps: 8_000,
+      horizon: { seconds: 8, oneOrbit: false, shorten: 0, ref: 1 },
+    };
+    const config = simConfigFromLevel(openSpace);
+    const state = makeState(openSpace.ship.x, openSpace.ship.y, openSpace.ship.vx, openSpace.ship.vy, config);
     const open: SimConfig = { ...config, horizon: undefined };
-    const early: BurnNode = { step: 180, dvx: 0.15, dvy: 0.05 };
-    const later: BurnNode = { step: 640, dvx: -0.1, dvy: 0.2 };
+    const early: BurnNode = { step: 180, dvx: 0, dvy: 0 };
+    const later: BurnNode = { step: 640, dvx: 0, dvy: 0 };
     const extension = extensionSteps(state, config, 40);
     expect(extension).toBeGreaterThan(horizonSteps(state, config));
 
@@ -70,7 +85,7 @@ describe("prediction length", () => {
       }
     }
 
-    const game = createGame(relay);
+    const game = createGame(openSpace);
     setPlan(game, [early, later]);
     setPreviewSeconds(game, 40);
     expect(game.previewSeconds).toBe(40);
@@ -107,7 +122,7 @@ describe("prediction length", () => {
   });
 
   it("lets a wider level preview further than a small one", () => {
-    const { config, state } = relayStart();
+    const { config, state } = chartStart();
     const horizon = { seconds: 4, oneOrbit: false, shorten: 0, ref: 1 };
     const shared: SimConfig = { ...config, horizon, maxSteps: 1_000_000 };
     const small = previewRange(state, { ...shared, bounds: { minX: 0, maxX: 800, minY: 0, maxY: 0 } });

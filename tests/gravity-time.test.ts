@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { simConfigFromLevel, passage } from "../src/level/catalog";
+import { simConfigFromLevel } from "../src/level/catalog";
+import { stage as passage } from "./support/stage";
 import {
   TIME_BANDS,
   TIME_WARM_S,

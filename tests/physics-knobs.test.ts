@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { passage, rescue, simConfigFromLevel } from "../src/level/catalog";
-import { deepPlan } from "../src/level/solutions";
+import { simConfigFromLevel } from "../src/level/catalog";
+import { stage as passage } from "./support/stage";
 import { sampleGravityGrid } from "../src/render/gravityField";
 import {
   acceleration,
@@ -193,11 +193,18 @@ describe("physics knobs", () => {
   it("bounds the rate with dilationCap, and prediction matches the flight", () => {
     const cap = 10;
     const floor = 1 / cap;
-    const plain = simConfigFromLevel(rescue);
+    const flightC = 40;
+    const horizon = 40;
+    const flightMass = (horizon * flightC * flightC) / 2;
+    const plain: SimConfig = {
+      ...config({ c: flightC }),
+      maxSteps: 2000,
+      bodies: [{ id: "hole", name: "hole", kind: "blackhole", x: 0, y: 0, mass: flightMass, radius: 8 }],
+    };
     const capped: SimConfig = { ...plain, dilationCap: cap };
-    const start = makeState(rescue.ship.x, rescue.ship.y, rescue.ship.vx, rescue.ship.vy, plain);
-    const open = flyPlan(start, plain, deepPlan, 1);
-    const held = flyPlan(start, capped, deepPlan, 1);
+    const start = makeState(100, 0, -6, 0, plain);
+    const open = flyPlan(start, plain, [], 1);
+    const held = flyPlan(start, capped, [], 1);
     expect(held.path.length).toBe(open.path.length);
     let uncappedHitFloor = false;
     let capLiftedARate = false;
@@ -211,7 +218,7 @@ describe("physics knobs", () => {
     expect(uncappedHitFloor).toBe(true);
     expect(capLiftedARate).toBe(true);
     expect(held.shipTime).toBeGreaterThan(open.shipTime);
-    expectPredictionMatchesFlight(capped, start, deepPlan);
+    expectPredictionMatchesFlight(capped, start);
 
     const c = 40;
     const radius = 30;

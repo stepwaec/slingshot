@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { createGame, setMagnetism, setPlan } from "../src/game/state";
-import { needle, pulse, quake, rescue, simConfigFromLevel, type Level } from "../src/level/catalog";
-import { deepPlan, needlePlan, pulsePlan, quakePlan } from "../src/level/solutions";
+import { createGame, setMagnetism } from "../src/game/state";
+import { observatory } from "../src/level/catalog";
 import {
   advancePlan,
   beamDamageRate,
@@ -13,44 +12,24 @@ import {
   predictPlan,
   spreadAlong,
   type Body,
-  type BurnNode,
   type PathSample,
   type SimConfig,
 } from "../src/sim/physics";
 
-function expectFlightMatchesPrediction(level: Level, nodes: readonly BurnNode[]): void {
-  const config = simConfigFromLevel(level);
-  const state = makeState(level.ship.x, level.ship.y, level.ship.vx, level.ship.vy, config);
-  const predicted = predictPlan(state, config, nodes);
-  const flown = flyPlan(state, config, nodes, 1);
-  expect(flown.status).toBe(predicted.status);
-  expect(flown.status).toBe("won");
-  expect(flown.steps).toBe(predicted.steps);
-  expect(flown.path.length).toBe(predicted.path.length);
-  expect(predicted.final.hull).toBeGreaterThan(0);
-  for (let i = 0; i < flown.path.length; i++) {
-    const got = flown.path[i];
-    const want = predicted.path[i];
-    if (got.x !== want.x || got.y !== want.y || got.step !== want.step || got.rate !== want.rate) {
-      throw new Error(`${level.id} diverged at sample ${i}`);
-    }
-  }
-  const again = replay(level, nodes);
-  expect(again.hull).toBe(predicted.final.hull);
-  expect(again.x).toBe(predicted.final.x);
-  expect(again.y).toBe(predicted.final.y);
-  expect(again.status).toBe(predicted.final.status);
-}
-
-function replay(level: Level, nodes: readonly BurnNode[]) {
-  const config = simConfigFromLevel(level);
-  const state = makeState(level.ship.x, level.ship.y, level.ship.vx, level.ship.vy, config);
-  const cursor = { index: 0 };
-  let guard = 0;
-  while (state.status === "flying" && guard++ < config.maxSteps + nodes.length + 2) {
-    advancePlan(state, config, nodes, cursor);
-  }
-  return state;
+function flightConfig(bodies: Body[]): SimConfig {
+  return {
+    g: observatory.g,
+    dt: observatory.dt,
+    c: observatory.c,
+    bodies,
+    bounds: observatory.bounds,
+    maxSteps: 60,
+    targetId: bodies[0]?.id ?? "none",
+    periapsisMargin: 1,
+    fuelStart: 20,
+    fuelMax: 20,
+    fuelPerDv: 1,
+  };
 }
 
 function magnet(reach: number, tilt = 0, averaged = false): Body {
@@ -84,9 +63,10 @@ describe("WP9 compact objects", () => {
     expect(fieldRatio(round, 0, 0, [pulsar])).toBeCloseTo(1, 3);
     expect(fieldRatio(0, round, 0, [pulsar])).toBeCloseTo(1, 3);
 
-    const giant = needle.bodies.find((item) => item.look === "gas-giant");
-    expect(giant?.magnet?.b1Reach).toBe(120);
-    const lethalEquator = 120 / Math.cbrt(30);
+    const giant = observatory.bodies.find((item) => item.look === "gas-giant");
+    const reach = giant?.magnet?.b1Reach ?? 0;
+    expect(reach).toBeGreaterThan(0);
+    const lethalEquator = reach / Math.cbrt(30);
     expect(lethalEquator).toBeLessThan(giant?.radius ?? 0);
   });
 
@@ -149,26 +129,30 @@ describe("WP9 compact objects", () => {
     expect(fieldRatio(0, 400, 0, [body])).toBeLessThan(1);
   });
 
-  it("Pulse's reference solution wins through the beams, matching the flight", () => {
-    expect(pulse.bodies.some((body) => body.look === "pulsar" && (body.beam?.damage ?? 0) > 0)).toBe(true);
-    expectFlightMatchesPrediction(pulse, pulsePlan);
-    const flown = replay(pulse, pulsePlan);
-    expect(flown.hull).toBeLessThan(100);
+  it("reads the Observatory pulsar and matches a flight beside it", () => {
+    const pulsar = observatory.bodies.find((body) => body.look === "pulsar");
+    if (!pulsar?.beam) throw new Error("observatory pulsar");
+    expect(pulsar.beam.damage ?? 0).toBe(0);
+    expect(pulsar.magnet?.averaged).toBe(true);
+    const config = flightConfig([pulsar]);
+    const state = makeState(pulsar.x, pulsar.y + 50, 1, 0, config);
+    const predicted = predictPlan(state, config, []);
+    const flown = flyPlan(state, config, [], 1);
+    expect(flown.status).toBe(predicted.status);
+    expect(predicted.final.hull).toBe(100);
+    expect(flown.path.length).toBe(predicted.path.length);
   });
 
-  it("Quake's reference solution wins, and the field spreads the drawn path", () => {
-    expect(quake.bodies.some((body) => body.look === "magnetar")).toBe(true);
-    expectFlightMatchesPrediction(quake, quakePlan);
-    const config = simConfigFromLevel(quake);
-    const predicted = predictPlan(
-      makeState(quake.ship.x, quake.ship.y, quake.ship.vx, quake.ship.vy, config),
-      config,
-      quakePlan,
-    );
-    const spread = spreadAlong(predicted.path, quake.dt, quake.bodies);
-    expect(spread[spread.length - 1].sigma).toBeGreaterThan(0.6);
-    const game = createGame(quake);
-    setPlan(game, quakePlan);
+  it("spreads a path in the Observatory magnetar field without changing the prediction", () => {
+    const magnetar = observatory.bodies.find((body) => body.look === "magnetar");
+    if (!magnetar?.magnet) throw new Error("observatory magnetar");
+    const samples: PathSample[] = [];
+    for (let i = 0; i <= 40; i++) {
+      samples.push({ x: magnetar.x, y: magnetar.y + magnetar.magnet.b1Reach * 0.4 + i * 6, step: i, rate: 1 });
+    }
+    const spread = spreadAlong(samples, observatory.dt, [magnetar]);
+    expect(spread[spread.length - 1].sigma).toBeGreaterThan(spread[0].sigma);
+    const game = createGame();
     const path = game.prediction.path;
     const hull = game.prediction.final.hull;
     const x = game.prediction.final.x;
@@ -180,14 +164,23 @@ describe("WP9 compact objects", () => {
     expect(game.magnetism).toBe(false);
   });
 
-  it("Needle's neutron star and the Rescue black hole match flight", () => {
-    const neutron = needle.bodies.find((body) => body.look === "neutron");
-    expect(neutron?.beam?.damage ?? 0).toBe(0);
-    expect(neutron?.beam?.reach).toBe(36);
-    expect(needle.bodies.some((body) => body.look === "gas-giant" && body.magnet)).toBe(true);
-    expectFlightMatchesPrediction(needle, needlePlan);
-    expectFlightMatchesPrediction(rescue, deepPlan);
-    expect(rescue.bodies.some((body) => body.kind === "blackhole")).toBe(true);
+  it("keeps the Observatory neutron star dark and the black hole on the chart", () => {
+    const neutron = observatory.bodies.find((body) => body.look === "neutron");
+    const hole = observatory.bodies.find((body) => body.kind === "blackhole");
+    if (!neutron || !hole) throw new Error("observatory compact");
+    expect(neutron.beam?.damage ?? 0).toBe(0);
+    expect(neutron.beam?.reach).toBe(36);
+    expect(observatory.bodies.some((body) => body.look === "gas-giant" && body.magnet)).toBe(true);
+    const config = flightConfig([neutron, hole]);
+    const state = makeState(neutron.x + 90, neutron.y + 40, 1, 0, config);
+    const predicted = predictPlan(state, config, []);
+    const flown = flyPlan(state, config, [], 1);
+    expect(flown.status).toBe(predicted.status);
+    expect(flown.path.length).toBe(predicted.path.length);
+    for (let i = 0; i < flown.path.length; i++) {
+      expect(flown.path[i].x).toBe(predicted.path[i].x);
+      expect(flown.path[i].y).toBe(predicted.path[i].y);
+    }
   });
 });
 
