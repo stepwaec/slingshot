@@ -426,7 +426,7 @@ class GalleryVisual implements Visual {
   }
 
   private async paint(mesh: THREE.Mesh, fit: ArtFit, sun: boolean, dpr: number, zoom: number, gen: number): Promise<void> {
-    const texture = await loadArtTexture(fit, rasterPixels(fit.viewW, fit.viewH, dpr, zoom));
+    const texture = await loadArtTexture(fit, rasterPixels(fit.viewW, fit.viewH, dpr, zoom), zoom);
     if (gen !== this.bakeGen) {
       texture.dispose();
       return;
@@ -1076,17 +1076,25 @@ let sharedDisc: THREE.CanvasTexture | null = null;
 function discAlpha(): THREE.CanvasTexture {
   if (sharedDisc) return sharedDisc;
   const canvas = document.createElement("canvas");
-  canvas.width = 256;
-  canvas.height = 256;
+  const size = 1024;
+  canvas.width = size;
+  canvas.height = size;
   const ctx = canvas.getContext("2d");
   if (!ctx) return new THREE.CanvasTexture(canvas);
-  const fade = ctx.createRadialGradient(128, 128, 124, 128, 128, 128);
+  const mid = size / 2;
+  // The shade disc is the crash radius. An inset mask left a gap, so the
+  // rim sat off the limb as its own ring.
+  const fade = ctx.createRadialGradient(mid, mid, mid - 1.5, mid, mid, mid);
   fade.addColorStop(0, "#ffffff");
   fade.addColorStop(1, "#000000");
   ctx.fillStyle = fade;
-  ctx.fillRect(0, 0, 256, 256);
+  ctx.fillRect(0, 0, size, size);
   sharedDisc = new THREE.CanvasTexture(canvas);
   sharedDisc.colorSpace = THREE.NoColorSpace;
+  sharedDisc.generateMipmaps = false;
+  sharedDisc.minFilter = THREE.LinearFilter;
+  sharedDisc.magFilter = THREE.LinearFilter;
+  sharedDisc.needsUpdate = true;
   return sharedDisc;
 }
 
@@ -1107,6 +1115,8 @@ function poseStrip(mesh: THREE.Mesh, spec: StripSpec, x: number, y: number, radi
   const material = mesh.material as THREE.MeshBasicMaterial;
   const map = material.map;
   if (map) {
+    map.wrapS = THREE.RepeatWrapping;
+    map.wrapT = THREE.ClampToEdgeWrapping;
     map.offset.set(window.offsetX, window.offsetY);
     map.repeat.set(window.repeatX, window.repeatY);
   }

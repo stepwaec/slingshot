@@ -51,7 +51,41 @@ export function rasterSvg(url: string, width: number, height: number): Promise<H
   return pending;
 }
 
+/**
+ * The browser paints an SVG image at its width/height, then `drawImage` would
+ * stretch that bitmap. Set those attributes to the canvas size and keep the
+ * viewBox, so filters and the terminator are rasterized at DPR × zoom.
+ */
+export function svgSizedForRaster(markup: string, width: number, height: number): string {
+  const match = markup.match(/<svg\b[^>]*>/i);
+  if (!match) return markup;
+  let tag = match[0];
+  if (!/viewBox\s*=/i.test(tag)) {
+    const w = /width\s*=\s*["']([\d.]+)/i.exec(tag)?.[1] ?? String(width);
+    const h = /height\s*=\s*["']([\d.]+)/i.exec(tag)?.[1] ?? String(height);
+    tag = tag.replace(/<svg\b/i, `<svg viewBox="0 0 ${w} ${h}"`);
+  }
+  if (/width\s*=\s*["'][^"']*["']/i.test(tag)) tag = tag.replace(/width\s*=\s*["'][^"']*["']/i, `width="${width}"`);
+  else tag = tag.replace(/<svg\b/i, `<svg width="${width}"`);
+  if (/height\s*=\s*["'][^"']*["']/i.test(tag)) tag = tag.replace(/height\s*=\s*["'][^"']*["']/i, `height="${height}"`);
+  else tag = tag.replace(/<svg\b/i, `<svg height="${height}"`);
+  return markup.replace(match[0], tag);
+}
+
 function drawSvg(url: string, width: number, height: number): Promise<HTMLCanvasElement> {
+  return fetch(url)
+    .then((res) => {
+      if (!res.ok) throw new Error("svg raster");
+      return res.text();
+    })
+    .then((markup) => {
+      const sized = svgSizedForRaster(markup, width, height);
+      const blob = URL.createObjectURL(new Blob([sized], { type: "image/svg+xml" }));
+      return paintImage(blob, width, height).finally(() => URL.revokeObjectURL(blob));
+    });
+}
+
+function paintImage(url: string, width: number, height: number): Promise<HTMLCanvasElement> {
   return new Promise((resolve, reject) => {
     const image = new Image();
     image.onload = () => {
