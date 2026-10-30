@@ -69,6 +69,12 @@ export const palette = {
   gridDepth3: "#FFC857",
   gridDepth4: "#FF5A1F",
   gridTidal: "#FF5A5F",
+  /** design/style.md §22 tidal.low. Level 1 rings. Same cyan as the Layers icon. */
+  tidalLow: "#7FE0FF",
+  /** design/style.md §22 tidal.warn. Level 2 rings. Same hex as stress.warn. */
+  tidalWarn: "#FF9F43",
+  /** design/style.md §22 tidal.critical. Level 3 rings, the danger ring and the chips. */
+  tidalCritical: "#FF5A5F",
   /** design/assets/overlays/gravity-sheet.svg. */
   sheetGlass: "#0B1430",
   /** design/style.md §21 time.casing. Also the warm-band grid ink. */

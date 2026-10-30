@@ -420,6 +420,41 @@ export const theme = {
     legendSwatchGap: 4,
   },
   /**
+   * Tidal stress lattice. design/assets/overlays/tidal-stress.svg header
+   * and design/style.md §22. Screen pixels. The sim owns S and the tensor.
+   */
+  tidal: {
+    /** 18 px screen grid. Cells do not scale with zoom. */
+    cell: 18,
+    /** Empty where S / STRESS_WARN is below this. */
+    show: 0.06,
+    /** Skip a cell within the body radius plus this many screen pixels. */
+    bodyPad: 7,
+    /** Ring radius g = glyph × cell (0.26 × 18 = 4.68). */
+    glyph: 0.26,
+    eccentricityCap: 0.95,
+    /** e = min(cap, k · log₂(1 + S/(show·W)) / log₂(1 + 2/show)). */
+    eccentricityK: 0.924,
+    /** b = g / (1 + squeeze · e). a = g (1 + e). */
+    squeeze: 0.6,
+    /** Stroke alpha runs 0.32 → 0.92 and reaches the cap at S = STRESS_WARN. */
+    alphaMin: 0.32,
+    alphaSpan: 0.6,
+    alphaMax: 0.92,
+    /** Level 3 fill. */
+    fillAlpha: 0.22,
+    /** "tidal 3 · hull" chip on the dashed ring. */
+    boundaryWidth: 90,
+    boundaryHeight: 16,
+    /** Path chip. planning-tidal.svg: 16 px, radius 5, pad 6, 10.5 px mono. */
+    chipHeight: 16,
+    chipPad: 6,
+    chipFont: 10.5,
+    chipRadius: 5,
+    chipFill: 0.88,
+    chipStroke: 0.75,
+  },
+  /**
    * Cosmetic timings from the megastructure headers.
    * Lengths the sim uses live in `src/sim/mega.ts`, scaled by star radius.
    */

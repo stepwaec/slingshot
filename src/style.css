@@ -464,7 +464,8 @@ html, body, #app {
 
 .zone-legend,
 .dot-legend,
-.tick-legend {
+.tick-legend,
+.ring-legend {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 10px;
@@ -475,7 +476,8 @@ html, body, #app {
 
 .zone-legend > span,
 .dot-legend > span,
-.tick-legend > span {
+.tick-legend > span,
+.ring-legend > span {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -516,6 +518,39 @@ html, body, #app {
 .astro-tick[data-zone="dense"] { background: #ff3d6e; }
 .astro-tick[data-zone="harvest"] { background: #ffc2d2; }
 .astro-tick[data-zone="eaten"] { background: #6ef0a0; }
+
+/* design/assets/overlays/tidal-stress.svg legend: Trace, Level 1, Level 2, Level 3. */
+.tidal-ring {
+  display: inline-block;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 1px solid transparent;
+}
+
+.tidal-ring[data-zone="trace"] {
+  width: 8px;
+  height: 8px;
+  border-color: rgba(127, 224, 255, 0.4);
+}
+
+.tidal-ring[data-zone="low"] {
+  width: 12px;
+  height: 6px;
+  border-color: rgba(127, 224, 255, 0.9);
+}
+
+.tidal-ring[data-zone="warn"] {
+  width: 15.2px;
+  height: 4.8px;
+  border-color: rgba(255, 159, 67, 0.95);
+}
+
+.tidal-ring[data-zone="critical"] {
+  width: 17.6px;
+  height: 4px;
+  border-color: #ff5a5f;
+  background: rgba(255, 90, 95, 0.22);
+}
 
 .fuel-block {
   position: absolute;

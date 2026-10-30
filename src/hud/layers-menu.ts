@@ -37,6 +37,10 @@ function legendElement(kind: NonNullable<(typeof LAYERS)[number]["legend"]>): HT
     legend.append(dotLegend());
     return legend;
   }
+  if (kind === "tidal") {
+    legend.append(tidalLegend());
+    return legend;
+  }
   legend.append(tickLegend());
   return legend;
 }
@@ -77,6 +81,26 @@ function dotLegend(): HTMLElement {
     dot.className = "rad-dot";
     dot.dataset.zone = dots[i][0];
     item.append(dot, document.createTextNode(dots[i][1]));
+    row.append(item);
+  }
+  return row;
+}
+
+function tidalLegend(): HTMLElement {
+  const row = document.createElement("span");
+  row.className = "ring-legend";
+  const marks: Array<[string, string]> = [
+    ["trace", "Trace"],
+    ["low", "Level 1"],
+    ["warn", "Level 2"],
+    ["critical", "Level 3 · hull"],
+  ];
+  for (let i = 0; i < marks.length; i++) {
+    const item = document.createElement("span");
+    const mark = document.createElement("i");
+    mark.className = "tidal-ring";
+    mark.dataset.zone = marks[i][0];
+    item.append(mark, document.createTextNode(marks[i][1]));
     row.append(item);
   }
   return row;
