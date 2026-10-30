@@ -25,6 +25,7 @@ import { createClockLatches, readClocks, type ClockLatches } from "./hud/readout
 import type { MissionScore } from "./sim/score";
 import { frameLevel, worldToScreen } from "./render/camera";
 import { SpaceView } from "./render/view";
+import { showNeedsWebGL2, webGL2Available } from "./render/webgl2";
 import {
   doseAt,
   hasMagneticBody,
@@ -139,7 +140,9 @@ const game = createGame();
 if (import.meta.env.DEV) {
   (window as unknown as { __slingshot?: { game: Game; setPlan: typeof setPlan } }).__slingshot = { game, setPlan };
 }
-const view = new SpaceView(canvas, game);
+const webgl2 = webGL2Available();
+if (!webgl2) showNeedsWebGL2(app);
+const view = webgl2 ? new SpaceView(canvas, game) : null;
 const resetButtons = [...document.querySelectorAll<HTMLButtonElement>("[data-reset]")];
 const clearButtons = [...document.querySelectorAll<HTMLButtonElement>("[data-clear]")];
 const speedButtons = [...document.querySelectorAll<HTMLButtonElement>("[data-speed]")];
@@ -172,7 +175,7 @@ levelSelect.addEventListener("change", () => {
   const next = levels.find((level) => level.id === levelSelect.value) ?? passage;
   loadLevel(game, next);
   resetShipLook();
-  view.reload(next);
+  view?.reload(next);
   frameLevel(game.camera, canvas.clientWidth, canvas.clientHeight, next);
   framed = true;
 });
@@ -205,15 +208,17 @@ previewRangeInput.addEventListener("input", () => {
   setPreviewSeconds(game, Number(previewRangeInput.value));
 });
 
-window.addEventListener("resize", resize);
-resize();
-requestAnimationFrame(loop);
+if (view) {
+  window.addEventListener("resize", resize);
+  resize();
+  requestAnimationFrame(loop);
+}
 
 function resize(): void {
   const width = canvas.clientWidth;
   const height = canvas.clientHeight;
   if (width < 2 || height < 2) return;
-  view.resize(width, height);
+  view?.resize(width, height);
   if (!framed) {
     frameLevel(game.camera, width, height, game.level);
     framed = true;
@@ -228,7 +233,7 @@ function loop(now: number): void {
     fpsStamp = now;
   }
   tick(game);
-  if (canvas.clientWidth > 1 && canvas.clientHeight > 1) view.render(game, now);
+  if (view && canvas.clientWidth > 1 && canvas.clientHeight > 1) view.render(game, now);
   syncHud(game);
   requestAnimationFrame(loop);
 }

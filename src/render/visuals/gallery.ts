@@ -26,9 +26,8 @@ import {
   stripScroll,
   stripWindow,
 } from "../art-motion";
-import { usesShader } from "../shaders/families";
+import { shaderFamily } from "../shaders/families";
 import { planetKey } from "../shaders/planet-params";
-import { shaderRendering } from "../shaders/impostor";
 import { zoomBucket } from "../ship-art";
 import {
   SOL_PROMINENCES,
@@ -129,7 +128,7 @@ class GalleryVisual implements Visual {
     this.object.name = "design-art";
     for (const body of level.bodies) {
       if (body.supernova || body.quasar) continue;
-      if (usesShader(body, shaderRendering())) {
+      if (shaderFamily(body)) {
         if (body.look === "red-giant") this.addDragEdge(body);
         if (planetKey(body) === "planetx") this.addPlanetHalo(body);
         continue;

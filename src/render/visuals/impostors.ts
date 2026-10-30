@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { isEditing, type Game } from "../../game/state";
 import { bodyPose, type Body } from "../../sim/physics";
 import { projectToScreen, syncTopDown } from "../camera";
-import { createBodyShader, shaderFamily, usesShader } from "../shaders/families";
+import { createBodyShader, shaderFamily } from "../shaders/families";
 import {
   artLightLocked,
   impostorSide,
@@ -11,7 +11,6 @@ import {
   planetSide,
   ringOctaves,
   screenRadius,
-  shaderRendering,
   cosmeticSeconds,
 } from "../shaders/impostor";
 import { compactMotion } from "../shaders/compact-params";
@@ -24,7 +23,7 @@ import { disposeObject, type Visual, type VisualFactory, type VisualFrame } from
 /**
  * One impostor quad per body (design/shader-specs.md §1).
  * A quad stays hidden until its family registers a shader. The SVG gallery
- * draws the rest, and draws everything when `rendering.shaders` is off.
+ * draws the rest. A family with a shader does not fall back to a sprite.
  */
 export const createImpostors: VisualFactory = (theme, level) => new ImpostorVisual(theme, level);
 
@@ -47,9 +46,8 @@ class ImpostorVisual implements Visual {
 
   constructor(_theme: Theme, level: Parameters<VisualFactory>[1]) {
     this.object.name = "shader-bodies";
-    const on = shaderRendering();
     for (const body of level.bodies) {
-      const material = usesShader(body, on) ? createBodyShader(body) : null;
+      const material = shaderFamily(body) ? createBodyShader(body) : null;
       const designR = numberUniform(material, "uDesignR", body.radius);
       const hazeR = numberUniform(material, "uHazeR", 1);
       const smooth = numberUniform(material, "uSmooth", 0);
@@ -81,9 +79,7 @@ class ImpostorVisual implements Visual {
   }
 
   update(frame: VisualFrame): void {
-    const on = shaderRendering();
-    const compact = this.slots.some((slot) => slot.mesh.visible && shaderFamily(slot.body) === "compact");
-    this.object.visible = on || compact;
+    this.object.visible = this.slots.some((slot) => slot.mesh.visible);
     if (!this.object.visible) return;
     const game = frame.game;
     const time = chartTime(game);
