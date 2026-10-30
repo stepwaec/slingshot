@@ -2,43 +2,21 @@ import * as THREE from "three";
 import { bodyPose, type Body } from "../../sim/physics";
 import { isEditing } from "../../game/state";
 import { hashId } from "../event-look";
-import { artMesh, loadArtTexture, poseArt, rasterPixels, type ArtFit } from "../art-sprite";
-import { silenceNightRim } from "../surface-art";
 import type { Theme } from "../theme";
 import { disposeObject, type Visual, type VisualFactory, type VisualFrame } from "../visual";
+import { srgb01 } from "../palette";
+import { syncField } from "../shaders/field-camera";
+import { cosmeticSeconds } from "../shaders/impostor";
+import { createPointCloud, type PointCloud } from "../shaders/points-shader";
+import { createRockMesh, writeRock, type RockMesh } from "../shaders/rock-shader";
 import { shader, srgbVec } from "./materials";
 
 /**
- * A lone asteroid outside any belt. design/assets/bodies/stray-asteroid.svg.
- * The silhouette is the sample's S-type rock, lit toward the brightest mass.
+ * A lone asteroid outside any belt. The rock is one procedural instance,
+ * lit toward the brightest mass. design/shaders/rock.vert.
  * Dust and the drift arrow do not touch the sim.
  */
 export const createStray: VisualFactory = (theme, level) => new StrayVisual(theme, level);
-
-const TAU = Math.PI * 2;
-/** saS2's farthest vertex is 11.35; the sample draws it at scale 1.5. */
-const ROCK_RADIUS = 11.35 * 1.5;
-
-const dustVert = /* glsl */ `
-attribute float aAlpha;
-varying float vAlpha;
-varying vec2 vLocal;
-void main() {
-  vAlpha = aAlpha;
-  vLocal = position.xy * 2.0;
-  gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0);
-}
-`;
-
-const dustFrag = /* glsl */ `
-varying float vAlpha;
-varying vec2 vLocal;
-uniform vec3 uColor;
-void main() {
-  if (length(vLocal) > 1.0) discard;
-  gl_FragColor = vec4(uColor, vAlpha);
-}
-`;
 
 const arrowFrag = /* glsl */ `
 varying vec2 vLocal;
@@ -81,17 +59,15 @@ interface Speck {
 
 interface StrayView {
   body: Body;
-  rock: THREE.Mesh;
-  fit: ArtFit;
-  dust: THREE.InstancedMesh;
   specks: Speck[];
   arrow: THREE.Mesh;
   head: THREE.Mesh;
   arrowLength: { value: number };
   arrowZoom: { value: number };
   arrowOffset: { value: number };
-  period: number;
   chip: Chip;
+  shaderRock: RockMesh;
+  shaderDust: PointCloud;
 }
 
 class StrayVisual implements Visual {
@@ -101,8 +77,6 @@ class StrayVisual implements Visual {
   private readonly bodies: readonly Body[];
   private readonly g: number;
   private readonly views: StrayView[] = [];
-  private readonly dummy = new THREE.Object3D();
-  private bakeGen = 0;
 
   constructor(theme: Theme, level: Parameters<VisualFactory>[1]) {
     this.theme = theme;
@@ -113,7 +87,6 @@ class StrayVisual implements Visual {
       if (body.look !== "asteroid") continue;
       this.views.push(this.build(body));
     }
-    this.bakeOnce();
   }
 
   update(frame: VisualFrame): void {
@@ -126,28 +99,25 @@ class StrayVisual implements Visual {
     for (const view of this.views) {
       const pose = bodyPose(view.body, time, this.bodies, this.g);
       const star = brightest(pose.x, pose.y, time, this.bodies, this.g);
-      const face = star ? Math.atan2(star.y - pose.y, star.x - pose.x) - Math.PI : 0;
-      const tumble = view.period > 0 ? (seconds / view.period) * TAU : 0;
-      poseArt(view.rock, view.fit, pose.x, pose.y, view.body.radius, face + tumble);
       const speed = Math.hypot(pose.vx, pose.vy);
       const dx = speed > 1e-4 ? pose.vx / speed : 1;
       const dy = speed > 1e-4 ? pose.vy / speed : 0;
       const trail = spec.trail * (view.body.radius / spec.sampleRadius);
       const px = view.body.radius / spec.sampleRadius;
+      const shown = cosmeticSeconds(frame.now);
+      syncField(view.shaderRock.material.uniforms, game.camera, frame.width, frame.height, frame.dpr, shown);
+      syncField(view.shaderDust.material.uniforms, game.camera, frame.width, frame.height, frame.dpr, shown);
+      view.shaderRock.pos[0] = pose.x;
+      view.shaderRock.pos[1] = pose.y;
+      view.shaderRock.posAttr.needsUpdate = true;
+      const aim = star ?? { x: pose.x + 1, y: pose.y };
+      (view.shaderRock.material.uniforms.uStar.value as THREE.Vector2).set(aim.x, aim.y);
       for (let i = 0; i < view.specks.length; i += 1) {
         const speck = view.specks[i];
-        this.dummy.position.set(
-          pose.x - dx * speck.along * trail + -dy * speck.side * px,
-          pose.y - dy * speck.along * trail + dx * speck.side * px,
-          0,
-        );
-        const size = speck.radius * px;
-        this.dummy.scale.set(size, size, 1);
-        this.dummy.rotation.z = 0;
-        this.dummy.updateMatrix();
-        view.dust.setMatrixAt(i, this.dummy.matrix);
+        view.shaderDust.pos[i * 2] = pose.x - dx * speck.along * trail + -dy * speck.side * px;
+        view.shaderDust.pos[i * 2 + 1] = pose.y - dy * speck.along * trail + dx * speck.side * px;
       }
-      view.dust.instanceMatrix.needsUpdate = true;
+      view.shaderDust.posAttr.needsUpdate = true;
       const show = editing && speed > 1e-3;
       view.arrow.visible = show;
       view.head.visible = show;
@@ -183,9 +153,6 @@ class StrayVisual implements Visual {
 
   private build(body: Body): StrayView {
     const spec = this.theme.stray;
-    const fit = strayFit(this.theme);
-    const rock = artMesh(fit, `${body.id}-rock`);
-    rock.renderOrder = 2;
     const seed = hashId(body.id);
     const rnd = mulberry(seed);
     const specks: Speck[] = [];
@@ -198,25 +165,29 @@ class StrayVisual implements Visual {
         alpha: (1 - along) * (0.35 + rnd() * 0.5),
       });
     }
-    const alpha = new Float32Array(specks.map((speck) => speck.alpha));
-    const geometry = new THREE.PlaneGeometry(1, 1);
-    geometry.setAttribute("aAlpha", new THREE.InstancedBufferAttribute(alpha, 1));
-    const dust = new THREE.InstancedMesh(
-      geometry,
-      new THREE.ShaderMaterial({
-        uniforms: { uColor: { value: srgbVec(this.theme.colors.rockDust) } },
-        vertexShader: dustVert,
-        fragmentShader: dustFrag,
-        transparent: true,
-        depthTest: false,
-        depthWrite: false,
-        toneMapped: false,
-      }),
-      specks.length,
-    );
-    dust.frustumCulled = false;
-    dust.renderOrder = 1;
-    dust.name = `${body.id}-dust`;
+    const span = spec.tumbleMax - spec.tumbleMin;
+    const unit = (seed % 1000) / 1000;
+    const period = spec.tumbleMin + unit * span;
+    const shaderRock = createRockMesh(1, `${body.id}-shader-rock`);
+    writeRock(shaderRock, 0, body.radius, unit, 0, unit >= 0.5 ? period : -period);
+    shaderRock.mesh.geometry.getAttribute("aSize").needsUpdate = true;
+    shaderRock.mesh.geometry.getAttribute("aSeed").needsUpdate = true;
+    shaderRock.mesh.geometry.getAttribute("aType").needsUpdate = true;
+    shaderRock.mesh.geometry.getAttribute("aSpin").needsUpdate = true;
+    const shaderDust = createPointCloud(specks.length, 0.25, 3, `${body.id}-shader-dust`);
+    const dustScale = body.radius / spec.sampleRadius;
+    const [cr, cg, cb] = srgb01(this.theme.colors.rockDust);
+    const colorAttr = shaderDust.points.geometry.getAttribute("aColor") as THREE.BufferAttribute;
+    const sizeAttr = shaderDust.points.geometry.getAttribute("aSize") as THREE.BufferAttribute;
+    const phaseAttr = shaderDust.points.geometry.getAttribute("aPhase") as THREE.BufferAttribute;
+    for (let i = 0; i < specks.length; i += 1) {
+      colorAttr.setXYZW(i, cr, cg, cb, specks[i].alpha);
+      sizeAttr.setX(i, specks[i].radius * dustScale);
+      phaseAttr.setX(i, (i * 0.61803398875) % 1);
+    }
+    colorAttr.needsUpdate = true;
+    sizeAttr.needsUpdate = true;
+    phaseAttr.needsUpdate = true;
     const arrowLength = { value: 1 };
     const arrowZoom = { value: 1 };
     const arrowOffset = { value: 0 };
@@ -244,36 +215,8 @@ class StrayVisual implements Visual {
     head.renderOrder = 6;
     head.name = `${body.id}-drift-head`;
     const chip = new Chip(24);
-    const span = spec.tumbleMax - spec.tumbleMin;
-    const period = spec.tumbleMin + (seed % 1000) / 1000 * span;
-    this.object.add(dust, rock, arrow, head, chip.mesh);
-    return { body, rock, fit, dust, specks, arrow, head, arrowLength, arrowZoom, arrowOffset, period, chip };
-  }
-
-  /** One raster. Later frames only move, turn and scale the mesh. */
-  private bakeOnce(): void {
-    if (this.views.length === 0) return;
-    const gen = ++this.bakeGen;
-    for (const view of this.views) {
-      void this.paint(view.rock, view.fit, rasterPixels(view.fit.viewW, view.fit.viewH, 2, 1), gen);
-    }
-  }
-
-  private async paint(mesh: THREE.Mesh, fit: ArtFit, pixels: { width: number; height: number }, gen: number): Promise<void> {
-    const texture = await loadArtTexture(fit, pixels, 1);
-    texture.generateMipmaps = true;
-    texture.minFilter = THREE.LinearMipmapLinearFilter;
-    texture.needsUpdate = true;
-    if (gen !== this.bakeGen) {
-      texture.dispose();
-      return;
-    }
-    const material = mesh.material as THREE.MeshBasicMaterial;
-    const previous = material.map;
-    material.map = texture;
-    material.opacity = 1;
-    material.needsUpdate = true;
-    previous?.dispose();
+    this.object.add(shaderDust.points, shaderRock.mesh, arrow, head, chip.mesh);
+    return { body, specks, arrow, head, arrowLength, arrowZoom, arrowOffset, chip, shaderRock, shaderDust };
   }
 }
 
@@ -312,37 +255,6 @@ function brightest(
     }
   }
   return found;
-}
-
-function strayFit(theme: Theme): ArtFit {
-  return {
-    url: theme.assets.strayAsteroid,
-    viewW: 48,
-    viewH: 48,
-    svgRadius: ROCK_RADIUS,
-    ox: 0,
-    oy: 0,
-    light: { x: -1, y: 0 },
-    spin: "light",
-    bake: { tag: "stray-rock", prep: prepStrayRock },
-  };
-}
-
-/** Keep the S-type rock. Drop the sample dust, arrow and chip. Clear a night-limb rim if one is masked. */
-function prepStrayRock(doc: Document): void {
-  const svg = doc.documentElement;
-  svg.setAttribute("viewBox", "0 0 48 48");
-  svg.setAttribute("width", "48");
-  svg.setAttribute("height", "48");
-  const root = doc.getElementById("strayAsteroid");
-  if (!root) return;
-  for (const child of [...root.children]) {
-    if (!child.querySelector("use")) child.remove();
-  }
-  const use = root.querySelector("use");
-  use?.setAttribute("transform", "translate(24 24) scale(1.5)");
-  root.querySelectorAll("animate, animateTransform").forEach((node) => node.remove());
-  silenceNightRim(doc, root);
 }
 
 class Chip {

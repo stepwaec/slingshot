@@ -1,6 +1,9 @@
 import * as THREE from "three";
-import type { Body } from "../../sim/physics";
+import { bodyPose, type Body } from "../../sim/physics";
 import type { Level } from "../../level/schema";
+import { syncField } from "../shaders/field-camera";
+import { cosmeticSeconds } from "../shaders/impostor";
+import { createRockMesh, writeRock, type RockMesh } from "../shaders/rock-shader";
 import type { Theme } from "../theme";
 import { disposeObject, type Visual, type VisualFactory, type VisualFrame } from "../visual";
 import { shader, srgbVec } from "./materials";
@@ -43,6 +46,9 @@ class SceneryVisual implements Visual {
   readonly space = "world" as const;
   readonly object = new THREE.Group();
   private readonly spin: THREE.IUniform<number>;
+  private readonly asteroids: RockMesh | null = null;
+  private readonly bodies: readonly Body[];
+  private readonly g: number;
 
   constructor(theme: Theme, level: Level) {
     this.object.name = "scenery";
@@ -71,19 +77,58 @@ class SceneryVisual implements Visual {
     }
 
     this.spin = { value: 0 };
+    this.bodies = level.bodies;
+    this.g = level.g;
     if (!level.belts || level.belts.length === 0) {
-      this.object.add(field(theme.scenery.asteroidCount, center.x + 180, center.y + 40, 220, 0x9aa4b8, 6, 16, rnd, this.spin, 0));
+      this.asteroids = scenicRocks(theme.scenery.asteroidCount, center.x + 180, center.y + 40, 220, 6, 16, rnd);
+      this.object.add(this.asteroids.mesh);
     }
     this.object.add(field(theme.scenery.wreckCount, center.x - 260, center.y - 120, 160, 0x6a5344, 10, 28, rnd, this.spin, 1));
   }
 
   update(frame: VisualFrame): void {
     this.spin.value = frame.now * 0.001;
+    if (!this.asteroids) return;
+    const time = (frame.game.mode === "planning" ? 0 : frame.game.ship.step) * frame.game.level.dt;
+    syncField(this.asteroids.material.uniforms, frame.game.camera, frame.width, frame.height, frame.dpr, cosmeticSeconds(frame.now));
+    const star = this.bodies.find((body) => body.kind === "star") ?? this.bodies[0];
+    const pose = star ? bodyPose(star, time, this.bodies, this.g) : { x: 0, y: 0 };
+    (this.asteroids.material.uniforms.uStar.value as THREE.Vector2).set(pose.x, pose.y);
   }
 
   dispose(): void {
     disposeObject(this.object);
   }
+}
+
+/** Decorative field. One instanced draw, metallic palette, static positions. */
+function scenicRocks(
+  count: number,
+  cx: number,
+  cy: number,
+  radius: number,
+  minSize: number,
+  maxSize: number,
+  rnd: () => number,
+): RockMesh {
+  const built = createRockMesh(count, "scenic-rocks");
+  for (let i = 0; i < count; i++) {
+    const ang = rnd() * Math.PI * 2;
+    const dist = radius * (0.35 + rnd() * 0.65);
+    const size = (minSize + rnd() * (maxSize - minSize)) * 0.45;
+    const seed = rnd();
+    built.pos[i * 2] = cx + Math.cos(ang) * dist;
+    built.pos[i * 2 + 1] = cy + Math.sin(ang) * dist;
+    const spin = seed >= 0.5 ? 18 + seed * 40 : -(18 + seed * 40);
+    writeRock(built, i, size, seed, 2, spin);
+  }
+  built.posAttr.needsUpdate = true;
+  const geometry = built.mesh.geometry;
+  geometry.getAttribute("aSize").needsUpdate = true;
+  geometry.getAttribute("aSeed").needsUpdate = true;
+  geometry.getAttribute("aType").needsUpdate = true;
+  geometry.getAttribute("aSpin").needsUpdate = true;
+  return built;
 }
 
 function field(

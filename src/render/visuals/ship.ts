@@ -4,6 +4,7 @@ import { sampleBurnAnim, tailFromBurn, windupFlicker, type BurnCue, type BurnSam
 import { plumeFrame, type PlumeFrame } from "../plume";
 import { projectToScreen } from "../camera";
 import { lookForLevel } from "../appearance";
+import { markEmissive } from "../shaders/bloom";
 import { srgbVec, shader } from "./materials";
 import {
   chargingNearStar,
@@ -109,6 +110,7 @@ class ShipVisual implements Visual {
       const plume = ENGINE_PLUMES[look];
       const built = look === "chemical" ? anchorFlame(plume, theme) : anchorBeam(plume);
       built.mesh.visible = false;
+      markEmissive(built.mesh);
       this.ship.add(built.mesh);
       this.plumes.set(look, built);
     }

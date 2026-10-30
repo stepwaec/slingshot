@@ -2,6 +2,7 @@ import * as THREE from "three";
 import type { Game } from "../game/state";
 import type { Level } from "../level/catalog";
 import { bindSpaceTimeCamera, syncTopDown, topDownCamera } from "./camera";
+import { SelectiveBloom } from "./shaders/bloom";
 import { theme } from "./theme";
 import type { Visual, VisualSpace } from "./visual";
 import { visualFactories } from "./visuals/index";
@@ -30,6 +31,7 @@ export class SpaceView {
   private width = 1;
   private height = 1;
   private dpr = 1;
+  private readonly bloom = new SelectiveBloom();
 
   constructor(canvas: HTMLCanvasElement, game: Game) {
     this.renderer = new THREE.WebGLRenderer({
@@ -110,10 +112,13 @@ export class SpaceView {
     const frame = { game, width, height, now, dpr: this.dpr };
     for (const visual of this.visuals) visual.update(frame);
 
+    this.renderer.setRenderTarget(null);
     this.renderer.clear(true, true, true);
     this.renderer.render(this.bgScene, this.screenCamera);
     this.renderer.clearDepth();
     this.renderer.render(this.worldScene, topDownCamera);
+    this.bloom.composite(this.renderer, this.worldScene, topDownCamera, this.screenScene, this.screenCamera);
+    this.renderer.setRenderTarget(null);
     this.renderer.clearDepth();
     this.renderer.render(this.screenScene, this.screenCamera);
   }

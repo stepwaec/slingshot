@@ -17,6 +17,7 @@ import {
 } from "../shaders/impostor";
 import { giantArtLight } from "../shaders/giant-params";
 import { planetArtLight } from "../shaders/planet-params";
+import { markEmissive } from "../shaders/bloom";
 import { theme, type Theme } from "../theme";
 import { disposeObject, type Visual, type VisualFactory, type VisualFrame } from "../visual";
 
@@ -64,6 +65,7 @@ class ImpostorVisual implements Visual {
       const family = shaderFamily(body);
       mesh.renderOrder = family === "planet" || family === "giant" ? 4 : -1;
       mesh.visible = material !== null;
+      if (family === "star") markEmissive(mesh);
       mesh.scale.set(side, side, 1);
       this.object.add(mesh);
       this.slots.push({

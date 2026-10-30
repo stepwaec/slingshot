@@ -5,6 +5,7 @@ import type { Theme } from "../theme";
 import { disposeObject, type Visual, type VisualFactory, type VisualFrame } from "../visual";
 import { artForBody } from "../art-sprite";
 import { srgb01 } from "../palette";
+import { markEmissive } from "../shaders/bloom";
 import { targetZoneLook } from "../target-zone";
 import { shader, srgbVec } from "./materials";
 
@@ -382,10 +383,12 @@ class PlanetsVisual implements Visual {
         wave.renderOrder = 5.4;
         wave.name = `${body.id}-zone-wave`;
         wave.visible = false;
+        markEmissive(wave);
         const ring = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), shader(zoneFrag, uniforms));
         ring.position.set(body.x, body.y, 0);
         ring.renderOrder = 5.5;
         ring.name = `${body.id}-ring`;
+        markEmissive(ring);
         this.object.add(wave, ring);
         order += 1;
         this.rings.push({ body, mesh: ring, wave, color, waveColor, wonAt: -1 });
