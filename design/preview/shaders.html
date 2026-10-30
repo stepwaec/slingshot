@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Slingshot — shader reference (Rendering v2)</title>
+<style>
+ :root { --bg:#050710; --text:#ECF0FA; --muted:#8B95B5; --dim:#5E6788; --border:#1E2440; }
+ body { margin:0; padding:40px; background:var(--bg); color:var(--text); font:13px/1.5 -apple-system,"Segoe UI",Inter,Roboto,"Helvetica Neue",Arial,sans-serif; }
+ .wordmark { font-size:13px; letter-spacing:.18em; text-transform:uppercase; color:var(--muted); margin:0; }
+ h1 { font-size:17px; font-weight:500; margin:6px 0 4px; } header p { color:var(--muted); max-width:1100px; margin:6px 0 0; }
+ code { font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace; font-size:12px; }
+ section { margin:36px 0; } .mode { font-size:11px; font-weight:500; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin:0 0 14px; }
+ .mode span { letter-spacing:0; text-transform:none; font-weight:400; color:var(--dim); margin-left:10px; }
+ .pair { display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap; } figure { margin:0; text-align:center; color:var(--muted); }
+ figure > div { border:1px solid var(--border); border-radius:10px; overflow:hidden; line-height:0; } figcaption { margin-top:8px; }
+ footer { color:var(--muted); border-top:1px solid var(--border); padding-top:16px; margin-top:40px; }
+</style></head><body>
+<header><p class="wordmark">Slingshot</p><h1>Shader reference — Rendering v2, R2.1 stars</h1>
+<p>Left: the approved SVG (<code>design/assets/…</code>, as an image). Right: the reference shader <code>design/shaders/star.frag</code> running live in WebGL with the numbers from <code>design/shader-specs.md</code> §2. The game's shaders should match the right-hand column. Add <code>?t=13.9</code> to the URL to freeze the clock (13.9 s shows the sun's flare). Both columns at 1.5×.</p></header>
+<script id="frag" type="x-shader/x-fragment">// Reference star shader (Rendering v2, R2.1). GLSL ES 1.00 (WebGL 1), one impostor quad per star.
+// Every number here is the spec: design/shader-specs.md §2 lists the per-star values, and these defaults are the sun (star.svg, variant J).
+// Coordinates: uv in units of the body radius, centred on the star, y up. Time uTime in seconds (frame.now: all star motion is cosmetic).
+precision highp float;
+uniform vec2  uCenter;      // px, the star's centre on the canvas
+uniform float uR;           // px, body radius (= crash radius x zoom)
+uniform float uTime;
+// photosphere
+uniform vec3  uCore, uMid, uEdge;          // body ramp at r 0, 0.65, 1
+uniform vec3  uDeep;  uniform float uDeepAmt, uDeepFreq, uDeepFlow;   // deep plasma, flows west -> east
+uniform vec3  uDark;  uniform float uDarkAmt, uDarkFreq, uDarkFlow;   // dark plasma, flows the other way
+uniform vec3  uFil;   uniform float uFilAmt,  uFilFreq,  uBoil, uFilGain;   // granulation filaments, three seeds cross-faded over uBoil seconds
+uniform float uLimbDark;                   // I(mu) = 1 - uLimbDark (1 - mu): gentle, so the star stays vibrant
+uniform vec3  uLimbA, uLimbB;              // the approved bright rim: 0.80 a0 | 0.93 uLimbA a0.55 | 0.97 uLimbB a0.9 | 1.0 white a0.95
+uniform float uRimA;                       // rim strength (1 sun, 0.6 red giant)
+uniform float uWobble;                     // ragged edge: radius x (1 + uWobble n)
+uniform float uFaculae;                    // bright patches hugging the limb
+// spots (Sol sun)
+uniform float uSpots; uniform vec3 uPen, uUmb; uniform float uSpotSpin;
+// atmosphere
+uniform vec3  uHaze0, uHaze1, uHaze2; uniform float uHazeR, uHazeA;   // haze radius in body radii
+uniform vec3  uFl0, uFl1, uFl2;  uniform float uFlR, uFlAmp, uFlFreq, uFlSpin, uFlA;   // flame ring
+uniform vec3  uWi0, uWi1, uWi2;  uniform float uWiR, uWiAmp, uWiFreq, uWiSpin, uWiA;   // wisp ring
+uniform float uBreathe, uBreatheT;         // +-amplitude and period of the atmosphere's breathe (never the disc)
+uniform vec3  uProOut, uProIn; uniform float uProm, uProW;                             // prominences
+uniform float uFlare;
+uniform float uNoiseGain;                  // contrast of the ring noise: (fbm*2-1)*uNoiseGain, clamped to +-1 (the SVG displacement maps are high-contrast)
+// white dwarf mode: a smooth disc, hard limb, wide glow and four spikes
+uniform float uSmooth;
+
+// --- noise: 3D simplex (Gustavson / Ashima), fbm and turbulence ---
+vec3 mod289(vec3 x){return x-floor(x*(1./289.))*289.;} vec4 mod289(vec4 x){return x-floor(x*(1./289.))*289.;}
+vec4 perm(vec4 x){return mod289(((x*34.)+1.)*x);} vec4 tis(vec4 r){return 1.79284291400159-0.85373472095314*r;}
+float snoise(vec3 v){const vec2 C=vec2(1./6.,1./3.);const vec4 D=vec4(0.,.5,1.,2.);
+ vec3 i=floor(v+dot(v,C.yyy));vec3 x0=v-i+dot(i,C.xxx);vec3 g=step(x0.yzx,x0.xyz);vec3 l=1.-g;vec3 i1=min(g.xyz,l.zxy);vec3 i2=max(g.xyz,l.zxy);
+ vec3 x1=x0-i1+C.xxx;vec3 x2=x0-i2+C.yyy;vec3 x3=x0-D.yyy;i=mod289(i);
+ vec4 p=perm(perm(perm(i.z+vec4(0.,i1.z,i2.z,1.))+i.y+vec4(0.,i1.y,i2.y,1.))+i.x+vec4(0.,i1.x,i2.x,1.));
+ float n_=.142857142857;vec3 ns=n_*D.wyz-D.xzx;vec4 j=p-49.*floor(p*ns.z*ns.z);vec4 x_=floor(j*ns.z);vec4 y_=floor(j-7.*x_);
+ vec4 x=x_*ns.x+ns.yyyy;vec4 y=y_*ns.x+ns.yyyy;vec4 h=1.-abs(x)-abs(y);vec4 b0=vec4(x.xy,y.xy);vec4 b1=vec4(x.zw,y.zw);
+ vec4 s0=floor(b0)*2.+1.;vec4 s1=floor(b1)*2.+1.;vec4 sh=-step(h,vec4(0.));vec4 a0=b0.xzyw+s0.xzyw*sh.xxyy;vec4 a1=b1.xzyw+s1.xzyw*sh.zzww;
+ vec3 p0=vec3(a0.xy,h.x);vec3 p1=vec3(a0.zw,h.y);vec3 p2=vec3(a1.xy,h.z);vec3 p3=vec3(a1.zw,h.w);
+ vec4 norm=tis(vec4(dot(p0,p0),dot(p1,p1),dot(p2,p2),dot(p3,p3)));p0*=norm.x;p1*=norm.y;p2*=norm.z;p3*=norm.w;
+ vec4 m=max(.6-vec4(dot(x0,x0),dot(x1,x1),dot(x2,x2),dot(x3,x3)),0.);m=m*m;
+ return 42.*dot(m*m,vec4(dot(p0,x0),dot(p1,x1),dot(p2,x2),dot(p3,x3)));}
+float fbm(vec3 p){float a=.5,s=0.;for(int i=0;i<5;i++){s+=a*snoise(p);p*=2.02;a*=.5;}return .5+.5*s;}      // ~0..1, mean 0.5 (the SVG fractalNoise)
+float turb(vec3 p){float a=.5,s=0.;for(int i=0;i<5;i++){s+=a*abs(snoise(p));p*=2.03;a*=.5;}return s;}    // ~0..1 (the SVG turbulence)
+vec3 rotY(vec3 p,float a){float c=cos(a),s=sin(a);return vec3(c*p.x+s*p.z,p.y,-s*p.x+c*p.z);}
+vec4 over(vec4 dst, vec3 c, float a){a=clamp(a,0.,1.);return vec4(mix(dst.rgb,c,a),dst.a+a*(1.-dst.a));}
+float band(float x,float a,float b,float c,float d){return smoothstep(a,b,x)*(1.-smoothstep(c,d,x));}
+vec3 ramp3(float t,vec3 a,vec3 b,vec3 c,float tb){return t<tb?mix(a,b,t/tb):mix(b,c,(t-tb)/(1.-tb));}
+
+void main(){
+  vec2 uv=(gl_FragCoord.xy-uCenter)/uR; float r=length(uv); float th=atan(uv.y,uv.x); vec2 dir=uv/max(r,1e-5);
+  float px=1./uR;                         // one pixel in body radii
+  float br=1.+uBreathe*sin(6.2831853*uTime/uBreatheT); float q=r/br;
+  vec4 col=vec4(0.);
+  if(uSmooth<.5){
+    // 1. haze: 0 a0.6 | 0.23 a0.52 | 0.33 haze1 a0.3 | 0.55 haze2 a0.15 | 0.8 a0.06 | 1 a0   (fractions of uHazeR)
+    float h=q/uHazeR; float ha=h<.23?mix(.6,.52,h/.23):h<.33?mix(.52,.3,(h-.23)/.1):h<.55?mix(.3,.15,(h-.33)/.22):h<.8?mix(.15,.06,(h-.55)/.25):mix(.06,0.,(h-.8)/.2);
+    vec3 hc=h<.23?uHaze0:h<.55?mix(uHaze0,uHaze1,(h-.23)/.32):mix(uHaze1,uHaze2,clamp((h-.55)/.45,0.,1.));
+    col=over(col,hc,ha*uHazeA*step(h,1.));
+    // 2. wisp ring and 3. flame ring: radial ramps displaced by noise on the ring, turning in opposite directions
+    float aw=th-6.2831853*uTime/uWiSpin; vec3 pw=vec3(cos(aw),sin(aw),0.)*uWiFreq; pw.z=q*uWiFreq*.6;
+    float rw=q+uWiAmp*clamp((fbm(pw)*2.-1.)*uNoiseGain,-1.,1.); float tw=rw/uWiR;
+    float wa=tw<.62?.55:tw<.8?mix(.55,.22,(tw-.62)/.18):tw<1.?mix(.22,0.,(tw-.8)/.2):0.;
+    col=over(col,tw<.62?uWi0:tw<.8?mix(uWi0,uWi1,(tw-.62)/.18):mix(uWi1,uWi2,clamp((tw-.8)/.2,0.,1.)),wa*uWiA);
+    float af=th-6.2831853*uTime/uFlSpin; vec3 pf=vec3(cos(af),sin(af),0.)*uFlFreq; pf.z=q*uFlFreq*.6+17.;
+    float rf=q+uFlAmp*clamp((fbm(pf)*2.-1.)*uNoiseGain,-1.,1.); float tf=rf/uFlR;
+    float fa=tf<.74?.95:tf<.82?mix(.95,.8,(tf-.74)/.08):tf<.91?mix(.8,.38,(tf-.82)/.09):tf<1.?mix(.38,0.,(tf-.91)/.09):0.;
+    col=over(col,tf<.74?uFl0:tf<.82?mix(uFl0,uFl1,(tf-.74)/.08):mix(uFl1,uFl2,clamp((tf-.82)/.18,0.,1.)),fa*uFlA);
+    // 4. prominences: three two-tone loops footed on the limb, swelling 0.6 -> 1 and fading in and out (never all at once)
+    if(uProm>.5){
+      for(int i=0;i<3;i++){
+        float A= -(i==0?147.5:i==1?243.6:314.8); /* the SVG angles are clockwise (y down): negated for y up */ float hgt= i==0?.34:i==1?.38:.47; float wid= i==0?.20:i==1?.24:.185;
+        float dur= i==0?12.:i==1?16.:14.; float beg= i==0?0.:i==1?5.:9.;
+        float ph=sin(3.14159265*(uTime-beg)/dur); float s=.6+.4*ph*ph; float op=ph*ph;
+        vec2 d=vec2(cos(radians(A)),sin(radians(A))); vec2 t=vec2(-d.y,d.x); vec2 l=uv-d; float x=dot(l,d); float y=dot(l,t);
+        if(x>-.02){ float e=length(vec2(x/(hgt*s),y/(wid*s))); float dist=abs(e-1.)*min(hgt,wid)*s;
+          col=over(col,uProOut,.85*op*(1.-smoothstep(uProW*px*.5,uProW*px*.5+px,dist)));
+          col=over(col,uProIn, .9*op*(1.-smoothstep(uProW*.36*px*.5,uProW*.36*px*.5+px,dist))); }
+      }
+    }
+  } else {
+    // white dwarf: glow r 6.25 (#7FB8FF), spikes to r 4, tight bloom to 1.4
+    float g=q/6.25; col=over(col,uHaze0,uHazeA*(1.-smoothstep(0.,1.,g))*(1.-smoothstep(0.,1.,g)));
+    float sp=0.; for(int i=0;i<4;i++){ float a=float(i)*1.5707963; vec2 d=vec2(cos(a),sin(a)); float x=dot(uv,d), y=abs(dot(uv,vec2(-d.y,d.x)));
+      float w=.05*(1.-clamp((x-1.)/3.,0.,1.)); sp=max(sp,step(1.,x)*step(x,4.)*(1.-smoothstep(w,w+px,y))*mix(.55,0.,clamp((x-1.)/3.,0.,1.))); }
+    col=over(col,mix(vec3(1.),uHaze1,.5),sp);
+    col=over(col,vec3(1.),.5*(1.-smoothstep(1.,1.4,r)));
+  }
+  // 6. the disc: a sphere, so texture foreshortens toward the limb and the flows read as rotation
+  float edge=1.+uWobble*(fbm(vec3(dir*3.2,uTime*.02))*2.-1.);
+  float aa=smoothstep(edge+px*.5,edge-px*.5,r);
+  if(aa>0.){
+    float rr=clamp(r/edge,0.,.9999); vec3 p=vec3(uv/edge,sqrt(1.-rr*rr)); float mu=p.z;
+    vec3 c=ramp3(rr,uCore,uMid,uEdge,.65);
+    if(uSmooth<.5){
+      float nd=fbm(rotY(p,uTime*uDeepFlow)*uDeepFreq+3.1); c=mix(c,uDeep,clamp(3.0*nd-1.55,0.,1.)*uDeepAmt);
+      float nk=fbm(rotY(p,uTime*uDarkFlow)*uDarkFreq+7.7); c=mix(c,uDark,clamp(3.4*nk-1.6,0.,1.)*uDarkAmt);
+      // boiling granulation: three seeds, each fading 0 -> 0.9 -> 0.9 -> 0 over uBoil s (keyTimes 0 .33 .55 1), staggered by a third
+      float fil=0.; for(int k=0;k<3;k++){ float ph=fract(uTime/uBoil+float(k)/3.); float w=ph<.33?ph/.33:ph<.55?1.:1.-(ph-.55)/.45;
+        float tb=turb(rotY(p,uTime*uDarkFlow*.6)*uFilFreq+vec3(float(k)*11.3,0.,ph*.35)); fil=max(fil,clamp(1.25-6.5*tb*uFilGain,0.,1.)*w*.9); }   // uFilGain maps this turbulence onto the SVG feTurbulence range
+      c=mix(c,uFil,clamp(fil,0.,1.)*uFilAmt);
+      // faculae: bright patches near the limb, twinkling
+      float fac=smoothstep(.72,.95,rr)*smoothstep(.6,.85,fbm(p*6.+vec3(0.,0.,uTime*.08)));
+      c=mix(c,vec3(1.,.965,.84),fac*uFaculae);
+      // spots (Sol sun): six spots in the +-10-18 deg activity belts, turning with the surface
+      if(uSpots>.5){ for(int s=0;s<6;s++){ float lon= float(s)*1.13+.4; float lat= (mod(float(s),2.)<.5? .21:-.25)+.04*sin(float(s)*3.);
+          vec3 sd=vec3(cos(lat)*sin(lon),sin(lat),cos(lat)*cos(lon)); sd=rotY(sd,uTime*uSpotSpin); float dd=acos(clamp(dot(p,sd),-1.,1.));
+          float sz=.045+.025*sin(float(s)*1.7); c=mix(c,uPen,.75*(1.-smoothstep(sz*1.9,sz*1.9+.012,dd))); c=mix(c,uUmb,1.-smoothstep(sz*.85,sz*.85+.01,dd)); } }
+      c*=1.-uLimbDark*(1.-mu);
+    }
+    // the approved bright rim on top of the (gently darkened) photosphere
+    float la=rr<.8?0.:rr<.93?mix(0.,.55,(rr-.8)/.13):rr<.97?mix(.55,.9,(rr-.93)/.04):mix(.9,.95,(rr-.97)/.03);
+    vec3 lc=rr<.93?uLimbA:rr<.97?mix(uLimbA,uLimbB,(rr-.93)/.04):mix(uLimbB,vec3(1.),(rr-.97)/.03);
+    c=mix(c,lc,la*uRimA);
+    col=over(col,c,aa);
+  }
+  // 7. the ragged rim stroke, 1.6 px
+  if(uSmooth<.5) col=over(col,uLimbB,.75*uRimA*(1.-smoothstep(.8*px,1.8*px,abs(r-edge))));
+  // 5. the flare: a thin wedge at 25 deg, one flash per 22 s (0 until 13 s, 1 at 13.9 s, 0 at 14.8 s)
+  if(uFlare>.5){ float ct=mod(uTime,22.); float fo=ct<13.?0.:ct<13.9?(ct-13.)/.9:ct<14.8?1.-(ct-13.9)/.9:0.;
+    vec2 d=vec2(cos(radians(25.)),sin(radians(25.))); float x=dot(uv,d), y=abs(dot(uv,vec2(-d.y,d.x))); float w=(1.8/46.)*(1.-clamp((x-1.)/.87,0.,1.));
+    col=over(col,mix(vec3(1.),vec3(1.,.824,.478),clamp((x-1.)/.87,0.,1.)),fo*step(1.,x)*step(x,1.87)*(1.-smoothstep(w,w+px,y))*mix(1.,.15,clamp((x-1.)/.87,0.,1.))); }
+  gl_FragColor=vec4(col.rgb*col.a,col.a);   // premultiplied
+}
+</script>
+<div id="rows"></div>
+<footer>One impostor quad per star (the canvas here); premultiplied alpha, blend ONE, ONE_MINUS_SRC_ALPHA. All star motion is cosmetic and runs on <code>frame.now</code>. Values: <code>design/shader-specs.md</code>.</footer>
+<script>
+const STARS = [["The sun (variant J)", "star.svg", 400, [{"R": 46, "core": "#FFB43A", "mid": "#FF8F1F", "edge": "#FF7A14", "deep": "#A03308", "deepAmt": 0.28, "deepFreq": 1.6, "deepFlow": 0.0143, "dark": "#802105", "darkAmt": 0.55, "darkFreq": 2.3, "darkFlow": -0.0222, "fil": "#FFE7A0", "filAmt": 0.8, "filFreq": 2.75, "boil": 9, "filGain": 0.66, "noiseGain": 1.6, "limbDark": 0.18, "limbA": "#FFD27A", "limbB": "#FFF1C2", "rimA": 1, "wobble": 0.05, "faculae": 0.6, "spots": 0, "pen": "#B8401E", "umb": "#4A1006", "spotSpin": 0.0349, "haze0": "#FF7A2A", "haze1": "#E8461A", "haze2": "#6A1408", "hazeR": 4.35, "hazeA": 1.2, "fl0": "#FFE7A0", "fl1": "#FFB347", "fl2": "#FF6A1A", "flR": 1.348, "flAmp": 0.217, "flFreq": 6.5, "flSpin": 200, "flA": 1, "wi0": "#FFB347", "wi1": "#FF6A1A", "wi2": "#E8461A", "wiR": 1.7, "wiAmp": 0.37, "wiFreq": 3.9, "wiSpin": -300, "wiA": 1, "breathe": 0.03, "breatheT": 6, "proOut": "#FF8C2E", "proIn": "#FFF1C2", "prom": 1, "proW": 2.8, "flare": 1, "smooth": 0}]], ["The Sol sun", "sol/sun.svg", 412, [{"R": 46, "core": "#FFB43A", "mid": "#FF8F1F", "edge": "#FF7A14", "deep": "#A03308", "deepAmt": 0.28, "deepFreq": 1.6, "deepFlow": 0.0143, "dark": "#802105", "darkAmt": 0.55, "darkFreq": 2.3, "darkFlow": -0.0222, "fil": "#FFE7A0", "filAmt": 0.8, "filFreq": 2.75, "boil": 9, "filGain": 0.66, "noiseGain": 1.6, "limbDark": 0.18, "limbA": "#FFD27A", "limbB": "#FFF1C2", "rimA": 1, "wobble": 0.05, "faculae": 0.6, "spots": 1, "pen": "#B8401E", "umb": "#4A1006", "spotSpin": 0.0349, "haze0": "#FF7A2A", "haze1": "#E8461A", "haze2": "#6A1408", "hazeR": 4.35, "hazeA": 1.2, "fl0": "#FFE7A0", "fl1": "#FFB347", "fl2": "#FF6A1A", "flR": 1.348, "flAmp": 0.217, "flFreq": 6.5, "flSpin": 200, "flA": 1, "wi0": "#FFB347", "wi1": "#FF6A1A", "wi2": "#E8461A", "wiR": 1.7, "wiAmp": 0.37, "wiFreq": 3.9, "wiSpin": -300, "wiA": 1, "breathe": 0.03, "breatheT": 6, "proOut": "#FF8C2E", "proIn": "#FFF1C2", "prom": 1, "proW": 2.8, "flare": 0, "smooth": 0}]], ["Red dwarf", "bodies/red-dwarf.svg", 360, [{"R": 40, "core": "#FF8A4A", "mid": "#F0502A", "edge": "#D63A1E", "deep": "#7A1A08", "deepAmt": 0.3, "deepFreq": 1.0, "deepFlow": 0.01, "dark": "#4A0A06", "darkAmt": 0.55, "darkFreq": 1.3, "darkFlow": -0.015, "fil": "#FFB27A", "filAmt": 0.68, "filFreq": 2.0, "boil": 11, "filGain": 0.66, "noiseGain": 1.6, "limbDark": 0.18, "limbA": "#FF9A62", "limbB": "#FFD9B0", "rimA": 1, "wobble": 0.05, "faculae": 0.6, "spots": 0, "pen": "#B8401E", "umb": "#4A1006", "spotSpin": 0.0349, "haze0": "#F0502A", "haze1": "#C8301C", "haze2": "#4E0C16", "hazeR": 4.5, "hazeA": 1.2, "fl0": "#FFB27A", "fl1": "#FF6A3A", "fl2": "#E0432F", "flR": 1.35, "flAmp": 0.175, "flFreq": 4.3, "flSpin": 260, "flA": 1, "wi0": "#FF6A3A", "wi1": "#E0432F", "wi2": "#A8240E", "wiR": 1.7, "wiAmp": 0.3, "wiFreq": 3.4, "wiSpin": -390, "wiA": 1, "breathe": 0.03, "breatheT": 6, "proOut": "#E0432F", "proIn": "#FFD9B0", "prom": 1, "proW": 2.4, "flare": 1, "smooth": 0}]], ["Blue giant", "bodies/blue-giant.svg", 480, [{"R": 54, "core": "#EAF1FF", "mid": "#A6C0FF", "edge": "#7FA3FF", "deep": "#3A6AF0", "deepAmt": 0.25, "deepFreq": 2.5, "deepFlow": 0.0143, "dark": "#2F5BD8", "darkAmt": 0.45, "darkFreq": 4.3, "darkFlow": -0.0222, "fil": "#F4F8FF", "filAmt": 0.85, "filFreq": 5.4, "boil": 7, "filGain": 0.66, "noiseGain": 1.25, "limbDark": 0.18, "limbA": "#CFE0FF", "limbB": "#F4F8FF", "rimA": 1, "wobble": 0.05, "faculae": 0.6, "spots": 0, "pen": "#B8401E", "umb": "#4A1006", "spotSpin": 0.0349, "haze0": "#5E9BFF", "haze1": "#3A6AF0", "haze2": "#15287A", "hazeR": 4.44, "hazeA": 0.92, "fl0": "#F4F8FF", "fl1": "#A9C8FF", "fl2": "#4F8DFF", "flR": 1.348, "flAmp": 0.22, "flFreq": 7.3, "flSpin": 180, "flA": 1, "wi0": "#7FB2FF", "wi1": "#4F8DFF", "wi2": "#3A6AF0", "wiR": 1.7, "wiAmp": 0.37, "wiFreq": 6.0, "wiSpin": -270, "wiA": 1, "breathe": 0.03, "breatheT": 6, "proOut": "#5EA0FF", "proIn": "#F4F8FF", "prom": 1, "proW": 3.2, "flare": 1, "smooth": 0}]], ["Binary star", "bodies/binary-star.svg", 400, [{"R": 30, "core": "#FFE7A0", "mid": "#FFC24A", "edge": "#FF9A2A", "deep": "#A03308", "deepAmt": 0.28, "deepFreq": 1.05, "deepFlow": 0.0143, "dark": "#A0460E", "darkAmt": 0.55, "darkFreq": 1.5, "darkFlow": -0.0222, "fil": "#FFFDF0", "filAmt": 0.8, "filFreq": 1.8, "boil": 9, "filGain": 0.66, "noiseGain": 1.6, "limbDark": 0.18, "limbA": "#FFE7A0", "limbB": "#FFFDF0", "rimA": 1, "wobble": 0.05, "faculae": 0.6, "spots": 0, "pen": "#B8401E", "umb": "#4A1006", "spotSpin": 0.0349, "haze0": "#FFB45A", "haze1": "#FF8C3A", "haze2": "#6A2A10", "hazeR": 4.0, "hazeA": 0.8, "fl0": "#FFF6D6", "fl1": "#FFD27A", "fl2": "#FFA040", "flR": 1.348, "flAmp": 0.217, "flFreq": 6.5, "flSpin": 200, "flA": 1, "wi0": "#FFD27A", "wi1": "#FFA040", "wi2": "#FF8C3A", "wiR": 1.7, "wiAmp": 0.37, "wiFreq": 3.9, "wiSpin": -300, "wiA": 1, "breathe": 0.03, "breatheT": 6, "proOut": "#FFB45A", "proIn": "#FFFDF0", "prom": 1, "proW": 2.0, "flare": 1, "smooth": 0, "cx": -42.9}, {"R": 20, "core": "#FF9A3A", "mid": "#FF7426", "edge": "#E85A1A", "deep": "#A03308", "deepAmt": 0.28, "deepFreq": 0.7, "deepFlow": 0.0143, "dark": "#6A1606", "darkAmt": 0.55, "darkFreq": 1.0, "darkFlow": -0.0222, "fil": "#FFC27A", "filAmt": 0.8, "filFreq": 1.2, "boil": 9, "filGain": 0.66, "noiseGain": 1.6, "limbDark": 0.18, "limbA": "#FFB27A", "limbB": "#FFD8B0", "rimA": 1, "wobble": 0.05, "faculae": 0.6, "spots": 0, "pen": "#B8401E", "umb": "#4A1006", "spotSpin": 0.0349, "haze0": "#FF8C3A", "haze1": "#E8501A", "haze2": "#5A1608", "hazeR": 4.0, "hazeA": 0.7, "fl0": "#FFC890", "fl1": "#FF9A4A", "fl2": "#E8501A", "flR": 1.348, "flAmp": 0.217, "flFreq": 6.5, "flSpin": 200, "flA": 1, "wi0": "#FF9A4A", "wi1": "#E8501A", "wi2": "#A8240E", "wiR": 1.7, "wiAmp": 0.37, "wiFreq": 3.9, "wiSpin": -300, "wiA": 1, "breathe": 0.03, "breatheT": 6, "proOut": "#FF6A2A", "proIn": "#FFD8B0", "prom": 1, "proW": 1.5, "flare": 0, "smooth": 0, "cx": 77.1}]], ["White dwarf", "bodies/white-dwarf.svg", 240, [{"R": 16, "core": "#FFFFFF", "mid": "#F2F5FC", "edge": "#9FC2FF", "deep": "#A03308", "deepAmt": 0.28, "deepFreq": 1.6, "deepFlow": 0.0143, "dark": "#802105", "darkAmt": 0.55, "darkFreq": 2.3, "darkFlow": -0.0222, "fil": "#FFE7A0", "filAmt": 0.8, "filFreq": 2.75, "boil": 9, "filGain": 0.66, "noiseGain": 1.6, "limbDark": 0.18, "limbA": "#7FB8FF", "limbB": "#FFFFFF", "rimA": 0.9, "wobble": 0, "faculae": 0.6, "spots": 0, "pen": "#B8401E", "umb": "#4A1006", "spotSpin": 0.0349, "haze0": "#7FB8FF", "haze1": "#B8CCFF", "haze2": "#6A1408", "hazeR": 4.35, "hazeA": 0.55, "fl0": "#FFE7A0", "fl1": "#FFB347", "fl2": "#FF6A1A", "flR": 1.348, "flAmp": 0.217, "flFreq": 6.5, "flSpin": 200, "flA": 1, "wi0": "#FFB347", "wi1": "#FF6A1A", "wi2": "#E8461A", "wiR": 1.7, "wiAmp": 0.37, "wiFreq": 3.9, "wiSpin": -300, "wiA": 1, "breathe": 0.05, "breatheT": 4, "proOut": "#FF8C2E", "proIn": "#FFF1C2", "prom": 0, "proW": 2.8, "flare": 0, "smooth": 1}]], ["Red giant", "bodies/red-giant.svg", 600, [{"R": 120, "core": "#FF8A42", "mid": "#F0602C", "edge": "#C8401E", "deep": "#8A2A0C", "deepAmt": 0.3, "deepFreq": 2.0, "deepFlow": 0.006, "dark": "#5A1406", "darkAmt": 0.55, "darkFreq": 3.1, "darkFlow": -0.009, "fil": "#FFB27A", "filAmt": 0.62, "filFreq": 3.85, "boil": 14, "filGain": 0.66, "noiseGain": 1.6, "limbDark": 0.18, "limbA": "#FF9A62", "limbB": "#FFC8A0", "rimA": 0.6, "wobble": 0.03, "faculae": 0.6, "spots": 0, "pen": "#B8401E", "umb": "#4A1006", "spotSpin": 0.0349, "haze0": "#FF6A3A", "haze1": "#C83C1E", "haze2": "#4A0E08", "hazeR": 2.43, "hazeA": 0.9, "fl0": "#FFB27A", "fl1": "#FF8A4A", "fl2": "#D8461E", "flR": 1.348, "flAmp": 0.11, "flFreq": 12, "flSpin": 200, "flA": 0.55, "wi0": "#FF8A4A", "wi1": "#D8461E", "wi2": "#8A1E10", "wiR": 1.7, "wiAmp": 0.18, "wiFreq": 9, "wiSpin": -300, "wiA": 0.7, "breathe": 0.03, "breatheT": 9, "proOut": "#FF8A4A", "proIn": "#FFE0C8", "prom": 1, "proW": 3.0, "flare": 0, "smooth": 0}]]];
+const SCALE = 1.5;
+const T0 = new URLSearchParams(location.search).get("t");
+const hex = h => [1,3,5].map(i => parseInt(h.slice(i, i+2), 16)/255);
+const VERT = "attribute vec2 p; void main(){ gl_Position = vec4(p, 0., 1.); }";
+const MAP = {R:null, cx:null, core:"uCore", mid:"uMid", edge:"uEdge", deep:"uDeep", deepAmt:"uDeepAmt", deepFreq:"uDeepFreq", deepFlow:"uDeepFlow", dark:"uDark", darkAmt:"uDarkAmt", darkFreq:"uDarkFreq", darkFlow:"uDarkFlow",
+  fil:"uFil", filAmt:"uFilAmt", filFreq:"uFilFreq", boil:"uBoil", filGain:"uFilGain", noiseGain:"uNoiseGain", limbDark:"uLimbDark", limbA:"uLimbA", limbB:"uLimbB", rimA:"uRimA", wobble:"uWobble", faculae:"uFaculae", spots:"uSpots", pen:"uPen", umb:"uUmb", spotSpin:"uSpotSpin",
+  haze0:"uHaze0", haze1:"uHaze1", haze2:"uHaze2", hazeR:"uHazeR", hazeA:"uHazeA", fl0:"uFl0", fl1:"uFl1", fl2:"uFl2", flR:"uFlR", flAmp:"uFlAmp", flFreq:"uFlFreq", flSpin:"uFlSpin", flA:"uFlA",
+  wi0:"uWi0", wi1:"uWi1", wi2:"uWi2", wiR:"uWiR", wiAmp:"uWiAmp", wiFreq:"uWiFreq", wiSpin:"uWiSpin", wiA:"uWiA", breathe:"uBreathe", breatheT:"uBreatheT", proOut:"uProOut", proIn:"uProIn", prom:"uProm", proW:"uProW", flare:"uFlare", smooth:"uSmooth"};
+const views = [];
+for (const [name, svg, size, parts] of STARS) {
+  const px = Math.round(size*SCALE);
+  const sec = document.createElement("section");
+  sec.innerHTML = `<p class="mode">${name}<span>SVG | shader · ${parts.map(p => "r " + p.R).join(" + ")}</span></p><div class="pair"><figure><div><img src="../assets/${svg}" width="${px}" height="${px}" alt=""></div><figcaption>SVG</figcaption></figure><figure><div><canvas width="${px}" height="${px}"></canvas></div><figcaption>shader</figcaption></figure></div>`;
+  document.getElementById("rows").appendChild(sec);
+  const cv = sec.querySelector("canvas");
+  const gl = cv.getContext("webgl", {premultipliedAlpha: true, preserveDrawingBuffer: true, antialias: false});
+  const prog = gl.createProgram();
+  for (const [type, src] of [[gl.VERTEX_SHADER, VERT], [gl.FRAGMENT_SHADER, document.getElementById("frag").textContent]]) {
+    const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) { sec.insertAdjacentHTML("beforeend", "<pre>" + gl.getShaderInfoLog(s) + "</pre>"); }
+    gl.attachShader(prog, s);
+  }
+  gl.linkProgram(prog); gl.useProgram(prog);
+  const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+  const loc = gl.getAttribLocation(prog, "p"); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+  gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+  views.push({gl, prog, parts, px});
+}
+function draw(t) {
+  for (const {gl, prog, parts, px} of views) {
+    gl.viewport(0, 0, px, px); gl.clearColor(0.0196, 0.0275, 0.0627, 1); gl.clear(gl.COLOR_BUFFER_BIT);
+    for (const part of parts) {
+      const u = n => gl.getUniformLocation(prog, n);
+      gl.uniform2f(u("uCenter"), px/2 + (part.cx || 0)*SCALE, px/2); gl.uniform1f(u("uR"), part.R*SCALE); gl.uniform1f(u("uTime"), t);
+      for (const [k, val] of Object.entries(part)) { const n = MAP[k]; if (!n) continue;
+        if (typeof val === "string") gl.uniform3fv(u(n), hex(val)); else gl.uniform1f(u(n), n === "uProW" ? val*SCALE : val); }
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    }
+  }
+}
+if (T0 !== null) draw(parseFloat(T0)); else { const start = performance.now() - 6000; const loop = now => { draw((now - start)/1000); requestAnimationFrame(loop); }; requestAnimationFrame(loop); }
+</script>
+</body></html>
