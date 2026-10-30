@@ -1,13 +1,13 @@
 import type { Level } from "../level/schema";
+import { levelHasAstro } from "./state";
 import { hasMagneticBody, isCompactBody, starLuminosity } from "../sim/physics";
 
 /**
  * Map layers menu. One table drives the rows, so a later layer is one entry.
  * design/style.md §20 and design/threejs-notes.md §23.
  *
- * Gravity, magnetism and radiation keep the view flags they already have.
- * Astrophage and tidal stress are rows only: the game has no flag for them yet,
- * and A and T stay unbound until those layers exist.
+ * Gravity, magnetism, radiation and Astrophage keep their view flags.
+ * T stays unbound until the tidal-stress layer exists.
  */
 
 export type LayerLegend = "gravity" | "magnetism" | "radiation" | "astrophage";
@@ -18,6 +18,7 @@ export interface LayerGame {
   gravity: "off" | "on";
   magnetism: boolean;
   radiation: boolean;
+  astrophage: boolean;
 }
 
 export interface LayerDef {
@@ -97,11 +98,13 @@ export const LAYERS: readonly LayerDef[] = [
     id: "astrophage",
     name: "Astrophage",
     key: "A",
-    available: () => false,
+    available: levelHasAstro,
     reason: "no infected star here",
     legend: "astrophage",
-    isOn: () => false,
-    setOn: null,
+    isOn: (game) => game.astrophage,
+    setOn: (game, on) => {
+      game.astrophage = on;
+    },
   },
   {
     id: "tidal",
@@ -241,20 +244,20 @@ function chord(event: LayerKeyEvent): boolean {
 }
 
 /**
- * L toggles the panel. G, M and D toggle their layers, in planning and pause.
- * A and T are left for later layers. Repeats and modifier chords do nothing,
- * the same way `applyGravityKey` treats G.
+ * L toggles the panel. G, M, D and A toggle their layers, in planning and pause.
+ * T stays unbound until the tidal layer exists. Repeats and modifier chords
+ * do nothing, the same way `applyGravityKey` treats G.
  * Returns whether the key was consumed.
  */
 export function applyLayerKey(game: LayerGame, panel: LayersPanelState, event: LayerKeyEvent): boolean {
   const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
-  if (key !== "l" && key !== "g" && key !== "m" && key !== "d") return false;
+  if (key !== "l" && key !== "g" && key !== "m" && key !== "d" && key !== "a") return false;
   if (chord(event)) return false;
   if (key === "l") {
     panel.open = !panel.open;
     return true;
   }
-  const id = key === "g" ? "gravity" : key === "m" ? "magnetism" : "radiation";
+  const id = key === "g" ? "gravity" : key === "m" ? "magnetism" : key === "d" ? "radiation" : "astrophage";
   return toggleLayer(game, id);
 }
 

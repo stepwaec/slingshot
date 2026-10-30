@@ -666,24 +666,7 @@ html, body, #app {
 
 #recharge[hidden] { display: none; }
 
-#astrophage {
-  position: absolute;
-  left: 172px;
-  top: 124px;
-  height: 32px;
-  padding: 0 12px;
-  font-size: 12px;
-  pointer-events: auto;
-}
-
-#astrophage[hidden],
 #dose[hidden] { display: none; }
-
-#astrophage[aria-pressed="true"] {
-  background: #ff3d6e;
-  color: #0a0d1a;
-  border-color: transparent;
-}
 
 #app[data-astro="on"] .hull-block { top: 128px; }
 
@@ -741,43 +724,6 @@ html, body, #app {
 #astro-chip[hidden] { display: none; }
 #astro-chip[data-tone="crimson"] { color: #ff3d6e; }
 #astro-chip[data-tone="pink"] { color: #ff7a9c; }
-
-#astro-legend {
-  position: absolute;
-  left: 40px;
-  top: 168px;
-  width: 457px;
-  height: 55px;
-  padding: 8px 12px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--panel);
-  pointer-events: none;
-  box-sizing: border-box;
-}
-#astro-legend[hidden] { display: none; }
-.astro-key {
-  list-style: none;
-  display: flex;
-  gap: 14px;
-  margin: 6px 0 0;
-  padding: 0;
-  font: 500 10px/1 var(--ui);
-  color: var(--text);
-}
-.astro-key i {
-  display: inline-block;
-  width: 18px;
-  height: 3px;
-  margin-right: 6px;
-  vertical-align: middle;
-  border-radius: 2px;
-}
-.astro-key i[data-tick="trace"] { background: #ff7a9c; width: 8px; }
-.astro-key i[data-tick="present"] { background: #ff3d6e; width: 12px; }
-.astro-key i[data-tick="dense"] { background: #ff3d6e; width: 15px; height: 4px; }
-.astro-key i[data-tick="harvest"] { background: #ffc2d2; width: 18px; height: 4px; }
-.astro-key i[data-tick="eaten"] { background: #6ef0a0; width: 15px; height: 4px; }
 
 #astro-chips { position: absolute; inset: 0; pointer-events: none; }
 .astro-float {
@@ -1518,7 +1464,9 @@ button:disabled:active { background: var(--panel); }
   display: flex;
   flex-direction: column;
   gap: 3px;
-  width: 136px;
+  width: max-content;
+  max-width: 100%;
+  margin-top: 6px;
   pointer-events: none;
 }
 

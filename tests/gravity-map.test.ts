@@ -346,7 +346,6 @@ describe("gravity layer toggle", () => {
             },
           },
           layersPanel,
-          astrophageButton: quietButton(),
         } as unknown as InputElements,
         () => ({ width: 800, height: 600 }),
       );

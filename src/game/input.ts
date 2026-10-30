@@ -6,8 +6,6 @@ import {
   deleteSelected,
   isEditing,
   launch,
-  levelHasAstro,
-  toggleAstrophage,
   moveNodeAlong,
   nodeIncoming,
   nodePosition,
@@ -41,7 +39,6 @@ export interface InputElements {
   layersButton: HTMLButtonElement;
   /** UI-only. Opening the panel does not touch the sim. */
   layersPanel: LayersPanelState;
-  astrophageButton: HTMLButtonElement;
 }
 
 const HANDLE_RADIUS = 16;
@@ -164,10 +161,6 @@ export function bindInput(
   elements.layersButton.addEventListener("click", () => {
     elements.layersPanel.open = !elements.layersPanel.open;
   });
-  elements.astrophageButton.addEventListener("click", () => {
-    if (!levelHasAstro(game.level)) return;
-    toggleAstrophage(game);
-  });
   elements.deleteButton.addEventListener("click", () => deleteSelected(game));
   elements.nodeRemove.addEventListener("click", (event) => {
     event.stopPropagation();
@@ -207,10 +200,6 @@ export function bindInput(
       else if (!event.repeat && !event.metaKey && !event.ctrlKey && !event.altKey) selectNode(game, null);
     } else if (applyLayerKey(game, elements.layersPanel, event)) {
       event.preventDefault();
-    } else if (event.key === "a" || event.key === "A") {
-      if (event.repeat || event.metaKey || event.ctrlKey || event.altKey) return;
-      if (!levelHasAstro(game.level)) return;
-      toggleAstrophage(game);
     } else if (applySpeedKey(game, event)) {
       event.preventDefault();
     }

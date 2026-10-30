@@ -6,7 +6,6 @@ import {
   canPause,
   createGame,
   isEditing,
-  levelHasAstro,
   loadLevel,
   missionResult,
   nodeIncoming,
@@ -123,14 +122,12 @@ const routeSafe = required<HTMLButtonElement>("#route-safe");
 const routeDeep = required<HTMLButtonElement>("#route-deep");
 const layersButton = required<HTMLButtonElement>("#layers");
 const layersPanelEl = required<HTMLElement>("#layers-panel");
-const astrophageButton = required<HTMLButtonElement>("#astrophage");
 const astroRow = required<HTMLElement>("#astro-row");
 const astroValue = required<HTMLElement>("#astro-value");
 const astroFill = required<HTMLElement>("#astro-fill");
 const astroGhost = required<HTMLElement>("#astro-ghost");
 const astroSpark = required<HTMLElement>("#astro-spark");
 const astroChip = required<HTMLElement>("#astro-chip");
-const astroLegend = required<HTMLElement>("#astro-legend");
 const astroChips = required<HTMLElement>("#astro-chips");
 const doseBlock = required<HTMLElement>("#dose");
 const doseValue = required<HTMLElement>("#dose-value");
@@ -199,7 +196,6 @@ bindInput(
     slowButton,
     layersButton,
     layersPanel,
-    astrophageButton,
   },
   () => ({ width: canvas.clientWidth, height: canvas.clientHeight }),
   () => frameLevel(game.camera, canvas.clientWidth, canvas.clientHeight, game.level),
@@ -311,11 +307,6 @@ function syncAstro(current: Game): void {
   const fitted = current.level.fit?.engine === "spin";
   astroRow.hidden = !fitted;
   app.dataset.astro = fitted ? "on" : "off";
-  const armed = levelHasAstro(current.level);
-  astrophageButton.hidden = !armed;
-  const on = armed && current.astrophage;
-  astrophageButton.setAttribute("aria-pressed", on ? "true" : "false");
-  astroLegend.hidden = !(on && isEditing(current));
   if (!fitted) {
     astroChip.hidden = true;
     astroChips.replaceChildren();

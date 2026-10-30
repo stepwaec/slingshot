@@ -1,4 +1,5 @@
 import { LAYERS, layersOnCount, layerView, type LayerGame, type LayersPanelState } from "../game/layers";
+import { gravityBandLegend } from "./gravity-legend";
 
 /**
  * DOM for the Layers button and panel. Rows are built once from `LAYERS`.
@@ -25,9 +26,7 @@ function legendElement(kind: NonNullable<(typeof LAYERS)[number]["legend"]>): HT
   legend.className = `layer-legend layer-legend-${kind}`;
   legend.hidden = true;
   if (kind === "gravity") {
-    legend.innerHTML =
-      `<span class="grav-ramp"></span><span class="grav-note">+ grid</span>` +
-      `<span class="grav-caps"><span>clock at full rate</span><span>stopped</span></span>`;
+    legend.append(gravityBandLegend());
     return legend;
   }
   if (kind === "magnetism") {
