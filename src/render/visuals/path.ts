@@ -29,9 +29,12 @@ const dotFrag = /* glsl */ `
 varying vec4 vColor;
 varying vec2 vUv;
 uniform float uSpan;
+uniform float uRadius;
+uniform float uSoft;
 void main() {
   float d = length(vUv - vec2(0.5)) * uSpan;
-  float alpha = 1.0 - smoothstep(2.15, 2.85, d);
+  float edge = max(uSoft, 0.05);
+  float alpha = 1.0 - smoothstep(uRadius - edge, uRadius + edge, d);
   if (alpha <= 0.01) discard;
   gl_FragColor = vec4(vColor.rgb, vColor.a * alpha);
 }
@@ -336,7 +339,8 @@ class PathVisual implements Visual {
       colors[o + 1] = rgb[1];
       colors[o + 2] = rgb[2];
       const faded = sigma >= 0.6 ? Math.max(0.18, 0.7 - sigma / 40) : i < split ? this.theme.path.sureAlpha : this.theme.path.dimAlpha;
-      colors[o + 3] = gold > 0 ? 1 : Math.min(0.95, faded + (byRate && sigma < 0.6 ? glow * 0.4 : 0));
+      const lift = byRate && sigma < 0.6 ? glow * this.theme.path.glowLift : 0;
+      colors[o + 3] = gold > 0 ? 1 : Math.min(this.theme.path.alphaCap, faded + lift);
     }
   }
 
@@ -448,7 +452,11 @@ function makeDots(theme: Theme, order: number): Dots {
   const mesh = new THREE.Mesh(
     geometry,
     new THREE.ShaderMaterial({
-      uniforms: { uSpan: { value: theme.path.dotSpanPx } },
+      uniforms: {
+        uSpan: { value: theme.path.dotSpanPx },
+        uRadius: { value: theme.path.dotRadiusPx },
+        uSoft: { value: theme.path.dotSoftPx },
+      },
       vertexShader: dotVert,
       fragmentShader: dotFrag,
       transparent: true,
