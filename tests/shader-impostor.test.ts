@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import { frost } from "../src/level/catalog";
 import { shaderFamily } from "../src/render/shaders/families";
 import { artLightLocked, impostorSide, lightDirection, planetSide, ringOctaves, shaderRendering } from "../src/render/shaders/impostor";
+import { GIANT_FRAGMENT } from "../src/render/shaders/giant-shader";
+import { PLANET_FRAGMENT } from "../src/render/shaders/planet-shader";
+import { STAR_FRAGMENT } from "../src/render/shaders/star-shader";
 import { STAR_PARAMS, starKind } from "../src/render/shaders/star-params";
 import { theme } from "../src/render/theme";
 
@@ -21,6 +24,9 @@ describe("shader impostors", () => {
     expect(STAR_PARAMS.sun.core).toBe("#FFB43A");
     expect(STAR_PARAMS.sun.limbDark).toBe(0.18);
     expect(STAR_PARAMS.sun.hazeR).toBe(4.35);
+    expect(STAR_PARAMS.sun.hazeA).toBe(1);
+    expect(STAR_PARAMS["sol-sun"].hazeA).toBe(1);
+    expect(STAR_PARAMS["red-dwarf"].hazeA).toBe(1);
     expect(STAR_PARAMS.sun.flare).toBe(1);
     expect(STAR_PARAMS["sol-sun"].spots).toBe(1);
     expect(STAR_PARAMS["sol-sun"].flare).toBe(0);
@@ -29,6 +35,13 @@ describe("shader impostors", () => {
     expect(STAR_PARAMS["binary-cool"].proW).toBe(1.5);
     const family = Object.fromEntries(frost.bodies.map((body) => [body.id, shaderFamily(body)]));
     expect(family).toEqual({ home: "planet", sun: "star", dwarf: "planet", x: "planet" });
+  });
+
+  it("composites layers with straight alpha and premultiplies only the final pixel", () => {
+    for (const source of [STAR_FRAGMENT, PLANET_FRAGMENT, GIANT_FRAGMENT]) {
+      expect(source.replace(/\s+/g, "")).toContain("d.rgb*d.a");
+      expect(source).toContain("gl_FragColor");
+    }
   });
 
   it("sizes a planet quad to the rim, and a star quad to twice the haze", () => {

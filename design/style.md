@@ -1,6 +1,6 @@
 # Slingshot — visual style v1.5
 
-Calm, cinematic space for Slingshot. This file is the look; `canvas-notes.md` is the pixel-exact drawing reference (how each SVG recipe looks and what it costs, written for Canvas 2D); `threejs-notes.md` maps it onto the game's Three.js renderer (WP3); `assets.md` indexes every file. Sections: §1 mood · §2 palette (background, sky, the sun, the two original planets, the shared lighting tokens, UI) · §3 typography · §4 glow and blur rules, with **§4.1 Realism, vibrancy and crispness rules** · §5 motion · §6 layout · §7 asset index · §8 the **body library** (31 bodies: 12 planets, 6 stars and compact objects, 4 moons, 3 ringed planets, the 3 WP8 objects: binary star, red giant, moon chain, the 2 WP9 compact objects: pulsar, magnetar, and the WP10 comet) plus the WP9 **magnetism map** and the WP10 **solar recharge indicator** · §9 the **space environment** (nebulae, asteroid field, wreck debris) · §10 **ship systems** (modular ship, damage states, hull HUD, tidal-stress warning, upgrade screen) · §11 **WP11** (asteroid belts, Kuiper belt, rogue planet, radiation map, dose meter) · §12 **ship and planning view** (burn plume, burn node, gravity grid and sheet) · §13 **late game** (stellar engine, Dyson swarm, ringworld, Shkadov thruster, space elevator, wormhole pair) and **living surfaces** · §14 **collisions and consumption** (impact, debris field, tidal disruption, burning up in a star, accretion, event telegraphs) · §15 **ghost markers** (where a moving body will be) · §16 **supernova, quasar and stray asteroid** (WP12) · §17 **target zone** (orbit capture) · §18 **Sol bodies** (the Sol campaign) · §19 **Astrophage** (infected stars, the Petrova line, the spin drive, Tau Ceti, the Astrophage map) · §20 **Layers menu** (one panel for every map layer) · §21 **gravity and time heat map** (clock-rate bands and the grid funnel). Coding agents: read `IMPLEMENTING.md` first. Assets live in `design/assets` (bodies in `design/assets/bodies`, the environment in `design/assets/space`, map overlays in `design/assets/overlays`, the modular ship in `design/assets/ship`, late-game structures in `design/assets/mega`, scripted events in `design/assets/events`), mockups (1440×900, PNG = 2× render) in `design/mockups`, animated previews in `design/preview/planets.html`, `bodies.html` and `space.html`.
+Calm, cinematic space for Slingshot. This file is the look; `canvas-notes.md` is the pixel-exact drawing reference (how each SVG recipe looks and what it costs, written for Canvas 2D); `threejs-notes.md` maps it onto the game's Three.js renderer (WP3); `assets.md` indexes every file. Sections: §1 mood · §2 palette (background, sky, the sun, the two original planets, the shared lighting tokens, UI) · §3 typography · §4 glow and blur rules, with **§4.1 Realism, vibrancy and crispness rules** · §5 motion · §6 layout · §7 asset index · §8 the **body library** (31 bodies: 12 planets, 6 stars and compact objects, 4 moons, 3 ringed planets, the 3 WP8 objects: binary star, red giant, moon chain, the 2 WP9 compact objects: pulsar, magnetar, and the WP10 comet) plus the WP9 **magnetism map** and the WP10 **solar recharge indicator** · §9 the **space environment** (nebulae, asteroid field, wreck debris) · §10 **ship systems** (modular ship, damage states, hull HUD, tidal-stress warning, upgrade screen) · §11 **WP11** (asteroid belts, Kuiper belt, rogue planet, radiation map, dose meter) · §12 **ship and planning view** (burn plume, burn node, gravity grid and sheet) · §13 **late game** (stellar engine, Dyson swarm, ringworld, Shkadov thruster, space elevator, wormhole pair) and **living surfaces** · §14 **collisions and consumption** (impact, debris field, tidal disruption, burning up in a star, accretion, event telegraphs) · §15 **ghost markers** (where a moving body will be) · §16 **supernova, quasar and stray asteroid** (WP12) · §17 **target zone** (orbit capture) · §18 **Sol bodies** (the Sol campaign) · §19 **Astrophage** (infected stars, the Petrova line, the spin drive, Tau Ceti, the Astrophage map) · §20 **Layers menu** (one panel for every map layer) · §21 **gravity and time heat map** (clock-rate bands and the grid funnel) · §22 **tidal stress map** (deforming rings). Coding agents: read `IMPLEMENTING.md` first. Assets live in `design/assets` (bodies in `design/assets/bodies`, the environment in `design/assets/space`, map overlays in `design/assets/overlays`, the modular ship in `design/assets/ship`, late-game structures in `design/assets/mega`, scripted events in `design/assets/events`), mockups (1440×900, PNG = 2× render) in `design/mockups`, animated previews in `design/preview/planets.html`, `bodies.html` and `space.html`.
 
 **History in one paragraph.** v1 set the layout, UI and the two-glow rule. v1.1 was the first realism pass (limb-darkened star, planets with a terminator and a rim, a tinted starfield with a Milky Way). v1.2 made the planets rotate: a seamless texture strip slides under a lighting overlay that never moves. v1.3 built the body library (12 planets, 6 stars and compact objects) and gave the stars prominences and a flare. v1.4 adds moons, ringed planets, nebulae and debris fields (§8, §9). **v1.5 (revised) is the realism, vibrancy and crispness pass**, agreed with the client on two approved reference assets — the ocean world "variant F" and the sun "variant J" — and applied to every body: vivid multi-zone surfaces with crisp edges, elongated clouds with cast shadows, a warm terminator band, a lit-side haze and rim, a fiery plasma sun with ragged flame rings and an irregular rim, and no untinted grey anywhere. The earlier v1.5 "crispness pass" numbers (halve blurs, ±12 % lightness, limb line at α 0.30) were rejected as indistinguishable from v1.2 and are **not** used; §4.1 holds the rules that replaced them.
 
@@ -1518,3 +1518,57 @@ Files: `assets/overlays/gravity-time.svg` (the sun, a neutron star and a black h
 
 The tidal stress map (a later request) must use a palette distinct from this one.
 
+## 22. Tidal stress map (v3.6)
+
+Files: `assets/overlays/tidal-stress.svg` (a white dwarf, two compact bodies, a black hole), mockup `mockups/planning-tidal.svg`. Renderer notes: `threejs-notes.md` §26. It is the **Tidal stress** layer (T) of the Layers menu (§20), in planning and pause. It is available when the level has a compact body and `tidalStrength` > 0; otherwise its row reads "no tidal body here".
+
+**A palette and a grammar distinct from every other layer** (the roadmap asked for a palette distinct from the gravity and time map): no fills (gravity and time), no stepped zones (magnetism), no dots (radiation), no flow ticks (Astrophage). Instead, a **lattice of deforming rings**, which is how a circle of test particles really deforms in a tidal field: stretched toward the mass and squeezed across.
+
+- **Field.** The sim's own number: S = `tidalStressAt`, in hull per second from compact bodies only, shown as S / W with W = `STRESS_WARN` (the HUD's level 3). The ring shape comes from the **summed tidal tensor** T = Σ k · 2GM · L / r³ · (3 r̂r̂ − I) / 2. Its larger eigenvalue is the stretch (= S for one body), and its eigenvector is the stretch axis. Between two compact bodies the axes turn through the saddle.
+- **Grid:** an 18 px screen grid, px-space. Empty where S/W < 0.06, and skipped within r + 7 px of a body.
+- **Glyph:** a ring of radius g = 4.7 px stretched along the axis and squeezed across it:
+  - a = g(1 + e) and b = g / (1 + 0.6 e), with e = min(0.95, 0.924 · log₂(1 + S/0.06W) / log₂(1 + 2/0.06))
+  - 1 px stroke, α 0.32 → 0.92 with log S
+- **Colour by the HUD's levels** (`stressLevel` in `ship-art.ts`), so the map and the chip always agree:
+  - level 1: cyan
+  - level 2: `stress.warn` orange
+  - level 3: `stress.critical` red, filled at α 0.22
+- **The level-3 boundary** is the existing dashed tidal ring (`grid.tidal`), with the chip "tidal 3 · hull".
+- **Planning:** where the predicted path dips inside level 3, a chip on the path gives the time and the hull it will cost ("path: tidal 3 for 0:02 · −9 hull").
+
+| Token | Hex | Used for |
+|---|---|---|
+| `tidal.low` | `#7FE0FF` | Level 1 rings (S < W/2); the Layers icon's cyan |
+| `tidal.warn` | `#FF9F43` | Level 2 rings (W/2 ≤ S < W) (= `stress.warn`) |
+| `tidal.critical` | `#FF5A5F` | Level 3 rings (S ≥ W), filled α 0.22; the danger ring and chips (= `stress.critical`, `grid.tidal`) |
+
+## 23. Cryosleep (v3.7)
+
+Files: `assets/hud-crew.svg` (the lifespan meter), `assets/cryo-segment.svg` (the sleep stretch on the predicted path), `assets/ship/cryo-pods.svg` (pod states and the ship's asleep cue), mockup `mockups/planning-cryosleep.svg`. Renderer notes: `threejs-notes.md` §27. Cryosleep is the late upgrade that uses the cryo module (`ship/module-cryo.svg`).
+
+**Two colours tell the story: warm for life, ice for sleep.** The crew's remaining life is a warm peach (`crew.life`), distinct from fuel mint, hull blue and the dose greens. Everything that belongs to sleep is ice cyan: the frozen bar, the stretch on the path, the pods, the ring round a sleeping ship. Waking always brings a touch of peach back (the wake handle's core, the pods' flash).
+
+- **Lifespan meter** (`hud-crew.svg`). The last block of the status stack: FUEL 48 · HULL 96 · (DOSE 144) · CREW at the next 48 px step, so 144 without the dose meter and 192 with it. Chips move below it.
+  - "CREW" label, a heartbeat glyph in the bar colour (asleep: a snowflake), the remaining lifespan in ship time ("2:10", 12 px mono), and a continuous 220 × 8 bar filled from the left. 0:00 loses the mission.
+  - `crew.life` from 25 %, `crew.low` below 25 %, `crew.crit` below 10 % (pulsing α 1 → 0.45, 1 s).
+  - The crew ages in **ship** time, so time dilation slows it too. The rate line says "ageing 1.00× · ship time"; when the clock rate drops below 0.995 it shows the factor ("ageing 0.62× · deep well").
+  - **Asleep:** the fill turns to ice (gradient `cryo.ice` → `cryo.glow`, a `cryo.frost` rim, frost needles, a shimmer every 4 s), its edge is frozen by a tick, and the value stops. "cryosleep · ageing 0× · wake 0:12".
+  - **Planning ghost:** the life this plan uses is hatched at the end of the fill, with a tick where the plan ends; the life the planned sleep keeps is an ice slice just left of the tick. "−0:46 on this path · cryo keeps 0:24".
+  - **Groggy** (optional penalty): for a few seconds after waking, the chip "groggy 0:05 · burns 70 %" and burns are capped.
+- **Sleep stretch** (`cryo-segment.svg`), px-space:
+  - a soft `cryo.glow` band (14 px α 0.10 + 5 px α 0.22), a crawling frost dash, ice dots, and four-point glints twinkling beside the line
+  - **handles:** capsules (9 × 16) across the path, not circles, so they never read as burn nodes. SLEEP has an ice core, WAKE a peach core. Labels "sleep" / "wake" on the convex side. Both drag along the path.
+  - **chip** at the middle: "cryosleep 0:31 · ageing 0×"
+  - **rules:** the crew must be awake to burn, so WAKE snaps to 0:01 before the next burn node. **Wake on danger** (optional): where the path enters a hazard, an `event.warn` diamond with "!" rings, the chip "auto-wake 0:22 · belt" appears, and the rest of the planned stretch is only a dashed promise.
+  - **Placing:** right-click a path dot, or press Z with the cursor on the path, to drop a 0:20 sleep centred there. Z is free in `src/game/input.ts`; C stays free.
+- **Pods** (`cryo-pods.svg`): awake (dark `cryo.deep` glass, no glow), entering (ice climbs in 2 s), asleep (ice glass, a 6 s breath, frosted rim), waking (ice melts from the top, a peach flash), auto-wake (fast melt, red rims). At 22 px the pods can't be read, so a sleeping ship gets a breathing `cryo.glow` ring (r 15 → 19, 6 s) and a small turning snowflake.
+
+| Token | Hex | Used for |
+|---|---|---|
+| `crew.life` | `#FFC09A` | Lifespan fill from 25 %; the heartbeat glyph; the planning hatch; the wake handle's core; the waking flash; the groggy chip |
+| `crew.low` | `#FF9F43` | Lifespan fill and value below 25 % (= `event.warn`) |
+| `crew.crit` | `#FF5A5F` | Lifespan fill and value below 10 %, pulsing; the auto-wake pod rims |
+| `cryo.ice` | `#BFF4FF` | Frozen bar top, ice dots on the stretch, the sleep handle's core, ice glass, the asleep value |
+| `cryo.glow` | `#7CF5FF` | Frozen bar base, the stretch band, handle strokes, the snowflake glyph, the pods' breath, the ship's asleep ring |
+| `cryo.deep` | `#1E6E8A` | Empty pod glass and pod rims (= the module's rim) |
+| `cryo.frost` | `#E6FAFF` | Frost rim on the bar, the crawling frost dash, glints |

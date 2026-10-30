@@ -493,3 +493,28 @@ Specs: `shader-specs.md`. Reference shaders: `shaders/*.frag`. Live comparison: 
 - **Giants.** Upload `uJet` as a 17-float uniform array. Ring profile maps use `ClampToEdgeWrapping`. Size the quad to the ring's outer edge (`rho1` × r). A ringed giant is one quad, because the shader orders the far ring, the planet and the near ring itself.
 - **Compact objects.** The pulsar's `uSimTime` is `shownTime(game)`, the same clock as its damage. Size its quad to the beam reach (2 × `uReach` × r), or draw the beams as a separate long quad, so the body quad stays small.
 - **Effects.** Rocks are one `InstancedMesh` per field, with the attributes in §6.1. Dust and motes are one `THREE.Points` per set with the `points.*` material. If bloom is used, render the emissive bodies on their own layer (`camera.layers`) into an `EffectComposer` with the §6.3 passes (or `UnrealBloomPass` at threshold 0.85, strength 0.45, radius 0.35) and add the result over the world scene; the HUD stays outside.
+
+## 26. Tidal stress map
+
+Designs: `overlays/tidal-stress.svg`, `mockups/planning-tidal.svg`. Values in `style.md` §22. This is the Layers menu's Tidal stress row (T).
+
+1. **Sample.** On an 18 px screen grid (planning and pause only, re-sampled when the view changes), for each cell centre in world space:
+   - S = `tidalStressAt(x, y, config, time)`
+   - the summed tensor, with components txx, txy and tyy from Σ k · 2GM · L / r³ · (3 r̂r̂ − I) / 2 over compact bodies posed by `bodyPose`
+   - its larger eigenvalue (the stretch) and that eigenvector's angle, ½ atan2(2 txy, txx − tyy)
+
+   Skip cells with S < 0.06 · `STRESS_WARN` and cells within r + 7 px of a body.
+2. **Draw** one instanced ring quad per cell: an ellipse with semi-axes a and b from §22, rotated to the axis, with a px-space 1 px stroke (`fwidth`), coloured by `stressLevel(S)` and filled at α 0.22 at level 3.
+3. **Keep** the dashed tidal ring (`gravity.ts`) as the level-3 boundary.
+4. **Path chip.** When the prediction spends steps at S ≥ `STRESS_WARN`, chip the longest stretch with its duration and its summed hull loss.
+5. **Layers.** Add the row to the menu table, available when `tidalStrength` > 0 and a compact body exists. Its key is T.
+
+## 27. Cryosleep
+
+Designs: `hud-crew.svg`, `cryo-segment.svg`, `ship/cryo-pods.svg`, `mockups/planning-cryosleep.svg`. Values in `style.md` §23.
+
+1. **State.** A plan holds at most one sleep per coast as two sim times, `sleepAt` and `wakeAt`, in ship time. Deterministic: the sim decides asleep from the step's ship time, never from frame time, so 1× and 32× sleep the same steps. `wakeAt` is clamped to 1 s of ship time before the next burn; an auto-wake (optional) moves it to the first predicted step inside a hazard.
+2. **Ageing.** Each step adds `dτ` (the ship-time step, already slowed by the clock rate) to `crewAge` unless the crew is asleep. Lifespan left = `lifespan − crewAge`; at 0 the mission is lost. The prediction carries `crewAge` along the path so the HUD ghost can show what the plan uses and what the sleep keeps (the same plan with and without the sleep).
+3. **HUD.** A fourth status block in the DOM stack (like `#dose`), placed after the dose block. The ice bar is a CSS gradient with a frost-needle background image and an animated shimmer; the hatch is a repeating linear gradient at −35°.
+4. **Path.** Draw the stretch over the prediction stroke: a wide soft line and a narrow core in `cryo.glow` (px-space widths, like the path dots), the dash crawling with time, the dots inside tinted `cryo.ice`, and glints as point sprites. Handles are px-space capsule quads aligned with the path tangent, hit-tested like burn nodes and dragged along the predicted points.
+5. **Ship.** While asleep, switch the cryo module to the asleep pod state and add the breathing ring and snowflake around the ship (screen-space, under the ship sprite).
