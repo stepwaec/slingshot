@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { frost } from "../src/level/catalog";
+import { stage } from "./support/stage";
 import { shaderFamily, usesShader } from "../src/render/shaders/families";
 import { COMPACT_FRAGMENT } from "../src/render/shaders/compact-shader";
 import { compactExtent, compactKey, compactMotion } from "../src/render/shaders/compact-params";
@@ -21,7 +21,7 @@ describe("compact object shader", () => {
     expect(starKind(body({ kind: "star", look: "white-dwarf" }))).toBe("white-dwarf");
     expect(STAR_PARAMS["white-dwarf"].smooth).toBe(1);
     expect(shaderFamily(body({ kind: "star", look: "sun" }))).toBe("star");
-    expect(frost.bodies.some((item) => compactKey(item) !== null)).toBe(false);
+    expect(stage.bodies.some((item) => compactKey(item) !== null)).toBe(false);
     expect(usesShader(body({ kind: "star", look: "neutron" }))).toBe(true);
     expect(usesShader(body({ kind: "star", look: "sun" }))).toBe(true);
     expect(usesShader(body({ kind: "star", look: "tau-ceti" }))).toBe(false);
