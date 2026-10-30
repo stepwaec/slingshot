@@ -62,6 +62,9 @@ One row per file in `design/assets/` (15 top-level files, 30 bodies in `bodies/`
 | `magnetar.svg` (v2.1, WP9) | **Magnetar** (r 9): white-pink body, magenta glow, six static dipole field lines r = L sin²θ (axis 20°) with flowing dashes and uneven flicker, sparse radio-static grain r 24–120, starquake ring every 18 s | `0 0 320 320`; quake ring r 150 | `#magnetar` (160, 160); `mg*` | `magnetar.*` #FFFFFF / #FFE0FA / #FF7AE6 / #C77DFF / #D946EF / #FF9BEF | field-line sprite cached once; dashes and flicker per line (`threejs-notes.md` §5); axis tilt from level data; crash radius 9 |
 | `comet.svg` (v2.2, WP10) | **Comet**: dark peanut nucleus (crash r 5), green coma, straight blue ion tail with flowing solar-wind streaks and a 9 s disconnection knot, curved golden dust tail of 24 crisp strands with drifting sparkles, ice-harvest ring r 30 | `0 0 520 240`; ion tail 440, dust tail 380 | `#comet` (60, 100); `cm*` | `comet.*` (`style.md` §8 WP10) | rotate the group so +x points away from the star; scale `#cmTails` by `clamp(Rperi / d, 0.35, 1)`; needs elliptical orbits (`threejs-notes.md` §12) |
 | `rogue-planet.svg` (v2.4, WP11) | **Rogue planet** (r 36): dark disc, faint thermal bands drifting, flickering hot spots, cold rim of starlight, thin airglow, planning drift arrow | `0 0 260 200` | `#roguePlanet` (100, 100); `rp*` | `rogue.*` (`style.md` §11) | no stellar lighting; constant-velocity drift; opaque (hides the stars behind it); no recharge |
+| `supernova-progenitor.svg` (v2.9, WP12) | **Supernova progenitor**: the red-giant asset (placeholder disc here) breathing unevenly, old shells, planning countdown arc and dashed lethal blast radius | `0 0 460 330` | `#supernovaProgenitor` (0, 0), star at (230, 170); `sp*` | `nova.shell` #FF5A8A · `nova.blast` #FF5A5F · `event.warn` #FF9F43 (`style.md` §16) | red-giant sprite scaled to `radius / 120`; countdown from `supernova.at`; sim time |
+| `quasar.svg` (v2.9, WP12) | **Quasar**: black-hole shadow, white-hot disk, glow, twin blue-violet jets with racing knots | `0 0 460 330`; jets reach 210 | `#quasar` (0, 0), core at (230, 165); `qs*` | `quasar.glow` / `quasar.disk` / `quasar.jet` (`style.md` §16) | axis `jetAngle(jet, t)`; sheath = lethal cone, half-width d · tan(cone); jets end at `reach` |
+| `stray-asteroid.svg` (v2.9) | **Stray asteroid** (r 15): one WP11 rock lit toward its star, dust trail, planning drift arrow | `0 0 460 330` | `#strayAsteroid` (0, 0); `sa*` | WP11 rock tokens · `rock.dust` #C8A684 · drift #8B95B5 | body with `drift { vx, vy }`; crash radius = r; ghosts per `style.md` §15 |
 
 `planet-x.svg` and `star.svg` complete the library and appear in the galleries through their own files.
 
@@ -100,6 +103,9 @@ Each sample draws a placeholder disc where the real body goes; timelines in each
 | `burn-up.svg` | **Burning up**: decaying spiral, dayside glow, ablation tail, plunge flash, ripple, star brightening (8 s loop) | `#burnUp`; `bu*` | `consume { centerId, start, end, radius }` |
 | `accretion.svg` | **Accretion**: stretched star, stream into the disk, hotspot, turning disk | `#accretionEvent`; `ac*` | proposed `accrete` |
 | `event-telegraphs.svg` | **Telegraphs** in planning: collision course, impact reticle, countdown and debris forecast | `#eventTelegraphs`; `tg*` | every scripted event |
+| `supernova-detonation.svg` (v2.9, WP12) | **Supernova detonation**: the star shrinks and vanishes, blue-white flash, ejecta shell with filaments, neutron star (6 s loop) | `#supernovaDetonation`; `sd*` | `supernova { at, blast, speed }` |
+| `supernova-remnant.svg` (v2.9, WP12) | **Supernova remnant**: 240 filaments, synchrotron haze, shock front, pulsar, planning shock forecast | `#supernovaRemnant`; `sr*` | shock at `shellRadius` |
+| `quasar-sweep.svg` (v2.9, WP12) | **Quasar sweep** in planning: dashed swept cone and reach arc, "jet sweeps" and "safe window" chips | `#quasarSweep`; `qw*` | `quasar { period, sweep }` |
 
 ## Late game (`design/assets/mega/`, v2.6)
 
@@ -152,10 +158,11 @@ All self-contained pages (inline CSS, no scripts) on `bg.base`, inlining the ass
 | `space.html` WP11 row (v2.4) | Belts (sparse, medium, dense), the Kuiper belt and the radiation-map sample, each at 1×; `bodies.html` gains a rogue-planet row |
 | `space.html` late-game row (v2.6) | The six late-game structures at 1×, plus the living-sun reference |
 | `space.html` events row (v2.7) | The six scripted-event samples at 1× |
+| `space.html` WP12 row (v2.9) | The supernova progenitor, detonation and remnant, the quasar and its sweep, and the stray asteroid, each at 1× |
 
 ## Mockups (`design/mockups/`, all `0 0 1440 900`; **PNG = 2× render**)
 
-Every PNG is a 2× render of its SVG (2880 × 1800, `--force-device-scale-factor=2`, same filename). All eighteen share the v1.1 background (the upgrade screen dims it) (a `bg.edge` rect, the vignette centred (720, 450) r 900, then the `#starfield` group verbatim) and splice every body group **verbatim** from the v1.5 assets with only its translate changed; where a library body's upper-right light does not face the scene's star, its lighting layers sit in a scene-local `rotate(angle(L_scene) − angle(L_library))` wrapper (strips and the asset files untouched).
+Every PNG is a 2× render of its SVG (2880 × 1800, `--force-device-scale-factor=2`, same filename). All nineteen share the v1.1 background (the upgrade screen dims it) (a `bg.edge` rect, the vignette centred (720, 450) r 900, then the `#starfield` group verbatim) and splice every body group **verbatim** from the v1.5 assets with only its translate changed; where a library body's upper-right light does not face the scene's star, its lighting layers sit in a scene-local `rotate(angle(L_scene) − angle(L_library))` wrapper (strips and the asset files untouched).
 
 | File | Mode | What it demonstrates |
 |---|---|---|
@@ -177,6 +184,7 @@ Every PNG is a 2× render of its SVG (2880 × 1800, `--force-device-scale-factor
 | `late-game.svg` / `.png` (v2.6) | Planning, late-game system | A Dyson swarm rings the sun (sun at α 0.72), a space elevator stands on the home planet with its release arrow and "free Δv 2.4", and a wormhole pair sits between them with "exit clock +3.2 h" |
 | `showcase-burning-planet.svg` / `.png` (v2.7) | Planning, the Ash showcase | Planet X on its decaying orbit, heating and shedding an ablation tail; the dashed spiral into the sun; the predicted path racing to where X will be at arrival (dashed mint ring and capture radius); chips "burns up in 1:42", "orbit decaying", "arrive 1:10 · margin 0:32" |
 | `planning-ghosts.svg` / `.png` (v2.8) | Planning, ghost markers | Planet X on a circular orbit around the sun; its future track with a tick every 10 s; a ghost at burn 2 and under the cursor, each tied to its path sample; the path ends in the arrival ghost's capture radius |
+| `supernova-level.svg` / `.png` (v2.9, WP12) | Planning, a supernova level | The sun replaced by the red-giant asset (at 0.5, breathing unevenly) as the progenitor, with old shells, the countdown arc and the dashed lethal blast radius r 150; a quasar upper left with its swept cone dashed across the top; a stray asteroid drifting across the lower right; the planning path with "path leaves the blast zone at 0:41 · 0:07 to spare" |
 
 ## Usage rules
 

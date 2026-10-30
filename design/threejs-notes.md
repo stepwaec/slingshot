@@ -352,3 +352,17 @@ Designs: `ghost-markers.svg`, `mockups/planning-ghosts.svg`. Values in `style.md
 4. **Labels.** The time chip is DOM, like the Δv chip; for the target's arrival it reads "arrive m:ss".
 
 The target's future track is one line strip sampled from `bodyPose` between now and the arrival step, dashed in px-space, with a tick quad every 10 s of sim time. Draw it at renderOrder below the path dots. Ghosts never write the sim.
+
+## 19. Supernova, quasar and stray asteroid (WP12)
+
+Designs: `bodies/supernova-progenitor.svg`, `events/supernova-detonation.svg`, `events/supernova-remnant.svg`, `bodies/quasar.svg`, `events/quasar-sweep.svg`, `bodies/stray-asteroid.svg`, `mockups/supernova-level.svg`. Values in `style.md` §16. These replace the placeholder rings and jet bar in `src/render/visuals/hazards.ts`. Keep `shownTime`, `shellRadius` and `jetAngle`: every frame below is a pure function of that time, so the plan cursor scrubs it.
+
+- **Progenitor** (`t < at`): draw the red-giant sprite (`bodies/red-giant.svg`, photosphere r 120) scaled to `body.radius / 120`, whatever the level's `look`. Animate the uneven breathing as a scale on the sprite only. Three shell rings (`nova.shell`, px-space 1.2 px) drift outward on `frame.now`. In planning, add the dashed blast ring at `blast`, the countdown arc (a ring quad with an angular cut at `1 − t/at`) and the DOM chips.
+- **Detonation** (`at ≤ t < at + 2.6`): one additive quad with the `event.novaFlash` radial, radius and alpha from the timeline in §16. Hide the star sprite from `at`. The neutron-star dot (r 3, `nova.pulsar`) appears at `at`.
+- **Shock** (`t ≥ at`): a ring quad at exactly `shellRadius(nova, t)`, `nova.shock`, px-space width. The filaments are one instanced quad set (46 at detonation, 240 on the remnant, seeded by body id) laid on the ring with ±12 % radial jitter, so the nebula grows with the shock. The haze is one radial quad at 0.8 × the ring. Fade the filaments' α over 40 s of sim time, down to the remnant's 0.35–0.85.
+- **Remnant pulsar:** beams on a quad rotated by `frame.now` (cosmetic; no damage unless the level adds a `pulsar` block).
+- **Quasar:** a disk quad (back half under the shadow, front half over it), a shadow disc, and a glow quad. Each jet is a quad from 1.5 × the shadow to `reach`, rotated to `jetAngle(jet, t)` and its opposite. A fragment shader reads the half-width `d · tan(cone)` and lays the violet sheath, the blue body and the white core across it, plus three knots moving out on `frame.now`. The sheath edge is the damage edge (gap C: drawn reach and width must equal `quasarDamage`'s). Planning draws the swept edges at `angle ± (sweep + cone)` and the reach arc as dashed px-space line quads.
+- **Stray asteroid:** the belt rock instance code from WP11 (§14 of these notes and `space/belt-*.svg`) with one rock at `body.radius`, posed by `bodyPose` (its `drift`). The dust trail is 40 points behind `-velocity`, fading with distance. The drift arrow and ghosts appear in planning only.
+
+**Budget:** under 0.3 ms per hazard (a few quads plus one instanced filament set of at most 240).
+
