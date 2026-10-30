@@ -12,7 +12,7 @@ import {
  * These read hull and stress. They do not change the simulation.
  */
 
-export type EngineLook = "chemical" | "ion" | "pulse";
+export type EngineLook = "chemical" | "ion" | "pulse" | "spin";
 export type DamageBand = "none" | "75" | "45" | "15";
 export type HullTone = "ok" | "warn" | "critical";
 export type StressLevel = 0 | 1 | 2 | 3;
@@ -64,6 +64,8 @@ export const ENGINE_PLUME_IDS: Record<EngineLook, readonly string[]> = {
   chemical: ["sxEcPlume", "sxEcGlow"],
   ion: ["sxEiPlume", "sxEiGlow"],
   pulse: ["sxEpPlume"],
+  /** Beam and core are drawn as their own quad. The ring is a separate mesh. */
+  spin: ["sxEsBeamG", "sxEsRing"],
 };
 
 /**
@@ -101,6 +103,21 @@ export const ENGINE_PLUMES: Record<EngineLook, PlumeLook> = {
     timeScale: 1,
     continuous: false,
     root: 36,
+  },
+  /**
+   * Photon beam. Length is theme.astro (44 + 30·Δv, cap 160), not this field.
+   * `continuous` is false so the chemical flame path is skipped; the beam quad
+   * is posed on its own.
+   */
+  spin: {
+    length: 160,
+    halfWidth: 4.2,
+    turbulence: 0,
+    core: "#FFFFFF",
+    edge: "#FF3D6E",
+    timeScale: 1,
+    continuous: false,
+    root: 25.6,
   },
 };
 

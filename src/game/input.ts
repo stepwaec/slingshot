@@ -9,6 +9,8 @@ import {
   cycleGravity,
   launch,
   toggleMagnetism,
+  levelHasAstro,
+  toggleAstrophage,
   toggleRadiation,
   moveNodeAlong,
   nodeIncoming,
@@ -42,6 +44,7 @@ export interface InputElements {
   gravityButton: HTMLButtonElement;
   magnetismButton: HTMLButtonElement;
   radiationButton: HTMLButtonElement;
+  astrophageButton: HTMLButtonElement;
 }
 
 const HANDLE_RADIUS = 16;
@@ -167,6 +170,10 @@ export function bindInput(
     toggleMagnetism(game);
   });
   elements.radiationButton.addEventListener("click", () => toggleRadiation(game));
+  elements.astrophageButton.addEventListener("click", () => {
+    if (!levelHasAstro(game.level)) return;
+    toggleAstrophage(game);
+  });
   elements.deleteButton.addEventListener("click", () => deleteSelected(game));
   elements.nodeRemove.addEventListener("click", (event) => {
     event.stopPropagation();
@@ -205,6 +212,10 @@ export function bindInput(
       selectNode(game, null);
     } else if (applyGravityKey(game, event)) {
       event.preventDefault();
+    } else if (event.key === "a" || event.key === "A") {
+      if (event.repeat || event.metaKey || event.ctrlKey || event.altKey) return;
+      if (!levelHasAstro(game.level)) return;
+      toggleAstrophage(game);
     } else if (event.key === "m" || event.key === "M") {
       if (event.repeat || event.metaKey || event.ctrlKey || event.altKey) return;
       if (!hasMagneticBody(game.level.bodies)) return;

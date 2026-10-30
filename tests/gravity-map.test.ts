@@ -304,6 +304,7 @@ describe("gravity layer toggle", () => {
           },
           magnetismButton: quietButton(),
           radiationButton: quietButton(),
+          astrophageButton: quietButton(),
         } as unknown as InputElements,
         () => ({ width: 800, height: 600 }),
       );
