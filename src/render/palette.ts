@@ -141,6 +141,13 @@ export const palette = {
   wormholeStarCool: "#B8CCFF",
   wormholeArc: "#E9EEF8",
   wormholeLink: "#8B95B5",
+  /** design/style.md §15. Ghost markers. Hexes match earlier tokens; the names are the ghost ones. */
+  ghostBody: "#DCE4FF",
+  ghostCursor: "#FFFFFF",
+  ghostTarget: "#3DE0C2",
+  ghostCollision: "#FF5A5F",
+  ghostGone: "#FF9F43",
+  ghostTie: "#8B95B5",
 } as const;
 
 /** Linear blend in sRGB, matching the arrow.power ramp in design/canvas-notes.md §9. */

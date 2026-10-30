@@ -80,6 +80,17 @@ Landed in [PR #57](https://github.com/stepwaec/slingshot/pull/57), from the even
 
   The planning view should match `mockups/planning-ghosts.svg`.
 
+Landed in this pull request, from the ghost-marker art in design [PR #51](https://github.com/stepwaec/slingshot/pull/51):
+
+- ✔ Ring and inner ring, with the burn badge, cursor, arrival capture radius, collision cross and gone slash.
+- ✔ Dotted tie lines to the path sample at the same step, and the time chips.
+- ✔ The target's future track, ticked every 10 s.
+- `ghostSteps` and `movingBodies` are unchanged. The drawing reads `bodyPose` and does not write the sim.
+- The mockup's faint full-orbit circle (α 0.12) is not in the header, so it is not drawn.
+- "Other bodies" keep the body's radius (minimum 8 world units). The sample's quieter look is α 0.6.
+- The cross ends at 0.64 r and the ticks are 8 px long, measured from `ghost-markers.svg`. The header does not number those two.
+- Arrival wins over a burn when they share a step (§18). Lead's capture is the burn at step 230, so that ghost is the arrival marker. A burn that is not the capture keeps the badge.
+
 ## Update after PR #46: supernova and quasar are placeholders
 
 - **The hazards are drawn as plain shapes** (`src/render/visuals/hazards.ts`): a red ring at `blast`, an orange ring at the shock radius, and a magenta bar along the jet. The star keeps its normal `look` until and after `at`, and the bar's width is `2 · reach · sin(cone)`, a box rather than the cone that `quasarDamage` tests.
