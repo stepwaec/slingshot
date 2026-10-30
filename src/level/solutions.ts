@@ -200,3 +200,20 @@ export const torchPlan: readonly BurnNode[] = [
   { step: 0, dvx: 14, dvy: 0 },
   { step: 733, dvx: 3.5605591485068326, dvy: -7.211137656752013 },
 ];
+
+/** Hoop: cross both ring gaps and capture at Planet X. */
+export const hoopPlan: readonly BurnNode[] = [
+  { step: 0, dvx: 8, dvy: -6 },
+  { step: 4212, dvx: -19.69284436825011, dvy: -5.172970224646104 },
+];
+
+/** Cable: the counterweight throws the ship at ω × r. One burn captures Planet X. */
+export const cablePlan: readonly BurnNode[] = [
+  { step: 1209, dvx: 7.23782441619588, dvy: -14.96653180981787 },
+];
+
+/** Fold: enter the near mouth. The exit adds 18 s to outside time, then capture. */
+export const foldPlan: readonly BurnNode[] = [
+  { step: 0, dvx: 4, dvy: 6 },
+  { step: 1081, dvx: -14.520140219396815, dvy: -12.127569023296974 },
+];

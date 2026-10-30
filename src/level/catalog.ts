@@ -19,6 +19,9 @@ import leadData from "../levels/lead.json";
 import flashData from "../levels/flash.json";
 import ashData from "../levels/ash.json";
 import torchData from "../levels/torch.json";
+import hoopData from "../levels/hoop.json";
+import cableData from "../levels/cable.json";
+import foldData from "../levels/fold.json";
 import { loadLevelData, type Level, type LevelPhysics } from "./schema";
 import { shipLoadout } from "../game/upgrades";
 import { placeBelts } from "../sim/belts";
@@ -48,8 +51,11 @@ export const lead: Level = loadLevelData(leadData, "src/levels/lead.json");
 export const flash: Level = loadLevelData(flashData, "src/levels/flash.json");
 export const ash: Level = loadLevelData(ashData, "src/levels/ash.json");
 export const torch: Level = loadLevelData(torchData, "src/levels/torch.json");
+export const hoop: Level = loadLevelData(hoopData, "src/levels/hoop.json");
+export const cable: Level = loadLevelData(cableData, "src/levels/cable.json");
+export const fold: Level = loadLevelData(foldData, "src/levels/fold.json");
 
-export const LEVELS: readonly Level[] = [passage, relay, rescue, pair, ember, chain, pulse, quake, needle, ice, veil, drift, shade, wander, weave, frost, lead, flash, ash, torch];
+export const LEVELS: readonly Level[] = [passage, relay, rescue, pair, ember, chain, pulse, quake, needle, ice, veil, drift, shade, wander, weave, frost, lead, flash, ash, torch, hoop, cable, fold];
 
 function bodyById(level: Level, id: string): Body {
   const body = level.bodies.find((item) => item.id === id);
@@ -111,6 +117,7 @@ export function simConfigFromLevel(level: Level, upgrades: readonly string[] = [
     config.belts = level.belts;
     config.beltRocks = placeBelts(level.belts);
   }
+  if (level.wormholes && level.wormholes.length > 0) config.wormholes = level.wormholes;
   return config;
 }
 

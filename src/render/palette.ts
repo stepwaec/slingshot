@@ -111,6 +111,36 @@ export const palette = {
   debrisDarkS: "#5A4636",
   debrisLightC: "#8E8478",
   debrisDarkC: "#3A332D",
+  /** design/style.md §13 ring.land and ringworld.svg. */
+  ringLand: "#5FA84A",
+  ringForest: "#3B7E3A",
+  ringSea: "#1E5BD6",
+  ringShallow: "#36B9D8",
+  ringDesert: "#E8A85C",
+  ringNight: "#050B1E",
+  ringCloud: "#FFFFFF",
+  ringHull: "#141A33",
+  ringRib: "#2A3560",
+  ringLight: "#FFD9B0",
+  ringRim: "#DCE4F6",
+  ringRimNear: "#AFC2EE",
+  shadowFill: "#1A2240",
+  shadowRim: "#5A6E9E",
+  /** design/style.md §13 elevator.climber and space-elevator.svg. */
+  elevatorBeacon: "#5EF2FF",
+  elevatorClimber: "#FFE08A",
+  elevatorRelease: "#3DE0C2",
+  elevatorRock: "#62584E",
+  elevatorDock: "#FFD9B0",
+  /** design/style.md §13 wormhole.warm / .cool and wormhole.svg. */
+  wormholeWarm: "#8A2A4A",
+  wormholeWarmEdge: "#4A1A3A",
+  wormholeCool: "#2A5AB8",
+  wormholeCoolEdge: "#0E2A5A",
+  wormholeStarWarm: "#FFD9B0",
+  wormholeStarCool: "#B8CCFF",
+  wormholeArc: "#E9EEF8",
+  wormholeLink: "#8B95B5",
 } as const;
 
 /** Linear blend in sRGB, matching the arrow.power ramp in design/canvas-notes.md §9. */

@@ -1,6 +1,14 @@
 import * as THREE from "three";
 import { bodyPose, bodyPresent, type Body } from "../../sim/physics";
 import {
+  ELEVATOR_CLIMB_0,
+  ELEVATOR_CLIMB_1,
+  ELEVATOR_INNER,
+  ELEVATOR_OUTER,
+  ELEVATOR_STATION,
+  ELEVATOR_STATION_R,
+  ELEVATOR_STATION_RING,
+  ELEVATOR_TETHER_HALF,
   ENGINE_MIRROR_A0,
   ENGINE_MIRROR_A1,
   ENGINE_MIRROR_INNER,
@@ -19,21 +27,37 @@ import {
   MIRROR_OUTER,
   RAY_LENGTH,
   RAY_START,
+  RING_BAND,
+  RING_RX,
+  RING_RY,
+  RING_SHADOW_RX,
+  RING_SHADOW_RY,
   SWARM_BAND,
   SWARM_HEAT_OUTER,
   SWARM_SHELLS,
+  WORMHOLE_HALO,
+  WORMHOLE_RING_PAD,
+  WORMHOLE_STAR_EXP,
+  clockChip,
+  elevatorAngle,
+  elevatorScale,
   engineScale,
+  launchChip,
+  launchSpeed,
+  ringScale,
+  ringSolidArcs,
   shkadovScale,
+  type WormholePair,
 } from "../../sim/mega";
 import type { Theme } from "../theme";
 import { disposeObject, type Visual, type VisualFactory, type VisualFrame } from "../visual";
 import { srgbVec } from "./materials";
 
 /**
- * Stellar engine, Dyson swarm and Shkadov thruster.
- * Groups sit on the body's pose and scale by radius / the sample radius
- * in the SVG header. Hazard edges use the same spans as the sim.
- * Rag, dashes, glints and knots run on `frame.now`.
+ * Megastructures. Groups sit on the body's pose and scale by radius / the
+ * sample radius in the SVG header. Hazard edges use the same spans as the sim.
+ * Rag, dashes, glints, knots, the ring floor, climbers and wormhole skies
+ * run on `frame.now`. The elevator's angle and anything that can crash use sim time.
  */
 export const createMega: VisualFactory = (theme, level) => new MegaVisual(theme, level);
 
@@ -259,6 +283,9 @@ class MegaVisual implements Visual {
   private readonly engines: EngineDraw[] = [];
   private readonly swarms: SwarmDraw[] = [];
   private readonly thrusters: ThrusterDraw[] = [];
+  private readonly rings: RingDraw[] = [];
+  private readonly elevators: ElevatorDraw[] = [];
+  private readonly wormholes: WormholeDraw[] = [];
 
   constructor(theme: Theme, level: Parameters<VisualFactory>[1]) {
     this.object.name = "mega";
@@ -269,8 +296,13 @@ class MegaVisual implements Visual {
       if (body.engine) this.engines.push(new EngineDraw(theme, colors, body));
       if (body.dyson) this.swarms.push(new SwarmDraw(theme, colors, body));
       if (body.shkadov) this.thrusters.push(new ThrusterDraw(theme, colors, body));
+      if (body.ring) this.rings.push(new RingDraw(theme, colors, body));
+      if (body.elevator) this.elevators.push(new ElevatorDraw(theme, colors, body));
     }
-    for (const draw of [...this.engines, ...this.swarms, ...this.thrusters]) this.object.add(draw.group);
+    for (const hole of level.wormholes ?? []) this.wormholes.push(new WormholeDraw(theme, colors, hole));
+    for (const draw of [...this.engines, ...this.swarms, ...this.thrusters, ...this.rings, ...this.elevators, ...this.wormholes]) {
+      this.object.add(draw.group);
+    }
   }
 
   update(frame: VisualFrame): void {
@@ -281,6 +313,9 @@ class MegaVisual implements Visual {
     for (const draw of this.engines) draw.update(time, now, planning, this.bodies, this.g);
     for (const draw of this.swarms) draw.update(time, now, this.bodies, this.g);
     for (const draw of this.thrusters) draw.update(time, now, planning, this.bodies, this.g);
+    for (const draw of this.rings) draw.update(time, now, this.bodies, this.g);
+    for (const draw of this.elevators) draw.update(time, now, planning, this.bodies, this.g);
+    for (const draw of this.wormholes) draw.update(now, planning);
   }
 
   dispose(): void {
@@ -567,6 +602,512 @@ class ThrusterDraw {
     this.arrow.visible = planning;
     if (this.label) this.label.visible = planning;
   }
+}
+
+const floorFrag = /* glsl */ `
+precision highp float;
+varying float vArc;
+varying float vSide;
+uniform float uScroll;
+uniform vec3 uLand;
+uniform vec3 uForest;
+uniform vec3 uSea;
+uniform vec3 uShallow;
+uniform vec3 uDesert;
+uniform vec3 uNight;
+uniform vec3 uCloud;
+uniform vec3 uRim;
+void main() {
+  float fw = fwidth(vSide);
+  float edge = 1.0 - smoothstep(1.0 - fw, 1.0 + fw, abs(vSide));
+  float u = fract((vArc + uScroll) / 96.0);
+  vec3 col = uLand;
+  if (u < 0.16) col = uSea;
+  else if (u < 0.24) col = uShallow;
+  else if (u < 0.36) col = uDesert;
+  else if (u < 0.58) col = uForest;
+  else if (u < 0.74) col = uLand;
+  else if (u < 0.88) col = uSea;
+  else col = uShallow;
+  float nightU = fract((vArc - uScroll * 0.35) / 220.0);
+  float night = 1.0 - smoothstep(0.0, 0.015, abs(nightU - 0.22) - 0.07);
+  night = max(night, 1.0 - smoothstep(0.0, 0.015, abs(nightU - 0.62) - 0.05));
+  col = mix(col, uNight, night * 0.65);
+  float cloud = 1.0 - smoothstep(0.0, 0.02, abs(fract(vArc / 74.0) - 0.5) - 0.035);
+  col = mix(col, uCloud, cloud * 0.7);
+  float rim = smoothstep(0.78, 0.98, abs(vSide));
+  col = mix(col, uRim, rim);
+  float alpha = edge;
+  if (alpha < 0.02) discard;
+  gl_FragColor = vec4(col, alpha);
+}
+`;
+
+const hullFrag = /* glsl */ `
+precision highp float;
+varying float vArc;
+varying float vSide;
+uniform vec3 uHull;
+uniform vec3 uRib;
+uniform vec3 uLight;
+uniform vec3 uRim;
+void main() {
+  float fw = fwidth(vSide);
+  float edge = 1.0 - smoothstep(1.0 - fw, 1.0 + fw, abs(vSide));
+  float rib = 1.0 - smoothstep(0.15, 0.9, abs(mod(vArc, 28.0) - 0.6));
+  vec3 col = mix(uHull, uRib, rib);
+  float cell = floor(vArc / 17.0);
+  float n = fract(sin(cell * 12.9898) * 43758.5453);
+  float light = step(0.86, n) * (1.0 - smoothstep(0.15, 0.55, abs(vSide)));
+  col = mix(col, uLight, light);
+  float rim = smoothstep(0.82, 0.98, abs(vSide));
+  col = mix(col, uRim, rim);
+  float alpha = edge;
+  if (alpha < 0.02) discard;
+  gl_FragColor = vec4(col, alpha);
+}
+`;
+
+const mouthFrag = /* glsl */ `
+precision highp float;
+varying vec2 vLocal;
+uniform vec3 uInner;
+uniform vec3 uOuter;
+uniform vec3 uStar;
+uniform float uAngle;
+uniform float uExp;
+void main() {
+  float r = length(vLocal);
+  float fw = fwidth(r);
+  if (r > 1.0 + fw) discard;
+  float edge = 1.0 - smoothstep(1.0 - fw, 1.0 + fw, r);
+  float u = pow(max(r, 1e-4), 1.0 / uExp);
+  float ang = atan(vLocal.y, vLocal.x) + uAngle;
+  vec2 q = vec2(cos(ang), sin(ang)) * u;
+  vec3 col = mix(uInner, uOuter, smoothstep(0.0, 1.0, r));
+  vec2 blob = q - vec2(0.25, -0.1);
+  col = mix(col, uInner, exp(-dot(blob, blob) * 6.0) * 0.35);
+  vec2 cell = floor(q * 16.0);
+  float n = fract(sin(dot(cell, vec2(12.9898, 78.233))) * 43758.5453);
+  vec2 gv = fract(q * 16.0) - 0.5;
+  float star = (1.0 - smoothstep(0.02, 0.11, length(gv))) * step(0.78, n);
+  col = mix(col, uStar, clamp(star, 0.0, 1.0));
+  float alpha = edge;
+  if (alpha < 0.02) discard;
+  gl_FragColor = vec4(col, alpha);
+}
+`;
+
+const haloFrag = /* glsl */ `
+precision highp float;
+varying vec2 vLocal;
+uniform vec3 uColor;
+uniform float uOuter;
+void main() {
+  float r = length(vLocal);
+  if (r > uOuter) discard;
+  float t = r / uOuter;
+  float alpha = 0.0;
+  if (t > 0.7) {
+    float u = (t - 0.7) / 0.3;
+    alpha = u < 0.4667 ? mix(0.0, 0.35, u / 0.4667) : mix(0.35, 0.0, (u - 0.4667) / 0.5333);
+  }
+  if (alpha < 0.02) discard;
+  gl_FragColor = vec4(uColor, alpha);
+}
+`;
+
+class RingDraw {
+  readonly group = new THREE.Group();
+  private readonly body: Body;
+  private readonly scrolls: THREE.IUniform[] = [];
+  private readonly shadows: THREE.Object3D[] = [];
+  private readonly period: number;
+  private readonly shadowPeriod: number;
+  private readonly scrollPx: number;
+
+  constructor(theme: Theme, colors: Theme["colors"], body: Body) {
+    this.body = body;
+    this.period = theme.mega.ringScrollPeriod;
+    this.shadowPeriod = theme.mega.ringShadowPeriod;
+    this.scrollPx = theme.mega.ringScrollPx;
+    this.group.name = `${body.id}-ring`;
+    const gaps = body.ring?.gaps ?? [];
+    const arcs = ringSolidArcs(gaps);
+    const half = RING_BAND / 2;
+    for (let i = 0; i < arcs.length; i++) {
+      const arc = arcs[i];
+      const points = tiltedArc(arc.start, arc.end);
+      const scroll = { value: 0 };
+      const mesh = new THREE.Mesh(
+        stripGeometry(points, half),
+        material(arc.far ? floorFrag : hullFrag, shellVert, arc.far ? floorUniforms(colors, scroll) : hullUniforms(colors)),
+      );
+      mesh.renderOrder = arc.far ? -0.7 : 0.75;
+      mesh.frustumCulled = false;
+      this.group.add(mesh);
+      if (arc.far) this.scrolls.push(scroll);
+    }
+    for (let i = 0; i < gaps.length; i++) {
+      this.addCap(gaps[i].start, colors.ringRim);
+      this.addCap(gaps[i].end, colors.ringRim);
+    }
+    const count = theme.mega.ringShadowCount;
+    for (let i = 0; i < count; i++) {
+      const square = new THREE.Mesh(
+        new THREE.PlaneGeometry(10, 3),
+        new THREE.MeshBasicMaterial({
+          color: colors.shadowFill,
+          transparent: true,
+          depthTest: false,
+          depthWrite: false,
+          toneMapped: false,
+          side: THREE.DoubleSide,
+        }),
+      );
+      const rim = new THREE.Mesh(
+        new THREE.PlaneGeometry(11, 4),
+        new THREE.MeshBasicMaterial({
+          color: colors.shadowRim,
+          transparent: true,
+          depthTest: false,
+          depthWrite: false,
+          toneMapped: false,
+          side: THREE.DoubleSide,
+        }),
+      );
+      rim.renderOrder = 0.34;
+      square.renderOrder = 0.36;
+      rim.frustumCulled = false;
+      square.frustumCulled = false;
+      const holder = new THREE.Group();
+      holder.add(rim);
+      holder.add(square);
+      holder.userData.phase = (i / count) * Math.PI * 2;
+      this.group.add(holder);
+      this.shadows.push(holder);
+    }
+  }
+
+  private addCap(theta: number, color: string): void {
+    const mesh = strokeMesh(capPoints(theta), 0.8, color, 1, 0, 1, 1);
+    const wrapped = ((theta % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+    mesh.renderOrder = wrapped < Math.PI ? -0.65 : 0.8;
+    this.group.add(mesh);
+  }
+
+  update(time: number, now: number, bodies: readonly Body[], g: number): void {
+    const pose = place(this.group, this.body, time, bodies, g, ringScale(this.body.radius));
+    if (!pose) return;
+    this.group.rotation.z = this.body.ring?.angle ?? 0;
+    const scroll = (now / this.period) * this.scrollPx;
+    for (let i = 0; i < this.scrolls.length; i++) this.scrolls[i].value = scroll;
+    const turn = (Math.PI * 2 * now) / this.shadowPeriod;
+    for (let i = 0; i < this.shadows.length; i++) {
+      const theta = turn + Number(this.shadows[i].userData.phase);
+      this.shadows[i].position.set(Math.cos(theta) * RING_SHADOW_RX, Math.sin(theta) * RING_SHADOW_RY, 0);
+      this.shadows[i].rotation.z = theta;
+    }
+  }
+}
+
+class ElevatorDraw {
+  readonly group = new THREE.Group();
+  private readonly body: Body;
+  private readonly climbers: { mesh: THREE.Object3D; delay: number; dur: number; reverse: boolean }[] = [];
+  private readonly arrow: THREE.Object3D;
+  private readonly label: THREE.Object3D | null;
+
+  constructor(theme: Theme, colors: Theme["colors"], body: Body) {
+    this.body = body;
+    this.group.name = `${body.id}-elevator`;
+    const glow = strokeMesh(
+      [
+        { x: ELEVATOR_INNER, y: 0 },
+        { x: ELEVATOR_OUTER, y: 0 },
+      ],
+      1.5,
+      colors.nozzleField,
+      0.35,
+      0,
+      1,
+      1,
+    );
+    glow.renderOrder = 0.85;
+    this.group.add(glow);
+    const line = strokeMesh(
+      [
+        { x: ELEVATOR_INNER, y: 0 },
+        { x: ELEVATOR_OUTER, y: 0 },
+      ],
+      ELEVATOR_TETHER_HALF,
+      colors.ringRim,
+      1,
+      0,
+      1,
+      1,
+    );
+    line.renderOrder = 0.9;
+    this.group.add(line);
+    const station = new THREE.Group();
+    station.position.set(ELEVATOR_STATION, 0, 0);
+    station.add(disc(ELEVATOR_STATION_R, colors.shadowFill, 1));
+    station.add(ringLine(ELEVATOR_STATION_RING, 0.5, colors.ringRimNear, 1));
+    station.add(disc(1.5, colors.elevatorBeacon, 1));
+    station.renderOrder = 1;
+    this.group.add(station);
+    const rock = new THREE.Mesh(rockGeometry(), flatMaterial(colors.elevatorRock, 1));
+    rock.position.set(ELEVATOR_OUTER, 0, 0);
+    rock.renderOrder = 1;
+    this.group.add(rock);
+    const dock = disc(1.2, colors.elevatorDock, 1);
+    dock.position.set(ELEVATOR_OUTER + 2, -1, 0);
+    dock.renderOrder = 1.1;
+    this.group.add(dock);
+    const rides: { delay: number; dur: number; reverse: boolean }[] = [
+      { delay: 0, dur: theme.mega.climberUp, reverse: false },
+      { delay: 5, dur: theme.mega.climberUp, reverse: false },
+      { delay: 2, dur: theme.mega.climberDown, reverse: true },
+    ];
+    for (let i = 0; i < rides.length; i++) {
+      const mesh = new THREE.Mesh(new THREE.PlaneGeometry(4, 3.6), flatMaterial(colors.elevatorClimber, 1));
+      mesh.renderOrder = 1.2;
+      this.group.add(mesh);
+      this.climbers.push({ mesh, ...rides[i] });
+    }
+    this.arrow = new THREE.Group();
+    const dir = (body.elevator?.omega ?? 1) >= 0 ? 1 : -1;
+    const shaft = strokeMesh(
+      [
+        { x: ELEVATOR_OUTER, y: 8 * dir },
+        { x: ELEVATOR_OUTER, y: 70 * dir },
+      ],
+      0.7,
+      colors.elevatorRelease,
+      1,
+      4,
+      4,
+      0,
+    );
+    shaft.renderOrder = 2;
+    this.arrow.add(shaft);
+    const head = new THREE.Mesh(releaseHead(dir), flatMaterial(colors.elevatorRelease, 1));
+    head.renderOrder = 2;
+    this.arrow.add(head);
+    this.group.add(this.arrow);
+    const speed = launchSpeed(body.radius, body.elevator?.omega ?? 0);
+    this.label = labelMesh(launchChip(speed), colors.elevatorRelease);
+    if (this.label) {
+      this.label.position.set(ELEVATOR_OUTER + 40, 50 * dir, 0);
+      this.label.renderOrder = 2;
+      this.group.add(this.label);
+    }
+  }
+
+  update(time: number, now: number, planning: boolean, bodies: readonly Body[], g: number): void {
+    const pose = place(this.group, this.body, time, bodies, g, elevatorScale(this.body.radius));
+    if (!pose) return;
+    const elevator = this.body.elevator;
+    this.group.rotation.z = elevator ? elevatorAngle(elevator, time) : 0;
+    const span = ELEVATOR_CLIMB_1 - ELEVATOR_CLIMB_0;
+    for (let i = 0; i < this.climbers.length; i++) {
+      const climber = this.climbers[i];
+      let u = ((now + climber.delay) % climber.dur) / climber.dur;
+      if (climber.reverse) u = 1 - u;
+      climber.mesh.position.set(ELEVATOR_CLIMB_0 + span * u, 0, 0);
+    }
+    this.arrow.visible = planning;
+    if (this.label) this.label.visible = planning;
+  }
+}
+
+class WormholeDraw {
+  readonly group = new THREE.Group();
+  private readonly spins: THREE.IUniform[] = [];
+  private readonly link: THREE.Object3D;
+  private readonly label: THREE.Object3D | null;
+  private readonly period: number;
+
+  constructor(theme: Theme, colors: Theme["colors"], pair: WormholePair) {
+    this.period = theme.mega.wormholePeriod;
+    this.group.name = `${pair.id}-wormhole`;
+    this.addMouth(pair.a, colors.wormholeWarm, colors.wormholeWarmEdge, colors.wormholeStarWarm, colors);
+    this.addMouth(pair.b, colors.wormholeCool, colors.wormholeCoolEdge, colors.wormholeStarCool, colors);
+    const midX = (pair.a.x + pair.b.x) / 2;
+    const midY = (pair.a.y + pair.b.y) / 2;
+    const dx = pair.b.x - pair.a.x;
+    const dy = pair.b.y - pair.a.y;
+    const len = Math.hypot(dx, dy) || 1;
+    const bow = 0.18 * len;
+    this.link = strokeMesh(
+      [
+        { x: pair.a.x, y: pair.a.y },
+        { x: midX - (dy / len) * bow, y: midY + (dx / len) * bow },
+        { x: pair.b.x, y: pair.b.y },
+      ],
+      0.6,
+      colors.wormholeLink,
+      0.7,
+      3,
+      5,
+      0,
+    );
+    this.link.renderOrder = 0.3;
+    this.group.add(this.link);
+    this.label = labelMesh(clockChip(pair.clockOffset), colors.text);
+    if (this.label) {
+      this.label.position.set(pair.b.x + 36, pair.b.y - pair.b.radius - 28, 0);
+      this.label.renderOrder = 2;
+      this.group.add(this.label);
+    }
+  }
+
+  private addMouth(
+    mouth: { x: number; y: number; radius: number },
+    inner: string,
+    outer: string,
+    star: string,
+    colors: Theme["colors"],
+  ): void {
+    const holder = new THREE.Group();
+    holder.position.set(mouth.x, mouth.y, 0);
+    holder.scale.set(mouth.radius, mouth.radius, 1);
+    const spin = { value: 0 };
+    const sky = new THREE.Mesh(
+      new THREE.PlaneGeometry(2, 2),
+      material(mouthFrag, localVert, {
+        uInner: { value: srgbVec(inner) },
+        uOuter: { value: srgbVec(outer) },
+        uStar: { value: srgbVec(star) },
+        uAngle: spin,
+        uExp: { value: WORMHOLE_STAR_EXP },
+      }),
+    );
+    sky.renderOrder = 0.45;
+    sky.frustumCulled = false;
+    holder.add(sky);
+    const halo = new THREE.Mesh(
+      new THREE.PlaneGeometry(WORMHOLE_HALO * 2, WORMHOLE_HALO * 2),
+      material(haloFrag, localVert, {
+        uColor: { value: srgbVec(colors.wormholeStarCool) },
+        uOuter: { value: WORMHOLE_HALO },
+      }),
+    );
+    halo.renderOrder = 0.2;
+    halo.frustumCulled = false;
+    holder.add(halo);
+    const einstein = ringLine(1, 0.6 / mouth.radius, colors.engineCore, 0.85);
+    einstein.renderOrder = 0.5;
+    holder.add(einstein);
+    const second = ringLine(1 + WORMHOLE_RING_PAD / mouth.radius, 0.4 / mouth.radius, colors.wormholeStarCool, 0.45);
+    second.renderOrder = 0.5;
+    holder.add(second);
+    for (let i = 0; i < 7; i++) {
+      const start = i * 0.9 + 0.2;
+      const arc = strokeMesh(arcPoints(1.12, start, start + 0.38), 0.4 / mouth.radius, colors.wormholeArc, 0.6, 0, 1, 1);
+      arc.renderOrder = 0.48;
+      holder.add(arc);
+    }
+    this.spins.push(spin);
+    this.group.add(holder);
+  }
+
+  update(now: number, planning: boolean): void {
+    const angle = (now / this.period) * Math.PI * 2;
+    for (let i = 0; i < this.spins.length; i++) this.spins[i].value = angle + i;
+    this.link.visible = planning;
+    if (this.label) this.label.visible = planning;
+  }
+}
+
+function floorUniforms(colors: Theme["colors"], scroll: THREE.IUniform): { [key: string]: THREE.IUniform } {
+  return {
+    uScroll: scroll,
+    uLand: { value: srgbVec(colors.ringLand) },
+    uForest: { value: srgbVec(colors.ringForest) },
+    uSea: { value: srgbVec(colors.ringSea) },
+    uShallow: { value: srgbVec(colors.ringShallow) },
+    uDesert: { value: srgbVec(colors.ringDesert) },
+    uNight: { value: srgbVec(colors.ringNight) },
+    uCloud: { value: srgbVec(colors.ringCloud) },
+    uRim: { value: srgbVec(colors.ringRim) },
+  };
+}
+
+function hullUniforms(colors: Theme["colors"]): { [key: string]: THREE.IUniform } {
+  return {
+    uHull: { value: srgbVec(colors.ringHull) },
+    uRib: { value: srgbVec(colors.ringRib) },
+    uLight: { value: srgbVec(colors.ringLight) },
+    uRim: { value: srgbVec(colors.ringRimNear) },
+  };
+}
+
+function tiltedArc(start: number, end: number): { x: number; y: number }[] {
+  const steps = Math.max(6, Math.ceil(((end - start) / (Math.PI * 2)) * 96));
+  const points: { x: number; y: number }[] = [];
+  for (let i = 0; i <= steps; i++) {
+    const t = start + ((end - start) * i) / steps;
+    points.push({ x: RING_RX * Math.cos(t), y: RING_RY * Math.sin(t) });
+  }
+  return points;
+}
+
+function capPoints(theta: number): { x: number; y: number }[] {
+  const x = RING_RX * Math.cos(theta);
+  const y = RING_RY * Math.sin(theta);
+  let nx = Math.cos(theta) / RING_RX;
+  let ny = Math.sin(theta) / RING_RY;
+  const len = Math.hypot(nx, ny) || 1;
+  nx /= len;
+  ny /= len;
+  return [
+    { x: x - nx * (RING_BAND / 2), y: y - ny * (RING_BAND / 2) },
+    { x: x + nx * (RING_BAND / 2), y: y + ny * (RING_BAND / 2) },
+  ];
+}
+
+function disc(radius: number, color: string, alpha: number): THREE.Mesh {
+  const mesh = new THREE.Mesh(new THREE.CircleGeometry(radius, 24), flatMaterial(color, alpha));
+  mesh.frustumCulled = false;
+  return mesh;
+}
+
+function ringLine(radius: number, halfWidth: number, color: string, alpha: number): THREE.Mesh {
+  return strokeMesh(arcPoints(radius, 0, Math.PI * 2), halfWidth, color, alpha, 0, 1, 1);
+}
+
+function flatMaterial(color: string, alpha: number): THREE.MeshBasicMaterial {
+  return new THREE.MeshBasicMaterial({
+    color,
+    transparent: alpha < 1,
+    opacity: alpha,
+    depthTest: false,
+    depthWrite: false,
+    toneMapped: false,
+    side: THREE.DoubleSide,
+  });
+}
+
+function rockGeometry(): THREE.BufferGeometry {
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute([-7, -5, 0, 6, -6, 0, 9, 1, 0, 4, 7, 0, -6, 6, 0, -9, 0, 0], 3),
+  );
+  geo.setIndex([0, 1, 2, 0, 2, 3, 0, 3, 4, 0, 4, 5]);
+  return geo;
+}
+
+function releaseHead(dir: number): THREE.BufferGeometry {
+  const y = 70 * dir;
+  const tip = 9 * dir;
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute([ELEVATOR_OUTER, y + tip, 0, ELEVATOR_OUTER - 6, y, 0, ELEVATOR_OUTER + 6, y, 0], 3),
+  );
+  return geo;
 }
 
 function place(group: THREE.Group, body: Body, time: number, bodies: readonly Body[], g: number, scale: number): boolean {
