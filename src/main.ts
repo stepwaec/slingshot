@@ -15,6 +15,8 @@ import {
   planFuel,
   queuedBurns,
   setPlan,
+  setPreviewSeconds,
+  speedAllowed,
   tick,
   type Game,
 } from "./game/state";
@@ -24,7 +26,17 @@ import { createClockLatches, readClocks, type ClockLatches } from "./hud/readout
 import type { MissionScore } from "./sim/score";
 import { frameLevel, worldToScreen } from "./render/camera";
 import { SpaceView } from "./render/view";
-import { doseAt, hasMagneticBody, horizonSteps, iceHarvestRate, nebulaScoopRate, solarRechargeRate, spreadAlong } from "./sim/physics";
+import {
+  doseAt,
+  hasMagneticBody,
+  iceHarvestRate,
+  nebulaScoopRate,
+  previewRange,
+  SIM_SPEEDS,
+  solarRechargeRate,
+  spreadAlong,
+  type SimSpeed,
+} from "./sim/physics";
 import { shipLoadout } from "./game/upgrades";
 import { mountShipyard, syncShipyard } from "./hud/shipyard";
 import { resetShipLook } from "./render/appearance";
@@ -68,6 +80,8 @@ const planningActions = required<HTMLElement>("#planning-actions");
 const flightActions = required<HTMLElement>("#flight-actions");
 const fpsValue = required<HTMLElement>("#fps");
 const planNote = required<HTMLElement>("#plan-note");
+const previewRangeInput = required<HTMLInputElement>("#preview-range");
+const previewReadout = required<HTMLElement>("#preview-readout");
 const levelSelect = required<HTMLSelectElement>("#level");
 const pauseButton = required<HTMLButtonElement>("#pause");
 const resumeButton = required<HTMLButtonElement>("#resume");
@@ -165,6 +179,10 @@ bindInput(
   () => ({ width: canvas.clientWidth, height: canvas.clientHeight }),
   () => frameLevel(game.camera, canvas.clientWidth, canvas.clientHeight, game.level),
 );
+
+previewRangeInput.addEventListener("input", () => {
+  setPreviewSeconds(game, Number(previewRangeInput.value));
+});
 
 window.addEventListener("resize", resize);
 resize();
@@ -338,7 +356,12 @@ function syncHud(current: Game): void {
   deleteButton.disabled = !editing || current.selected === null;
   for (const button of clearButtons) button.disabled = current.mode === "flying";
   syncPlanNote(current);
+  syncPreview(current);
   for (const button of speedButtons) {
+    const speed = Number(button.dataset.speed);
+    const allowed = isListedSpeed(speed) && speedAllowed(current.level, speed);
+    button.hidden = !allowed;
+    button.disabled = !allowed;
     button.setAttribute("aria-pressed", button.dataset.speed === String(current.speed) ? "true" : "false");
   }
 
@@ -579,11 +602,26 @@ function syncOverlay(current: Game, budget: number): void {
   }
 }
 
+function isListedSpeed(value: number): value is SimSpeed {
+  return (SIM_SPEEDS as readonly number[]).includes(value);
+}
+
+function syncPreview(current: Game): void {
+  const origin = current.mode === "paused" ? current.ship : current.initial;
+  const range = previewRange(origin, simConfigFromLevel(current.level, current.upgrades));
+  const seconds = current.previewSeconds ?? range.defaultSeconds;
+  previewRangeInput.min = String(range.minSeconds);
+  previewRangeInput.max = String(range.maxSeconds);
+  if (document.activeElement !== previewRangeInput) previewRangeInput.value = String(seconds);
+  previewReadout.textContent = `${seconds.toFixed(1)}s`;
+}
+
 function syncPlanNote(current: Game): void {
   const parts: string[] = [];
   if (current.level.horizon) {
     const origin = current.mode === "paused" ? current.ship : current.initial;
-    const seconds = horizonSteps(origin, simConfigFromLevel(current.level)) * current.level.dt;
+    const range = previewRange(origin, simConfigFromLevel(current.level, current.upgrades));
+    const seconds = current.previewSeconds ?? range.defaultSeconds;
     parts.push(`horizon ${seconds.toFixed(1)}s`);
   }
   if (current.level.maxPlannedBurns !== undefined && current.level.maxPlannedBurns <= 4) {

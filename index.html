@@ -123,6 +123,11 @@
             <button type="button" data-clear>Clear plan</button>
           </div>
           <div id="planning-actions">
+            <label id="preview" class="preview">
+              <span class="hud-label">Preview</span>
+              <input id="preview-range" type="range" min="0" max="1" step="any" value="0" aria-label="Prediction length" />
+              <span id="preview-readout">0s</span>
+            </label>
             <div id="route-actions" hidden>
               <button type="button" id="route-safe">Safe arc</button>
               <button type="button" id="route-deep">Deep dive</button>
@@ -132,9 +137,12 @@
           </div>
           <div id="flight-actions" hidden>
             <div class="speeds" role="group" aria-label="Simulation speed">
-              <button type="button" data-speed="1" aria-pressed="true">1x</button>
-              <button type="button" data-speed="2" aria-pressed="false">2x</button>
-              <button type="button" data-speed="4" aria-pressed="false">4x</button>
+              <button type="button" data-speed="1" aria-pressed="true" title="1x (1)">1x<kbd>1</kbd></button>
+              <button type="button" data-speed="2" aria-pressed="false" title="2x (2)">2x<kbd>2</kbd></button>
+              <button type="button" data-speed="4" aria-pressed="false" title="4x (4)">4x<kbd>4</kbd></button>
+              <button type="button" data-speed="8" aria-pressed="false" title="8x (8)">8x<kbd>8</kbd></button>
+              <button type="button" data-speed="16" aria-pressed="false" title="16x (,)">16x<kbd>,</kbd></button>
+              <button type="button" data-speed="32" aria-pressed="false" title="32x (.)">32x<kbd>.</kbd></button>
             </div>
             <button type="button" id="slow" aria-pressed="false">Slow</button>
             <button type="button" id="pause">Pause</button>

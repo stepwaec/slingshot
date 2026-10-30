@@ -7,10 +7,12 @@ import {
   type BodyLook,
   type BodyOrbit,
   type Bounds,
+  SIM_SPEEDS,
   type Horizon,
   type Magnet,
   type Nebula,
   type PauseRule,
+  type SimSpeed,
   keplerMeanMotion,
 } from "../sim/physics";
 import type { DysonSwarm, Ringworld, ShkadovThruster, SpaceElevator, StellarEngine, WormholePair } from "../sim/mega";
@@ -101,6 +103,11 @@ export interface Level {
   horizon?: Horizon;
   /** How pausing works. Omitted levels pause for free, without a limit. */
   pause?: PauseRule;
+  /**
+   * Fastest sim speed the flight buttons offer. Omitted levels allow 32×.
+   * Higher speeds are more fixed steps per frame. `dt` does not change.
+   */
+  maxSpeed?: SimSpeed;
   /** Knobs. Omitted, or with fields omitted, this is today's physics. */
   physics?: LevelPhysics;
   /** Fuel clouds. Omitted means the level has none. */
@@ -145,6 +152,7 @@ const LEVEL_KEYS = [
   "maxPlannedBurns",
   "horizon",
   "pause",
+  "maxSpeed",
   "physics",
   "nebulae",
   "belts",
@@ -908,6 +916,11 @@ export function loadLevelData(data: unknown, source = "level"): Level {
   let pause: PauseRule | undefined;
   if (Object.prototype.hasOwnProperty.call(data, "pause")) pause = readPause(data.pause, "level.pause", issues);
 
+  const maxSpeed = readOptionalFinite(data, "maxSpeed", "level", issues, { min: 1, integer: true });
+  if (maxSpeed !== undefined && !(SIM_SPEEDS as readonly number[]).includes(maxSpeed)) {
+    issues.push(`level.maxSpeed must be one of ${SIM_SPEEDS.join(", ")}`);
+  }
+
   let physics: LevelPhysics | undefined;
   if (Object.prototype.hasOwnProperty.call(data, "physics")) physics = readPhysics(data.physics, "level.physics", issues);
 
@@ -1012,6 +1025,9 @@ export function loadLevelData(data: unknown, source = "level"): Level {
   if (maxPlannedBurns !== undefined) level.maxPlannedBurns = maxPlannedBurns;
   if (horizon) level.horizon = horizon;
   if (pause) level.pause = pause;
+  if (maxSpeed !== undefined && (SIM_SPEEDS as readonly number[]).includes(maxSpeed)) {
+    level.maxSpeed = maxSpeed as SimSpeed;
+  }
   if (physics) level.physics = physics;
   if (nebulae.length > 0) level.nebulae = nebulae;
   if (belts.length > 0) level.belts = belts;

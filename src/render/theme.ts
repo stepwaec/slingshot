@@ -256,7 +256,11 @@ export const theme = {
     tickHalfWidth: 0.5,
     tickSoftPx: 0.35,
     tickAlpha: 0.72,
-    /** Room for every predicted sample. Current levels stay under 9000 steps. */
+    /**
+     * Points stored for the stroke. Current levels stay under 9000 steps, so
+     * they draw every sample. A preview past this length is strided; the
+     * samples themselves stay on the flight `dt`.
+     */
     maxSamples: 12000,
     endRingInner: 5.25,
     endRingOuter: 6.75,

@@ -314,7 +314,12 @@ class PathVisual implements Visual {
     disposeObject(this.object);
   }
 
-  /** Project every predicted sample. The stroke is this polyline, not a new path. */
+  /**
+   * Project the predicted samples onto the stroke. The buffer holds
+   * `maxSamples` points; a longer preview (the step cap is above that) is
+   * drawn with a stride. Integration is unchanged: every stored sample is
+   * still one flight step of `dt`.
+   */
   private project(width: number, height: number, splitStep: number): number {
     const total = this.chain.length + (this.chainPrefix ? 1 : 0);
     const max = this.px.length;
