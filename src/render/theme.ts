@@ -41,6 +41,8 @@ import neutronStarUrl from "../../design/assets/bodies/neutron-star.svg?url";
 import pulsarUrl from "../../design/assets/bodies/pulsar.svg?url";
 import magnetarUrl from "../../design/assets/bodies/magnetar.svg?url";
 import blackHoleUrl from "../../design/assets/bodies/black-hole.svg?url";
+import quasarUrl from "../../design/assets/bodies/quasar.svg?url";
+import strayAsteroidUrl from "../../design/assets/bodies/stray-asteroid.svg?url";
 import magnetismUrl from "../../design/assets/overlays/magnetism-heatmap.svg?url";
 import cometUrl from "../../design/assets/bodies/comet.svg?url";
 import solarRechargeUrl from "../../design/assets/solar-recharge.svg?url";
@@ -97,6 +99,8 @@ export const theme = {
     pulsar: pulsarUrl,
     magnetar: magnetarUrl,
     blackHole: blackHoleUrl,
+    quasar: quasarUrl,
+    strayAsteroid: strayAsteroidUrl,
     magnetism: magnetismUrl,
     comet: cometUrl,
     solarRecharge: solarRechargeUrl,
@@ -596,6 +600,112 @@ export const theme = {
     captureDash: 6,
     captureGap: 6,
     captureAlpha: 0.35,
+  },
+  /**
+   * design/assets/bodies/supernova-progenitor.svg and events/supernova-*.svg.
+   * style.md §16. The sample star is drawn at scale 0.38 of photosphere r 120,
+   * so shell radii are measured against 45.6 px.
+   */
+  nova: {
+    /** Header keyTimes 0 .2 .45 .8 1 over 5.5 s. Scales are the sample's, divided by 0.38 in code. */
+    breathePeriod: 5.5,
+    /** Last 0.5 s: sample scale 0.38 → 0.30, then the star is gone. */
+    shrinkLead: 0.5,
+    shrinkTo: 0.3 / 0.38,
+    /** Sample shell radii 120, 150, 182 and +14 px / 12 s, against the drawn star. */
+    sampleStar: 0.38 * 120,
+    shellRadii: [120, 150, 182],
+    shellAlphas: [0.32, 0.22, 0.14],
+    shellDrift: 14,
+    shellPeriod: 12,
+    shellWidth: 1.2,
+    /** Lethal ring: #FF5A5F α 0.85, 1.2 px, dash 5 5, crawl 10 px/s. */
+    blastAlpha: 0.85,
+    blastDash: 5,
+    blastGap: 5,
+    blastCrawl: 10,
+    blastWidth: 1.2,
+    /** Countdown arc r 62 in the sample, 3 px, track #FFFFFF α 0.12. */
+    arcSample: 62,
+    arcWidth: 3,
+    arcTrack: 0.12,
+    /** Flash peaks at 1.2 × blast by +0.85 s. Sample radii 10 → 260 → 300. Alpha 1 → 0.6 → 0 by +2.6 s. */
+    flashPeak: 1.2,
+    flashGrow: 0.85,
+    flashEnd: 2.6,
+    flashR0: 10,
+    flashRPeak: 260,
+    flashREnd: 300,
+    flashRise: 0.16,
+    flashMid: 1,
+    flashMidAlpha: 0.6,
+    /** Shock ring 2 px while the flash plays, then 1.4 px. Sits on shellRadius. */
+    shockWidthDet: 2,
+    shockWidthRem: 1.4,
+    filamentDet: 46,
+    filamentRem: 240,
+    filamentJitter: 0.12,
+    filamentFade: 40,
+    filamentLenDet0: 6,
+    filamentLenDet1: 16,
+    filamentLenRem0: 4,
+    filamentLenRem1: 12,
+    filamentWidthDet: 1.4,
+    filamentWidthRem0: 0.7,
+    filamentWidthRem1: 1.6,
+    remnantAlpha0: 0.35,
+    remnantAlpha1: 0.85,
+    /** threejs-notes.md §19: haze at 0.8 × the shock. */
+    hazeScale: 0.8,
+    /** Neutron-star dot r 3. Beams to r 30, one turn per 2 s. */
+    pulsarR: 3,
+    pulsarBeam: 30,
+    pulsarPeriod: 2,
+    /** Forecast rings +20 s and +40 s, dash 4 6, α 0.7 and 0.5. */
+    forecastA: 20,
+    forecastB: 40,
+    forecastDash: 4,
+    forecastGap: 6,
+    forecastAlphaA: 0.7,
+    forecastAlphaB: 0.5,
+    forecastWidth: 1,
+  },
+  /**
+   * design/assets/bodies/quasar.svg. Shadow r 9 in the sample.
+   * Glow r 90 (10×). Disk rx 44, ry 13. Jets from 1.5× the shadow.
+   */
+  quasar: {
+    glowScale: 90 / 9,
+    diskRx: 44 / 9,
+    diskRy: 13 / 9,
+    jetStart: 1.5,
+    /** Blue body is 0.45 of the lethal half-width. Core is 2.5 px out to 0.6 reach. */
+    bodyFraction: 0.45,
+    coreWidth: 2.5,
+    coreReach: 0.6,
+    knotPeriod: 2.4,
+    knotCount: 3,
+    knotRx: 6,
+    knotRy: 2.6,
+    knotAlpha: 0.85,
+    rimWidth: 1.2,
+    /** Planning sweep: event.warn α 0.7, dash 5 5. */
+    sweepAlpha: 0.7,
+    sweepDash: 5,
+    sweepGap: 5,
+    sweepWidth: 1,
+  },
+  /** design/assets/bodies/stray-asteroid.svg. Rock r 15, trail 140 px, tumble 55–90 s. */
+  stray: {
+    sampleRadius: 15,
+    trail: 140,
+    specks: 40,
+    tumbleMin: 55,
+    tumbleMax: 90,
+    arrowDash: 4,
+    arrowGap: 5,
+    arrowWidth: 1.2,
+    arrowAlpha: 0.85,
   },
   /**
    * Where a moving body will be. design/assets/ghost-markers.svg header,

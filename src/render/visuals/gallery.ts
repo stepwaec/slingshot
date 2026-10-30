@@ -125,6 +125,7 @@ class GalleryVisual implements Visual {
     this.theme = theme;
     this.object.name = "design-art";
     for (const body of level.bodies) {
+      if (body.supernova || body.quasar) continue;
       if (isSolLook(body.look)) {
         if (body.look === "sol-sun") this.addSolSun(body);
         else this.addSol(body);

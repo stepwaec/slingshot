@@ -19,6 +19,7 @@ import { createPlanets } from "./planets";
 import { createRadiation } from "./radiation";
 import { createRecharge } from "./recharge";
 import { createRogue } from "./rogue";
+import { createStray } from "./stray";
 import { createRelativity } from "./relativity";
 import { createShip } from "./ship";
 import { createStar } from "./star";
@@ -48,6 +49,7 @@ export const visualFactories = {
   fates: createFates,
   planets: createPlanets,
   rogue: createRogue,
+  stray: createStray,
   compact: createCompact,
   comet: createComet,
   clouds: createClouds,

@@ -63,6 +63,7 @@ const LOOK_KIND: Partial<Record<BodyLook, BodyKind>> = {
   "moon-volcanic": "moon",
   dwarf: "planet",
   comet: "planet",
+  asteroid: "planet",
   "tau-hot": "planet",
   "tau-cold": "planet",
   "tau-green": "planet",
@@ -83,6 +84,7 @@ const LOOK_NAME: Partial<Record<BodyLook, string>> = {
   pulsar: "Pulsar",
   magnetar: "Magnetar",
   comet: "Comet",
+  asteroid: "Stray asteroid",
   "tau-ceti": "Tau Ceti",
   "tau-hot": "Hot world",
   "tau-cold": "Cold world",
@@ -153,6 +155,7 @@ const LOOK_SPEC: Partial<Record<BodyLook, ExhibitSpec>> = {
   "moon-icy": { radius: 12, mass: 200, reach: 60 },
   "moon-volcanic": { radius: 13, mass: 220, reach: 60 },
   dwarf: { radius: 10, mass: 180, reach: 50 },
+  asteroid: { radius: 15, mass: 0, reach: 48, extra: { drift: { vx: 0.02, vy: 0 } } },
   neutron: {
     radius: 8,
     mass: 1800,
