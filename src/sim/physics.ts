@@ -12,10 +12,11 @@
  * prediction. A body without an orbit stays at `x`, `y`.
  *
  * `predictPlan` caches the state at each node. Editing node k recomputes from
- * k onward and reuses the path before it. A configured horizon stops the
- * predicted line early; the live flight does not. A preview extension, when
- * passed, is that many steps after the latest burn (or after the ship when
- * there is no burn). The step cap bounds the work. `dt` stays the flight step.
+ * k onward and reuses the path before it. The planning line stops at
+ * `planHorizonEnd`: a coast of `extension` steps after the latest burn, or
+ * after the ship when there is no later burn. The slider sets that extension.
+ * Omit it and the coast is today's look-ahead. The step cap bounds the work.
+ * `dt` stays the flight step. Live flight does not stop early.
  *
  * Each step also advances two clocks. Outside time starts as coordinate time
  * (`step * dt`): Home and Planet X share that one frame. A wormhole exit adds
@@ -2554,10 +2555,10 @@ export function secondsToSteps(seconds: number, dt: number): number {
 }
 
 /**
- * Preview length in steps. `null` seconds keeps today's look-ahead
- * (`horizonSteps`), including a level with no horizon, which previews until
- * `maxSteps`. A chosen number of seconds is fixed and is not shortened again.
- * Both are capped.
+ * Coast length the slider asks for, in steps.
+ * `null` is today's look-ahead (`horizonSteps`): the level horizon when one
+ * is set, otherwise the room until `maxSteps`. A chosen number of seconds is
+ * fixed and is not shortened again. Both are capped.
  */
 export function extensionSteps(state: SimState, config: SimConfig, previewSeconds: number | null): number {
   const raw = previewSeconds == null ? horizonSteps(state, config) : secondsToSteps(previewSeconds, config.dt);
@@ -2588,24 +2589,25 @@ export function previewRange(state: SimState, config: SimConfig): PreviewRange {
 }
 
 /**
- * Last step the preview draws for `extensionSteps` of coast.
- * The anchor is the latest burn at or after `from`, or `from` when there is
- * no such burn. A burn is one instant, so its step is the burn's end.
- * The total from `from` never exceeds `PREDICTION_STEP_CAP`.
+ * Last step the planning line draws.
+ * `extension` is the coast after the latest burn, or after `from` when no
+ * burn is later. A burn is one instant, so its step is the burn's end.
+ * Omit `extension` to use today's look-ahead. The total from `from` never
+ * exceeds `PREDICTION_STEP_CAP`, and the line never runs past `maxSteps`.
  */
 export function planHorizonEnd(
   from: SimState,
   config: SimConfig,
   nodes: readonly BurnNode[],
-  extension: number,
+  extension?: number,
 ): number {
-  let anchor = from.step;
+  const coast = Math.max(0, Math.min(PREDICTION_STEP_CAP, extension ?? horizonSteps(from, config)));
+  let burnEnd = from.step;
   for (let i = 0; i < nodes.length; i++) {
     const step = nodes[i].step;
-    if (step > anchor) anchor = step;
+    if (step > burnEnd) burnEnd = step;
   }
-  const requested = anchor + Math.max(0, extension);
-  return Math.min(requested, from.step + PREDICTION_STEP_CAP, config.maxSteps);
+  return Math.min(burnEnd + coast, from.step + PREDICTION_STEP_CAP, config.maxSteps);
 }
 
 /** Orbital period of the body that pulls hardest on `state`, or a circular stand-in. */
@@ -2638,10 +2640,9 @@ function dominantPeriod(state: SimState, config: SimConfig): number | null {
 /**
  * Deterministic prediction of `nodes`, with the state at each node cached.
  * Pass `reuse` after an edit so nodes before the edit are not resimulated.
- * The returned path matches `flyPlan` step for step. A horizon stops the line
- * at that look-ahead; samples up to the stop still match the flight.
- * `extensionSteps` replaces that look-ahead with a fixed coast after the
- * latest burn. Omit it to keep the level horizon exactly.
+ * The returned path matches `flyPlan` step for step. The line stops at
+ * `planHorizonEnd`. Samples up to that stop still match the flight.
+ * `extension` is the slider's coast; omit it for today's look-ahead.
  */
 export function predictPlan(
   from: SimState,
@@ -2705,12 +2706,7 @@ export function predictPlan(
         approach.push({ x: integrated.x, y: integrated.y, step: integrated.step, rate: integrated.rate });
       },
     };
-    const end =
-      extension === undefined
-        ? config.horizon
-          ? from.step + horizonSteps(from, config)
-          : Number.POSITIVE_INFINITY
-        : planHorizonEnd(from, config, nodes, extension);
+    const end = planHorizonEnd(from, config, nodes, extension);
     let guard = 0;
     const guardLimit = config.maxSteps + nodes.length + 2;
     while (state.status === "flying" && state.step <= end && guard++ <= guardLimit) {

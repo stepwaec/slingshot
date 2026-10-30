@@ -273,14 +273,14 @@ export function queuedBurns(game: Game): number {
 /**
  * True when `step` is still ahead of the ship and inside the current preview.
  * Planning measures from the pad. A pause measures from the frozen ship.
- * The preview runs `extensionSteps` past the latest burn, or past the ship when there is none.
+ * The end is `planHorizonEnd`: the slider's extension past the latest burn,
+ * or past the ship when there is no later burn.
  */
 export function stepInHorizon(game: Game, step: number): boolean {
   const origin = planOrigin(game);
   if (!Number.isInteger(step) || step < origin.step) return false;
   const config = simConfigFromLevel(game.level, game.upgrades);
-  const extension = extensionSteps(origin, config, game.previewSeconds);
-  return step <= planHorizonEnd(origin, config, game.nodes, extension);
+  return step <= planHorizonEnd(origin, config, game.nodes, extensionSteps(origin, config, game.previewSeconds));
 }
 
 /** Click on the predicted path. An existing node at that step is selected instead. */

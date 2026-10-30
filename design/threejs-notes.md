@@ -384,3 +384,20 @@ Designs: `target-zone.svg`, `planet-x.svg` part 8, `mockups/planning-capture.svg
 
 Moving targets (LU2): every quad and point is posed by `bodyPose` at the sim time, like the ring today.
 
+## 21. Sol bodies (Sol campaign)
+
+Designs: `assets/sol/*.svg`, `mockups/sol-moon.svg`, `preview/sol.html`. Values in `style.md` §18. There is no Sol code yet, so this is new work.
+
+1. **Looks.** Add one `look` per body: `sol-sun`, `mercury`, `venus`, `earth`, `luna`, `mars`, `jupiter`, `saturn`, `titan`, `uranus`, `neptune`, `pluto`, `charon`, `eris`, `arrokoth`, `voyager`. Draw them with the SVG pipeline the library bodies use (`art-sprite.ts`, `gallery.ts`). Bake per layer so the strips and the living surfaces move as their headers say (§4.6). Never freeze a body at t = 0.
+2. **Sizes.** Level authors use the ladder for `radius` (= crash radius): r = 34 √(R / R⊕). The Sun is r 46. Distances and periods are compressed per the Sol campaign plan, but orbits stay Kepler (`centerId`, `radius`, `omega` with ω = √(GM/r³)). Moons orbit their planets, and the Moon's orbit is about Earth.
+3. **Layers that must stay separate:**
+   - Earth's city lights: a night-side layer masked by the live light direction, not baked into the day texture.
+   - Saturn's rings: a back-half quad under the planet and a front-half quad over it, sharing one ring texture. The planet's shadow on the rings follows −L.
+   - Uranus: the strip is rolled −62°, and the rings split front and back the same way.
+   - The Sun's spots scroll inside the photosphere, under the flame ring.
+4. **Fixed faces.** The Moon, Pluto and Charon don't scroll. Their lighting follows the star as usual, so their phases change while their features stay put.
+5. **Light.** Each body's shade, haze and rim face the system's star, like every planet. Uranus's and Saturn's ring tilts are art, not physics.
+6. **Voyager** is a small non-solid prop with a slow drift. It needs no collision.
+
+**Budget:** the same as the library planets: one strip bake per layer and bucket, and two quads for each ring system.
+
