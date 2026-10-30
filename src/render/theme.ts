@@ -215,11 +215,31 @@ export const theme = {
   path: {
     spacingPx: 10,
     maxDots: 400,
-    /** Quad the dot is drawn into. The visible radius is ~2.4 px, still a dot at the 10 px spacing. */
-    dotSpanPx: 8,
-    sureAlpha: 0.95,
-    dimAlpha: 0.62,
+    /**
+     * Quad the dot is drawn into. Must cover 2 × (dotRadiusPx + dotSoftPx).
+     * design/assets/predicted-path.svg header: round dots r 1.5 every 10 px.
+     */
+    dotSpanPx: 5,
+    /**
+     * Screen-px radius at the middle of the antialiased edge.
+     * design/assets/predicted-path.svg header and style.md `path`: r 1.5.
+     * The previous discs faded out near 2.85 px and read as a chalk stroke.
+     */
+    dotRadiusPx: 1.5,
+    /** Half-width of the one-pixel edge, in screen px. */
+    dotSoftPx: 0.4,
+    /** design/style.md `path`: α 0.7 for the first 80 %, 0.35 for the last 20 %. */
+    sureAlpha: 0.7,
+    dimAlpha: 0.35,
     dimAfter: 0.8,
+    /**
+     * Extra alpha where the clock slows. Kept small so a deep well does not
+     * push the dots back up to a solid stroke. The colour mix toward
+     * `starCorona` is unchanged.
+     */
+    glowLift: 0.12,
+    /** Ceiling for that lift. Gold recharge dots stay at α 1 (style.md solar path). */
+    alphaCap: 0.82,
     endRingInner: 5.25,
     endRingOuter: 6.75,
     endRingAlpha: 0.5,
