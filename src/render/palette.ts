@@ -16,6 +16,12 @@ export const palette = {
   planetXHighlight: "#B5FFF0",
   planetXBase: "#3DE0C2",
   planetXShadow: "#0E4A40",
+  /** design/style.md §17 zone.*. The live capture ring reads these. */
+  zoneRing: "#3DE0C2",
+  zoneStable: "#B5FFF0",
+  zoneFlash: "#FFFFFF",
+  zoneExit: "#FFC857",
+  zoneLost: "#B48CFF",
   shipHull: "#F2F5FF",
   shipOutline: "#0A0D1A",
   shipCockpit: "#5EA0FF",

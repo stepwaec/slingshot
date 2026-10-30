@@ -203,15 +203,16 @@ The ring's transit gaps are holes in the solid band. Its gravity stays that of a
 
 **Collisions and consumption** (LU3): designed in [PR #50](https://github.com/stepwaec/slingshot/pull/50) and drawn in [PR #57](https://github.com/stepwaec/slingshot/pull/57). Ash's burn-up, the impact flash, the shock, the ejecta, the crater glow and the debris field replace the orange ring. Planning shows the telegraphs. Tidal disruption and a star falling into an accretion disk stay proposed scripts (`disrupt`, `accrete`). PR #47 did not add them, and this pass does not change gravity.
 
+**Target zone:** designed in [PR #62](https://github.com/stepwaec/slingshot/pull/62). Drawn in this pull request. Planet X's capture radius is a solid mint ring with a glow band that pulses over 4 s. It holds steady and brighter while the ship is inside the zone, flashes once when the flight is won, then rests on the ice colour. The dashed crawling ring and the zone fill baked into the planet sprite are gone. The stable-orbit hook is `targetZonePhase` in `src/render/target-zone.ts`, which reads `ship.status === "won"`. The Orbit capture work package can replace that rule there. Physics and prediction are unchanged. The exit arc, the Δv hint, the planning entry tick, the capture-orbit stroke and the flyby cross wait for that package. The dotted capture ellipse on the predicted path stays.
+
 **Open requests**, in priority order:
 
 1. **Ghost markers** (LU2) for where a moving body will be. The path ghosts, the recharge planning ghost and the dose ghost are already specified. A marker on a body's future position is not.
 2. **A lone stray asteroid**, outside a belt. The WP11 note above still stands: `design/` has the belt fields and the rogue planet, not a stray rock.
 3. **Supernova and quasar art.** The countdown, the remnant shock, and the quasar jet are in the game as placeholders. `design/` has no asset for them.
-4. **Target zone.** Replace the dotted ring with a solid ring that glows and pulses slowly. It gets brighter or steady when the ship enters the zone. It changes colour or flashes once when a stable orbit is achieved (tied to the Orbit capture work package). Keep it subtle so it doesn't compete with the planet.
-5. **Sol bodies.** Real Sol bodies for the Sol campaign: Sun, Mercury, Venus, Earth with the Moon, Mars, Jupiter, Saturn with rings, Titan, Uranus, Neptune, Kuiper objects, plus Voyager.
-6. **Astrophage.** Infected stars, the Petrova line, Astrophage fuel pickups, the spin drive engine and its plume, the Tau Ceti system.
-7. **Cryosleep.** A lifespan HUD meter, the sleep segment on the trajectory line, and cryo-pod states.
+4. **Sol bodies.** Real Sol bodies for the Sol campaign: Sun, Mercury, Venus, Earth with the Moon, Mars, Jupiter, Saturn with rings, Titan, Uranus, Neptune, Kuiper objects, plus Voyager.
+5. **Astrophage.** Infected stars, the Petrova line, Astrophage fuel pickups, the spin drive engine and its plume, the Tau Ceti system.
+6. **Cryosleep.** A lifespan HUD meter, the sleep segment on the trajectory line, and cryo-pod states.
 
 **Guidelines:** a realistic and vibrant style matching v1.5 and v2; SVG files under `design/assets/`; easter eggs only as hints, never logos or characters.
 

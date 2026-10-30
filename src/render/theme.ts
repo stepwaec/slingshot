@@ -132,13 +132,49 @@ export const theme = {
     haloScale: 1.8,
     limbAlphaHome: 0.16,
     limbAlphaTarget: 0.18,
-    ringPulseMs: 2400,
-    ringAlphaMin: 0.35,
-    ringAlphaMax: 0.7,
-    ringPulsePx: 2,
-    ringDashPeriodPx: 12,
-    ringCrawlPxPerSec: 12,
-    ringLockedAlpha: 1,
+  },
+  /**
+   * Planet X target zone. design/style.md §17 and design/assets/target-zone.svg.
+   * Widths are screen pixels. The ring does not dash, crawl, or pulse its radius.
+   */
+  zone: {
+    widthPx: 1.5,
+    stableWidthPx: 1.6,
+    flashWidthPx: 3.5,
+    bandInPx: 30,
+    bandOutPx: 9,
+    /** Idle ring and band, in phase. α 0.55 → 0.78 and 0.14 → 0.24 over 4 s. */
+    pulseSec: 4,
+    idleAlpha0: 0.55,
+    idleAlpha1: 0.78,
+    idleBand0: 0.14,
+    idleBand1: 0.24,
+    /** Inside the zone, not yet captured. Steady. */
+    insideAlpha: 0.95,
+    insideBand: 0.32,
+    /** Capture flash, once, on frame time. Ring mint → white at 0.15 s → ice at 1.1 s. */
+    flashWhiteSec: 0.15,
+    flashSettleSec: 1.1,
+    flashEndSec: 1.5,
+    flashBandPeak: 0.7,
+    flashBandPeakSec: 0.2,
+    /** Wave ring, ease-out, R → R + 34 px over 1.4 s, α 0.9 → 0. */
+    waveSec: 1.4,
+    wavePx: 34,
+    waveWidthPx: 2,
+    waveAlpha: 0.9,
+    /** Stable ice ring. α 0.88 → 1 over 6 s. Under the result scrim the ring holds 0.95. */
+    stablePulseSec: 6,
+    stableAlpha0: 0.88,
+    stableAlpha1: 1,
+    stableBand0: 0.3,
+    stableBand1: 0.4,
+    scrimAlpha: 0.95,
+    /** Flyby: the ship left the zone unbound. */
+    flybyAlpha: 0.3,
+    flybyBand: 0.06,
+    /** Quad padding so the wave (34 px) and the stroke stay inside the mesh. */
+    padPx: 40,
   },
   ship: {
     lengthAtZoom1: 22,
