@@ -204,7 +204,7 @@ const MAGNET_KEYS = ["b1Reach", "tilt", "averaged"] as const;
 const BEAM_KEYS = ["reach", "period", "base", "tip", "damage"] as const;
 const BODY_ORBIT_KEYS = ["centerId", "cx", "cy", "radius", "phase", "omega", "kind", "a", "e", "periapsisAngle"] as const;
 const NEBULA_KEYS = ["id", "x", "y", "rx", "ry", "angle", "scoop", "look"] as const;
-const NEBULA_LOOKS = ["emission", "reflection", "dark"] as const;
+export const NEBULA_LOOKS = ["emission", "reflection", "dark"] as const;
 const BELT_KEYS = ["id", "centerId", "radius", "width", "tier", "seed", "arcStart", "arcSpan", "dustDamage"] as const;
 const BELT_TIERS: readonly BeltTier[] = ["sparse", "medium", "dense", "kuiper"];
 const SHIP_KEYS = ["x", "y", "vx", "vy"] as const;
@@ -225,7 +225,7 @@ const PHYSICS_KEYS = [
   "doseLimit",
 ] as const;
 
-const BODY_KINDS: readonly BodyKind[] = ["home", "star", "target", "moon", "blackhole", "planet", "rogue"];
+export const BODY_KINDS: readonly BodyKind[] = ["home", "star", "target", "moon", "blackhole", "planet", "rogue"];
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);

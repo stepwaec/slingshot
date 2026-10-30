@@ -318,6 +318,13 @@ export interface WormholeMouth {
 }
 
 /**
+ * Structures the megastructure view draws. A new entry has to be placed
+ * by the Observatory builder; the showcase test fails until it is.
+ */
+export const MEGA_SLOTS = ["engine", "dyson", "shkadov", "ring", "elevator", "wormhole"] as const;
+export type MegaSlot = (typeof MEGA_SLOTS)[number];
+
+/**
  * Entering either mouth moves the ship to the other.
  * `angle` turns the heading on the way from `a` to `b` (the opposite turn
  * on the way back). `clockOffset` is added to outside time on arrival at

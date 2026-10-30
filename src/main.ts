@@ -20,7 +20,7 @@ import {
   tick,
   type Game,
 } from "./game/state";
-import { burnLimit, LEVELS, passage, pauseRuleOf, rescue, simConfigFromLevel, type Level } from "./level/catalog";
+import { burnLimit, LEVELS, observatory, passage, pauseRuleOf, rescue, simConfigFromLevel, type Level } from "./level/catalog";
 import { deepPlan, safePlan } from "./level/solutions";
 import { createClockLatches, readClocks, type ClockLatches } from "./hud/readout";
 import type { MissionScore } from "./sim/score";
@@ -44,7 +44,19 @@ import { hullRatio, hullSegmentsLit, hullTone, stressLevel } from "./render/ship
 import { burnChipText } from "./render/node-style";
 import { theme } from "./render/theme";
 
-const levels: readonly Level[] = LEVELS;
+const levels: readonly Level[] = [...LEVELS, observatory];
+
+function addLevelGroup(select: HTMLSelectElement, label: string, groupLevels: readonly Level[]): void {
+  const group = document.createElement("optgroup");
+  group.label = label;
+  for (const level of groupLevels) {
+    const option = document.createElement("option");
+    option.value = level.id;
+    option.textContent = level.name;
+    group.append(option);
+  }
+  select.append(group);
+}
 
 function required<T extends Element>(selector: string): T {
   const element = document.querySelector<T>(selector);
@@ -131,12 +143,8 @@ let overlayOpen = false;
 let spreadFor: Game["prediction"] | null = null;
 let spreadSigma = 0;
 
-for (const level of levels) {
-  const option = document.createElement("option");
-  option.value = level.id;
-  option.textContent = level.name;
-  levelSelect.append(option);
-}
+addLevelGroup(levelSelect, "Campaign", LEVELS);
+addLevelGroup(levelSelect, "Showcase", [observatory]);
 routeSafe.addEventListener("click", () => setPlan(game, safePlan));
 routeDeep.addEventListener("click", () => setPlan(game, deepPlan));
 upgradeToggle.addEventListener("click", () => {
