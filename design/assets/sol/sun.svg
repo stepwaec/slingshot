@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="412" height="412" viewBox="0 0 412 412">
+  <!-- The Sun (Sol campaign): the approved game sun (star.svg, variant J; ids star* re-prefixed solSun*), r 46, plus sunspot groups. Ids: solSun*, sol*.
+       The Sun stays a game-scale star (it is off the ladder: 109 Earth radii). Sunspots: five groups (14 spots) at 10-18 deg N/S (the activity belts),
+       each spot a penumbra #B8401E a0.75 round an umbra #4A1006, in a strip (P = 289) scrolling west -> east over 180 s inside the photosphere (clip r 44.5),
+       group opacity 0.92, drawn over the surface and under the limb. Everything else as star.svg.
+       ONE group #solSun at translate(206.0 206.0); geometry relative to (0,0). Tokens and the size ladder: style.md §18. -->
+  <defs>
+    <radialGradient id="solSunHaze" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#FF7A2A" stop-opacity="0.6"/><stop offset="0.23" stop-color="#FF7A2A" stop-opacity="0.52"/><stop offset="0.33" stop-color="#E8461A" stop-opacity="0.3"/><stop offset="0.55" stop-color="#A8240E" stop-opacity="0.15"/><stop offset="0.8" stop-color="#6A1408" stop-opacity="0.06"/><stop offset="1" stop-color="#6A1408" stop-opacity="0"/></radialGradient>
+    <radialGradient id="solSunFlameFill" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="62"><stop offset="0" stop-color="#FFE7A0" stop-opacity="0.95"/><stop offset="0.74" stop-color="#FFE7A0" stop-opacity="0.95"/><stop offset="0.82" stop-color="#FFB347" stop-opacity="0.8"/><stop offset="0.91" stop-color="#FF6A1A" stop-opacity="0.38"/><stop offset="1" stop-color="#FF5A1F" stop-opacity="0"/></radialGradient>
+    <radialGradient id="solSunWispFill" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="78"><stop offset="0" stop-color="#FFB347" stop-opacity="0.55"/><stop offset="0.62" stop-color="#FFB347" stop-opacity="0.55"/><stop offset="0.8" stop-color="#FF6A1A" stop-opacity="0.22"/><stop offset="1" stop-color="#E8461A" stop-opacity="0"/></radialGradient>
+    <radialGradient id="solSunBody" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#FFB43A"/><stop offset="0.65" stop-color="#FF8F1F"/><stop offset="1" stop-color="#FF7A14"/></radialGradient>
+    <radialGradient id="solSunLimb" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="46"><stop offset="0.8" stop-color="#FFD27A" stop-opacity="0"/><stop offset="0.93" stop-color="#FFD27A" stop-opacity="0.55"/><stop offset="0.97" stop-color="#FFF1C2" stop-opacity="0.9"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0.95"/></radialGradient>
+    <linearGradient id="solSunFlareFill" gradientUnits="userSpaceOnUse" x1="46" y1="0" x2="86" y2="0"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#FFD27A" stop-opacity="0.15"/></linearGradient>
+    <filter id="solSunFlame" filterUnits="userSpaceOnUse" x="-88" y="-88" width="176" height="176" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.08" numOctaves="4" seed="21" result="n0"/>
+      <feColorMatrix in="n0" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0 1" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="20" xChannelSelector="R" yChannelSelector="G" result="nd"/>
+      <feGaussianBlur in="nd" stdDeviation="0.4"/>
+    </filter>
+    <filter id="solSunWisp" filterUnits="userSpaceOnUse" x="-107" y="-107" width="214" height="214" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="5" seed="33" result="w0"/>
+      <feColorMatrix in="w0" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0 1" result="w"/>
+      <feDisplacementMap in="SourceGraphic" in2="w" scale="34" xChannelSelector="R" yChannelSelector="G" result="wd"/>
+      <feGaussianBlur in="wd" stdDeviation="0.8"/>
+    </filter>
+    <filter id="solSunSurf" filterUnits="userSpaceOnUse" x="-48" y="-48" width="96" height="96" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="5" seed="4" result="f"/>
+      <feColorMatrix in="f" type="matrix" values="0 0 0 0 0.502  0 0 0 0 0.129  0 0 0 0 0.02  3.4 0 0 0 -1.6" result="dk"/>
+      <feComponentTransfer in="dk" result="dark"><feFuncA type="linear" slope="0.55"/></feComponentTransfer>
+      <feTurbulence type="turbulence" baseFrequency="0.06" numOctaves="5" seed="9" result="t"/>
+      <feColorMatrix in="t" type="matrix" values="0 0 0 0 1  0 0 0 0 0.906  0 0 0 0 0.627  -6.5 0 0 0 1.25" result="fl"/>
+      <feComponentTransfer in="fl" result="fil"><feFuncA type="linear" slope="0.85"/></feComponentTransfer>
+      <feMerge result="m"><feMergeNode in="SourceGraphic"/><feMergeNode in="dark"/><feMergeNode in="fil"/></feMerge>
+      <feComposite in="m" in2="SourceGraphic" operator="in"/>
+    </filter>
+    <filter id="solSunEdge" filterUnits="userSpaceOnUse" x="-60" y="-60" width="120" height="120" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.11" numOctaves="3" seed="44" result="e0"/>
+      <feColorMatrix in="e0" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0 1" result="e"/>
+      <feDisplacementMap in="SourceGraphic" in2="e" scale="6.5" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="solSunRimRag" filterUnits="userSpaceOnUse" x="-60" y="-60" width="120" height="120" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.22" numOctaves="2" seed="57" result="g0"/>
+      <feColorMatrix in="g0" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0 1" result="g"/>
+      <feDisplacementMap in="SourceGraphic" in2="g" scale="5" xChannelSelector="R" yChannelSelector="G" result="gd"/>
+      <feGaussianBlur in="gd" stdDeviation="0.35"/>
+    </filter>
+  <clipPath id="solClip"><circle r="44.5"/></clipPath></defs>
+  <g id="solSun" transform="translate(206.0 206.0)">
+    <g id="solSunBreathe">
+      <animateTransform attributeName="transform" type="scale" values="1;1.03;1;0.97;1" keyTimes="0;0.25;0.5;0.75;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1" dur="6s" repeatCount="indefinite"/>
+      <circle r="200" fill="url(#solSunHaze)"/>
+      <g id="solSunWispRing"><animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="300s" repeatCount="indefinite"/>
+        <circle r="78" fill="url(#solSunWispFill)" filter="url(#solSunWisp)"/></g>
+      <g id="solSunFlameRing"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="200s" repeatCount="indefinite"/>
+        <circle r="62" fill="url(#solSunFlameFill)" filter="url(#solSunFlame)"/></g>
+    </g>
+    <g id="solSunProminences" fill="none" stroke-linecap="round">
+      <g transform="rotate(147.5) translate(46 0)">
+        <g id="solSunProm1" transform="scale(0.6)" opacity="0">
+          <animateTransform attributeName="transform" type="scale" values="0.6;1;0.6" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="12s" begin="0s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0;1;0" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="12s" begin="0s" repeatCount="indefinite"/>
+          <path d="M-0.9 -9 C21 -7.2 21 7.2 -0.9 9" stroke="#FF8C2E" stroke-width="2.8" stroke-opacity="0.85"/>
+          <path d="M-0.9 -9 C21 -7.2 21 7.2 -0.9 9" stroke="#FFF1C2" stroke-width="1" stroke-opacity="0.9"/>
+        </g>
+      </g>
+      <g transform="rotate(243.6) translate(46 0)">
+        <g id="solSunProm2" transform="scale(0.6)" opacity="0">
+          <animateTransform attributeName="transform" type="scale" values="0.6;1;0.6" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="16s" begin="5s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0;1;0" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="16s" begin="5s" repeatCount="indefinite"/>
+          <path d="M-1.3 -11 C23.5 -9 23.5 9 -1.3 11" stroke="#FF8C2E" stroke-width="2.8" stroke-opacity="0.85"/>
+          <path d="M-1.3 -11 C23.5 -9 23.5 9 -1.3 11" stroke="#FFF1C2" stroke-width="1" stroke-opacity="0.9"/>
+        </g>
+      </g>
+      <g transform="rotate(314.8) translate(46 0)">
+        <g id="solSunProm3" transform="scale(0.6)" opacity="0">
+          <animateTransform attributeName="transform" type="scale" values="0.6;1;0.6" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="14s" begin="9s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0;1;0" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="14s" begin="9s" repeatCount="indefinite"/>
+          <path d="M-0.8 -8.5 C29 -6.8 29 6.8 -0.8 8.5" stroke="#FF8C2E" stroke-width="2.8" stroke-opacity="0.85"/>
+          <path d="M-0.8 -8.5 C29 -6.8 29 6.8 -0.8 8.5" stroke="#FFF1C2" stroke-width="1" stroke-opacity="0.9"/>
+        </g>
+      </g>
+    </g>
+    <g id="solSunFlare" transform="rotate(25)" opacity="0">
+      <animate attributeName="opacity" values="0;0;1;0;0" keyTimes="0;0.5909;0.6318;0.6727;1" dur="22s" repeatCount="indefinite"/>
+      <path d="M46 -1.8 L86 0 L46 1.8 Z" fill="url(#solSunFlareFill)"/>
+    </g>
+    <g id="solSunDisc" filter="url(#solSunEdge)">
+      <circle r="46" fill="url(#solSunBody)" filter="url(#solSunSurf)"/>
+      <circle r="46" fill="url(#solSunLimb)"/>
+    </g>
+    <circle r="46.2" fill="none" stroke="#FFF1C2" stroke-width="1.6" stroke-opacity="0.75" filter="url(#solSunRimRag)"/>
+  <g clip-path="url(#solClip)" opacity="0.92"><g><animateTransform attributeName="transform" type="translate" from="0 0" to="289 0" dur="180s" repeatCount="indefinite"/><g transform="translate(-433.5 -46)"><ellipse cx="112.4" cy="35.2" rx="3.97" ry="3.15" fill="#B8401E" fill-opacity="0.75"/><ellipse cx="112.4" cy="35.2" rx="1.87" ry="1.52" fill="#4A1006"/><ellipse cx="401.4" cy="35.2" rx="3.97" ry="3.15" fill="#B8401E" fill-opacity="0.75"/><ellipse cx="401.4" cy="35.2" rx="1.87" ry="1.52" fill="#4A1006"/><ellipse cx="115.2" cy="33.7" rx="2.29" ry="1.82" fill="#B8401E" fill-opacity="0.75"/><ellipse cx="115.2" cy="33.7" rx="1.08" ry="0.88" fill="#4A1006"/><ellipse cx="404.2" cy="33.7" rx="2.29" ry="1.82" fill="#B8401E" fill-opacity="0.75"/><ellipse cx="404.2" cy="33.7" rx="1.08" ry="0.88" fill="#4A1006"/><ellipse cx="118.5" cy="35.6" rx="2.94" ry="2.33" fill="#B8401E" fill-opacity="0.75"/><ellipse cx="118.5" cy="35.6" rx="1.38" ry="1.12" fill="#4A1006"/><ellipse cx="407.5" cy="35.6" rx="2.94" ry="2.33" fill="#B8401E" fill-opacity="0.75"/><ellipse cx="407.5" cy="35.6" rx="1.38" ry="1.12" fill="#4A1006"/><ellipse cx="123.1" cy="35.0" rx="2.88" ry="2.29" fill="#B8401E" fill-opacity="0.75"/><ellipse cx="123.1" cy="35.0" rx="1.35" ry="1.10" fill="#4A1006"/><ellipse cx="412.1" cy="35.0" rx="2.88" ry="2.29" fill="#B8401E" fill-opacity="0.75"/><ellipse cx="412.1" cy="35.0" rx="1.35" ry="1.10" fill="#4A1006"/><ellipse cx="164.6" cy="55.4" rx="3.28" ry="2.61" fill="#B8401E" fill-opacity="0.75"/><ellipse cx="164.6" cy="55.4" rx="1.54" ry="1.25" fill="#4A1006"/><ellipse cx="453.6" cy="55.4" rx="3.28" ry="2.61" fill="#B8401E" fill-opacity="0.75"/><ellipse cx="453.6" cy="55.4" rx="1.54" ry="1.25" fill="#4A1006"/><ellipse cx="168.6" cy="54.5" rx="3.20" ry="2.54" fill="#B8401E" fill-opacity="0.75"/><ellipse cx="168.6" cy="54.5" rx="1.51" ry="1.22" fill="#4A1006"/><ellipse cx="457.6" cy="54.5" rx="3.20" ry="2.54" fill="#B8401E" fill-opacity="0.75"/><ellipse cx="457.6" cy="54.5" rx="1.51" ry="1.22" fill="#4A1006"/><ellipse cx="170.0" cy="56.0" rx="2.22" ry="1.76" fill="#B8401E" fill-opacity="0.75"/><ellipse cx="170.0" cy="56.0" rx="1.04" ry="0.85" fill="#4A1006"/><ellipse cx="459.0" cy="56.0" rx="2.22" ry="1.76" fill="#B8401E" fill-opacity="0.75"/><ellipse cx="459.0" cy="56.0" rx="1.04" ry="0.85" fill="#4A1006"/><ellipse cx="200.7" cy="32.6" rx="3.09" ry="2.45" fill="#B8401E" fill-opacity="0.75"/><ellipse cx="200.7" cy="32.6" rx="1.45" ry="1.18" fill="#4A1006"/><ellipse cx="489.7" cy="32.6" rx="3.09" ry="2.45" fill="#B8401E" fill-opacity="0.75"/><ellipse cx="489.7" cy="32.6" rx="1.45" ry="1.18" fill="#4A1006"/><ellipse cx="203.4" cy="32.8" rx="2.57" ry="2.04" fill="#B8401E" fill-opacity="0.75"/><ellipse cx="203.4" cy="32.8" rx="1.21" ry="0.98" fill="#4A1006"/><ellipse cx="492.4" cy="32.8" rx="2.57" ry="2.04" fill="#B8401E" fill-opacity="0.75"/><ellipse cx="492.4" cy="32.8" rx="1.21" ry="0.98" fill="#4A1006"/><ellipse cx="56.2" cy="59.8" rx="4.35" ry="3.45" fill="#B8401E" fill-opacity="0.75"/><ellipse cx="56.2" cy="59.8" rx="2.05" ry="1.66" fill="#4A1006"/><ellipse cx="345.2" cy="59.8" rx="4.35" ry="3.45" fill="#B8401E" fill-opacity="0.75"/><ellipse cx="345.2" cy="59.8" rx="2.05" ry="1.66" fill="#4A1006"/><ellipse cx="59.0" cy="58.5" rx="1.81" ry="1.43" fill="#B8401E" fill-opacity="0.75"/><ellipse cx="59.0" cy="58.5" rx="0.85" ry="0.69" fill="#4A1006"/><ellipse cx="348.0" cy="58.5" rx="1.81" ry="1.43" fill="#B8401E" fill-opacity="0.75"/><ellipse cx="348.0" cy="58.5" rx="0.85" ry="0.69" fill="#4A1006"/><ellipse cx="62.4" cy="59.0" rx="1.86" ry="1.48" fill="#B8401E" fill-opacity="0.75"/><ellipse cx="62.4" cy="59.0" rx="0.88" ry="0.71" fill="#4A1006"/><ellipse cx="351.4" cy="59.0" rx="1.86" ry="1.48" fill="#B8401E" fill-opacity="0.75"/><ellipse cx="351.4" cy="59.0" rx="0.88" ry="0.71" fill="#4A1006"/><ellipse cx="256.9" cy="36.9" rx="3.29" ry="2.61" fill="#B8401E" fill-opacity="0.75"/><ellipse cx="256.9" cy="36.9" rx="1.55" ry="1.26" fill="#4A1006"/><ellipse cx="545.9" cy="36.9" rx="3.29" ry="2.61" fill="#B8401E" fill-opacity="0.75"/><ellipse cx="545.9" cy="36.9" rx="1.55" ry="1.26" fill="#4A1006"/><ellipse cx="260.8" cy="37.8" rx="2.38" ry="1.89" fill="#B8401E" fill-opacity="0.75"/><ellipse cx="260.8" cy="37.8" rx="1.12" ry="0.91" fill="#4A1006"/><ellipse cx="549.8" cy="37.8" rx="2.38" ry="1.89" fill="#B8401E" fill-opacity="0.75"/><ellipse cx="549.8" cy="37.8" rx="1.12" ry="0.91" fill="#4A1006"/></g></g></g></g>
+</svg>

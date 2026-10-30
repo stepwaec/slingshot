@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28">
+  <!-- Arrokoth (Kuiper belt), a contact binary shown at a minimum readable size (true scale would be under 2 px): lobes rx 6.2 / 4.4,
+       rolled -18 deg, radial red #E08A62 | #B2553A | #3A1A22 lit from the upper-right, a pale neck #F0B08A. Ids: arr*. Crash radius 6.
+       ONE group #arrokoth at translate(13.9 13.9); geometry relative to (0,0). Tokens and the size ladder: style.md §18. -->
+  <defs><radialGradient id="arrBig" gradientUnits="userSpaceOnUse" cx="-1.3" cy="-1.5" r="6.8"><stop offset="0" stop-color="#E08A62"/><stop offset="0.55" stop-color="#B2553A"/><stop offset="1" stop-color="#3A1A22"/></radialGradient><radialGradient id="arrSmall" gradientUnits="userSpaceOnUse" cx="6.5" cy="-1.2" r="4.8"><stop offset="0" stop-color="#E08A62"/><stop offset="0.55" stop-color="#B2553A"/><stop offset="1" stop-color="#3A1A22"/></radialGradient></defs>
+  <g id="arrokoth" transform="translate(13.9 13.9)"><g transform="rotate(-18)"><ellipse cx="-2.8" cy="0" rx="6.2" ry="3.8" fill="url(#arrBig)"/><ellipse cx="5.3" cy="0.3" rx="4.4" ry="3.7" fill="url(#arrSmall)"/><ellipse cx="2.6" cy="0.2" rx="1.2" ry="1.8" fill="#F0B08A" fill-opacity="0.7"/></g></g>
+</svg>
