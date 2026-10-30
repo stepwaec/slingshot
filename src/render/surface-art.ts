@@ -22,6 +22,12 @@ export interface StripSpec {
   opacity: number;
   order: number;
   prep: (doc: Document) => void;
+  /** SMIL translate x at the rest frame. The strip then moves by `distance`. */
+  fromX?: number;
+  /** SVG `rotate` on the strip, in degrees. The mesh uses the opposite sign so world +y stays up. */
+  rollDeg?: number;
+  /** Scroll under a night-side mask that follows the live star, instead of a baked day texture. */
+  night?: boolean;
 }
 
 export type SurfaceKind = "ocean" | "planetx" | "giant" | "moon" | "moon-icy" | "moon-volcanic" | "dwarf";

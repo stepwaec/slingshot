@@ -27,6 +27,16 @@ import {
   stripWindow,
 } from "../art-motion";
 import { zoomBucket } from "../ship-art";
+import {
+  SOL_PROMINENCES,
+  isSolLook,
+  prepSol,
+  prepSolSun,
+  solArt,
+  solLight,
+  type SolArt,
+  type SolSunPart,
+} from "../sol-art";
 import { keepBase, keepHalo, keepLight, stripsFor, surfaceKind, type StripSpec, type SurfaceKind } from "../surface-art";
 import { rasterMarkup } from "../svg-bake";
 import { shader, srgbVec } from "./materials";
@@ -76,7 +86,8 @@ type Role =
   | "knot"
   | "spark"
   | "quake"
-  | "flash";
+  | "flash"
+  | "ring";
 
 interface Sprite {
   mesh: THREE.Mesh;
@@ -84,7 +95,7 @@ interface Sprite {
   body: Body | null;
   cloud: Nebula | null;
   role: Role;
-  prom?: (typeof SUN_PROMINENCES)[number];
+  prom?: { id: string; angle: number; begin: number; dur: number };
   strip?: StripSpec;
   /** Comet-local sample, SVG y down, for a sparkle. */
   spark?: { points: { x: number; y: number }[]; dur: number; begin: number };
@@ -114,6 +125,11 @@ class GalleryVisual implements Visual {
     this.theme = theme;
     this.object.name = "design-art";
     for (const body of level.bodies) {
+      if (isSolLook(body.look)) {
+        if (body.look === "sol-sun") this.addSolSun(body);
+        else this.addSol(body);
+        continue;
+      }
       if (isSun(body)) {
         this.addSun(body);
         continue;
@@ -176,6 +192,117 @@ class GalleryVisual implements Visual {
     this.add(limb, `${body.id}-limb`, body, null, "limb", 6);
   }
 
+  /** sol/sun.svg: the same living layers as the library sun, plus spots under the flame ring. */
+  private addSolSun(body: Body): void {
+    const base = artForBody(body, this.theme);
+    const art = solArt("sol-sun");
+    if (!base) return;
+    const layer = (part: SolSunPart, tag: string, promId?: string): ArtFit => ({
+      ...base,
+      spin: "none",
+      light: null,
+      bake: { tag, prep: (doc) => prepSolSun(doc, part, promId) },
+    });
+    this.add(layer("haze", "sol-haze"), `${body.id}-haze`, body, null, "haze", 0, true);
+    this.add(layer("wisp", "sol-wisp"), `${body.id}-wisp`, body, null, "wisp", 1);
+    this.add(layer("flame", "sol-flame"), `${body.id}-flame`, body, null, "flame", 2);
+    for (const prom of SOL_PROMINENCES) {
+      this.add(layer("prom", prom.id, prom.id), `${body.id}-${prom.id}`, body, null, "prom", 3, false, prom);
+    }
+    this.add(layer("flare", "sol-flare"), `${body.id}-flare`, body, null, "flare", 4);
+    this.add(layer("grain", "sol-grain"), `${body.id}-grain`, body, null, "grain", 5);
+    for (const spec of art.strips) {
+      const fit: ArtFit = {
+        ...base,
+        viewW: spec.viewW,
+        viewH: spec.viewH,
+        spin: "none",
+        light: null,
+        bake: { tag: spec.id, prep: spec.prep },
+      };
+      this.addStrip(fit, `${body.id}-${spec.id}`, body, spec);
+    }
+    this.add(layer("limb", "sol-limb"), `${body.id}-limb`, body, null, "limb", 7);
+  }
+
+  private addSol(body: Body): void {
+    if (!isSolLook(body.look)) return;
+    const art = solArt(body.look);
+    const base = artForBody(body, this.theme);
+    if (!base) return;
+    const piece = (part: Parameters<typeof prepSol>[2], order: number, role: Role, spin: ArtFit["spin"]): void => {
+      const fit: ArtFit = {
+        ...base,
+        spin,
+        light: spin === "light" ? solLight() : null,
+        bake: { tag: `${art.look}-${part}`, prep: (doc) => prepSol(doc, art.root, part) },
+      };
+      this.add(fit, `${body.id}-${part}`, body, null, role, order);
+    };
+    if (art.rings) {
+      if (art.ringShadow) this.addRing(base, art, body, "ring-back", 0);
+      else piece("ring-back", 0, "body", "none");
+    }
+    if (art.mode === "prop") {
+      this.add({ ...base, spin: "none", light: null }, body.id, body, null, "body", 2);
+      return;
+    }
+    if (art.mode === "locked") {
+      piece("surface", 2, "body", "none");
+      piece("shade", 5, "body", "light");
+      if (art.air) piece("air", 7, "body", "light");
+      return;
+    }
+    piece("base", 1, "body", "none");
+    for (const spec of art.strips) {
+      if (spec.night) continue;
+      const fit: ArtFit = {
+        ...base,
+        viewW: spec.viewW,
+        viewH: spec.viewH,
+        spin: "none",
+        light: null,
+        bake: { tag: spec.id, prep: spec.prep },
+      };
+      this.addStrip(fit, `${body.id}-${spec.id}`, body, spec);
+    }
+    if (art.staticLayer) piece("static", 3, "body", "none");
+    piece("shade", 5, "body", "light");
+    for (const spec of art.strips) {
+      if (!spec.night) continue;
+      const fit: ArtFit = {
+        ...base,
+        viewW: spec.viewW,
+        viewH: spec.viewH,
+        spin: "none",
+        light: null,
+        bake: { tag: spec.id, prep: spec.prep },
+      };
+      this.addStrip(fit, `${body.id}-${spec.id}`, body, spec);
+    }
+    if (art.air) piece("air", 7, "body", "light");
+    if (art.rings) {
+      if (art.ringShadow) this.addRing(base, art, body, "ring-front", 8);
+      else piece("ring-front", 8, "body", "none");
+    }
+  }
+
+  private addRing(base: ArtFit, art: SolArt, body: Body, part: "ring-back" | "ring-front", order: number): void {
+    const fit: ArtFit = {
+      ...base,
+      spin: "none",
+      light: null,
+      bake: { tag: `${art.look}-${part}`, prep: (doc) => prepSol(doc, art.root, part) },
+    };
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(fit.viewW, fit.viewH), ringMaterial(this.theme));
+    mesh.name = `${body.id}-${part}`;
+    mesh.frustumCulled = false;
+    mesh.renderOrder = order;
+    this.object.add(mesh);
+    this.sprites.push({ mesh, fit, body, cloud: null, role: "ring" });
+    void this.paint(mesh, fit, false, 1, 1, this.bakeGen);
+  }
+
   private addComet(body: Body): void {
     const base = artForBody(body, this.theme);
     if (!base) return;
@@ -231,7 +358,8 @@ class GalleryVisual implements Visual {
   }
 
   private addStrip(fit: ArtFit, name: string, body: Body, spec: StripSpec): void {
-    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), stripMaterial(spec.opacity));
+    const material = spec.night ? nightMaterial(this.theme) : stripMaterial(spec.opacity);
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material);
     mesh.name = name;
     mesh.frustumCulled = false;
     mesh.renderOrder = spec.order;
@@ -415,7 +543,7 @@ class GalleryVisual implements Visual {
     role: Role,
     order: number,
     sun = false,
-    prom?: (typeof SUN_PROMINENCES)[number],
+    prom?: { id: string; angle: number; begin: number; dur: number },
   ): void {
     const mesh = artMesh(fit, name);
     mesh.renderOrder = order;
@@ -429,6 +557,14 @@ class GalleryVisual implements Visual {
     const texture = await loadArtTexture(fit, rasterPixels(fit.viewW, fit.viewH, dpr, zoom), zoom);
     if (gen !== this.bakeGen) {
       texture.dispose();
+      return;
+    }
+    if ((mesh.material as THREE.ShaderMaterial).isShaderMaterial) {
+      const uniforms = (mesh.material as THREE.ShaderMaterial).uniforms;
+      const previous = uniforms.uMap?.value as THREE.Texture | null;
+      if (uniforms.uMap) uniforms.uMap.value = texture;
+      previous?.dispose();
+      if (sun) document.documentElement.dataset.starArt = "1";
       return;
     }
     const material = mesh.material as THREE.MeshBasicMaterial;
@@ -510,6 +646,12 @@ class GalleryVisual implements Visual {
       }
       if (sprite.role === "strip" && sprite.strip) {
         poseStrip(sprite.mesh, sprite.strip, pose.x, pose.y, body.radius, seconds);
+        if (sprite.strip.night) aimNight(sprite.mesh, pose.x, pose.y, time, bodies, game.level.g);
+        continue;
+      }
+      if (sprite.role === "ring") {
+        poseArt(sprite.mesh, sprite.fit, pose.x, pose.y, body.radius, 0);
+        aimRing(sprite.mesh, pose.x, pose.y, time, bodies, game.level.g);
         continue;
       }
       if (sprite.role === "halo") {
@@ -1098,6 +1240,114 @@ function discAlpha(): THREE.CanvasTexture {
   return sharedDisc;
 }
 
+const uvVert = /* glsl */ `
+varying vec2 vLocal;
+varying vec2 vUv;
+void main() {
+  vLocal = position.xy;
+  vUv = uv;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}
+`;
+
+/** earth.svg #ethNight: city lights only, masked by the live star direction. */
+const nightFrag = /* glsl */ `
+varying vec2 vLocal;
+varying vec2 vUv;
+uniform sampler2D uMap;
+uniform vec2 uOffset;
+uniform vec2 uRepeat;
+uniform vec2 uLight;
+uniform float uNight0;
+uniform float uNight1;
+uniform float uLitReach;
+void main() {
+  float r = length(vLocal);
+  float fw = max(fwidth(r), 1e-4);
+  float disc = 1.0 - smoothstep(1.0 - fw, 1.0 + fw, r);
+  if (disc <= 0.0) discard;
+  vec4 tex = texture2D(uMap, uOffset + vUv * uRepeat);
+  vec2 lit = normalize(uLight);
+  float along = dot(vLocal, lit);
+  float t = (uLitReach - along) / (2.0 * uLitReach);
+  float night = smoothstep(uNight0, uNight1, t);
+  float a = tex.a * disc * night;
+  if (a <= 0.004) discard;
+  gl_FragColor = vec4(tex.rgb, a);
+}
+`;
+
+/** saturn.svg: rings stay put; the planet's shadow wedge follows −L. */
+const ringFrag = /* glsl */ `
+varying vec2 vLocal;
+varying vec2 vUv;
+uniform sampler2D uMap;
+uniform vec2 uLight;
+uniform vec3 uShadow;
+uniform float uShadowAlpha;
+void main() {
+  vec4 tex = texture2D(uMap, vUv);
+  if (tex.a <= 0.004) discard;
+  float r = length(vLocal);
+  vec2 dir = r > 0.001 ? vLocal / r : vec2(1.0, 0.0);
+  float side = dot(dir, normalize(uLight));
+  float shade = smoothstep(0.12, -0.05, side);
+  gl_FragColor = vec4(mix(tex.rgb, uShadow, shade * uShadowAlpha), tex.a);
+}
+`;
+
+function nightMaterial(theme: Theme): THREE.ShaderMaterial {
+  const material = new THREE.ShaderMaterial({
+    uniforms: {
+      uMap: { value: null },
+      uOffset: { value: new THREE.Vector2() },
+      uRepeat: { value: new THREE.Vector2(1, 1) },
+      uLight: { value: new THREE.Vector2(1, 1) },
+      uNight0: { value: theme.sol.cityNight0 },
+      uNight1: { value: theme.sol.cityNight1 },
+      uLitReach: { value: theme.sol.cityLitReach },
+    },
+    vertexShader: uvVert,
+    fragmentShader: nightFrag,
+    transparent: true,
+    depthTest: false,
+    depthWrite: false,
+    toneMapped: false,
+    side: THREE.DoubleSide,
+  });
+  return material;
+}
+
+function ringMaterial(theme: Theme): THREE.ShaderMaterial {
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      uMap: { value: null },
+      uLight: { value: new THREE.Vector2(1, 1) },
+      uShadow: { value: srgbVec(theme.colors.ringNight) },
+      uShadowAlpha: { value: theme.sol.saturnShadowAlpha },
+    },
+    vertexShader: uvVert,
+    fragmentShader: ringFrag,
+    transparent: true,
+    depthTest: false,
+    depthWrite: false,
+    toneMapped: false,
+    side: THREE.DoubleSide,
+  });
+}
+
+function aimNight(mesh: THREE.Mesh, x: number, y: number, time: number, bodies: readonly Body[], g: number): void {
+  const light = (mesh.material as THREE.ShaderMaterial).uniforms.uLight?.value as THREE.Vector2 | undefined;
+  if (!light) return;
+  const aim = towardStar(x, y, time, bodies, g);
+  if (aim) light.set(aim.x, aim.y);
+  else light.set(1, 1);
+}
+
+function aimRing(mesh: THREE.Mesh, x: number, y: number, time: number, bodies: readonly Body[], g: number): void {
+  aimNight(mesh, x, y, time, bodies, g);
+}
+
 function stripMaterial(opacity: number): THREE.MeshBasicMaterial {
   return new THREE.MeshBasicMaterial({
     transparent: true,
@@ -1110,19 +1360,24 @@ function stripMaterial(opacity: number): THREE.MeshBasicMaterial {
 }
 
 function poseStrip(mesh: THREE.Mesh, spec: StripSpec, x: number, y: number, radius: number, seconds: number): void {
-  const scroll = stripScroll(seconds, spec.dur, spec.distance);
+  const scroll = (spec.fromX ?? 0) + stripScroll(seconds, spec.dur, spec.distance);
   const window = stripWindow(spec.svgRadius, spec.tx, spec.ty, spec.originX, spec.originY, spec.viewW, spec.viewH, scroll);
-  const material = mesh.material as THREE.MeshBasicMaterial;
-  const map = material.map;
+  mesh.scale.set(radius, radius, 1);
+  mesh.rotation.z = (-(spec.rollDeg ?? 0) * Math.PI) / 180;
+  mesh.position.set(x, y, 0);
+  const shaderMat = mesh.material as THREE.ShaderMaterial;
+  if (shaderMat.isShaderMaterial) {
+    (shaderMat.uniforms.uOffset?.value as THREE.Vector2).set(window.offsetX, window.offsetY);
+    (shaderMat.uniforms.uRepeat?.value as THREE.Vector2).set(window.repeatX, window.repeatY);
+    return;
+  }
+  const map = (mesh.material as THREE.MeshBasicMaterial).map;
   if (map) {
     map.wrapS = THREE.RepeatWrapping;
     map.wrapT = THREE.ClampToEdgeWrapping;
     map.offset.set(window.offsetX, window.offsetY);
     map.repeat.set(window.repeatX, window.repeatY);
   }
-  mesh.scale.set(radius, radius, 1);
-  mesh.rotation.z = 0;
-  mesh.position.set(x, y, 0);
 }
 
 function poseCometMark(

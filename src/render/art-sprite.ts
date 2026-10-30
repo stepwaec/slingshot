@@ -2,6 +2,7 @@ import * as THREE from "three";
 import type { Body, Nebula } from "../sim/physics";
 import { zoomBucket } from "./ship-art";
 import type { Theme } from "./theme";
+import { isSolLook, solArt, solLight } from "./sol-art";
 import { bakedSvgUrl, rasterSvg, type SvgBakeOptions } from "./svg-bake";
 
 /**
@@ -34,6 +35,11 @@ const UP_RIGHT = { x: 1, y: 1 };
 const DOWN_LEFT = { x: -1, y: -1 };
 
 export function artForBody(body: Body, theme: Theme): ArtFit | null {
+  if (isSolLook(body.look)) {
+    const art = solArt(body.look);
+    const spin = art.mode === "locked" ? "light" : "none";
+    return fit(theme.assets[art.asset], art.viewW, art.viewH, art.svgRadius, spin, art.mode === "prop" || art.mode === "sun" ? null : solLight());
+  }
   const assets = theme.assets;
   if (body.kind === "rogue") {
     return { ...fit(assets.rogue, 260, 200, 36, "none", null), ox: 100 - 130, oy: 0, hide: ["rpDrift"] };

@@ -14,6 +14,7 @@ import {
   type MegaSlot,
   type WormholePair,
 } from "../sim/mega";
+import { SOL_LOOKS, solArt, type SolLook } from "../render/sol-art";
 import {
   BODY_LOOKS,
   type Body,
@@ -169,6 +170,61 @@ const LOOK_SPEC: Partial<Record<BodyLook, ExhibitSpec>> = {
   magnetar: { radius: 9, mass: 2000, reach: 170, extra: { magnet: { b1Reach: 84, tilt: 0.35 } } },
   comet: { radius: 4, mass: 80, reach: 200, extra: { harvest: 6, harvestRadius: 36 } },
 };
+
+/**
+ * Sol looks use the size ladder in sol-art. Voyager is drawn and does not
+ * collide. Ringed bodies reserve the ring ellipse so the next cell stays clear.
+ */
+const SOL_KIND: Record<SolLook, BodyKind> = {
+  "sol-sun": "star",
+  mercury: "planet",
+  venus: "planet",
+  earth: "planet",
+  luna: "moon",
+  mars: "planet",
+  jupiter: "planet",
+  saturn: "planet",
+  titan: "moon",
+  uranus: "planet",
+  neptune: "planet",
+  pluto: "planet",
+  charon: "moon",
+  eris: "planet",
+  arrokoth: "planet",
+  voyager: "planet",
+};
+
+const SOL_NAME: Record<SolLook, string> = {
+  "sol-sun": "The Sun",
+  mercury: "Mercury",
+  venus: "Venus",
+  earth: "Earth",
+  luna: "The Moon",
+  mars: "Mars",
+  jupiter: "Jupiter",
+  saturn: "Saturn",
+  titan: "Titan",
+  uranus: "Uranus",
+  neptune: "Neptune",
+  pluto: "Pluto",
+  charon: "Charon",
+  eris: "Eris",
+  arrokoth: "Arrokoth",
+  voyager: "Voyager",
+};
+
+for (const look of SOL_LOOKS) {
+  const art = solArt(look);
+  LOOK_KIND[look] = SOL_KIND[look];
+  LOOK_NAME[look] = SOL_NAME[look];
+  const ringReach = art.rings ? art.radius * 2.4 + 28 : art.radius + 48;
+  LOOK_SPEC[look] = {
+    radius: art.radius,
+    mass: look === "voyager" ? 0 : look === "sol-sun" ? 1400 : 480,
+    reach: look === "sol-sun" ? 210 : ringReach,
+    extra: look === "voyager" ? { solid: false } : undefined,
+  };
+}
 
 const defaultLook: ExhibitSpec = { radius: 20, mass: 700, reach: 140 };
 

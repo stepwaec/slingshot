@@ -76,6 +76,7 @@ export type BodyKind = "home" | "star" | "target" | "moon" | "blackhole" | "plan
  * Stars: `sun`, `binary-hot`, `binary-cool`, `white-dwarf`, `red-giant`.
  * Compact objects: `neutron`, `pulsar`, `magnetar`.
  * Planets and moons: `gas-giant`, `moon`, `moon-icy`, `moon-volcanic`, `dwarf`.
+ * Sol campaign: `sol-sun` and the bodies in design/style.md §18.
  */
 export const BODY_LOOKS = [
   "sun",
@@ -92,6 +93,22 @@ export const BODY_LOOKS = [
   "pulsar",
   "magnetar",
   "comet",
+  "sol-sun",
+  "mercury",
+  "venus",
+  "earth",
+  "luna",
+  "mars",
+  "jupiter",
+  "saturn",
+  "titan",
+  "uranus",
+  "neptune",
+  "pluto",
+  "charon",
+  "eris",
+  "arrokoth",
+  "voyager",
 ] as const;
 
 export type BodyLook = (typeof BODY_LOOKS)[number];
@@ -218,6 +235,17 @@ export interface Body {
   ring?: Ringworld;
   /** Space elevator. Omitted planets have no tether. */
   elevator?: SpaceElevator;
+  /**
+   * When false, the body is drawn and may move, but it never crashes the ship
+   * and never blocks starlight. Omitted means solid. Voyager is never solid.
+   */
+  solid?: boolean;
+}
+
+/** Props such as Voyager are drawn at `radius` and do not collide. */
+export function bodySolid(body: Body): boolean {
+  if (body.look === "voyager" || body.solid === false) return false;
+  return true;
 }
 
 /**
@@ -1621,7 +1649,7 @@ function closePassRate(x: number, y: number, config: SimConfig, time: number): n
   const bodies = config.bodies;
   for (let i = 0; i < bodies.length; i++) {
     const body = bodies[i];
-    if (isCompactBody(body) || !(body.radius > 0)) continue;
+    if (isCompactBody(body) || !bodySolid(body) || !(body.radius > 0)) continue;
     const pose = bodyPose(body, time, bodies);
     const r = Math.hypot(x - pose.x, y - pose.y);
     const outer = body.radius * CLOSE_FACTOR;
@@ -1704,7 +1732,7 @@ export function starShadowed(
   if (!(len2 > 1e-8)) return false;
   for (let i = 0; i < bodies.length; i++) {
     const body = bodies[i];
-    if (body.id === starId || !(body.radius > 0)) continue;
+    if (body.id === starId || !bodySolid(body) || !(body.radius > 0)) continue;
     const pose = bodyPose(body, time, bodies, g);
     const along = ((pose.x - x) * dx + (pose.y - y) * dy) / len2;
     if (!(along > 0.02) || !(along < 0.98)) continue;
@@ -2165,6 +2193,7 @@ export function step(state: SimState, config: SimConfig): void {
   const bodies = config.bodies;
   for (let i = 0; i < bodies.length; i++) {
     const body = bodies[i];
+    if (!bodySolid(body)) continue;
     if (!bodyPresent(body, t0) && !bodyPresent(body, t1)) continue;
     const moving = body.orbit !== undefined || body.drift !== undefined || body.script?.kind === "consume";
     const hit = moving

@@ -154,6 +154,24 @@ export const palette = {
   ghostCollision: "#FF5A5F",
   ghostGone: "#FF9F43",
   ghostTie: "#8B95B5",
+  /** design/style.md §18 Sol bodies. */
+  earthOcean: "#1D56CF",
+  earthDesert: "#E2B66A",
+  earthCity: "#FFD27A",
+  marsRust: "#C8643A",
+  marsDark: "#7E3E2A",
+  jupiterZone: "#F5E3C6",
+  jupiterBelt: "#A3502D",
+  jupiterGrs: "#DC5C34",
+  saturnRingB: "#F2E6D2",
+  saturnRingA: "#DCC398",
+  saturnRingC: "#B49A76",
+  uranusBody: "#99DDE6",
+  neptuneBody: "#4B7DF2",
+  neptuneSpot: "#1C2F86",
+  titanHaze: "#E2A04A",
+  plutoHeart: "#F6EBDD",
+  plutoCthulhu: "#6B3322",
 } as const;
 
 /** Linear blend in sRGB, matching the arrow.power ramp in design/canvas-notes.md §9. */
