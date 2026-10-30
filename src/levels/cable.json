@@ -1,0 +1,51 @@
+{
+  "id": "cable",
+  "name": "Cable",
+  "g": 1,
+  "dt": 0.016666666666666666,
+  "bodies": [
+    {
+      "id": "home",
+      "name": "Home",
+      "kind": "home",
+      "x": 0,
+      "y": 0,
+      "mass": 9000,
+      "radius": 34,
+      "elevator": { "phase": 0, "omega": 0.06 }
+    },
+    {
+      "id": "x",
+      "name": "Planet X",
+      "kind": "target",
+      "x": 200,
+      "y": 480,
+      "mass": 5000,
+      "radius": 16,
+      "captureRadius": 160
+    }
+  ],
+  "targetId": "x",
+  "ship": {
+    "x": 270,
+    "y": 0,
+    "vx": 0,
+    "vy": 0
+  },
+  "orbit": { "bodyId": "home", "radius": 270 },
+  "fuel": 40,
+  "fuelPerDv": 1,
+  "bounds": { "minX": -8000, "maxX": 8000, "minY": -8000, "maxY": 8000 },
+  "maxSteps": 4000,
+  "dvPerPixel": 0.25,
+  "periapsisMargin": 6,
+  "maxPlannedBurns": 3,
+  "c": 1000000,
+  "mission": {
+    "deadline": 40,
+    "crewLimit": 40,
+    "fuelStarMin": 8,
+    "crewWeight": 1,
+    "fuelWeight": 1
+  }
+}

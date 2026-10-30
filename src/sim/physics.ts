@@ -15,8 +15,10 @@
  * k onward and reuses the path before it. A configured horizon stops the
  * predicted line early; the live flight does not.
  *
- * Each step also advances two clocks. Outside time is coordinate time
- * (`step * dt`): Home and Planet X share that one frame. Ship time is the
+ * Each step also advances two clocks. Outside time starts as coordinate time
+ * (`step * dt`): Home and Planet X share that one frame. A wormhole exit adds
+ * its clock offset on top of that, so the scoring clock and the ship both
+ * jump together. Orbits keep using `step * dt`. Ship time is the
  * proper time along the trajectory. With the default knobs,
  * `dτ/dt = sqrt(1 - 2 Φ_depth / c² - v² / c²)`, clamped at 0.
  * A finite `dilationCap` replaces that hard floor with a smooth saturation.
@@ -36,13 +38,27 @@ import { blastHits, quasarDamage, shockCrosses, type QuasarJet, type Supernova }
 import {
   coverageFactor,
   dysonShellHit,
+  elevatorAngle,
+  elevatorFrame,
   frameAcceleration,
   jetContact,
   mirrorRadii,
   mirrorSegmentEntry,
+  mouthName,
+  RING_SAMPLES,
+  ringHalfWidth,
+  ringSample,
+  ringSegmentEntry,
+  rotateVelocity,
+  tangentialVelocity,
+  tetherSegmentEntry,
   type DysonSwarm,
+  type Ringworld,
   type ShkadovThruster,
+  type SpaceElevator,
   type StellarEngine,
+  type WormholeMouth,
+  type WormholePair,
 } from "./mega";
 
 export interface Vec2 {
@@ -195,6 +211,10 @@ export interface Body {
   dyson?: DysonSwarm;
   /** Shkadov thruster. Omitted bodies do not drift the frame. */
   shkadov?: ShkadovThruster;
+  /** Ringworld. Omitted bodies have no ring. The band is solid except at its gaps. */
+  ring?: Ringworld;
+  /** Space elevator. Omitted planets have no tether. */
+  elevator?: SpaceElevator;
 }
 
 /**
@@ -308,6 +328,8 @@ export interface SimConfig {
   belts?: readonly Belt[];
   /** Rocks from `placeBelts`. Omitted with `belts`. */
   beltRocks?: readonly BeltRock[];
+  /** Wormhole pairs. Omitted leaves transit off. */
+  wormholes?: readonly WormholePair[];
 }
 
 /** How many times a flight may freeze so the player can edit burns. */
@@ -364,6 +386,11 @@ export interface SimState {
   /** Crew dose rate in mSv per second, after shielding. */
   doseRate: number;
   doseSource: DoseSource;
+  /**
+   * Mouth or counterweight the ship is still inside after a transit or a throw.
+   * Stops that contact from firing again until the ship has left it.
+   */
+  transit: string | null;
 }
 
 /** One impulsive burn at an exact sim step. Nodes are ordered by `step`. */
@@ -745,8 +772,12 @@ export function acceleration(
   const p = config.p ?? 2;
   const grav = eps === 0 && p === 2 ? newtonAcceleration(x, y, g, config, time) : shapedAcceleration(x, y, g, eps, p, config, time);
   const push = enginePush(x, y, config, time);
-  if (!push) return grav;
-  return { ax: grav.ax + push.ax, ay: grav.ay + push.ay };
+  const ring = ringForce(x, y, g, eps, p, config, time);
+  if (!push && !ring) return grav;
+  return {
+    ax: grav.ax + (ring ? ring.ax : 0) + (push ? push.ax : 0),
+    ay: grav.ay + (ring ? ring.ay : 0) + (push ? push.ay : 0),
+  };
 }
 
 /** Acceleration along a stellar-engine plume. Null when the ship is outside every jet. */
@@ -768,6 +799,71 @@ function enginePush(x: number, y: number, config: SimConfig, time: number): { ax
     ay += Math.sin(engine.angle) * engine.push;
   }
   return any ? { ax, ay } : null;
+}
+
+/**
+ * Pull of a uniform ring, softened by the band's half-width so a transit
+ * gap stays finite. Samples are the same points the renderer spaces around
+ * the circle. No ring mass returns null, and stock levels stay bit-identical.
+ * At the centre the samples cancel. Inside the ring the pull is outward.
+ */
+function ringForce(
+  x: number,
+  y: number,
+  g: number,
+  eps: number,
+  p: number,
+  config: SimConfig,
+  time: number,
+): { ax: number; ay: number } | null {
+  let ax = 0;
+  let ay = 0;
+  let any = false;
+  const bodies = config.bodies;
+  for (let i = 0; i < bodies.length; i++) {
+    const body = bodies[i];
+    const ring = body.ring;
+    if (!ring || !(ring.mass > 0) || !bodyPresent(body, time)) continue;
+    any = true;
+    const origin = bodyPoint(body, time, bodies, g);
+    const soft = Math.hypot(eps, ringHalfWidth(body.radius));
+    const soft2 = soft * soft;
+    const share = ring.mass / RING_SAMPLES;
+    for (let k = 0; k < RING_SAMPLES; k++) {
+      const sample = ringSample(body.radius, k);
+      const dx = origin.x + sample.x - x;
+      const dy = origin.y + sample.y - y;
+      const r2 = dx * dx + dy * dy;
+      const r = Math.sqrt(r2);
+      if (!(r > 0)) continue;
+      const scale = (g * share) / (r * Math.pow(r2 + soft2, p / 2));
+      ax += dx * scale;
+      ay += dy * scale;
+    }
+  }
+  return any ? { ax, ay } : null;
+}
+
+function ringDepth(x: number, y: number, g: number, eps: number, p: number, config: SimConfig, time: number): number {
+  let depth = 0;
+  let any = false;
+  const bodies = config.bodies;
+  for (let i = 0; i < bodies.length; i++) {
+    const body = bodies[i];
+    const ring = body.ring;
+    if (!ring || !(ring.mass > 0) || !bodyPresent(body, time)) continue;
+    any = true;
+    const origin = bodyPoint(body, time, bodies, g);
+    const soft = Math.hypot(eps, ringHalfWidth(body.radius));
+    const share = ring.mass / RING_SAMPLES;
+    for (let k = 0; k < RING_SAMPLES; k++) {
+      const sample = ringSample(body.radius, k);
+      const dx = origin.x + sample.x - x;
+      const dy = origin.y + sample.y - y;
+      depth += g * share * depthPerMu(Math.hypot(dx, dy), soft, p);
+    }
+  }
+  return any ? depth : 0;
 }
 
 /** Σ G M / r. Same operations as the pre-knob potential. */
@@ -884,8 +980,10 @@ export function potentialDepth(x: number, y: number, config: SimConfig, time = 0
   const g = gravityConstant(config);
   const eps = config.eps ?? 0;
   const p = config.p ?? 2;
-  if (eps === 0 && p === 2) return newtonPotential(x, y, g, config, time);
-  return shapedPotential(x, y, g, eps, p, config, time);
+  const base = eps === 0 && p === 2 ? newtonPotential(x, y, g, config, time) : shapedPotential(x, y, g, eps, p, config, time);
+  const extra = ringDepth(x, y, g, eps, p, config, time);
+  if (extra === 0) return base;
+  return base + extra;
 }
 
 /** Schwarzschild radius 2GM/c². A black hole body uses this as its surface. */
@@ -1012,6 +1110,7 @@ export function makeState(
     dose: 0,
     doseRate: 0,
     doseSource: "cosmic",
+    transit: null,
   };
 }
 
@@ -1931,11 +2030,102 @@ function applyShipSystems(state: SimState, config: SimConfig, time: number): voi
  * Drag, when a level sets it, is applied at the end of the step so prediction
  * and flight share it.
  */
+function elevatorLocal(x: number, y: number, pose: Pose, angle: number): { x: number; y: number } {
+  const dx = x - pose.x;
+  const dy = y - pose.y;
+  const c = Math.cos(angle);
+  const s = Math.sin(angle);
+  return { x: dx * c + dy * s, y: -dx * s + dy * c };
+}
+
+function findMouth(holes: readonly WormholePair[] | undefined, id: string): WormholeMouth | null {
+  if (!holes) return null;
+  for (let i = 0; i < holes.length; i++) {
+    const hole = holes[i];
+    if (mouthName(hole.id, "a") === id) return hole.a;
+    if (mouthName(hole.id, "b") === id) return hole.b;
+  }
+  return null;
+}
+
+/** Drop the latch once the ship has left the mouth or the counterweight. */
+function releaseTransit(state: SimState, config: SimConfig, time: number): void {
+  const id = state.transit;
+  if (!id) return;
+  if (id.endsWith(":lift")) {
+    const body = findBody(config.bodies, id.slice(0, -":lift".length));
+    if (!body?.elevator) {
+      state.transit = null;
+      return;
+    }
+    const pose = bodyPose(body, time, config.bodies, gravityConstant(config));
+    const angle = elevatorAngle(body.elevator, time);
+    const frame = elevatorFrame(body.radius);
+    const cx = pose.x + Math.cos(angle) * frame.outer;
+    const cy = pose.y + Math.sin(angle) * frame.outer;
+    if (Math.hypot(state.x - cx, state.y - cy) > frame.rock) state.transit = null;
+    return;
+  }
+  const mouth = findMouth(config.wormholes, id);
+  if (!mouth || Math.hypot(state.x - mouth.x, state.y - mouth.y) > mouth.radius) state.transit = null;
+}
+
+/**
+ * Move the ship to the other mouth. Speed is kept, heading turns by the
+ * pair's angle, and outside time shifts by the exit's clock offset.
+ * Returns true when a transit happened. One transit per step.
+ */
+function transitWormhole(
+  state: SimState,
+  config: SimConfig,
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  time: number,
+): boolean {
+  if (state.transit && !state.transit.endsWith(":lift")) return false;
+  const holes = config.wormholes;
+  if (!holes || holes.length === 0) return false;
+  let best: number | null = null;
+  let pair: WormholePair | null = null;
+  let fromA = false;
+  for (let i = 0; i < holes.length; i++) {
+    const hole = holes[i];
+    const intoA = circleEntry(x0, y0, x1, y1, hole.a.x, hole.a.y, hole.a.radius);
+    const intoB = circleEntry(x0, y0, x1, y1, hole.b.x, hole.b.y, hole.b.radius);
+    if (intoA !== null && (best === null || intoA < best)) {
+      best = intoA;
+      pair = hole;
+      fromA = true;
+    }
+    if (intoB !== null && (best === null || intoB < best)) {
+      best = intoB;
+      pair = hole;
+      fromA = false;
+    }
+  }
+  if (!pair) return false;
+  const exit = fromA ? pair.b : pair.a;
+  const spun = rotateVelocity(state.vx, state.vy, fromA ? pair.angle : -pair.angle);
+  state.vx = spun.vx;
+  state.vy = spun.vy;
+  state.x = exit.x;
+  state.y = exit.y;
+  state.transit = mouthName(pair.id, fromA ? "b" : "a");
+  const accel = acceleration(state.x, state.y, config, time);
+  state.ax = accel.ax;
+  state.ay = accel.ay;
+  state.t += fromA ? pair.clockOffset : -pair.clockOffset;
+  return true;
+}
+
 export function step(state: SimState, config: SimConfig): void {
   if (state.status !== "flying") return;
 
   const dt = config.dt;
   const t0 = state.step * dt;
+  releaseTransit(state, config, t0);
   const t1 = t0 + dt;
   const rateThen = properTimeRate(state.x, state.y, state.vx, state.vy, config, t0);
   const x0 = state.x;
@@ -2021,6 +2211,44 @@ export function step(state: SimState, config: SimConfig): void {
     }
   }
 
+  let throwBody: Body | null = null;
+  let throwT = Infinity;
+  for (let i = 0; i < bodies.length; i++) {
+    const body = bodies[i];
+    if (!body.ring && !body.elevator) continue;
+    if (!bodyPresent(body, t0) && !bodyPresent(body, t1)) continue;
+    const p0 = bodyPose(body, t0, bodies, mirrorG);
+    const p1 = bodyPose(body, t1, bodies, mirrorG);
+    if (body.ring) {
+      const hit = ringSegmentEntry(x0 - p0.x, y0 - p0.y, x1 - p1.x, y1 - p1.y, body.radius, body.ring.angle, body.ring.gaps);
+      if (hit !== null && hit < crashT) {
+        crashT = hit;
+        crashBody = `${body.id}:ring`;
+        rockSnap = null;
+      }
+    }
+    if (body.elevator) {
+      const frame = elevatorFrame(body.radius);
+      const l0 = elevatorLocal(x0, y0, p0, elevatorAngle(body.elevator, t0));
+      const l1 = elevatorLocal(x1, y1, p1, elevatorAngle(body.elevator, t1));
+      const cable = tetherSegmentEntry(l0.x, l0.y, l1.x, l1.y, frame.inner, frame.outer, frame.half, frame.rock);
+      if (cable !== null && cable < crashT) {
+        crashT = cable;
+        crashBody = `${body.id}:tether`;
+        rockSnap = null;
+      }
+      if (state.transit !== `${body.id}:lift`) {
+        const dock = circleEntry(l0.x, l0.y, l1.x, l1.y, frame.outer, 0, frame.rock);
+        if (dock !== null && dock < throwT) {
+          throwT = dock;
+          throwBody = body;
+        }
+      }
+    }
+  }
+  if (throwBody && throwT < crashT) crashBody = null;
+  else throwBody = null;
+
   if (crashBody !== null) {
     const body = rockSnap ? undefined : bodies.find((item) => item.id === crashBody);
     state.x = x0 + (x1 - x0) * crashT;
@@ -2060,6 +2288,19 @@ export function step(state: SimState, config: SimConfig): void {
     return;
   }
 
+  if (throwBody?.elevator) {
+    const time = t0 + throwT * dt;
+    const pose = bodyPose(throwBody, time, bodies, mirrorG);
+    const angle = elevatorAngle(throwBody.elevator, time);
+    const frame = elevatorFrame(throwBody.radius);
+    const tang = tangentialVelocity(throwBody.elevator.omega, angle, frame.outer);
+    state.vx = pose.vx + tang.vx;
+    state.vy = pose.vy + tang.vy;
+    state.transit = `${throwBody.id}:lift`;
+  }
+
+  const jumped = transitWormhole(state, config, x0, y0, x1, y1, t1);
+
   accrueClocks(state, rateThen, dt);
   state.rate = properTimeRate(state.x, state.y, state.vx, state.vy, config, t1);
   applyDramatic(state, config, x0, y0, t0, t1);
@@ -2082,9 +2323,9 @@ export function step(state: SimState, config: SimConfig): void {
       const p1 = bodyPose(target, t1, bodies);
       tx = p1.x;
       ty = p1.y;
-      crossed = movingCircleEntry(x0, y0, x1, y1, target, t0, t1, bodies, captureRadius) !== null;
+      crossed = !jumped && movingCircleEntry(x0, y0, x1, y1, target, t0, t1, bodies, captureRadius) !== null;
     } else {
-      crossed = circleEntry(x0, y0, x1, y1, target.x, target.y, captureRadius) !== null;
+      crossed = !jumped && circleEntry(x0, y0, x1, y1, target.x, target.y, captureRadius) !== null;
     }
     const dist = Math.hypot(state.x - tx, state.y - ty);
     if (dist <= captureRadius + 1e-6 || crossed) state.enteredCapture = true;
