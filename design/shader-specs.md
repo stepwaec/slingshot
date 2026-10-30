@@ -2,7 +2,7 @@
 
 The numbers for the GPU-drawn bodies in Rendering v2 (`docs/ROADMAP.md`, R2.0–R2.5). Each family has a **reference shader** in `design/shaders/` and a live comparison in `design/preview/shaders.html`: the approved SVG on the left, the reference shader on the right, at 1.5×. The game's shaders must match the right-hand column. The values in this file and in the preview come from one table, so they cannot drift apart. Physics, gameplay and the prediction stay untouched.
 
-Status: **R2.0 conventions, R2.1 stars and R2.2 rocky planets** are specified. Gas giants (R2.3), compact objects (R2.4) and effects (R2.5) follow as their own sections.
+Status: **R2.0 conventions, R2.1 stars, R2.2 rocky planets and R2.3 gas giants** are specified. Compact objects (R2.4) and effects (R2.5) follow as their own sections.
 
 ## 1. Conventions (R2.0)
 
@@ -201,3 +201,83 @@ Reference shader: `design/shaders/planet.frag`. Maps: `design/shaders/maps/`. Co
 | `rim0` | `uRim0` | rim peak (α 0.95 at r 1.0) | `#A8DBFF` | `#A8DBFF` | `#FFD2B8` | `#A8DBFF` | `#B5FFF0` | `#FFD9B0` | `#BFE3FF` | `#FFB347` | `#DDF59A` | `#B8CAEE` | `#A8DBFF` | `#A8DBFF` | `#BFE3FF` | `#FFE08A` | `#A8DBFF` | `#FFF0CC` | `#FFD08A` | `#C9D8FF` | `#A8DBFF` | `#A8DBFF` |
 | `rim1` | `uRim1` | rim tail (α 0.4 at 1.028) | `#7FC4FF` | `#7FC4FF` | `#F29C7A` | `#7FC4FF` | `#8FFFE6` | `#E8B07A` | `#8FD0FF` | `#FF8C2E` | `#A8D850` | `#8FA3C9` | `#7FC4FF` | `#7FC4FF` | `#BFE3FF` | `#FFE08A` | `#7FC4FF` | `#F5D9A0` | `#E9A050` | `#9FB8F2` | `#7FC4FF` | `#7FC4FF` |
 
+## 4. Gas giants and rings (R2.3)
+
+Reference shader: `design/shaders/giant.frag`. Maps: `*-bands.png` and `*-rings.png` in `design/shaders/maps/`. Covers Jupiter, Saturn, Uranus and Neptune, and the library's banded giant, ringed giant and Saturn-like ice ring. The debris and shepherd rings (rocks and moons) come with the instanced pass in R2.5.
+
+**Bands.** Bake the band strip as for rocky planets (§3), with two changes:
+- composite every band group into one strip, wrapping each layer's phase into (−P/2, P/2]
+- bake the window [P/2, 3P/2], clear of the filter edges
+
+On a sphere, the strip **rotates differentially**: u = start + longitude / 2π − t · (1/spin + jet(v)), where `jet` is a 17-row zonal wind profile (rows at v = i/16 from the north pole, linear between rows).
+- **Sol giants:** a simplified real wind profile.
+  - Jupiter: an equatorial prograde jet, the strong 23° N jet, and alternating belts and zones.
+  - Saturn: a broad equatorial jet.
+  - Uranus and Neptune: a retrograde equator with prograde high latitudes.
+- **Library giants:** the SVG's own counter-flowing band groups (180 s, −110 s and 150 s for the banded giant; 160 s and −120 s for the ringed giant).
+
+Shear at the row boundaries is intended: that is what makes the bands flow. Storms (the Great Red Spot, the dark spots) ride in the strip with their band.
+
+**Body frame.** `uRoll` rolls the spin axis and the ring plane together, as the SVG's `rotate()`: an SVG `rotate(−14)` is `uRoll` +14, counter-clockwise. Everything (normal, light, rings) works in that frame.
+
+**Rings** (in the body frame, y up):
+- **The plane:** a ring through the equator, tilted to the viewer with opening `B` = sin i (ellipse ry = B · rx).
+- **Ring coordinates:** for a pixel, b = y / B and ρ = √(x² + b²). The ring's 3D point is (x, y, −b · cos i); **b < 0 is the near half**, drawn over the planet, and the far half is hidden by it.
+- **The profile:** a 1024 × 4 RGBA map spanning [`rho0`, `rho1`], box-filtered over one pixel's footprint in ρ (five taps), so rings thinner than a pixel stay continuous.
+  - **Sol Saturn:** built from the asset's band table (C, B, Cassini Division, A, Encke Gap, F) and its 16 seeded ringlets.
+  - **Uranus:** four rings.
+  - **Ringed giant:** the `#grRing` gradient.
+  - **Ice ring:** six bands plus the `#rsGrain` ringlets.
+- **Planet shadow on the rings:** where the ray from the ring point toward the light hits the unit sphere, darken by `planetShadowA` toward `#050B1E`.
+- **Ring shadow on the globe:** intersect the ray from the surface point toward the light with the ring plane (normal (0, cos i, B)), read the profile alpha at that ρ, and darken by `ringShadowA` on the day side.
+- **Sparkle** (the ice ring): white glints, about 7 % of cells, α 0.3–0.6, on a cell grid in (ρ, φ) turning at the Keplerian rate ω ∝ ρ^−1.5 (60 s at ρ 1.37). The inner ring overtakes the outer.
+
+**Extras:**
+- Saturn's north-polar **hexagon:** colatitude < 0.26 / cos(the azimuth's offset from the nearest side), `#7F9AD6` α 0.5 with a `#B8C9F2` edge, turning with the planet.
+- Uranus's bright **polar cap:** `#E8FFFD` α 0.55 toward the body-frame pole.
+- Jupiter's **limb darkening:** `#3A2440` α 0.35 from 0.7 r.
+
+The day and night lighting, the haze and the rim are as §3.
+
+**Faithful, not identical.** The SVGs stroke the rings with a constant width, so their near and far sides look as thick as the ansae (the left and right ends). The shader foreshortens correctly, so Saturn's ring is thinner top and bottom and Uranus's hairline rings read fainter. Keep the shader's version.
+
+**Budget:** 1 band sample, up to 5 ring samples plus 5 for the shadow, under 0.12 ms per giant.
+
+**Parameters** (lighting defaults: `warm` `#FF9455` α 0.22, `night0` `#08122E`, `night1` `#050B1E`):
+
+| Parameter | Uniform | Meaning | Jupiter | Saturn | Uranus | Neptune | Banded gas giant | Ringed gas giant | Saturn-like ice ring |
+|---|---|---|---|---|---|---|---|---|---|
+| `R` | `uR` | body radius = crash radius | 114 | 104.5 | 68.1 | 67 | 44 | 44 | 44 |
+| `maps` | `uAlbedo / uRings` | band strip and ring profile in `shaders/maps/` | `jupiter-bands` | `saturn-bands` | `uranus-bands` | `neptune-bands` | `gas-banded-bands` | `gas-ringed-bands` | `ring-saturn-bands` |
+| `start` | `uStart` | longitude fraction at the centre at t 0 | 0.05 | 0 | 0 | 0.8667 | 0.8188 | 0.8188 | 0.8188 |
+| `spin` | `uSpin` | base seconds per turn (− = retrograde) | 240 | 260 | 140 | 120 | 180 | 160 | 150 |
+| `jet` | `uJet[17]` | extra turns per second by latitude row (north → south) | max ±1.75e-3 | max ±1.73e-3 | max ±2.29e-3 | max ±2.67e-3 | max ±14.65e-3 | max ±14.58e-3 | max ±0.00e-3 |
+| `rollCCW` | `uRoll` | body frame roll, degrees counter-clockwise | 0 | 14 | 62 | 0 | 0 | 22 | 22 |
+| `hi` | `uHi` | highlight bloom | `#FFF3DE` | `#FFF1C2` | `#F0FFFE` | `#DCE8FF` | `#FFF3DE` | `#E8FFFA` | `#FFF1C2` |
+| `hiA` | `uHiA` | its strength | 0.16 | 0.18 | 0.22 | 0.24 | 0.2 | 0.2 | 0.24 |
+| `haze0` | `uHaze0` | limb haze 0.96 | `#F5D7B0` | `#F5D7B0` | `#C8F4F4` | `#7FA8FF` | `#F5D7B0` | `#BFE8E0` | `#F5D7B0` |
+| `hazeA0` | `uHazeA0` | alpha | 0.32 | 0.26 | 0.42 | 0.4 | 0.38 | 0.38 | 0.26 |
+| `haze1` | `uHaze1` | limb haze 1.0 | `#FFE6C4` | `#FFE9C8` | `#E8FFFE` | `#B8D0FF` | `#FFE6C4` | `#DDF7F1` | `#FFE9C8` |
+| `hazeA1` | `uHazeA1` | alpha | 0.55 | 0.5 | 0.65 | 0.6 | 0.6 | 0.6 | 0.5 |
+| `rim0` | `uRim0` | rim peak | `#FFE3BC` | `#FFE9C8` | `#C8F6F6` | `#A8C4FF` | `#FFE3BC` | `#D3FBF2` | `#FFE9C8` |
+| `rim1` | `uRim1` | rim tail | `#F2B877` | `#F5D7B0` | `#8EE0E8` | `#5E8CFF` | `#F2B877` | `#8EDCCC` | `#F5D7B0` |
+| `limbA` | `uLimbA` | limb darkening (`uLimb` #3A2440) | 0.35 | 0 | 0 | 0 | 0 | 0 | 0 |
+| `hasRings` | `uHasRings` | rings on | 0 | 1 | 1 | 0 | 0 | 1 | 1 |
+| `B` | `uB` | ring opening = sin i | 0.3 | 0.36 | 0.62 | 0.3 | 0.3 | 0.28 | 0.31 |
+| `rho0` | `uRho0` | profile inner edge, radii | 1.2 | 1.2 | 1.6 | 1.2 | 1.2 | 1.32992 | 1.22 |
+| `rho1` | `uRho1` | profile outer edge, radii | 2.3 | 2.36 | 2.04 | 2.3 | 2.3 | 2.2 | 2.2 |
+| `planetShadowA` | `uPlanetShadowA` | planet's shadow on the rings | 0.82 | 0.82 | 0.82 | 0.82 | 0.82 | 0.85 | 0.82 |
+| `ringShadowA` | `uRingShadowA` | rings' shadow on the globe (`#050B1E`) | 0.55 | 0.55 | 0.55 | 0.55 | 0.55 | 0.55 | 0.55 |
+| `sparkle` | `uSparkle` | Keplerian particle sparkle | 0 | 0 | 0 | 0 | 0 | 0 | 1 |
+| `hex` | `uHex` | polar hexagon | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| `pole` | `uPole` | bright polar cap | 0 | 0 | 1 | 0 | 0 | 0 | 0 |
+
+**Wind profiles** (`uJet`, turns per second at the 17 rows):
+
+- **Jupiter:** `uJet` = [0.00000, 0.00020, -0.00011, 0.00019, 0.00111, 0.00175, -0.00050, 0.00121, 0.00104, 0.00121, -0.00031, -0.00013, 0.00088, 0.00019, -0.00011, 0.00020, 0.00000]
+- **Saturn:** `uJet` = [0.00000, 0.00017, -0.00002, -0.00003, 0.00035, 0.00090, 0.00123, 0.00148, 0.00173, 0.00148, 0.00123, 0.00090, 0.00035, -0.00003, -0.00002, 0.00017, 0.00000]
+- **Uranus:** `uJet` = [0.00086, 0.00224, 0.00154, 0.00089, 0.00033, -0.00027, -0.00096, -0.00163, -0.00229, -0.00163, -0.00096, -0.00027, 0.00033, 0.00089, 0.00154, 0.00224, 0.00086]
+- **Neptune:** `uJet` = [0.00100, 0.00261, 0.00180, 0.00104, 0.00038, -0.00032, -0.00112, -0.00190, -0.00267, -0.00190, -0.00112, -0.00032, 0.00038, 0.00104, 0.00180, 0.00261, 0.00100]
+- **Banded gas giant:** `uJet` = [0.00000, 0.00000, 0.00000, 0.00000, -0.01465, -0.01465, -0.01465, -0.01465, 0.00111, 0.00111, 0.00111, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000]
+- **Ringed gas giant:** `uJet` = [0.00000, 0.00000, 0.00000, 0.00000, -0.01458, -0.01458, -0.01458, 0.00000, 0.00000, 0.00000, -0.01458, -0.01458, -0.01458, 0.00000, 0.00000, 0.00000, 0.00000]
+- **Saturn-like ice ring:** `uJet` = [0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000]
