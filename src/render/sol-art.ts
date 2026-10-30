@@ -1,6 +1,5 @@
 import type { BodyLook } from "../sim/physics";
 import { silenceNightRim, type StripSpec } from "./surface-art";
-import type { Theme } from "./theme";
 
 /**
  * Sol campaign bodies. Numbers are the SVG headers in design/assets/sol/
@@ -45,7 +44,8 @@ export type SolMode = "sun" | "scroll" | "locked" | "prop";
 export interface SolArt {
   look: SolLook;
   root: string;
-  asset: keyof Theme["assets"];
+  /** Theme asset key. Only props that still rasterize an SVG look this up. */
+  asset: string;
   viewW: number;
   viewH: number;
   /** Painted disc radius in the SVG. Voyager's is the dish radius, for scale. */

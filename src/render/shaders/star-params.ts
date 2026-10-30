@@ -345,7 +345,8 @@ export const STAR_PARAMS: Record<StarKind, StarParams> = {
 const SHADER_LOOKS = new Set<string>(STAR_KINDS);
 
 /** Looks that stay on the SVG path until a later family. */
-const SPRITE_LOOKS = new Set<BodyLook>(["tau-ceti", "neutron", "pulsar", "magnetar"]);
+/** Tau Ceti has no star-shader column yet. Compact looks are a different family. */
+const SPRITE_LOOKS = new Set<BodyLook>(["tau-ceti"]);
 
 export function starKind(body: Body): StarKind | null {
   const look = body.look;

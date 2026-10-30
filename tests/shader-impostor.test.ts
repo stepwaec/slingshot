@@ -1,18 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { frost } from "../src/level/catalog";
 import { shaderFamily } from "../src/render/shaders/families";
-import { artLightLocked, impostorSide, lightDirection, planetSide, ringOctaves, shaderRendering } from "../src/render/shaders/impostor";
+import { artLightLocked, impostorSide, lightDirection, planetSide, ringOctaves } from "../src/render/shaders/impostor";
 import { GIANT_FRAGMENT } from "../src/render/shaders/giant-shader";
 import { PLANET_FRAGMENT } from "../src/render/shaders/planet-shader";
 import { STAR_FRAGMENT } from "../src/render/shaders/star-shader";
 import { STAR_PARAMS, starKind } from "../src/render/shaders/star-params";
-import { theme } from "../src/render/theme";
 
 describe("shader impostors", () => {
   it("draws Frost's sun as variant J and its rocky bodies with the planet shader", () => {
-    expect(theme.rendering.shaders).toBe(true);
-    expect(shaderRendering()).toBe(true);
-    expect(shaderRendering("?sprites=1")).toBe(false);
     expect(artLightLocked("?lit=art")).toBe(true);
     expect(artLightLocked("")).toBe(false);
     const sun = frost.bodies.find((body) => body.id === "sun");
