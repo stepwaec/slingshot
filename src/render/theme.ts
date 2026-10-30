@@ -132,13 +132,49 @@ export const theme = {
     haloScale: 1.8,
     limbAlphaHome: 0.16,
     limbAlphaTarget: 0.18,
-    ringPulseMs: 2400,
-    ringAlphaMin: 0.35,
-    ringAlphaMax: 0.7,
-    ringPulsePx: 2,
-    ringDashPeriodPx: 12,
-    ringCrawlPxPerSec: 12,
-    ringLockedAlpha: 1,
+  },
+  /**
+   * Planet X target zone. design/style.md §17 and design/assets/target-zone.svg.
+   * Widths are screen pixels. The ring does not dash, crawl, or pulse its radius.
+   */
+  zone: {
+    widthPx: 1.5,
+    stableWidthPx: 1.6,
+    flashWidthPx: 3.5,
+    bandInPx: 30,
+    bandOutPx: 9,
+    /** Idle ring and band, in phase. α 0.55 → 0.78 and 0.14 → 0.24 over 4 s. */
+    pulseSec: 4,
+    idleAlpha0: 0.55,
+    idleAlpha1: 0.78,
+    idleBand0: 0.14,
+    idleBand1: 0.24,
+    /** Inside the zone, not yet captured. Steady. */
+    insideAlpha: 0.95,
+    insideBand: 0.32,
+    /** Capture flash, once, on frame time. Ring mint → white at 0.15 s → ice at 1.1 s. */
+    flashWhiteSec: 0.15,
+    flashSettleSec: 1.1,
+    flashEndSec: 1.5,
+    flashBandPeak: 0.7,
+    flashBandPeakSec: 0.2,
+    /** Wave ring, ease-out, R → R + 34 px over 1.4 s, α 0.9 → 0. */
+    waveSec: 1.4,
+    wavePx: 34,
+    waveWidthPx: 2,
+    waveAlpha: 0.9,
+    /** Stable ice ring. α 0.88 → 1 over 6 s. Under the result scrim the ring holds 0.95. */
+    stablePulseSec: 6,
+    stableAlpha0: 0.88,
+    stableAlpha1: 1,
+    stableBand0: 0.3,
+    stableBand1: 0.4,
+    scrimAlpha: 0.95,
+    /** Flyby: the ship left the zone unbound. */
+    flybyAlpha: 0.3,
+    flybyBand: 0.06,
+    /** Quad padding so the wave (34 px) and the stroke stay inside the mesh. */
+    padPx: 40,
   },
   ship: {
     lengthAtZoom1: 22,
@@ -240,6 +276,24 @@ export const theme = {
     glowLift: 0.12,
     /** Ceiling for that lift. Gold recharge dots stay at α 1 (style.md solar path). */
     alphaCap: 0.82,
+    /**
+     * Thin solid planning stroke, in screen px. The dotted header
+     * (r 1.5 every 10 px) is replaced by this line: bright at the ship,
+     * transparent at the end. The centreline is still the predicted samples.
+     */
+    lineHalfPx: 0.8,
+    lineSoftPx: 0.45,
+    /** α at the ship. Falls as (1 − u²) along the screen arc, 0 at the end. */
+    headAlpha: 0.92,
+    /** Flight-time marks. Sim seconds from the ship, not a screen spacing. */
+    tickSeconds: 10,
+    /** Short cross-bar. Long enough to read at the framed chart, still a tick. */
+    tickHalfLength: 4.8,
+    tickHalfWidth: 0.5,
+    tickSoftPx: 0.35,
+    tickAlpha: 0.72,
+    /** Room for every predicted sample. Current levels stay under 9000 steps. */
+    maxSamples: 12000,
     endRingInner: 5.25,
     endRingOuter: 6.75,
     endRingAlpha: 0.5,
@@ -322,8 +376,19 @@ export const theme = {
     tidalDash: 4,
     tidalGap: 4,
     tidalCrawl: 8,
-    /** Rest-frame dτ/dt contours drawn over the flat grid. */
-    clockLevels: [0.92, 0.75, 0.5, 0.25],
+    /**
+     * Opacity of the clock-rate field at `CLOCK_HEAT_RATES`
+     * (dτ/dt = 0, 0.2, 0.4, 0.55, 0.82, 1). Interim until Claude designs it
+     * (docs/ROADMAP.md). Full rate is clear. Gold (0.4) is already opaque
+     * so it does not turn olive over the navy.
+     */
+    heatAlpha: [0.84, 0.8, 0.74, 0.5, 0.1, 0],
+    /**
+     * Display curve. The ramp is sampled at rate^heatGamma, so a mild
+     * slowdown moves toward the warm stops and the well reads at game scale.
+     * The stored rate is unchanged.
+     */
+    heatGamma: 2.4,
   },
   /**
    * Cosmetic timings from the megastructure headers.
@@ -366,6 +431,199 @@ export const theme = {
     /** wormhole.svg: the sky turns 360° in 120 s. */
     wormholePeriod: 120,
     wormholeArcCount: 7,
+  },
+  /**
+   * Scripted collisions. Numbers are the headers in design/assets/events/.
+   * Distances are world units (SVG units at zoom 1). Strokes are CSS pixels.
+   */
+  event: {
+    /** impact.svg: flash r 4 → 34 over 0.6 s, gone by 0.9 s. */
+    flashR0: 4,
+    flashR1: 34,
+    flashGrow: 0.6,
+    flashFade: 0.9,
+    /** Shock ring r 6 → 80 over 1.3 s, 1.6 px. */
+    shockR0: 6,
+    shockR1: 80,
+    shockDur: 1.3,
+    shockWidth: 1.6,
+    /** Rim flash 2 px, α 0.7, decaying over 1.8 s. */
+    rimWidth: 2,
+    rimAlpha: 0.7,
+    rimDur: 1.8,
+    /** 20 grains, ±35°, 40–120 px, 2.7 s, radii 1–2.2. */
+    ejectaCount: 20,
+    ejectaCone: 35,
+    ejectaDist0: 40,
+    ejectaDist1: 120,
+    ejectaDur: 2.7,
+    ejectaR0: 1,
+    ejectaR1: 2.2,
+    /** Crater r 9. α 1 → 0.6 at 2 s → 0 at 3.6 s. */
+    craterR: 9,
+    craterDur: 3.6,
+    craterMid: 2,
+    craterMidAlpha: 0.6,
+    /** burn-up.svg: glow circle r 9.5 on a planet of r 8. Tail 90, flicker 0.4 s. */
+    glowScale: 9.5 / 8,
+    /** Hotspot sits 0.35 of the bbox below centre; gradient radius is 0.6 of the bbox. */
+    glowHot: (0.85 - 0.5) * 2 * (8 / 9.5),
+    glowGrad: 1.2,
+    tailLength: 90,
+    tailFlicker: 0.4,
+    /** Plunge flash r 5 → 26 over 0.55 s. The sample fades it by 0.8 s. */
+    plungeR0: 5,
+    plungeR1: 26,
+    plungeGrow: 0.55,
+    plungeFade: 0.8,
+    /** Ripple r 4 → 70 over 1.8 s, 1.4 px, α 0.9, clipped to the star. */
+    rippleR0: 4,
+    rippleR1: 70,
+    rippleDur: 1.8,
+    rippleWidth: 1.4,
+    rippleAlpha: 0.9,
+    /** Star brightening #FFE7A0 α 0.22, up in 0.24 s, gone at 1.6 s. */
+    brightAlpha: 0.22,
+    brightRise: 0.24,
+    brightDur: 1.6,
+    /** Decaying spiral, dash 4 5, α 0.55, 1 px. */
+    spiralAlpha: 0.55,
+    spiralDash: 4,
+    spiralGap: 5,
+    spiralWidth: 1,
+    /** event-telegraphs.svg. */
+    courseWidth: 1.4,
+    courseDash: 5,
+    courseGap: 5,
+    courseCrawl: 13,
+    reticleR0: 9,
+    reticleR1: 12,
+    reticlePeriod: 1.2,
+    reticleWidth: 1.4,
+    reticleTick0: 6,
+    reticleTick1: 14,
+    /** Chip: 16 px, radius 5, 10.5 px mono, pad 6, fill α 0.88, stroke α 0.7. */
+    chipHeight: 16,
+    chipPad: 6,
+    chipFont: 10.5,
+    chipRadius: 5,
+    chipFill: 0.88,
+    chipStroke: 0.7,
+    /** debris-field.svg. */
+    chunkCount: 22,
+    chunkR0: 2.5,
+    chunkR1: 7.5,
+    dustCount: 48,
+    dustHot: 0.15,
+    bandAlpha: 0.05,
+    bandWidth: 70,
+    hazardAlpha: 0.75,
+    hazardDash: 5,
+    hazardGap: 5,
+    hazardCrawl: 10,
+    hazardWidth: 1,
+    solidRadius: 4,
+    driftPx0: 4,
+    driftPx1: 10,
+    driftPeriod0: 14,
+    driftPeriod1: 22,
+    /** Longest chunk drift. The "gap narrows" chip counts down to this. */
+    gapClose: 22,
+    /** event-telegraphs.svg sample: "debris from 0:42 for 1:30". */
+    debrisForecast: 90,
+    nextAlpha: 0.7,
+    nextDash: 3,
+    nextGap: 5,
+    nextWidth: 1,
+    /** showcase mockup arrival ring: body 1.2 px dash 4 4 α 0.75; capture 1 px dash 6 6 α 0.35. */
+    arrivalWidth: 1.2,
+    arrivalDash: 4,
+    arrivalGap: 4,
+    arrivalAlpha: 0.75,
+    captureWidth: 1,
+    captureDash: 6,
+    captureGap: 6,
+    captureAlpha: 0.35,
+  },
+  /**
+   * Where a moving body will be. design/assets/ghost-markers.svg header,
+   * style.md §15, threejs-notes.md §18.
+   * The ring radius is world units. Strokes, the badge, the chip and the
+   * tie line are CSS pixels and do not grow with zoom.
+   */
+  ghost: {
+    /** Header minimum 8 px, applied as world units so the ring stays on the body. */
+    minRadius: 8,
+    ringWidth: 1.2,
+    innerRatio: 0.62,
+    innerWidth: 0.7,
+    /** Half the outer ring's alpha. */
+    innerAlpha: 0.5,
+    alphaBurn: 0.85,
+    alphaOther: 0.6,
+    alphaCursor: 1,
+    alphaArrival: 1,
+    alphaCollision: 1,
+    alphaGone: 1,
+    widthCursor: 1.6,
+    widthArrival: 1.4,
+    widthCollision: 1.6,
+    fillBurn: 0.07,
+    fillOther: 0.07,
+    fillCursor: 0.12,
+    fillArrival: 0.1,
+    fillCollision: 0.14,
+    goneDash: 2,
+    goneGap: 3,
+    /** Sample cross ends 6.8 px from the centre on an r 15 ring: 0.64 r along the diagonal. */
+    crossReach: 0.64,
+    /** Sample slash runs to the ring. */
+    slashReach: 1,
+    collisionPeriod: 0.8,
+    collisionHigh: 1,
+    collisionLow: 0.45,
+    badgeRadius: 6.5,
+    badgeWidth: 1.4,
+    badgeFont: 9,
+    /** Up and to the right. The SVG's −0.72 r is screen-up. */
+    badgeOffset: 0.72,
+    chipHeight: 16,
+    chipPad: 6,
+    chipFont: 10.5,
+    chipRadius: 5,
+    chipFill: 0.88,
+    chipStroke: 0.7,
+    chipOffsetX: 8,
+    chipOffsetY: 4,
+    tieWidth: 1,
+    tieAlpha: 0.75,
+    tieCursorAlpha: 0.85,
+    tieDash: 1.5,
+    tieGap: 3.5,
+    pathRing: 2.6,
+    pathRingWidth: 1,
+    pathDot: 4,
+    trackWidth: 1.4,
+    trackAlpha: 0.55,
+    trackDash: 1,
+    trackGap: 5,
+    tickSeconds: 10,
+    /** Sample ticks measure about 8 px. The header sets the width at 1 px and the sample alpha at 0.5. */
+    tickLength: 8,
+    tickWidth: 1,
+    tickAlpha: 0.5,
+    captureWidth: 1,
+    captureDash: 6,
+    captureGap: 6,
+    captureAlpha: 0.45,
+    /** px per second. Cosmetic, so it runs on frame.now. */
+    captureCrawl: 12,
+    farBurns: 3,
+    farAlpha: 0.3,
+    /** Room for a long orbit sampled every 6 px. */
+    maxDots: 800,
+    maxTicks: 48,
+    maxSamples: 480,
   },
 } as const;
 

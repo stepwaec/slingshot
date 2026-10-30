@@ -15,6 +15,7 @@ import {
   ringRadius,
   type MegaSlot,
 } from "../src/sim/mega";
+import { movingBodies } from "../src/game/ghosts";
 import { BODY_LOOKS, makeState, step, type BodyLook } from "../src/sim/physics";
 
 describe("Observatory", () => {
@@ -97,6 +98,12 @@ describe("Observatory", () => {
         }
       }
     }
+  });
+
+  it("feeds the target-zone ring and the ghost markers", () => {
+    const target = observatory.bodies.find((body) => body.id === observatory.targetId);
+    expect(target?.captureRadius).toBeGreaterThan(target?.radius ?? 0);
+    expect(movingBodies(observatory.bodies).length).toBeGreaterThan(0);
   });
 
   it("can be flown: the opening coast stays clear, and the frame does not drift", () => {

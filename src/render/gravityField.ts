@@ -3,7 +3,7 @@ import { bodyPose, potentialDepth, rateFrom, type SimConfig } from "../sim/physi
 /**
  * Planning gravity field. Depth is `potentialDepth` from the sim — this
  * module does not restate Σ GM / r. The display scale is applied afterwards
- * so a horizon stays on the sheet:
+ * so a horizon stays finite:
  *
  *   knee   = deepest Φ sampled 3 radii out from any body
  *   scale  = tanh(log1p(Φ / knee) / softness)
@@ -430,112 +430,4 @@ function clipDisc(ax: number, ay: number, bx: number, by: number, disc: Disc): A
     out.push([x, y, bx, by]);
   }
   return out;
-}
-
-const CONTOUR_EDGES: readonly (readonly number[])[] = [
-  [],
-  [0, 3],
-  [0, 1],
-  [1, 3],
-  [1, 2],
-  [0, 3, 1, 2],
-  [0, 2],
-  [2, 3],
-  [2, 3],
-  [0, 2],
-  [0, 1, 2, 3],
-  [1, 2],
-  [1, 3],
-  [0, 1],
-  [0, 3],
-  [],
-];
-
-/**
- * Marching-squares segments where rest-frame dτ/dt crosses `level`.
- * Writes xyz triples and returns the vertex count. The rate values are the
- * ones already stored on the grid (`rateFrom`), not a second formula.
- */
-export function writeClockContours(
-  grid: GravityGrid,
-  level: number,
-  positions: Float32Array,
-  z: number,
-): number {
-  const cols = grid.cols;
-  const rows = grid.rows;
-  let cursor = 0;
-  const limit = positions.length - 5;
-  for (let row = 0; row < rows - 1; row++) {
-    for (let col = 0; col < cols - 1; col++) {
-      const i00 = row * cols + col;
-      const r00 = grid.rate[i00];
-      const r10 = grid.rate[i00 + 1];
-      const r01 = grid.rate[i00 + cols];
-      const r11 = grid.rate[i00 + cols + 1];
-      let mask = 0;
-      if (r00 >= level) mask |= 1;
-      if (r10 >= level) mask |= 2;
-      if (r11 >= level) mask |= 4;
-      if (r01 >= level) mask |= 8;
-      const edges = CONTOUR_EDGES[mask];
-      if (edges.length === 0) continue;
-      const i10 = i00 + 1;
-      const i01 = i00 + cols;
-      const i11 = i00 + cols + 1;
-      const x00 = grid.pinchX[i00];
-      const y00 = grid.pinchY[i00];
-      const x10 = grid.pinchX[i10];
-      const y10 = grid.pinchY[i10];
-      const x11 = grid.pinchX[i11];
-      const y11 = grid.pinchY[i11];
-      const x01 = grid.pinchX[i01];
-      const y01 = grid.pinchY[i01];
-      for (let e = 0; e < edges.length; e++) {
-        if (cursor > limit) return cursor / 3;
-        const point = contourEdge(edges[e], x00, y00, x10, y10, x11, y11, x01, y01, r00, r10, r11, r01, level);
-        positions[cursor] = point.x;
-        positions[cursor + 1] = point.y;
-        positions[cursor + 2] = z;
-        cursor += 3;
-      }
-    }
-  }
-  return cursor / 3;
-}
-
-function contourEdge(
-  edge: number,
-  x00: number,
-  y00: number,
-  x10: number,
-  y10: number,
-  x11: number,
-  y11: number,
-  x01: number,
-  y01: number,
-  r00: number,
-  r10: number,
-  r11: number,
-  r01: number,
-  level: number,
-): { x: number; y: number } {
-  if (edge === 0) return blend(x00, y00, x10, y10, r00, r10, level);
-  if (edge === 1) return blend(x10, y10, x11, y11, r10, r11, level);
-  if (edge === 2) return blend(x01, y01, x11, y11, r01, r11, level);
-  return blend(x00, y00, x01, y01, r00, r01, level);
-}
-
-function blend(
-  ax: number,
-  ay: number,
-  bx: number,
-  by: number,
-  va: number,
-  vb: number,
-  level: number,
-): { x: number; y: number } {
-  const d = vb - va;
-  const t = d === 0 ? 0.5 : (level - va) / d;
-  return { x: ax + (bx - ax) * t, y: ay + (by - ay) * t };
 }

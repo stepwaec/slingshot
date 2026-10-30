@@ -1,6 +1,6 @@
 # Slingshot — visual style v1.5
 
-Calm, cinematic space for Slingshot. This file is the look; `canvas-notes.md` is the pixel-exact drawing reference (how each SVG recipe looks and what it costs, written for Canvas 2D); `threejs-notes.md` maps it onto the game's Three.js renderer (WP3); `assets.md` indexes every file. Sections: §1 mood · §2 palette (background, sky, the sun, the two original planets, the shared lighting tokens, UI) · §3 typography · §4 glow and blur rules, with **§4.1 Realism, vibrancy and crispness rules** · §5 motion · §6 layout · §7 asset index · §8 the **body library** (31 bodies: 12 planets, 6 stars and compact objects, 4 moons, 3 ringed planets, the 3 WP8 objects: binary star, red giant, moon chain, the 2 WP9 compact objects: pulsar, magnetar, and the WP10 comet) plus the WP9 **magnetism map** and the WP10 **solar recharge indicator** · §9 the **space environment** (nebulae, asteroid field, wreck debris) · §10 **ship systems** (modular ship, damage states, hull HUD, tidal-stress warning, upgrade screen) · §11 **WP11** (asteroid belts, Kuiper belt, rogue planet, radiation map, dose meter) · §12 **ship and planning view** (burn plume, burn node, gravity grid and sheet) · §13 **late game** (stellar engine, Dyson swarm, ringworld, Shkadov thruster, space elevator, wormhole pair) and **living surfaces** · §14 **collisions and consumption** (impact, debris field, tidal disruption, burning up in a star, accretion, event telegraphs) · §15 **ghost markers** (where a moving body will be). Coding agents: read `IMPLEMENTING.md` first. Assets live in `design/assets` (bodies in `design/assets/bodies`, the environment in `design/assets/space`, map overlays in `design/assets/overlays`, the modular ship in `design/assets/ship`, late-game structures in `design/assets/mega`, scripted events in `design/assets/events`), mockups (1440×900, PNG = 2× render) in `design/mockups`, animated previews in `design/preview/planets.html`, `bodies.html` and `space.html`.
+Calm, cinematic space for Slingshot. This file is the look; `canvas-notes.md` is the pixel-exact drawing reference (how each SVG recipe looks and what it costs, written for Canvas 2D); `threejs-notes.md` maps it onto the game's Three.js renderer (WP3); `assets.md` indexes every file. Sections: §1 mood · §2 palette (background, sky, the sun, the two original planets, the shared lighting tokens, UI) · §3 typography · §4 glow and blur rules, with **§4.1 Realism, vibrancy and crispness rules** · §5 motion · §6 layout · §7 asset index · §8 the **body library** (31 bodies: 12 planets, 6 stars and compact objects, 4 moons, 3 ringed planets, the 3 WP8 objects: binary star, red giant, moon chain, the 2 WP9 compact objects: pulsar, magnetar, and the WP10 comet) plus the WP9 **magnetism map** and the WP10 **solar recharge indicator** · §9 the **space environment** (nebulae, asteroid field, wreck debris) · §10 **ship systems** (modular ship, damage states, hull HUD, tidal-stress warning, upgrade screen) · §11 **WP11** (asteroid belts, Kuiper belt, rogue planet, radiation map, dose meter) · §12 **ship and planning view** (burn plume, burn node, gravity grid and sheet) · §13 **late game** (stellar engine, Dyson swarm, ringworld, Shkadov thruster, space elevator, wormhole pair) and **living surfaces** · §14 **collisions and consumption** (impact, debris field, tidal disruption, burning up in a star, accretion, event telegraphs) · §15 **ghost markers** (where a moving body will be) · §16 **supernova, quasar and stray asteroid** (WP12) · §17 **target zone** (orbit capture) · §18 **Sol bodies** (the Sol campaign). Coding agents: read `IMPLEMENTING.md` first. Assets live in `design/assets` (bodies in `design/assets/bodies`, the environment in `design/assets/space`, map overlays in `design/assets/overlays`, the modular ship in `design/assets/ship`, late-game structures in `design/assets/mega`, scripted events in `design/assets/events`), mockups (1440×900, PNG = 2× render) in `design/mockups`, animated previews in `design/preview/planets.html`, `bodies.html` and `space.html`.
 
 **History in one paragraph.** v1 set the layout, UI and the two-glow rule. v1.1 was the first realism pass (limb-darkened star, planets with a terminator and a rim, a tinted starfield with a Milky Way). v1.2 made the planets rotate: a seamless texture strip slides under a lighting overlay that never moves. v1.3 built the body library (12 planets, 6 stars and compact objects) and gave the stars prominences and a flare. v1.4 adds moons, ringed planets, nebulae and debris fields (§8, §9). **v1.5 (revised) is the realism, vibrancy and crispness pass**, agreed with the client on two approved reference assets — the ocean world "variant F" and the sun "variant J" — and applied to every body: vivid multi-zone surfaces with crisp edges, elongated clouds with cast shadows, a warm terminator band, a lit-side haze and rim, a fiery plasma sun with ragged flame rings and an irregular rim, and no untinted grey anywhere. The earlier v1.5 "crispness pass" numbers (halve blurs, ±12 % lightness, limb line at α 0.30) were rejected as indistinguishable from v1.2 and are **not** used; §4.1 holds the rules that replaced them.
 
@@ -8,7 +8,7 @@ Calm, cinematic space for Slingshot. This file is the look; `canvas-notes.md` is
 
 **Observatory at night, not arcade.** The screen is mostly nothing: a near-black field, a thin dust of stars and a few bodies. The player sits in the dark planning one quiet throw. Everything is slow and weightless; nothing shouts. The drama comes from the physics (a predicted path that stops just short), not from the pixels.
 
-**What glows:** exactly two things per scene. The scene's star is the only warm light — a fiery disc inside ragged flame rings and a red haze that fades out to r 200. Planet X is the only cool light — a soft mint halo and a dashed capture ring that breathes. Everything else is lit, not luminous: planets are lit by the star but do not emit; the ship is matte off-white with a hard outline; trails, paths and UI are crisp and unblurred. The lava world's faint static halo is the one documented planetary exception. Nebulae are background gas (§9), drawn into the background pass at α ≤ 0.22 — weather in the sky, not a glowing object.
+**What glows:** exactly two things per scene. The scene's star is the only warm light — a fiery disc inside ragged flame rings and a red haze that fades out to r 200. Planet X is the only cool light — a soft mint halo and its target zone, a solid capture ring with a soft glow band that breathes (§17). Everything else is lit, not luminous: planets are lit by the star but do not emit; the ship is matte off-white with a hard outline; trails, paths and UI are crisp and unblurred. The lava world's faint static halo is the one documented planetary exception. Nebulae are background gas (§9), drawn into the background pass at α ≤ 0.22 — weather in the sky, not a glowing object.
 
 **Realistic and vibrant (v1.5).** The client's words were "realistic and vibrant" and "still a bit blurry". The answer is detail with edges: oceans that are deep blue with turquoise shallows, land that splits into forest, desert and highland, clouds that are white and cast a navy shadow, a thin band of warm light at the terminator before the night goes navy, a bright rim only where the light grazes the atmosphere. The sun is fiery plasma — bright filaments over darker red-brown cells, a glowing limb, ragged flames and a rim that is not perfectly round — "but a bit less dark" than a photograph. Saturated hues sit on deep navy the way Kurzgesagt's colour harmony does; Kurzgesagt is inspiration for harmony and bold silhouettes only, and nothing of theirs is copied.
 
@@ -93,7 +93,7 @@ The start planet **is** the reference. Its v1.2 tokens (`planet.start.base #3D8B
 | `planet.x.frost` | `#44CFE8` | Cyan frost (field k 0.570 → 0.641) composited **in** the plains | New (v1.5) |
 | `planet.x.cap` | `#E6FFF9` | Polar caps 18 % with a ragged, terrain-driven inner edge (v1.5.1); the wisps (α 0.70 group); the haze edge (α 0.65) | New (v1.5), replaces `planet.x.wisp` |
 | `planet.x.atmo` | `#8FFFE6` | Haze (0.96 α 0.42); rim tail (0.955 α 0.40) | |
-| `planet.x.ring` | `#3DE0C2` | Capture ring: dash `[6, 6]`, 1.5 px, α 0.55 at rest, pulse 0.55 → 0.70 → 0.55 → 0.35 → 0.55 and r ±2 over 2.4 s, crawl −12 px/s; locks at α 1 on a win | Unchanged since v1.2 |
+| `planet.x.ring` | `#3DE0C2` | The target zone (= `zone.ring`): a solid 1.5 px ring at the capture radius over a mint glow band, α 0.55 → 0.78 → 0.55 over 4 s; states in §17 | v3.0: replaces the v1.2 dashed, crawling ring |
 
 Planet X keeps its lower-left lighting (L = (−0.7071, +0.7071)) because it sits up-right of the star in every scene; its wisp shadow is offset (+1, −1), away from that light.
 
@@ -204,7 +204,7 @@ Each file's header comment lists every stop; this table repeats the three refere
 | Planet X wisp shadow / wisps | rect 376 × 60; shadow (1, −1) → (189, −1) / 80 s α 0.32; wisps 0 → +188 / 80 s α 0.70 | c = fractalNoise `0.025 0.12`, 6 oct, seed 23, alpha 26 c − 15.99 (≈ 15 % cover); shadow `#06122E` blur 0.45; wisps `#E6FFF9` blur 0.2 |
 | Planet X shade | centre (−7.64, 7.64), radius 37.5 | 0 `#B5FFF0` α 0.28 · 0.32 α 0 · 0.64 `#FF9455` α 0 · 0.705 α 0.22 · 0.76 `#08122E` α 0.74 · 0.84 `#050B1E` α 0.97 · 1 α 1 |
 | Planet X haze / rim | haze r 30; rim r 32.3; lit mask (−21.2, 21.2) → (21.2, −21.2) | haze 0.78 `#8FFFE6` α 0 · 0.96 α 0.42 · 1 `#E6FFF9` α 0.65; rim 0.90 `#B5FFF0` α 0 · 0.928 α 0.95 · 0.955 `#8FFFE6` α 0.40 · 1 α 0 |
-| Planet X capture ring | r 78 → 80 → 78 → 76 → 78 over 2.4 s; dash 6 6, 1.5 px, dashoffset 0 → −12 / 1 s | `#3DE0C2` α 0.55 → 0.70 → 0.55 → 0.35 → 0.55 (sine, `keySplines 0.42 0 0.58 1`) |
+| Planet X target zone (v3.0) | ring r 78, solid 1.5 px; band circle r 87 | ring `#3DE0C2` α 0.55 → 0.78 → 0.55 / 4 s (sine); band radial 0.552 `#3DE0C2` α 0 · 0.897 α 1 · 1 α 0 at fill-opacity 0.14 → 0.24 → 0.14, in phase (§17) |
 | Vignette | centre (720, 450), r 900, over `bg.edge` | 0 `bg.vignette` · 0.55 `bg.base` · 1 `bg.edge` |
 | Milky Way (`starfield.svg`) | ellipses at −28°: rx 1100 × ry 150, rx 900 × ry 70 offset 25 px; fractalNoise mask 0.0025, 3 oct, seed 5 | `milkyway.dust` α 0.06 · 0.55 α 0.03 · 1 α 0, and α 0.05 → 0; peak after masking 0.054. Canvas: three unmasked ellipses α 0.05 / 0.04 / 0.03 |
 | Star halos (`starfield.svg`) | r 4.5 on the 12 largest near stars | own tint α 0.18 → 0 |
@@ -240,7 +240,7 @@ Glow is a budget, not a style. Canvas `shadowBlur` is the single most expensive 
 
 1. **Glow belongs to exactly two things per scene: the scene's star and planet X.** The star is whichever of the six the level names (sun, red dwarf, blue giant, white dwarf, neutron star, black hole); a compact object's glow, beams and accretion disk count as the star's. The lava world's faint static halo (1.4 r, α 0.20) is the one planetary exception. Atmosphere haze and rims are not glow — they never leave 1.077 r and never animate. Nebulae are background-pass gas (§9), not glowing objects: no bloom, α ≤ 0.22 per colour layer, drawn into the background.
 2. **Stars: cached sprites, no runtime blur.** The SVG's flame and wisp rings are displaced noise; Canvas bakes them **with their displacement** into 2–3 sprite frames per ring that are drawn rotating (flames +360° / 200 s, wisps −360° / 300 s on the sun) and cross-faded, inside the ±3 % / 6 s breathe of the haze sprite. The disc — body gradient, tinted plasma, limb, rim wobble and the ragged rim — is one static sprite. Prominences are three unblurred two-tone sprites and the flare one sprite, faded and scaled by the scene clock (`canvas-notes.md` §3, §3b).
-3. **Planet X:** halo = a **live** radial-gradient fill at 1.8 r (0.35 to the disc edge, 0.22 at 0.62, 0.08 at 0.78, 0 at the rim), breathing ±4 % / 2.4 s: one gradient + one arc fill per frame. The dashed capture ring is a live stroke.
+3. **Planet X:** halo = a **live** radial-gradient fill at 1.8 r (0.35 to the disc edge, 0.22 at 0.62, 0.08 at 0.78, 0 at the rim), breathing ±4 % / 2.4 s: one gradient + one arc fill per frame. The target zone is a live solid stroke plus one live gradient fill for its band (§17).
 4. **Planets and moons: cached strips + a cached lighting overlay.** The surface is a texture strip of period P = round(2π r), two tiles wide, built once per zoom bucket with every zone baked (thresholded noise tiles, tinted). Clouds / wisps are a second strip **with their cast shadow baked under them**. Per frame: one circular clip, 1–3 strip blits with a time-based x offset, and one blit of the overlay that holds the shade (highlight bloom → warm terminator band → night navy), the lit-side haze and the lit-side rim. Ringed planets add ring sprites before and after; systems add moon sprites. Still 0 `shadowBlur`, 0 per-frame noise, 0 per-frame blur.
 5. **Ship:** no glow, ever. Thrust: two additive triangles, no blur in Canvas (the SVG asset keeps σ 1.2 / 0.4 as presentation only).
 6. **Trail / predicted path:** per-segment alpha / dots, no blur.
@@ -295,9 +295,8 @@ Slow, eased, weightless. Nothing snaps; nothing bounces.
 | Button hover | 120 ms | ease-out | fill lightens ~8 %; no scale |
 | Button press | 80 ms | ease-in | fill darkens; no scale |
 | Result overlay in | 320 ms | ease-out cubic | fade 0→1 with a 12 px rise |
-| Capture ring pulse | 2.4 s loop | sine | α 0.35 ↔ 0.70, radius ±2 px |
-| Capture ring dash crawl | continuous | linear | `[6, 6]` dashes at −12 px/s via `lineDashOffset` |
-| Planet X halo breathe | 2.4 s loop | sine | radius ±4 %, in phase with the ring |
+| Target zone pulse (v3.0) | 4 s loop | sine | ring α 0.55 ↔ 0.78, band α 0.14 ↔ 0.24; no dash, no crawl, fixed radius (§17) |
+| Planet X halo breathe | 2.4 s loop | sine | radius ±4 % |
 | Star breathe | 6 s loop | sine | haze + flame + wisp rings scale ±3 %; the disc, rim, prominences and flare never breathe (the crash disc never moves) |
 | Star flame / wisp rings | sun 200 / 300 s · red dwarf 260 / 390 s · blue giant 200 / 300 s per turn | linear | counter-rotating (flames +, wisps −); 0.1–0.2 °/s — reads as slow boiling, not spin |
 | Prominence loops | 12 / 16 / 14 s loops, begin 0 / 5 / 9 s | sine | scale 0.6 → 1.0 → 0.6 about the base point, opacity 0 → **1** → 0 (the two-tone strokes carry their own α 0.85 / 0.90); peaks at 6 + 12n / 13 + 16n / 16 + 14n s; invisible at t = 0 |
@@ -335,7 +334,7 @@ Scene and HUD positions for a 1440×900 frame, origin top-left. Same in every mo
 | Background | full frame | `bg.edge` fill, radial vignette from (720, 450) r 900: `bg.vignette` → `bg.base` at 0.55 → `bg.edge` at the rim; then the Milky Way and the starfield; then (scene-nebula) the nebula and the asteroid dust |
 | Central star | c (760, 470), r 46 | haze to r 200, flame ring r 62 (ragged to ≈ 72), wisp ring r 78 (ragged to ≈ 95), prominences to ≈ 1.5 r |
 | Start planet | c (250, 690), r 34 | ocean world lit from the upper-right; strip 214 px / 90 s, clouds 64 s; glint at (+10.82, −10.82); haze to r, rim to r 36.6 (1.077 r); the ship sits on its upper-right limb while planning |
-| Planet X | c (1190, 210), r 30 | mint world lit from the lower-left; strip 188 px / 120 s, wisps 80 s; halo to r 54 (breathing ±4 %), rim to r 32.3, capture ring r 78 (76–80) dashed `[6, 6]` |
+| Planet X | c (1190, 210), r 30 | mint world lit from the lower-left; strip 188 px / 120 s, wisps 80 s; halo to r 54 (breathing ±4 %), rim to r 32.3, target zone r 78, solid, glow band to r 87 (§17) |
 | Ship | 22 px long | planning: on start limb; flight: ≈ (900, 380), thrust on |
 | Predicted path | planning only | dotted, bends around the star's right/lower side toward X; last 20 % at α 0.35, r 6 end ring |
 | Drag arrow | planning only | from the ship, ~140 px, up-right, tick + label "62 %" |
@@ -369,7 +368,7 @@ One row per top-level file in `design/assets`; the 23 library bodies in `design/
 
 ## 8. Body library (v1.3 set, v1.4 moons and rings, all built to the v1.5 rules)
 
-**32 bodies**: 12 planets, 6 stars and compact objects (v1.3), 4 moons and 3 ringed planets (v1.4), 3 WP8 objects (v2): a binary star, a red giant and a gas giant with a resonant moon chain, 2 WP9 compact objects (v2.1): a pulsar and a magnetar, the WP10 comet (v2.2), and the WP11 rogue planet (v2.4). Each lives in `design/assets/bodies/<name>.svg` (the ocean world is `bodies/ocean.svg`, a copy of `planet-start.svg` with ids `ps*` → `oc*`; planet X stays `planet-x.svg`; the sun stays `star.svg`). Each = `<defs>` with ids prefixed by the body's short code + **one** top-level group with geometry relative to (0, 0), a header comment listing every parameter (the canon), and its SMIL inside. Prefixes, unique across all assets because galleries inline them together: `rk ic lv tx cr oc gb gr mn dw db rd bg wd ns bh mi mv mc ms rs dr sh bn rg mk pu mg cm rp` + `star* px*` (`ps*` only in `planet-start.svg`).
+**32 bodies**: 12 planets, 6 stars and compact objects (v1.3), 4 moons and 3 ringed planets (v1.4), 3 WP8 objects (v2): a binary star, a red giant and a gas giant with a resonant moon chain, 2 WP9 compact objects (v2.1): a pulsar and a magnetar, the WP10 comet (v2.2), and the WP11 rogue planet (v2.4). Each lives in `design/assets/bodies/<name>.svg` (the ocean world is `bodies/ocean.svg`, a copy of `planet-start.svg` with ids `ps*` → `oc*`; planet X stays `planet-x.svg`; the sun stays `star.svg`). Each = `<defs>` with ids prefixed by the body's short code + **one** top-level group with geometry relative to (0, 0), a header comment listing every parameter (the canon), and its SMIL inside. Prefixes, unique across all assets because galleries inline them together: `rk ic lv tx cr oc gb gr mn dw db rd bg wd ns bh mi mv mc ms rs dr sh bn rg mk pu mg cm rp sp qs sa` + `star* px*` (`ps*` only in `planet-start.svg`).
 
 **Direction (client decision, unchanged): stay realistic**, now also **vibrant and crisp** (§4.1). Kurzgesagt is inspiration only, for colour harmony on deep navy and bold silhouettes; nothing of theirs is copied.
 
@@ -1224,7 +1223,7 @@ Bodies should never look like still pictures. The game now animates the sun's ri
 | Rocky / ocean / ice / cracked worlds | Surface strip scrolls west → east: rocky 110 s, ocean 90 s, ice 140 s, cracked 100 s | Ocean clouds 64 s with their cast shadow; ice and cracked crack-glints are static |
 | Lava world | Surface 95 s | Emissive cracks pulse over 5 s (never faster) |
 | Toxic world | Surface 120 s, cloud deck 75 s | — |
-| Planet X | Surface 120 s, wisps 80 s | Halo breathes ±4 % / 2.4 s; capture ring crawls and pulses (§2) |
+| Planet X | Surface 120 s, wisps 80 s | Halo breathes ±4 % / 2.4 s; the target zone pulses over 4 s (§17) |
 | Gas giants | Band groups counter-flow 180 / 110 / 150 s (banded), 160 / 120 s (ringed) | Storm spot rides its band; rings stay still |
 | Moons | Barren 180 s, icy 150 s, volcanic 120 s, dwarf 160 s | Volcanic glow pulses slowly; moons in a chain keep their lit side to the star |
 | Comet | Coma breathes ×1.04 / 5 s | Ion streaks 2.2–3.1 s, knot every 9 s, dust sparkles 9–14 s |
@@ -1289,3 +1288,115 @@ Files: `assets/ghost-markers.svg`, mockup `mockups/planning-ghosts.svg`. Rendere
 | `ghost.collision` | `#FF5A5F` | A predicted collision (= `fuel.critical`) |
 | `ghost.gone` | `#FF9F43` | A body gone by then (= `event.warn`) |
 | `ghost.tie` | `#8B95B5` | Tie lines (α 0.75, dash 1.5 3.5, round caps) |
+
+## 16. Supernova, quasar and stray asteroid (v2.9, WP12)
+
+Files: `assets/bodies/supernova-progenitor.svg`, `assets/events/supernova-detonation.svg`, `assets/events/supernova-remnant.svg`, `assets/bodies/quasar.svg`, `assets/events/quasar-sweep.svg`, `assets/bodies/stray-asteroid.svg`, mockup `mockups/supernova-level.svg`. Renderer notes: `threejs-notes.md` §19. The progenitor and detonation samples draw a placeholder disc where the red-giant asset goes.
+
+Both hazards are functions of sim time (`src/sim/events.ts`), so their visuals play on sim time too: they pause and scrub with the plan, and planning shows the frame at the cursor's time. Only flicker and knot shimmer may use `frame.now`.
+
+**Supernova** (`supernova { at, blast, speed, damage }`):
+
+| Phase | Sim time | Look |
+|---|---|---|
+| Progenitor | before `at` | A red supergiant: the red-giant asset scaled to the body's radius, breathing unevenly (scale ×1 → 1.06 → 0.98 → 1.10 over 5.5 s, keyTimes 0 .2 .45 .8 1) and shedding faint old shells (`nova.shell` α 0.32 / 0.22 / 0.14, drifting out). The crash radius stays `radius`; the breathing is visual only. |
+| Detonation | `at` → `at` + 2.6 s | The star shrinks to ×0.8 in the last 0.5 s and vanishes at `at`. `event.novaFlash` grows to 1.2 × `blast` by `at` + 0.85 s and fades out by `at` + 2.6 s: blue-white, the hottest light in the game, never yellow. |
+| Ejecta and shock | from `at` | The ejecta shell (`nova.shock` ring plus 46 filaments in `nova.filament`) sits **exactly** at `shellRadius(nova, t)` = `speed · (t − at)`. What the player sees is what hits them. |
+| Remnant | after the flash | A filamentary nebula (240 short strokes, 5 : 3 : 2 : 1 in the four `nova.filament` colours) round a synchrotron haze (`nova.haze`), and a pulsar at the centre (beams turning once per 2 s, cosmetic). |
+
+Planning, before `at`: the lethal radius `blast` dashed in `nova.blast` (5 5, crawling 10 px/s) with "lethal blast r N"; a countdown arc (3 px, round caps, `event.warn` over a `#FFFFFF` α 0.12 track) emptying clockwise from 12 o'clock with "supernova in m:ss"; and on the predicted path, "path leaves the blast zone at m:ss · m:ss to spare" in `event.next`, or the path sample at `at` marked like a ghost collision (§15) when it is inside `blast`. After `at`: future shock radii dashed in `event.warn` with "shock +0:20" and "shock +0:40" chips.
+
+**Quasar** (`quasar { angle, cone, reach, damage, period?, sweep? }`): a supermassive black hole with a blazing disk and twin jets along `jetAngle(jet, t)`.
+
+- **Core:** the glow `quasar.glow` (r ≈ 6.4 × the shadow); the disk `quasar.disk` at rx 4.9 × the shadow, ry 0.3 × rx, white-hot inside, with its front half drawn over the shadow (`#000000`, rim `#FFF6D6`).
+- **Jets:** start at 1.5 × the shadow and end at `reach`. The violet sheath spans the lethal cone exactly (half-width `d · tan(cone)` at distance d). The blue body runs at 0.45 of that width, and the white core at 2.5 px to 0.6 `reach`. Three knots (`#FFFFFF` α 0.85) race out every 2.4 s. Everything inside the sheath is lethal, nothing outside it is.
+- **Planning, swept jets:** dash the extreme cone edges (`angle ± (sweep + cone)`) and the reach arc in `event.warn` (α 0.7, 5 5). Add "jet sweeps ±N° · every N s" and, when the path crosses the swept zone, "safe window m:ss" in `event.next` (the time until the jet leaves the crossing point). A static jet gets only the cone edges.
+
+**Stray asteroid** (a body with `drift { vx, vy }`): the WP11 rock construction (§9 asteroid field, S, mixed or C texture by seed) at its crash radius (here 15), lit toward the nearest star, tumbling 55–90 s. A dust trail of 40 specks (`rock.dust`) fading over 140 px behind its velocity. In planning and pause, a dashed drift arrow `#8B95B5` along its velocity (as on the rogue planet) and its ghost markers (§15). Solid: crash radius = r.
+
+| Token | Hex | Used for |
+|---|---|---|
+| `nova.shell` | `#FF5A8A` | The progenitor's old shells (1.2 px; pink, so they never turn brown on navy) |
+| `nova.blast` | `#FF5A5F` | Lethal blast radius in planning (= `fuel.critical`) |
+| `event.novaFlash` | `#FFFFFF` → 0.25 `#E6F4FF` α 0.95 → 0.6 `#9FC4FF` α 0.35 → `#7FB8FF` α 0 | The detonation flash |
+| `nova.shock` | `#BFEFFF` | Ejecta and shock front ring (2 px at detonation, 1.4 px on the remnant) |
+| `nova.filament` | `#FF5A6A` (H) · `#3DE0C2` (O) · `#FFB45A` (S) · `#E0408A` | Ejecta and remnant filaments |
+| `nova.haze` | `#9FC4FF` α 0.35 → `#7FB8FF` α 0.12 → 0 | The remnant's synchrotron haze |
+| `nova.pulsar` | `#FFFFFF` → `#DCF6FF` → `#7FDBFF` α 0 | Neutron star and pulsar; beams `#BFEFFF` α 0.6 |
+| `quasar.glow` | `#E6F4FF` α 0.5 → `#9FC4FF` α 0.15 → 0 | Glow round the core |
+| `quasar.disk` | `#FFFFFF` (0.33) → `#E6F4FF` (0.45) → `#FFE7A0` α 0.95 (0.62) → `#FF8A3A` α 0.7 (0.8) → `#E0408A` α 0 | Accretion disk (hotter and whiter than `disk.hot`) |
+| `quasar.jet` | `#FFFFFF` → 0.15 `#DCF6FF` α 0.95 → 0.5 `#5E9BFF` α 0.85 → 0.8 `#8A5CFF` α 0.5 → `#A06BFF` α 0 | Jets: vivid blue into violet, never grey |
+| `rock.dust` | `#C8A684` | Stray-asteroid dust trail (= `event.ejecta` rock) |
+
+Chips reuse `event.warn` (`#FF9F43`: countdown, sweep, shock forecast) and `event.next` (`#FFC857`: what follows, "safe window", "path leaves the blast zone"), on the panel fill with a coloured border, never a tinted fill.
+
+## 17. Target zone (v3.0, orbit capture)
+
+Files: `assets/target-zone.svg` (six states), `assets/planet-x.svg` part 8 (the idle zone, spliced into every mockup), mockup `mockups/planning-capture.svg`. Renderer notes: `threejs-notes.md` §20. The zone is Planet X's capture radius: a level is won when the ship is in an orbit around the target that clears the surface and whose apoapsis stays inside the ring (`isCapturedOrbit`). The v1.2 dashed, crawling ring is gone. A solid ring with a soft glow reads as a place to settle into, not a finish line to cross.
+
+- **Ring:** a solid circle at `captureRadius`, 1.5 px in screen space (never scaled with zoom).
+- **Band:** a glow under the ring, fading in from 30 px inside it and stopping 9 px outside. Mint only, so it never turns brown or grey on navy. It stays quieter than Planet X's halo and never covers the disc.
+- **Subtle:** at rest the zone is the dimmest mint on screen after the dashed planning marks. It brightens only when the ship is in it.
+
+| State | When | Ring | Band | Extras |
+|---|---|---|---|---|
+| Idle | ship outside the zone | `zone.ring` α 0.55 → 0.78 → 0.55 / 4 s | α 0.14 → 0.24, in phase | — |
+| Planning | planning mode | the idle ring | the idle band | entry tick where the predicted path first crosses the ring, "enters zone m:ss"; when a burn inside gives a captured orbit, that orbit dashed `zone.ring` α 0.75 (4 4) with "capture orbit · peri N · apo N" |
+| Inside, too fast | ship inside, orbit not captured | α 0.95, steady | α 0.32 | `zone.exit` arc ±10° at the predicted exit point, 3 px, pulsing 1 → 0.45 / 1.2 s, "leaves the zone in m:ss"; hint "too fast · burn Δv N retrograde to capture" |
+| Captured | the step `isCapturedOrbit` turns true; plays once | `zone.ring` → `#FFFFFF` (+0.15 s, 3.5 px) → `zone.stable` (+1.1 s, 1.6 px) | α 0.32 → 0.70 (+0.2 s) → 0.32 (+1.5 s) | a wave ring `zone.ring` 2 px from R to R + 34 in 1.4 s (ease-out), α 0.9 → 0; the orbit fades in; "orbit stable" at +0.2 s |
+| Stable | after the flash; under the win card | `zone.stable` 1.6 px, α 0.88 → 1 / 6 s (static α 0.95 under the result scrim) | α 0.30 → 0.40 | the closed orbit solid `zone.ring` 1 px α 0.6 with the ship on it; "orbit stable · peri N · apo N" |
+| Flyby | ship left the zone unbound (lost, `flyby`) | α 0.30 | α 0.06 | a `zone.lost` cross (8 px, 1.6 px) at the exit point; "flyby · left the zone" |
+
+| Token | Hex | Used for |
+|---|---|---|
+| `zone.ring` | `#3DE0C2` | Ring, band, capture orbit, wave, mint chips (= `planet.x.ring`) |
+| `zone.stable` | `#B5FFF0` | The ring once the orbit is stable (= `planet.x.highlight`): the colour change |
+| `zone.flash` | `#FFFFFF` | The ring's peak at the moment of capture |
+| `zone.exit` | `#FFC857` | Exit arc and the too-fast hint (= `event.next`) |
+| `zone.lost` | `#B48CFF` | The flyby cross and chip (= `result.lost`) |
+
+## 18. Sol bodies (v3.1, the Sol campaign)
+
+Files: `assets/sol/*.svg` (16 assets), mockup `mockups/sol-moon.svg` (mission 1, Moon orbit), gallery `preview/sol.html`. Renderer notes: `threejs-notes.md` §21. These are our own Sun, planets, moons and Kuiper objects. They must read as the real bodies at a glance, in the same realistic, vibrant and crisp style as the library.
+
+- **Size ladder.** r = 34 √(R / R⊕): Earth keeps the home planet's r 34, and the order and proportions stay true while Jupiter still fits on screen. The crash radius is r. The Sun is off the ladder (109 R⊕) and stays a game-scale star, r 46. Arrokoth is drawn at a minimum readable size.
+- **Real geography.** Features are placed from longitude and latitude, never random noise: Earth's continents and deserts, the Moon's maria, Mars's albedo features, Jupiter's belts and spots, Saturn's ring radii. Noise only roughens edges and adds texture inside them.
+- **Strips.** Rotating bodies use the planet strip construction: x = (lon + 180)/360 · P and y = r − r sin(lat), with every feature drawn at x and x + P. They scroll west → east, except Venus's clouds, which run retrograde. The visual periods are slow game periods, not real ones.
+- **Fixed faces.** The Moon, Pluto and Charon are tidally locked and keep fixed faces: the Moon's near side, and the sides New Horizons saw.
+- **Lighting.** Everything is lit from the upper-right with the planet reference construction (§4.1). Airless bodies get a hard terminator and no haze. Earth's city lights show on the night side only.
+- **Easter-egg hints only:** Voyager's golden record, and the sunspots as a nod to an active, living Sun. No logos, no characters.
+
+| Body | File · group · ids | r | Motion | What makes it read as itself |
+|---|---|---|---|---|
+| The Sun | `sun.svg` · `#solSun` · `solSun*`, `sol*` | 46 | star.svg motion; spots 180 s | the approved sun J plus five sunspot groups in the ±10–18° activity belts (penumbra `#B8401E`, umbra `#4A1006`) |
+| Mercury | `mercury.svg` · `#mercury` · `mer*` | 21 | 300 s | warm tan-grey regolith, craters, Caloris, ray craters; airless |
+| Venus | `venus.svg` · `#venus` · `ven*` | 33 | 96 s retrograde | unbroken pale-gold cloud deck, soft bands, faint Y chevrons, bright haze |
+| Earth | `earth.svg` · `#earth` · `eth*` | 34 | 90 s, clouds 64 s | real continents with biome colour by latitude, real deserts, shallow shelves, sea ice, clouds weighted to the ITCZ and storm tracks, night-side city lights |
+| The Moon | `moon.svg` · `#luna` · `lun*` | 18 | locked | near-side maria, Tycho, Copernicus and Kepler rays; airless |
+| Mars | `mars.svg` · `#mars` · `mar*` | 24.8 | 92 s | rust plains, Syrtis Major, Meridiani, Acidalium, Hellas, Argyre, Tharsis, Valles Marineris, caps, thin pink haze |
+| Jupiter | `jupiter.svg` · `#jupiter` · `jup*` | 114 | 240 s | the real belts and zones (LUT on latitude), Great Red Spot in its hollow, Oval BA, white ovals, NEB hot spots and festoons, barges, lavender poles |
+| Saturn | `saturn.svg` · `#saturn` · `sat*` | 104.6 | 260 s | pale-gold bands, blue polar hexagon; rings at real radii (C, B, Cassini Division, A, Encke Gap, F), back half behind and front half over the planet, the planet's shadow on the rings, the rings' shadow on the globe |
+| Titan | `titan.svg` · `#titan` · `tit*` | 21.6 | 160 s | orange haze with no surface, a darker north hood, the detached blue outer haze |
+| Uranus | `uranus.svg` · `#uranus` · `ura*` | 68.1 | 140 s | pale cyan; axis tipped 98°, so the bands run pole to pole on screen; faint, nearly face-on rings |
+| Neptune | `neptune.svg` · `#neptune` · `nep*` | 67 | 120 s | deep blue, Great Dark Spot with its white companion, the Scooter, D2, white cirrus |
+| Pluto | `pluto.svg` · `#pluto` · `plu*` | 14.7 | locked | Tombaugh Regio (the heart), Cthulhu, a thin blue haze |
+| Charon | `charon.svg` · `#charon` · `cha*` | 10.5 | locked | grey with the red Mordor Macula at the north pole |
+| Eris | `eris.svg` · `#eris` · `eri*` | 14.5 | — | bright ice |
+| Arrokoth | `arrokoth.svg` · `#arrokoth` · `arr*` | 6 (min) | — | red two-lobed contact binary |
+| Voyager | `voyager.svg` · `#voyager` · `voy*` | — | — | high-gain dish, bus, golden record, RTG and science booms, antennas; not solid |
+
+| Token | Hex | Used for |
+|---|---|---|
+| `earth.ocean` | `#1D56CF` | Earth's oceans (shelf `#36B9D8` = `ocean.shallow`) |
+| `earth.desert` | `#E2B66A` | Real deserts (dunes `#F0CC84`, rock `#B5763E`) |
+| `earth.city` | `#FFD27A` | City lights, core `#FFF1C2`, fringe `#FF9A3C`, night side only |
+| `mars.rust` / `mars.dark` | `#C8643A` / `#7E3E2A` | Mars plains and albedo features |
+| `jupiter.zone` / `jupiter.belt` / `jupiter.grs` | `#F5E3C6` / `#A3502D` / `#DC5C34` | Jupiter's zones, belts and the Great Red Spot |
+| `saturn.ringB` / `saturn.ringA` / `saturn.ringC` | `#F2E6D2` / `#DCC398` / `#B49A76` | Saturn's rings (ivory, never grey) |
+| `uranus.body` | `#99DDE6` | Uranus |
+| `neptune.body` / `neptune.spot` | `#4B7DF2` / `#1C2F86` | Neptune and its dark spot |
+| `titan.haze` | `#E2A04A` | Titan (outer haze `#9CC4FF`) |
+| `pluto.heart` / `pluto.cthulhu` | `#F6EBDD` / `#6B3322` | Pluto |
+
+Every other hex value is listed in its asset's header, which is canon.
+

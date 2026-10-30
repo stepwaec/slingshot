@@ -17,7 +17,6 @@ import {
   reset,
   resume,
   selectNode,
-  setGravityClock,
   setNodeBurn,
   setSlow,
   setSpeed,
@@ -40,7 +39,6 @@ export interface InputElements {
   resumeButton: HTMLButtonElement;
   slowButton: HTMLButtonElement;
   gravityButton: HTMLButtonElement;
-  gravityClockButton: HTMLButtonElement;
   magnetismButton: HTMLButtonElement;
   radiationButton: HTMLButtonElement;
 }
@@ -163,7 +161,6 @@ export function bindInput(
   elements.resumeButton.addEventListener("click", () => resume(game));
   elements.slowButton.addEventListener("click", () => setSlow(game, !game.slow));
   elements.gravityButton.addEventListener("click", () => cycleGravity(game));
-  elements.gravityClockButton.addEventListener("click", () => setGravityClock(game, !game.gravityClock));
   elements.magnetismButton.addEventListener("click", () => {
     if (!hasMagneticBody(game.level.bodies)) return;
     toggleMagnetism(game);
@@ -207,10 +204,6 @@ export function bindInput(
       selectNode(game, null);
     } else if (applyGravityKey(game, event)) {
       event.preventDefault();
-    } else if (event.key === "c" || event.key === "C") {
-      if (event.repeat || event.metaKey || event.ctrlKey || event.altKey) return;
-      if (game.gravity !== "grid") return;
-      setGravityClock(game, !game.gravityClock);
     } else if (event.key === "m" || event.key === "M") {
       if (event.repeat || event.metaKey || event.ctrlKey || event.altKey) return;
       if (!hasMagneticBody(game.level.bodies)) return;

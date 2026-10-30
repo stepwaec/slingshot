@@ -55,9 +55,19 @@ PRs #33 and #35 brought back the sun's turning rings and breathing haze, rebaked
 - **The scripted events draw only an orange ring** (`src/render/visuals/fates.ts`): a growing ring on a falling body, and a ring at an impact point for 3 s.
 - **Fix:** replace it with the LU3 pack: `style.md` §14, `threejs-notes.md` §17 and `assets/events/`.
   - The impact gets its flash, shock, ejecta and afterglow, then the debris field.
-  - `consume` gets the dayside glow and ablation tail growing with `u`, the plunge flash, the ripple and the star brightening.
+  - `consume` gets the dayside glow and ablation tail growing with heat, the plunge flash, the ripple and the star brightening.
   - Planning gets the telegraphs.
   - The Ash level should match `mockups/showcase-burning-planet.svg`.
+
+Landed in [PR #57](https://github.com/stepwaec/slingshot/pull/57), from the event art in design [PR #50](https://github.com/stepwaec/slingshot/pull/50):
+
+- ✔ Impact draws the flash, shock, rim, ejecta and crater glow, then the debris field.
+- ✔ `consume` draws the dayside glow and the ablation tail. Heat is `1 − (r − R_star) / (r0 − R_star)` from `burn-up.svg`. At `end`: plunge flash, ripple, star brightening.
+- ✔ Planning draws the dashed course, the reticle and the countdown chips.
+- ✔ Ash is compared with `mockups/showcase-burning-planet.svg`.
+- Debris with r ≥ 4 is drawn and labelled. It is not a crash body, so the sim stays as PR #47 left it.
+- `disrupt` and `accrete` are still proposed scripts. No level has them. Adding them would change gravity, so this pass does not.
+- The star brightening is masked to the photosphere. The sample disc is `#FFE7A0` at α 0.22 and would turn olive on the navy sky.
 
 ## Update after PR #45: ghost markers are placeholders
 
@@ -69,6 +79,49 @@ PRs #33 and #35 brought back the sun's turning rings and breathing haze, rebaked
   - the target's future track with a tick every 10 s
 
   The planning view should match `mockups/planning-ghosts.svg`.
+
+Landed in [PR #64](https://github.com/stepwaec/slingshot/pull/64), from the ghost-marker art in design [PR #51](https://github.com/stepwaec/slingshot/pull/51):
+
+- ✔ Ring and inner ring, with the burn badge, cursor, arrival capture radius, collision cross and gone slash.
+- ✔ Dotted tie lines to the path sample at the same step, and the time chips.
+- ✔ The target's future track, ticked every 10 s.
+- `ghostSteps` and `movingBodies` are unchanged. The drawing reads `bodyPose` and does not write the sim.
+- The mockup's faint full-orbit circle (α 0.12) is not in the header, so it is not drawn.
+- "Other bodies" keep the body's radius (minimum 8 world units). The sample's quieter look is α 0.6.
+- The cross ends at 0.64 r and the ticks are 8 px long, measured from `ghost-markers.svg`. The header does not number those two.
+- Arrival wins over a burn when they share a step (§18). Lead's capture is the burn at step 230, so that ghost is the arrival marker. A burn that is not the capture keeps the badge.
+
+## Update after PR #46: supernova and quasar are placeholders
+
+- **The hazards are drawn as plain shapes** (`src/render/visuals/hazards.ts`): a red ring at `blast`, an orange ring at the shock radius, and a magenta bar along the jet. The star keeps its normal `look` until and after `at`, and the bar's width is `2 · reach · sin(cone)`, a box rather than the cone that `quasarDamage` tests.
+- **Fix:** follow `style.md` §16 and `threejs-notes.md` §19:
+  - the progenitor as the red-giant sprite with uneven breathing and old shells
+  - the blue-white flash, then the ejecta and remnant filaments riding exactly on `shellRadius`
+  - the quasar's disk, shadow and twin jets, with the violet sheath on the lethal cone
+  - planning chips for the countdown, blast zone, shock forecast, jet sweep and safe window
+
+  `src/levels/flash.json` should match `mockups/supernova-level.svg`. Give the sun `"look": "red-giant"`, or have the hazard visual override it.
+- **Stray asteroid:** a body with `drift` and the WP11 rock look (`bodies/stray-asteroid.svg`). No level has one yet.
+- **Realism, for Stephan to decide:** after `at` the sim leaves the star's mass and crash radius unchanged ("Motion is untouched" in `physics.ts`). A real core collapse blows off most of the mass and leaves a neutron star of about 1.4 solar masses and a few km across. Suggested change: from `at`, mass drops to a remnant fraction (a new optional `supernova.remnant`, default 0.15) and the crash radius to 8, with the prediction seeing the change. This alters gameplay, so it isn't in the art.
+
+## Update for the target zone (v3.0): the capture ring is now a zone
+
+- **The design changed, not the code.** Planet X's ring in `src/render/visuals/planets.ts` (`ringFrag` with `uDash` and `uPulsePx`, `theme.planet.ring*`) still draws the v1.2 dashed, crawling, radius-pulsing ring. It matched its old spec; it no longer matches.
+- **Fix:** follow `style.md` §17 and `threejs-notes.md` §20:
+  - a solid px-space ring with a mint glow band, pulsing α over 4 s
+  - the states from the sim: idle, inside and too fast (exit arc and Δv hint), the one capture flash, stable in `#B5FFF0` under the win card, and dimmed with a cross on a flyby
+  - in planning, the entry tick and the predicted capture orbit dashed in mint
+
+  The planning view should match `mockups/planning-capture.svg`, and the result screens `result-win.svg` and `result-lost.svg`.
+
+## Sol campaign: the art is ready (v3.1)
+
+- **New, no code yet.** `design/assets/sol/` has the Sun, the eight planets, the Moon, Titan, Pluto, Charon, Eris, Arrokoth and Voyager. Follow `style.md` §18 and `threejs-notes.md` §21.
+  - Add one `look` per body.
+  - Use the size ladder for radii.
+  - Keep Earth's city lights, Saturn's and Uranus's front and back rings, and the Sun's spots as separate layers.
+  - Keep the locked faces fixed.
+- **Mission 1** should match `mockups/sol-moon.svg`: the Moon in its target zone (§17), with a capture into lunar orbit.
 
 ## Priority fixes
 
@@ -125,7 +178,7 @@ Do these first. They are the biggest visible or gameplay gaps after #32.
 - **low · `planets.ts:74-76`.** Planet X's halo stops are slightly off, and the halo doesn't breathe (±4 % / 2.4 s).
 - **low · `planets.ts:493-514`.** Planet textures are a fixed 256 × 128 with no rebake on zoom. Size them as `round(2πr) × bucket × DPR`, rebaked at 25 % zoom steps.
 
-**Done right:** sim time is used for positions and `frame.now` for cosmetics everywhere. The planet sphere mapping is correct, with the light computed live from the star and summed for binaries. Surfaces are baked once. The capture ring matches its spec. The WP8 star looks and the magnetar's geometry are right.
+**Done right:** sim time is used for positions and `frame.now` for cosmetics everywhere. The planet sphere mapping is correct, with the light computed live from the star and summed for binaries. Surfaces are baked once. The capture ring matched its v1.2 spec (superseded by the v3.0 target zone, see above). The WP8 star looks and the magnetar's geometry are right.
 
 ## Overlays and effects (`magnetism.ts`, `path.ts`, `recharge.ts`, `comet.ts`, `gravity.ts`, `relativity.ts`)
 

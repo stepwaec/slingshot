@@ -352,3 +352,52 @@ Designs: `ghost-markers.svg`, `mockups/planning-ghosts.svg`. Values in `style.md
 4. **Labels.** The time chip is DOM, like the Δv chip; for the target's arrival it reads "arrive m:ss".
 
 The target's future track is one line strip sampled from `bodyPose` between now and the arrival step, dashed in px-space, with a tick quad every 10 s of sim time. Draw it at renderOrder below the path dots. Ghosts never write the sim.
+
+## 19. Supernova, quasar and stray asteroid (WP12)
+
+Designs: `bodies/supernova-progenitor.svg`, `events/supernova-detonation.svg`, `events/supernova-remnant.svg`, `bodies/quasar.svg`, `events/quasar-sweep.svg`, `bodies/stray-asteroid.svg`, `mockups/supernova-level.svg`. Values in `style.md` §16. These replace the placeholder rings and jet bar in `src/render/visuals/hazards.ts`. Keep `shownTime`, `shellRadius` and `jetAngle`: every frame below is a pure function of that time, so the plan cursor scrubs it.
+
+- **Progenitor** (`t < at`): draw the red-giant sprite (`bodies/red-giant.svg`, photosphere r 120) scaled to `body.radius / 120`, whatever the level's `look`. Animate the uneven breathing as a scale on the sprite only. Three shell rings (`nova.shell`, px-space 1.2 px) drift outward on `frame.now`. In planning, add the dashed blast ring at `blast`, the countdown arc (a ring quad with an angular cut at `1 − t/at`) and the DOM chips.
+- **Detonation** (`at ≤ t < at + 2.6`): one additive quad with the `event.novaFlash` radial, radius and alpha from the timeline in §16. Hide the star sprite from `at`. The neutron-star dot (r 3, `nova.pulsar`) appears at `at`.
+- **Shock** (`t ≥ at`): a ring quad at exactly `shellRadius(nova, t)`, `nova.shock`, px-space width. The filaments are one instanced quad set (46 at detonation, 240 on the remnant, seeded by body id) laid on the ring with ±12 % radial jitter, so the nebula grows with the shock. The haze is one radial quad at 0.8 × the ring. Fade the filaments' α over 40 s of sim time, down to the remnant's 0.35–0.85.
+- **Remnant pulsar:** beams on a quad rotated by `frame.now` (cosmetic; no damage unless the level adds a `pulsar` block).
+- **Quasar:** a disk quad (back half under the shadow, front half over it), a shadow disc, and a glow quad. Each jet is a quad from 1.5 × the shadow to `reach`, rotated to `jetAngle(jet, t)` and its opposite. A fragment shader reads the half-width `d · tan(cone)` and lays the violet sheath, the blue body and the white core across it, plus three knots moving out on `frame.now`. The sheath edge is the damage edge (gap C: drawn reach and width must equal `quasarDamage`'s). Planning draws the swept edges at `angle ± (sweep + cone)` and the reach arc as dashed px-space line quads.
+- **Stray asteroid:** the belt rock instance code from WP11 (§14 of these notes and `space/belt-*.svg`) with one rock at `body.radius`, posed by `bodyPose` (its `drift`). The dust trail is 40 points behind `-velocity`, fading with distance. The drift arrow and ghosts appear in planning only.
+
+**Budget:** under 0.3 ms per hazard (a few quads plus one instanced filament set of at most 240).
+
+## 20. Target zone (orbit capture)
+
+Designs: `target-zone.svg`, `planet-x.svg` part 8, `mockups/planning-capture.svg`. Values in `style.md` §17. This replaces the dashed, crawling ring in `src/render/visuals/planets.ts` (the `ringFrag` path: `uDash`, `uPulsePx`, `ringCrawlPxPerSec`) and the `theme.planet.ring*` constants.
+
+1. **Quads.** Keep the one ring quad per target, sized `captureRadius + pad`. Drop the dash and the radius pulse in the fragment shader. Draw the solid stroke (1.5 px, from `fwidth`) and, in the same shader, the band: `band = smoothstep(R − 30/zoom, R, r) · (1 − smoothstep(R, R + 9/zoom, r))`. Both are px-space, so they hold their width at every zoom.
+2. **State.** Pick it each frame from the game:
+   - *flyby* when `ship.status === "lost"` and `lostReason === "flyby"`
+   - *stable* when the ship has won
+   - *inside* when `ship.enteredCapture` is true and the ship is within the radius
+   - otherwise *idle*
+
+   The alphas and colours come from §17. Pulse on `frame.now` (cosmetic).
+3. **The flash** starts on the frame the status turns `won` and runs on `frame.now` for 1.5 s, once. It is UI feedback, not a hazard. The wave is a second ring quad scaled from R to R + 34 (ease-out). Under the result scrim, freeze the stable look (α 0.95).
+4. **Too fast.** The exit arc sits at the first predicted sample outside the radius after the ship's current step, from the same prediction the path uses. For the hint, Δv = |v| − v_max at the current point, with v_max = √(GM (2/r − 2/(r + R))): the most speed a tangential burn may leave for an apoapsis at R. The chips are DOM.
+5. **Planning.** The entry tick sits at the first predicted sample inside the radius. When the prediction ends captured, draw its `orbit` (closed, about the target) as a px-dashed line strip (4 4) in `zone.ring` α 0.75, and the "capture orbit · peri · apo" chip from `orbitAbout`.
+
+Moving targets (LU2): every quad and point is posed by `bodyPose` at the sim time, like the ring today.
+
+## 21. Sol bodies (Sol campaign)
+
+Designs: `assets/sol/*.svg`, `mockups/sol-moon.svg`, `preview/sol.html`. Values in `style.md` §18. There is no Sol code yet, so this is new work.
+
+1. **Looks.** Add one `look` per body: `sol-sun`, `mercury`, `venus`, `earth`, `luna`, `mars`, `jupiter`, `saturn`, `titan`, `uranus`, `neptune`, `pluto`, `charon`, `eris`, `arrokoth`, `voyager`. Draw them with the SVG pipeline the library bodies use (`art-sprite.ts`, `gallery.ts`). Bake per layer so the strips and the living surfaces move as their headers say (§4.6). Never freeze a body at t = 0.
+2. **Sizes.** Level authors use the ladder for `radius` (= crash radius): r = 34 √(R / R⊕). The Sun is r 46. Distances and periods are compressed per the Sol campaign plan, but orbits stay Kepler (`centerId`, `radius`, `omega` with ω = √(GM/r³)). Moons orbit their planets, and the Moon's orbit is about Earth.
+3. **Layers that must stay separate:**
+   - Earth's city lights: a night-side layer masked by the live light direction, not baked into the day texture.
+   - Saturn's rings: a back-half quad under the planet and a front-half quad over it, sharing one ring texture. The planet's shadow on the rings follows −L.
+   - Uranus: the strip is rolled −62°, and the rings split front and back the same way.
+   - The Sun's spots scroll inside the photosphere, under the flame ring.
+4. **Fixed faces.** The Moon, Pluto and Charon don't scroll. Their lighting follows the star as usual, so their phases change while their features stay put.
+5. **Light.** Each body's shade, haze and rim face the system's star, like every planet. Uranus's and Saturn's ring tilts are art, not physics.
+6. **Voyager** is a small non-solid prop with a slow drift. It needs no collision.
+
+**Budget:** the same as the library planets: one strip bake per layer and bucket, and two quads for each ring system.
+

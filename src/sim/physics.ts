@@ -13,7 +13,9 @@
  *
  * `predictPlan` caches the state at each node. Editing node k recomputes from
  * k onward and reuses the path before it. A configured horizon stops the
- * predicted line early; the live flight does not.
+ * predicted line early; the live flight does not. With burns, that look-ahead
+ * is measured from the latest burn's end, so each new node pushes the fade
+ * forward by the same amount.
  *
  * Each step also advances two clocks. Outside time starts as coordinate time
  * (`step * dt`): Home and Planet X share that one frame. A wormhole exit adds
@@ -219,7 +221,7 @@ export interface Body {
 
 /**
  * `consume` falls from the body's orbit into `centerId` and is gone at `end`.
- * `impact` removes the body at `at`. `into` names what it hits, for the placeholder.
+ * `impact` removes the body at `at`. `into` names what it hits, for the impact drawing.
  */
 export type BodyScript =
   | { kind: "consume"; centerId: string; start: number; end: number; radius: number }
@@ -2521,6 +2523,24 @@ export function horizonSteps(state: SimState, config: SimConfig): number {
   return Math.max(1, Math.min(room, steps));
 }
 
+/**
+ * Last step the planning line draws.
+ * Without a horizon the flight runs to completion. With one and no burn after
+ * `from`, the end is `from.step + horizonSteps` — the look-ahead the line
+ * fades across today. With burns, that same duration is time after the latest
+ * burn. A burn is one instant at its step, so that step is the burn's end.
+ */
+export function planHorizonEnd(from: SimState, config: SimConfig, nodes: readonly BurnNode[]): number {
+  if (!config.horizon) return Number.POSITIVE_INFINITY;
+  const extension = horizonSteps(from, config);
+  let burnEnd = from.step;
+  for (let i = 0; i < nodes.length; i++) {
+    const step = nodes[i].step;
+    if (step > burnEnd) burnEnd = step;
+  }
+  return burnEnd + extension;
+}
+
 /** Orbital period of the body that pulls hardest on `state`, or a circular stand-in. */
 function dominantPeriod(state: SimState, config: SimConfig): number | null {
   const time = state.step * config.dt;
@@ -2552,7 +2572,7 @@ function dominantPeriod(state: SimState, config: SimConfig): number | null {
  * Deterministic prediction of `nodes`, with the state at each node cached.
  * Pass `reuse` after an edit so nodes before the edit are not resimulated.
  * The returned path matches `flyPlan` step for step. A horizon stops the line
- * at that look-ahead; samples up to the stop still match the flight.
+ * at `planHorizonEnd`; samples up to the stop still match the flight.
  */
 export function predictPlan(
   from: SimState,
@@ -2615,7 +2635,7 @@ export function predictPlan(
         approach.push({ x: integrated.x, y: integrated.y, step: integrated.step, rate: integrated.rate });
       },
     };
-    const end = config.horizon ? from.step + horizonSteps(from, config) : Number.POSITIVE_INFINITY;
+    const end = planHorizonEnd(from, config, nodes);
     let guard = 0;
     const guardLimit = config.maxSteps + nodes.length + 2;
     while (state.status === "flying" && state.step <= end && guard++ <= guardLimit) {

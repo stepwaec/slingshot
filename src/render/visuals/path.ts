@@ -7,9 +7,11 @@ import type { Theme } from "../theme";
 import { disposeObject, type Visual, type VisualFactory, type VisualFrame } from "../visual";
 
 /**
- * Predicted path: round dots in screen pixels, plus the closed capture ellipse.
- * Swap this factory to draw the same samples another way. Dot spacing and
- * colours come from the theme; the samples come from the game prediction.
+ * Predicted path: a thin screen-space stroke through the predicted samples,
+ * bright at the ship and transparent at the end, plus a tick every 10 s of
+ * flight. Gold recharge stays a marker on that stroke. The closed capture
+ * ellipse stays dotted. Samples come from the game prediction; nothing here
+ * writes the sim.
  */
 export const createPath: VisualFactory = (theme) => new PathVisual(theme);
 
@@ -40,6 +42,40 @@ void main() {
 }
 `;
 
+const strokeVert = /* glsl */ `
+attribute vec4 aColor;
+attribute float aAcross;
+varying vec4 vColor;
+varying float vAcross;
+void main() {
+  vColor = aColor;
+  vAcross = aAcross;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}
+`;
+
+const strokeFrag = /* glsl */ `
+varying vec4 vColor;
+varying float vAcross;
+uniform float uCore;
+uniform float uSoft;
+void main() {
+  float dist = abs(vAcross) * (uCore + uSoft);
+  float edge = max(uSoft, 0.05);
+  float alpha = 1.0 - smoothstep(max(uCore - edge, 0.0), uCore + edge, dist);
+  if (alpha <= 0.01) discard;
+  gl_FragColor = vec4(vColor.rgb, vColor.a * alpha);
+}
+`;
+
+interface Ribbon {
+  mesh: THREE.Mesh;
+  pos: Float32Array;
+  col: Float32Array;
+  across: Float32Array;
+  maxSegs: number;
+}
+
 interface Dots {
   mesh: THREE.Mesh;
   centers: Float32Array;
@@ -62,8 +98,21 @@ class PathVisual implements Visual {
   readonly object = new THREE.Group();
   private readonly theme: Theme;
   private readonly path: Dots;
+  private readonly line: Ribbon;
+  private readonly ticks: Ribbon;
   private readonly orbit: Dots;
   private readonly endRing: THREE.Mesh;
+  private readonly px: Float32Array;
+  private readonly py: Float32Array;
+  private readonly pArc: Float32Array;
+  private readonly pStep: Float32Array;
+  private readonly pRate: Float32Array;
+  private readonly pSigma: Float32Array;
+  private readonly pCharge: Float32Array;
+  private readonly pWhich: Uint8Array;
+  private readonly keep: Int32Array;
+  private readonly offX: Float32Array;
+  private readonly offY: Float32Array;
   private readonly which: Uint8Array;
   private readonly dotRate: Float32Array;
   private readonly dotSigma: Float32Array;
@@ -100,8 +149,24 @@ class PathVisual implements Visual {
     this.dotCharge = new Float32Array(max);
     this.object.name = "path";
     this.object.userData.asset = theme.assets.predictedPath;
-    this.path = makeDots(theme, 2);
-    this.path.mesh.name = "predicted-path";
+    const samples = theme.path.maxSamples;
+    this.px = new Float32Array(samples);
+    this.py = new Float32Array(samples);
+    this.pArc = new Float32Array(samples);
+    this.pStep = new Float32Array(samples);
+    this.pRate = new Float32Array(samples);
+    this.pSigma = new Float32Array(samples);
+    this.pCharge = new Float32Array(samples);
+    this.pWhich = new Uint8Array(samples);
+    this.keep = new Int32Array(samples);
+    this.offX = new Float32Array(samples);
+    this.offY = new Float32Array(samples);
+    this.path = makeDots(theme, 5);
+    this.path.mesh.name = "path-gold";
+    this.line = makeRibbon(samples - 1, theme.path.lineHalfPx, theme.path.lineSoftPx, 2);
+    this.line.mesh.name = "predicted-path";
+    this.ticks = makeRibbon(256, theme.path.tickHalfWidth, theme.path.tickSoftPx, 6);
+    this.ticks.mesh.name = "path-ticks";
     this.orbit = makeDots(theme, 2);
     this.orbit.mesh.name = "orbit";
     this.endRing = new THREE.Mesh(
@@ -140,16 +205,24 @@ class PathVisual implements Visual {
     this.envelope.frustumCulled = false;
     this.envelope.renderOrder = 1;
     this.envelope.visible = false;
-    this.object.add(this.envelope, this.path.mesh, this.orbit.mesh, this.ghost.mesh, this.endRing);
+    this.object.add(
+      this.envelope,
+      this.line.mesh,
+      this.ticks.mesh,
+      this.path.mesh,
+      this.orbit.mesh,
+      this.ghost.mesh,
+      this.endRing,
+    );
   }
 
   update(frame: VisualFrame): void {
     const { game, width, height } = frame;
     const planning = game.mode === "planning" || game.mode === "paused";
-    // The tilted sheet draws the plan on its surface. The screen-space dots
-    // would sit on the flat projection instead.
-    if (!planning || game.gravity === "sheet") {
+    if (!planning) {
       this.path.mesh.visible = false;
+      this.line.mesh.visible = false;
+      this.ticks.mesh.visible = false;
       this.orbit.mesh.visible = false;
       this.ghost.mesh.visible = false;
       this.envelope.visible = false;
@@ -200,17 +273,18 @@ class PathVisual implements Visual {
     this.chainPrefix = { x: origin.x, y: origin.y, step: origin.step, rate: origin.rate };
     this.chainClose = false;
     this.useSpread = true;
-    const count = this.sample(width, height, this.path.centers, splitStep);
+    const count = this.project(width, height, splitStep);
     const head = srgb01(this.theme.colors.path);
     const tailColor = tailHex(game, this.theme);
     const tail = srgb01(tailColor);
-    this.paint(this.path.colors, count, head, tail, true);
-    commitDots(this.path, count, this.theme.path.dotSpanPx, this.dotCharge);
+    this.drawStroke(count, head, tail);
+    this.drawTicks(count, head, tail);
+    this.drawGold(count, head, tail);
     if (count > 0) {
-      const last = (count - 1) * 2;
-      this.endRing.position.set(this.path.centers[last], this.path.centers[last + 1], 0);
+      const last = count - 1;
+      this.endRing.position.set(this.px[last], this.py[last], 0);
       this.endRing.visible = true;
-      const ringColor = this.which[count - 1] === 0 ? this.theme.colors.path : tailColor;
+      const ringColor = this.pWhich[count - 1] === 0 ? this.theme.colors.path : tailColor;
       (this.endRing.material as THREE.MeshBasicMaterial).color.set(ringColor);
       const grown = this.fuzzy ? (6 + endSigma) / this.theme.path.endRingOuter : 1;
       this.endRing.scale.setScalar(grown);
@@ -238,6 +312,266 @@ class PathVisual implements Visual {
 
   dispose(): void {
     disposeObject(this.object);
+  }
+
+  /** Project every predicted sample. The stroke is this polyline, not a new path. */
+  private project(width: number, height: number, splitStep: number): number {
+    const total = this.chain.length + (this.chainPrefix ? 1 : 0);
+    const max = this.px.length;
+    if (total === 0) return 0;
+    const stride = Math.max(1, Math.ceil(total / max));
+    let count = 0;
+    let prevX = 0;
+    let prevY = 0;
+    let arc = 0;
+    for (let i = 0; i < total && count < max; i += stride) {
+      const index = i + stride >= total ? total - 1 : i;
+      this.read(index);
+      projectToScreen(this.cursor.x, this.cursor.y, width, height, this.scratch);
+      const x = this.scratch.x;
+      const y = height - this.scratch.y;
+      if (count > 0) arc += Math.hypot(x - prevX, y - prevY);
+      this.px[count] = x;
+      this.py[count] = y;
+      this.pArc[count] = arc;
+      this.pStep[count] = this.cursor.step;
+      this.pRate[count] = this.cursor.rate;
+      this.pSigma[count] = this.cursor.sigma;
+      this.pCharge[count] = this.cursor.charge;
+      this.pWhich[count] = this.cursor.step <= splitStep ? 0 : 1;
+      count += 1;
+      prevX = x;
+      prevY = y;
+      if (index === total - 1) break;
+    }
+    return count;
+  }
+
+  private drawStroke(
+    count: number,
+    head: [number, number, number],
+    tail: [number, number, number],
+  ): void {
+    const n = this.compact(count);
+    if (n < 2) {
+      finishRibbon(this.line, 0);
+      return;
+    }
+    const extent = this.theme.path.lineHalfPx + this.theme.path.lineSoftPx;
+    this.miters(n, extent);
+    let segs = 0;
+    for (let i = 0; i < n - 1 && segs < this.line.maxSegs; i++) {
+      const a = this.keep[i];
+      const b = this.keep[i + 1];
+      const ca = this.tone(a, count, head, tail, true);
+      const cb = this.tone(b, count, head, tail, true);
+      segs = pushQuad(
+        this.line,
+        segs,
+        this.px[a] + this.offX[i],
+        this.py[a] + this.offY[i],
+        this.px[a] - this.offX[i],
+        this.py[a] - this.offY[i],
+        this.px[b] + this.offX[i + 1],
+        this.py[b] + this.offY[i + 1],
+        this.px[b] - this.offX[i + 1],
+        this.py[b] - this.offY[i + 1],
+        ca,
+        cb,
+      );
+    }
+    finishRibbon(this.line, segs);
+  }
+
+  private drawTicks(
+    count: number,
+    head: [number, number, number],
+    tail: [number, number, number],
+  ): void {
+    if (count < 2) {
+      finishRibbon(this.ticks, 0);
+      return;
+    }
+    const every = this.theme.path.tickSeconds;
+    const origin = this.pStep[0];
+    const end = this.pStep[count - 1];
+    const span = (end - origin) * this.dt;
+    const extent = this.theme.path.tickHalfWidth + this.theme.path.tickSoftPx;
+    const half = this.theme.path.tickHalfLength;
+    let segs = 0;
+    for (let elapsed = every; elapsed < span - 1e-3 && segs < this.ticks.maxSegs; elapsed += every) {
+      const target = origin + elapsed / this.dt;
+      let i = 1;
+      while (i < count && this.pStep[i] < target) i += 1;
+      if (i >= count) break;
+      const s0 = this.pStep[i - 1];
+      const s1 = this.pStep[i];
+      const u = s1 === s0 ? 0 : (target - s0) / (s1 - s0);
+      const x = this.px[i - 1] + (this.px[i] - this.px[i - 1]) * u;
+      const y = this.py[i - 1] + (this.py[i] - this.py[i - 1]) * u;
+      const tx = this.px[i] - this.px[i - 1];
+      const ty = this.py[i] - this.py[i - 1];
+      const len = Math.hypot(tx, ty) || 1;
+      const nx = -ty / len;
+      const ny = tx / len;
+      const wx = (tx / len) * extent;
+      const wy = (ty / len) * extent;
+      const x0 = x - nx * half;
+      const y0 = y - ny * half;
+      const x1 = x + nx * half;
+      const y1 = y + ny * half;
+      const arc = this.pArc[i - 1] + (this.pArc[i] - this.pArc[i - 1]) * u;
+      const along = this.pArc[count - 1] > 0 ? arc / this.pArc[count - 1] : 0;
+      const tone = this.tone(i, count, head, tail, true);
+      const alpha = this.theme.path.tickAlpha * (1 - 0.22 * along * along);
+      const color: Rgba = [tone[0], tone[1], tone[2], alpha];
+      segs = pushQuad(
+        this.ticks,
+        segs,
+        x0 + wx,
+        y0 + wy,
+        x0 - wx,
+        y0 - wy,
+        x1 + wx,
+        y1 + wy,
+        x1 - wx,
+        y1 - wy,
+        color,
+        color,
+      );
+    }
+    finishRibbon(this.ticks, segs);
+  }
+
+  private drawGold(
+    count: number,
+    head: [number, number, number],
+    tail: [number, number, number],
+  ): void {
+    const max = this.theme.path.maxDots;
+    if (!(this.solar > 0) || count < 2) {
+      commitDots(this.path, 0, this.theme.path.dotSpanPx);
+      return;
+    }
+    const spacing = this.theme.path.spacingPx;
+    const total = this.pArc[count - 1];
+    const goldRgb = srgb01("#FFD86E");
+    let dots = 0;
+    for (let mark = 0; mark <= total && dots < max; mark += spacing) {
+      const i = this.atArc(count, mark);
+      const span = this.pArc[i] - this.pArc[i - 1] || 1;
+      const u = Math.min(1, Math.max(0, (mark - this.pArc[i - 1]) / span));
+      const charge = this.pCharge[i - 1] + (this.pCharge[i] - this.pCharge[i - 1]) * u;
+      const gold = Math.min(1, Math.sqrt(Math.max(0, 1.6 * charge)));
+      if (gold <= 0) continue;
+      const tone = this.tone(i, count, head, tail, true);
+      const rgb = mixRgb([tone[0], tone[1], tone[2]], goldRgb, gold);
+      const o = dots * 2;
+      this.path.centers[o] = this.px[i - 1] + (this.px[i] - this.px[i - 1]) * u;
+      this.path.centers[o + 1] = this.py[i - 1] + (this.py[i] - this.py[i - 1]) * u;
+      const c = dots * 4;
+      this.path.colors[c] = rgb[0];
+      this.path.colors[c + 1] = rgb[1];
+      this.path.colors[c + 2] = rgb[2];
+      this.path.colors[c + 3] = 1;
+      this.dotCharge[dots] = charge;
+      dots += 1;
+    }
+    commitDots(this.path, dots, this.theme.path.dotSpanPx, this.dotCharge);
+  }
+
+  /** Drop samples that land on the same pixel so the stroke normal stays defined. */
+  private compact(count: number): number {
+    if (count === 0) return 0;
+    let n = 0;
+    this.keep[n] = 0;
+    n += 1;
+    for (let i = 1; i < count; i++) {
+      const prev = this.keep[n - 1];
+      const dx = this.px[i] - this.px[prev];
+      const dy = this.py[i] - this.py[prev];
+      if (dx * dx + dy * dy < 0.04) {
+        if (i === count - 1) this.keep[n - 1] = i;
+        continue;
+      }
+      this.keep[n] = i;
+      n += 1;
+    }
+    return n;
+  }
+
+  private miters(n: number, extent: number): void {
+    for (let i = 0; i < n; i++) {
+      const curr = this.keep[i];
+      const prev = this.keep[Math.max(0, i - 1)];
+      const next = this.keep[Math.min(n - 1, i + 1)];
+      const useOut = i === 0;
+      const useIn = i === n - 1;
+      const ax = this.px[curr] - this.px[prev];
+      const ay = this.py[curr] - this.py[prev];
+      const bx = this.px[next] - this.px[curr];
+      const by = this.py[next] - this.py[curr];
+      const la = Math.hypot(ax, ay) || 1;
+      const lb = Math.hypot(bx, by) || 1;
+      const nax = -ay / la;
+      const nay = ax / la;
+      const nbx = -by / lb;
+      const nby = bx / lb;
+      let mx = useOut ? nbx : useIn ? nax : nax + nbx;
+      let my = useOut ? nby : useIn ? nay : nay + nby;
+      let ml = Math.hypot(mx, my);
+      if (ml < 0.2) {
+        mx = nbx;
+        my = nby;
+        ml = 1;
+      } else {
+        mx /= ml;
+        my /= ml;
+      }
+      const refX = useIn ? nax : nbx;
+      const refY = useIn ? nay : nby;
+      const dot = mx * refX + my * refY;
+      const miter = useOut || useIn ? 1 : Math.min(2.4, 1 / Math.max(0.35, Math.abs(dot)));
+      this.offX[i] = mx * extent * miter;
+      this.offY[i] = my * extent * miter;
+    }
+  }
+
+  private atArc(count: number, arc: number): number {
+    let lo = 1;
+    let hi = count - 1;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (this.pArc[mid] < arc) lo = mid + 1;
+      else hi = mid;
+    }
+    return lo;
+  }
+
+  /** Colour at a projected sample. Alpha fades along the arc and tints by clock rate. */
+  private tone(
+    index: number,
+    count: number,
+    head: [number, number, number],
+    tail: [number, number, number],
+    byRate: boolean,
+  ): Rgba {
+    const total = count > 1 ? this.pArc[count - 1] : 0;
+    const along = total > 0 ? this.pArc[index] / total : 0;
+    const rate = this.pRate[index];
+    const slow = 1 - Math.min(1, Math.max(0, rate));
+    const glow = slow * slow;
+    const base = this.pWhich[index] === 0 ? head : tail;
+    const hot = srgb01(this.theme.colors.starCorona);
+    const tinted = byRate ? mixRgb(base, hot, glow) : base;
+    const sigma = this.pSigma[index];
+    let alpha = this.theme.path.headAlpha * (1 - along * along);
+    if (sigma >= 0.6) alpha *= Math.max(0.18, 0.7 - sigma / 40) / 0.7;
+    if (byRate && sigma < 0.6 && glow > 0) {
+      const lifted = alpha + glow * this.theme.path.glowLift;
+      alpha = Math.max(alpha, Math.min(this.theme.path.alphaCap, lifted));
+    }
+    return [tinted[0], tinted[1], tinted[2], alpha];
   }
 
   private sample(width: number, height: number, centers: Float32Array, splitStep: number): number {
@@ -418,6 +752,8 @@ class PathVisual implements Visual {
   }
 }
 
+type Rgba = [number, number, number, number];
+
 function mixRgb(
   a: [number, number, number],
   b: [number, number, number],
@@ -468,6 +804,83 @@ function makeDots(theme: Theme, order: number): Dots {
   mesh.frustumCulled = false;
   mesh.renderOrder = order;
   return { mesh, centers, colors, quadPos, quadCol };
+}
+
+function makeRibbon(maxSegs: number, core: number, soft: number, order: number): Ribbon {
+  const verts = Math.max(1, maxSegs) * 6;
+  const pos = new Float32Array(verts * 3);
+  const col = new Float32Array(verts * 4);
+  const across = new Float32Array(verts);
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  geometry.setAttribute("aColor", new THREE.BufferAttribute(col, 4));
+  geometry.setAttribute("aAcross", new THREE.BufferAttribute(across, 1));
+  geometry.setDrawRange(0, 0);
+  const mesh = new THREE.Mesh(
+    geometry,
+    new THREE.ShaderMaterial({
+      uniforms: {
+        uCore: { value: core },
+        uSoft: { value: soft },
+      },
+      vertexShader: strokeVert,
+      fragmentShader: strokeFrag,
+      transparent: true,
+      depthTest: false,
+      depthWrite: false,
+      toneMapped: false,
+      side: THREE.DoubleSide,
+    }),
+  );
+  mesh.frustumCulled = false;
+  mesh.renderOrder = order;
+  mesh.visible = false;
+  return { mesh, pos, col, across, maxSegs: Math.max(1, maxSegs) };
+}
+
+/** One quad. Corners are start-left, start-right, end-left, end-right. */
+function pushQuad(
+  ribbon: Ribbon,
+  cursor: number,
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number,
+  cx: number,
+  cy: number,
+  dx: number,
+  dy: number,
+  c0: Rgba,
+  c1: Rgba,
+): number {
+  if (cursor >= ribbon.maxSegs) return cursor;
+  const v = cursor * 6;
+  const xy = [ax, ay, bx, by, cx, cy, bx, by, dx, dy, cx, cy];
+  const across = [1, -1, 1, -1, -1, 1];
+  const colors = [c0, c0, c1, c0, c1, c1];
+  for (let k = 0; k < 6; k++) {
+    const p = (v + k) * 3;
+    ribbon.pos[p] = xy[k * 2];
+    ribbon.pos[p + 1] = xy[k * 2 + 1];
+    ribbon.pos[p + 2] = 0;
+    ribbon.across[v + k] = across[k];
+    const c = (v + k) * 4;
+    const color = colors[k];
+    ribbon.col[c] = color[0];
+    ribbon.col[c + 1] = color[1];
+    ribbon.col[c + 2] = color[2];
+    ribbon.col[c + 3] = color[3];
+  }
+  return cursor + 1;
+}
+
+function finishRibbon(ribbon: Ribbon, segs: number): void {
+  const geometry = ribbon.mesh.geometry;
+  geometry.setDrawRange(0, segs * 6);
+  geometry.attributes.position.needsUpdate = true;
+  geometry.attributes.aColor.needsUpdate = true;
+  geometry.attributes.aAcross.needsUpdate = true;
+  ribbon.mesh.visible = segs > 0;
 }
 
 function commitDots(dots: Dots, count: number, span: number, charge?: Float32Array): void {
