@@ -240,6 +240,24 @@ export const theme = {
     glowLift: 0.12,
     /** Ceiling for that lift. Gold recharge dots stay at α 1 (style.md solar path). */
     alphaCap: 0.82,
+    /**
+     * Thin solid planning stroke, in screen px. The dotted header
+     * (r 1.5 every 10 px) is replaced by this line: bright at the ship,
+     * transparent at the end. The centreline is still the predicted samples.
+     */
+    lineHalfPx: 0.8,
+    lineSoftPx: 0.45,
+    /** α at the ship. Falls as (1 − u²) along the screen arc, 0 at the end. */
+    headAlpha: 0.92,
+    /** Flight-time marks. Sim seconds from the ship, not a screen spacing. */
+    tickSeconds: 10,
+    /** Short cross-bar. Long enough to read at the framed chart, still a tick. */
+    tickHalfLength: 4.8,
+    tickHalfWidth: 0.5,
+    tickSoftPx: 0.35,
+    tickAlpha: 0.72,
+    /** Room for every predicted sample. Current levels stay under 9000 steps. */
+    maxSamples: 12000,
     endRingInner: 5.25,
     endRingOuter: 6.75,
     endRingAlpha: 0.5,
