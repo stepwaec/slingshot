@@ -1,6 +1,6 @@
 # Slingshot — visual style v1.5
 
-Calm, cinematic space for Slingshot. This file is the look; `canvas-notes.md` is the pixel-exact drawing reference (how each SVG recipe looks and what it costs, written for Canvas 2D); `threejs-notes.md` maps it onto the game's Three.js renderer (WP3); `assets.md` indexes every file. Sections: §1 mood · §2 palette (background, sky, the sun, the two original planets, the shared lighting tokens, UI) · §3 typography · §4 glow and blur rules, with **§4.1 Realism, vibrancy and crispness rules** · §5 motion · §6 layout · §7 asset index · §8 the **body library** (31 bodies: 12 planets, 6 stars and compact objects, 4 moons, 3 ringed planets, the 3 WP8 objects: binary star, red giant, moon chain, the 2 WP9 compact objects: pulsar, magnetar, and the WP10 comet) plus the WP9 **magnetism map** and the WP10 **solar recharge indicator** · §9 the **space environment** (nebulae, asteroid field, wreck debris) · §10 **ship systems** (modular ship, damage states, hull HUD, tidal-stress warning, upgrade screen) · §11 **WP11** (asteroid belts, Kuiper belt, rogue planet, radiation map, dose meter) · §12 **ship and planning view** (burn plume, burn node, gravity grid and sheet) · §13 **late game** (stellar engine, Dyson swarm, ringworld, Shkadov thruster, space elevator, wormhole pair) and **living surfaces** · §14 **collisions and consumption** (impact, debris field, tidal disruption, burning up in a star, accretion, event telegraphs). Coding agents: read `IMPLEMENTING.md` first. Assets live in `design/assets` (bodies in `design/assets/bodies`, the environment in `design/assets/space`, map overlays in `design/assets/overlays`, the modular ship in `design/assets/ship`, late-game structures in `design/assets/mega`, scripted events in `design/assets/events`), mockups (1440×900, PNG = 2× render) in `design/mockups`, animated previews in `design/preview/planets.html`, `bodies.html` and `space.html`.
+Calm, cinematic space for Slingshot. This file is the look; `canvas-notes.md` is the pixel-exact drawing reference (how each SVG recipe looks and what it costs, written for Canvas 2D); `threejs-notes.md` maps it onto the game's Three.js renderer (WP3); `assets.md` indexes every file. Sections: §1 mood · §2 palette (background, sky, the sun, the two original planets, the shared lighting tokens, UI) · §3 typography · §4 glow and blur rules, with **§4.1 Realism, vibrancy and crispness rules** · §5 motion · §6 layout · §7 asset index · §8 the **body library** (31 bodies: 12 planets, 6 stars and compact objects, 4 moons, 3 ringed planets, the 3 WP8 objects: binary star, red giant, moon chain, the 2 WP9 compact objects: pulsar, magnetar, and the WP10 comet) plus the WP9 **magnetism map** and the WP10 **solar recharge indicator** · §9 the **space environment** (nebulae, asteroid field, wreck debris) · §10 **ship systems** (modular ship, damage states, hull HUD, tidal-stress warning, upgrade screen) · §11 **WP11** (asteroid belts, Kuiper belt, rogue planet, radiation map, dose meter) · §12 **ship and planning view** (burn plume, burn node, gravity grid and sheet) · §13 **late game** (stellar engine, Dyson swarm, ringworld, Shkadov thruster, space elevator, wormhole pair) and **living surfaces** · §14 **collisions and consumption** (impact, debris field, tidal disruption, burning up in a star, accretion, event telegraphs) · §15 **ghost markers** (where a moving body will be). Coding agents: read `IMPLEMENTING.md` first. Assets live in `design/assets` (bodies in `design/assets/bodies`, the environment in `design/assets/space`, map overlays in `design/assets/overlays`, the modular ship in `design/assets/ship`, late-game structures in `design/assets/mega`, scripted events in `design/assets/events`), mockups (1440×900, PNG = 2× render) in `design/mockups`, animated previews in `design/preview/planets.html`, `bodies.html` and `space.html`.
 
 **History in one paragraph.** v1 set the layout, UI and the two-glow rule. v1.1 was the first realism pass (limb-darkened star, planets with a terminator and a rim, a tinted starfield with a Milky Way). v1.2 made the planets rotate: a seamless texture strip slides under a lighting overlay that never moves. v1.3 built the body library (12 planets, 6 stars and compact objects) and gave the stars prominences and a flare. v1.4 adds moons, ringed planets, nebulae and debris fields (§8, §9). **v1.5 (revised) is the realism, vibrancy and crispness pass**, agreed with the client on two approved reference assets — the ocean world "variant F" and the sun "variant J" — and applied to every body: vivid multi-zone surfaces with crisp edges, elongated clouds with cast shadows, a warm terminator band, a lit-side haze and rim, a fiery plasma sun with ragged flame rings and an irregular rim, and no untinted grey anywhere. The earlier v1.5 "crispness pass" numbers (halve blurs, ±12 % lightness, limb line at α 0.30) were rejected as indistinguishable from v1.2 and are **not** used; §4.1 holds the rules that replaced them.
 
@@ -1262,3 +1262,30 @@ Events are scripted and deterministic, keyed to sim time, so the visuals play on
 | `event.next` | `#FFC857` | What follows: debris forecast, "gap narrows", "orbit decaying" |
 
 The showcase mockup also previews where the target will be at arrival (a dashed `#3DE0C2` ring with its capture radius). The ghost-marker design itself is the next request.
+
+## 15. Ghost markers (v2.8, Living universe LU2)
+
+Files: `assets/ghost-markers.svg`, mockup `mockups/planning-ghosts.svg`. Renderer notes: `threejs-notes.md` §18. A ghost shows where a moving body will be at a moment on the plan. Ghosts appear in planning and pause only, take their position from `bodyPose` at the ghost's sim time, and use screen-space strokes that never scale with zoom.
+
+- **Marker:** a ring at the body's radius (minimum 8 px), 1.2 px, plus an inner ring at 0.62 r. The fill is the ghost colour at α 0.07–0.14, in cool colours only, so it never turns brown. Never a filled disc: a ghost must not compete with the real body.
+- **Tie line:** a dotted line from the path sample at the same sim time (a small ring on the path) to the ghost, so the pairing is never ambiguous. The cursor's tie line is white, with a solid dot on the path.
+- **Future track:** the target's orbit from now to arrival as mint dots with a tick every 10 s of sim time, so direction and speed read at a glance.
+- **Limits:** one ghost per body per burn node, one cursor ghost, one arrival ghost. Ghosts more than 3 burns ahead fade to α 0.3.
+
+| State | Look | Label |
+|---|---|---|
+| At a burn | `ghost.body` ring α 0.85; a badge r 6.5 with the burn number (ring `#B8A8FF`, = `node.ring`) | "+0:24" (time from now) |
+| Under the cursor | `ghost.cursor` 1.6 px ring | "+0:51" |
+| Target at arrival | `ghost.target` ring plus its capture radius dashed 6 6, crawling 12 px/s | "arrive 1:10" |
+| Collision | `ghost.collision` ring pulsing α 1 → 0.45 over 0.8 s, with a cross | "collision 0:48" |
+| Gone by then | `ghost.gone` dashed ring (2 3) with a slash: consumed or destroyed before that moment (LU3) | "gone at 1:42" |
+| Other bodies | `ghost.body` α 0.6, smaller, no label | — |
+
+| Token | Hex | Used for |
+|---|---|---|
+| `ghost.body` | `#DCE4FF` | Ghosts of bodies that are not the target; burn ghosts (= `path`) |
+| `ghost.cursor` | `#FFFFFF` | The ghost and tie line under the cursor |
+| `ghost.target` | `#3DE0C2` | The target's arrival ghost, capture radius and future track (= `planet.x` ring) |
+| `ghost.collision` | `#FF5A5F` | A predicted collision (= `fuel.critical`) |
+| `ghost.gone` | `#FF9F43` | A body gone by then (= `event.warn`) |
+| `ghost.tie` | `#8B95B5` | Tie lines (α 0.75, dash 1.5 3.5, round caps) |

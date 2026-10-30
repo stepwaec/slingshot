@@ -1,6 +1,6 @@
-# Slingshot — asset index (v2.7)
+# Slingshot — asset index (v2.8)
 
-One row per file in `design/assets/` (14 top-level files, 30 bodies in `bodies/`, 16 ship files in `ship/`, 6 late-game structures in `mega/`, 6 scripted events in `events/`, 4 map overlays in `overlays/`, 9 environment files in `space/` — 85 SVGs). Coding agents implementing these designs: read `IMPLEMENTING.md` first; `IMPLEMENTATION-REVIEW.md` lists fixes for what is already in the game, then the previews and the mockups. All SVGs are self-contained (no scripts, external refs or raster), `xmllint --noout` clean and use only the tokens of `style.md` §2 / §8 / §9. "Anchor" is the point the game positions and rotates. Exact Canvas code is in `canvas-notes.md` (§ numbers below). How to build each asset in the game\'s Three.js renderer is in `threejs-notes.md` (§10 maps every asset to its factory).
+One row per file in `design/assets/` (15 top-level files, 30 bodies in `bodies/`, 16 ship files in `ship/`, 6 late-game structures in `mega/`, 6 scripted events in `events/`, 4 map overlays in `overlays/`, 9 environment files in `space/` — 86 SVGs). Coding agents implementing these designs: read `IMPLEMENTING.md` first; `IMPLEMENTATION-REVIEW.md` lists fixes for what is already in the game, then the previews and the mockups. All SVGs are self-contained (no scripts, external refs or raster), `xmllint --noout` clean and use only the tokens of `style.md` §2 / §8 / §9. "Anchor" is the point the game positions and rotates. Exact Canvas code is in `canvas-notes.md` (§ numbers below). How to build each asset in the game\'s Three.js renderer is in `threejs-notes.md` (§10 maps every asset to its factory).
 
 **Structure.** Every body and environment asset is `<defs>` (ids prefixed per file) + **one** top-level group `<g id="…" transform="translate(cx cy)">` with all geometry relative to (0, 0), SMIL animation inside, and a **header comment listing every parameter — the header is the canon**. Mockups and galleries copy the defs and the group verbatim and change only the translate (plus scene-local lighting wrappers). Ids are unique across all 37 SVGs (checked: no id defined in two files, every `url(#…)` / `href` resolves). Static renders and mockups show t = 0.
 
@@ -24,6 +24,7 @@ One row per file in `design/assets/` (14 top-level files, 30 bodies in `bodies/`
 | `hud-dose.svg` (v2.4, WP11) | **Crew dose meter** sample sheet: low, rising (belt), danger (flare, pulsing), shadow, and the planning ghost; plus the radiation-map legend | `0 0 520 420` | `#hudDose` (0, 0) | `rad.dose*` #9BE15D / #FFE83A / #FF5A5F · star mark #FFD27A (`style.md` §11) | third block of the status stack (baseline 144); chips move to y 170 |
 | `burn-node.svg` (v2.5) | **Burn node** in every state: idle, selected (Δv chip, delete), placing, over budget, wind-up arc, ignition flash, fired; 2.4× and 1× | `0 0 1400 330` | `#burnNode` (0, 0); `kn*` | `node.*` #B8A8FF / #F7FBFF / #0A0D1A / #FFFFFF / #FF5A5F (`style.md` §12) | screen-space; arrow keeps the drag-arrow geometry and power ramp |
 | `star-surface-motion.svg` (v2.6) | **Living sun surface** reference: the sun J disc with two counter-flowing plasma layers, three boiling cell layers, twinkling faculae, limb shimmer and the ragged rim | `0 0 240 240` | `#starSurfaceMotion` (120, 120) ×2; `sm*` | the `star.svg` tokens (`sun.*`) | motion values in the header and `style.md` §13 "Living surfaces"; cosmetic, `frame.now` |
+| `ghost-markers.svg` (v2.8) | **Ghost markers**: six states (at a burn with its badge, cursor, target at arrival with capture radius, collision, gone, other bodies) at 2×, plus a tie line and a ticked future track | `0 0 1400 420` | `#ghostMarkers` (0, 0) | `ghost.*` #DCE4FF / #FFFFFF / #3DE0C2 / #FF5A5F / #FF9F43 / #8B95B5 (`style.md` §15) | planning and pause only; px-space strokes; positions from `bodyPose` at the ghost's sim time |
 
 ## Body library (`design/assets/bodies/`)
 
@@ -154,7 +155,7 @@ All self-contained pages (inline CSS, no scripts) on `bg.base`, inlining the ass
 
 ## Mockups (`design/mockups/`, all `0 0 1440 900`; **PNG = 2× render**)
 
-Every PNG is a 2× render of its SVG (2880 × 1800, `--force-device-scale-factor=2`, same filename). All seventeen share the v1.1 background (the upgrade screen dims it) (a `bg.edge` rect, the vignette centred (720, 450) r 900, then the `#starfield` group verbatim) and splice every body group **verbatim** from the v1.5 assets with only its translate changed; where a library body's upper-right light does not face the scene's star, its lighting layers sit in a scene-local `rotate(angle(L_scene) − angle(L_library))` wrapper (strips and the asset files untouched).
+Every PNG is a 2× render of its SVG (2880 × 1800, `--force-device-scale-factor=2`, same filename). All eighteen share the v1.1 background (the upgrade screen dims it) (a `bg.edge` rect, the vignette centred (720, 450) r 900, then the `#starfield` group verbatim) and splice every body group **verbatim** from the v1.5 assets with only its translate changed; where a library body's upper-right light does not face the scene's star, its lighting layers sit in a scene-local `rotate(angle(L_scene) − angle(L_library))` wrapper (strips and the asset files untouched).
 
 | File | Mode | What it demonstrates |
 |---|---|---|
@@ -175,6 +176,7 @@ Every PNG is a 2× render of its SVG (2880 × 1800, `--force-device-scale-factor
 | `flight-burn.svg` / `.png` (v2.5) | In flight, mid-burn | The modular ship firing a medium chemical plume (L 80), the burn being executed behind it as a fired node, the next node ahead in its wind-up arc, the predicted path ahead, and a 3.3× callout (mockup only) of the plume; the removed trail is gone |
 | `late-game.svg` / `.png` (v2.6) | Planning, late-game system | A Dyson swarm rings the sun (sun at α 0.72), a space elevator stands on the home planet with its release arrow and "free Δv 2.4", and a wormhole pair sits between them with "exit clock +3.2 h" |
 | `showcase-burning-planet.svg` / `.png` (v2.7) | Planning, the Ash showcase | Planet X on its decaying orbit, heating and shedding an ablation tail; the dashed spiral into the sun; the predicted path racing to where X will be at arrival (dashed mint ring and capture radius); chips "burns up in 1:42", "orbit decaying", "arrive 1:10 · margin 0:32" |
+| `planning-ghosts.svg` / `.png` (v2.8) | Planning, ghost markers | Planet X on a circular orbit around the sun; its future track with a tick every 10 s; a ghost at burn 2 and under the cursor, each tied to its path sample; the path ends in the arrival ghost's capture radius |
 
 ## Usage rules
 

@@ -59,6 +59,17 @@ PRs #33 and #35 brought back the sun's turning rings and breathing haze, rebaked
   - Planning gets the telegraphs.
   - The Ash level should match `mockups/showcase-burning-planet.svg`.
 
+## Update after PR #45: ghost markers are placeholders
+
+- **The ghosts are one plain ring per moving body** at each node time, brighter under the cursor (`src/render/visuals/ghosts.ts`). Nothing ties a ghost to its path sample, the target's arrival isn't distinct, and collisions or bodies already gone don't show.
+- **Fix:** follow `style.md` §15 and `threejs-notes.md` §18:
+  - the ring and inner ring with their states (burn badge, cursor, arrival with capture radius, collision, gone)
+  - dotted tie lines to the path sample at the same moment
+  - time chips
+  - the target's future track with a tick every 10 s
+
+  The planning view should match `mockups/planning-ghosts.svg`.
+
 ## Priority fixes
 
 Do these first. They are the biggest visible or gameplay gaps after #32.
