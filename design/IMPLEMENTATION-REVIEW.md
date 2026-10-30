@@ -116,12 +116,12 @@ Landed in [PR #64](https://github.com/stepwaec/slingshot/pull/64), from the ghos
 
 ## Sol campaign: the art is ready (v3.1)
 
-- **New, no code yet.** `design/assets/sol/` has the Sun, the eight planets, the Moon, Titan, Pluto, Charon, Eris, Arrokoth and Voyager. Follow `style.md` §18 and `threejs-notes.md` §21.
-  - Add one `look` per body.
-  - Use the size ladder for radii.
-  - Keep Earth's city lights, Saturn's and Uranus's front and back rings, and the Sun's spots as separate layers.
-  - Keep the locked faces fixed.
-- **Mission 1** should match `mockups/sol-moon.svg`: the Moon in its target zone (§17), with a capture into lunar orbit.
+- **Bodies are in the game.** `design/assets/sol/` has the Sun, the eight planets, the Moon, Titan, Pluto, Charon, Eris, Arrokoth and Voyager. Follow `style.md` §18 and `threejs-notes.md` §21.
+  - ✔ One `look` per body, drawn from the SVG pipeline.
+  - ✔ The size ladder is the crash radius (the Sun stays r 46; Voyager is not solid).
+  - ✔ Earth's city lights, Saturn's and Uranus's front and back rings, and the Sun's spots are separate layers.
+  - ✔ The Moon, Pluto and Charon keep fixed faces. Lighting still follows the star.
+- **Mission 1** should match `mockups/sol-moon.svg`: the Moon in its target zone (§17), with a capture into lunar orbit. That level comes after Orbit capture. It is not part of the bodies pass.
 
 ## Priority fixes
 
