@@ -15,7 +15,6 @@ import { createGame, loadLevel } from "../src/game/state";
 import type { Level } from "../src/level/schema";
 import { observatory } from "../src/level/catalog";
 import { stage as passage } from "./support/stage";
-import type { Level } from "../src/level/schema";
 
 const shade = passage;
 const needle = observatory;

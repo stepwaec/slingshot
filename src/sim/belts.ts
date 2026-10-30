@@ -155,7 +155,7 @@ const placedRocks = new WeakMap<object, readonly BeltRock[]>();
 
 /**
  * Rocks are a pure function of the belt list. `simConfigFromLevel` rebuilds
- * a config many times a frame, and placing Frost's Kuiper belt is the slow
+ * a config many times a frame, and placing the Observatory's Kuiper belt is the slow
  * part of that. The same array is returned for the same list.
  */
 export function placeBelts(belts: readonly Belt[]): BeltRock[] {
