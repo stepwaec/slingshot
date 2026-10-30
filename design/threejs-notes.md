@@ -4,7 +4,7 @@ How to build the v1.5 realistic look in the game's actual renderer: the orthogra
 
 Read with: `style.md` (tokens and rules), `assets.md` (one row per asset), the asset SVG header comments (the canon for every number), and in the code `src/render/visual.ts`, `src/render/visuals/index.ts`, `src/render/theme.ts`, `src/render/palette.ts`.
 
-Sections: §0 how the renderer is put together · §1 rules for the realistic visuals · §2 translating SVG filter recipes to GLSL · §3 planets · §4 stars · §5 compact objects · §6 moons and moon chains · §7 environment (nebulae, debris, rings) · §8 palette and colour · §9 budget · §10 asset → factory map, with what WP8 needs · §11 the magnetism map and fuzzy prediction (WP9) · §12 comets and the solar recharge indicator (WP10) · §13 the modular ship, damage, hull HUD and upgrade screen (ship systems) · §14 belts, Kuiper belt, rogue planet, radiation map and dose (WP11) · §15 burn plume, burn node and gravity grid styling · §16 late-game megastructures and wormholes; §4.6 living star surfaces · §17 collisions and consumption (LU3). Coding agents: `IMPLEMENTING.md` is the rulebook; `IMPLEMENTATION-REVIEW.md` lists fixes for what is already built.
+Sections: §0 how the renderer is put together · §1 rules for the realistic visuals · §2 translating SVG filter recipes to GLSL · §3 planets · §4 stars · §5 compact objects · §6 moons and moon chains · §7 environment (nebulae, debris, rings) · §8 palette and colour · §9 budget · §10 asset → factory map, with what WP8 needs · §11 the magnetism map and fuzzy prediction (WP9) · §12 comets and the solar recharge indicator (WP10) · §13 the modular ship, damage, hull HUD and upgrade screen (ship systems) · §14 belts, Kuiper belt, rogue planet, radiation map and dose (WP11) · §15 burn plume, burn node and gravity grid styling · §16 late-game megastructures and wormholes; §4.6 living star surfaces · §17 collisions and consumption (LU3) · §18 ghost markers (LU2). Coding agents: `IMPLEMENTING.md` is the rulebook; `IMPLEMENTATION-REVIEW.md` lists fixes for what is already built.
 
 ---
 
@@ -334,3 +334,21 @@ Designs: `events/*.svg`, `mockups/showcase-burning-planet.svg`. Values in `style
 - **Telegraphs:** for every scripted event the plan reaches, draw the course or spiral dashed in `event.warn`, the reticle at the predicted point, and the countdown chip (DOM), plus the follow-on dashed in `event.next`.
 
 **Budget:** each event is a handful of quads plus at most 30 points, under 0.2 ms.
+
+## 18. Ghost markers (LU2)
+
+Designs: `ghost-markers.svg`, `mockups/planning-ghosts.svg`. Values in `style.md` §15. This replaces the plain rings in `src/render/visuals/ghosts.ts`. Keep `ghostSteps` and `movingBodies`. Per ghost:
+
+1. **Pose.** Take the position from `bodyPose(body, step · dt)`. The ring radius is `max(body.radius, 8)` in world units, but the strokes are px-space (1.2 / 0.7 px, from `fwidth`).
+2. **State.** Pick it in this order:
+   - *gone* when `bodyPresent` is false (or a `consume` script has ended)
+   - *collision* when the predicted ship position at that step is inside the body
+   - *arrival* for the target at the capture step
+   - *cursor* at `cursorStep`
+   - otherwise *at a burn*
+
+   The colours and the badge come from §15.
+3. **Tie line.** Draw a px-dashed line quad from the ship's predicted position at the same step to the ghost centre.
+4. **Labels.** The time chip is DOM, like the Δv chip; for the target's arrival it reads "arrive m:ss".
+
+The target's future track is one line strip sampled from `bodyPose` between now and the arrival step, dashed in px-space, with a tick quad every 10 s of sim time. Draw it at renderOrder below the path dots. Ghosts never write the sim.

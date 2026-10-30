@@ -298,6 +298,140 @@ export function sampleGravityGrid(
   return grid;
 }
 
+/**
+ * Ink depth from design/assets/overlays/gravity-grid.svg.
+ * d = log(1 + Φ/Φ0) / log(1 + Φmax/Φ0). The warp still uses `scaleWellDepth`.
+ */
+export function inkDepth(phi: number, phi0: number, phiMax: number): number {
+  if (!Number.isFinite(phi) || !(phi > 0)) return phi === Number.POSITIVE_INFINITY ? 1 : 0;
+  const ref = phi0 > 1e-9 && Number.isFinite(phi0) ? phi0 : 1;
+  const max = phiMax > ref && Number.isFinite(phiMax) ? phiMax : ref;
+  const denom = Math.log1p(max / ref);
+  if (!(denom > 0)) return 0;
+  const d = Math.log1p(phi / ref) / denom;
+  return Math.min(1, Math.max(0, d));
+}
+
+/** Deepest finite sample. Singularities stay out of the denominator and draw as d = 1. */
+export function deepestFinite(depth: ArrayLike<number>): number {
+  let max = 0;
+  for (let i = 0; i < depth.length; i++) {
+    const value = depth[i];
+    if (Number.isFinite(value) && value > max) max = value;
+  }
+  return max;
+}
+
+/** t = d^gamma. Colour is sampled at min(1, ramp * t). */
+export function inkTone(d: number, gamma: number): number {
+  const x = d > 0 ? Math.min(1, d) : 0;
+  const g = gamma > 0 ? gamma : 1;
+  return Math.pow(x, g);
+}
+
+export function rampStop(tone: number, scale: number): number {
+  const t = tone > 0 ? tone : 0;
+  const s = scale > 0 ? scale : 1;
+  return Math.min(1, t * s);
+}
+
+/** (base + depth * t + major) * fade. */
+export function inkAlpha(tone: number, major: boolean, fade: number, base: number, depth: number, majorBoost: number): number {
+  const t = tone > 0 ? Math.min(1, tone) : 0;
+  const edge = fade > 0 ? Math.min(1, fade) : 0;
+  const extra = major ? majorBoost : 0;
+  return Math.max(0, (base + depth * t + extra) * edge);
+}
+
+/** z = -H * d^exp. Flat space stays on the plane. A black hole stays at -H. */
+export function sheetDrop(d: number, height: number, exponent: number): number {
+  if (!(height > 0) || !(d > 0)) return 0;
+  const x = Math.min(1, d);
+  const exp = exponent > 0 ? exponent : 1;
+  return -height * Math.pow(x, exp);
+}
+
+/** 0 on the screen edge, 1 once `inset` pixels in. */
+export function screenEdgeFade(x: number, y: number, width: number, height: number, inset: number): number {
+  if (!(inset > 0) || !(width > 0) || !(height > 0)) return 1;
+  const edge = Math.min(x, y, width - x, height - y);
+  return Math.max(0, Math.min(1, edge / inset));
+}
+
+/** 0 on the outer row, 1 after `cells` steps in. */
+export function cellEdgeFade(col: number, row: number, cols: number, rows: number, cells: number): number {
+  if (!(cells > 0)) return 1;
+  const inset = Math.min(col, row, cols - 1 - col, rows - 1 - row);
+  return Math.max(0, Math.min(1, inset / cells));
+}
+
+export interface Disc {
+  x: number;
+  y: number;
+  r: number;
+}
+
+/**
+ * Pieces of AB that sit outside every disc.
+ * Lines stop at the disc instead of crossing it.
+ */
+export function clipSegment(ax: number, ay: number, bx: number, by: number, discs: readonly Disc[]): Array<[number, number, number, number]> {
+  let pieces: Array<[number, number, number, number]> = [[ax, ay, bx, by]];
+  for (let i = 0; i < discs.length; i++) {
+    const disc = discs[i];
+    if (!(disc.r > 0)) continue;
+    const next: Array<[number, number, number, number]> = [];
+    for (let p = 0; p < pieces.length; p++) {
+      const piece = pieces[p];
+      const clipped = clipDisc(piece[0], piece[1], piece[2], piece[3], disc);
+      for (let c = 0; c < clipped.length; c++) next.push(clipped[c]);
+    }
+    pieces = next;
+    if (pieces.length === 0) return pieces;
+  }
+  return pieces;
+}
+
+function clipDisc(ax: number, ay: number, bx: number, by: number, disc: Disc): Array<[number, number, number, number]> {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const fx = ax - disc.x;
+  const fy = ay - disc.y;
+  const a = dx * dx + dy * dy;
+  const inside = (x: number, y: number) => {
+    const ox = x - disc.x;
+    const oy = y - disc.y;
+    return ox * ox + oy * oy < disc.r * disc.r;
+  };
+  if (!(a > 1e-12)) return inside(ax, ay) ? [] : [[ax, ay, bx, by]];
+  const b = 2 * (fx * dx + fy * dy);
+  const c = fx * fx + fy * fy - disc.r * disc.r;
+  const det = b * b - 4 * a * c;
+  if (det <= 0) return inside(ax, ay) ? [] : [[ax, ay, bx, by]];
+  const root = Math.sqrt(det);
+  let t0 = (-b - root) / (2 * a);
+  let t1 = (-b + root) / (2 * a);
+  if (t0 > t1) {
+    const swap = t0;
+    t0 = t1;
+    t1 = swap;
+  }
+  if (t1 < 0 || t0 > 1) return inside(ax, ay) ? [] : [[ax, ay, bx, by]];
+  const out: Array<[number, number, number, number]> = [];
+  const point = (t: number): [number, number] => [ax + dx * t, ay + dy * t];
+  if (!inside(ax, ay) && t0 > 1e-4) {
+    const end = Math.min(1, t0);
+    const [x, y] = point(end);
+    out.push([ax, ay, x, y]);
+  }
+  if (!inside(bx, by) && t1 < 1 - 1e-4) {
+    const start = Math.max(0, t1);
+    const [x, y] = point(start);
+    out.push([x, y, bx, by]);
+  }
+  return out;
+}
+
 const CONTOUR_EDGES: readonly (readonly number[])[] = [
   [],
   [0, 3],

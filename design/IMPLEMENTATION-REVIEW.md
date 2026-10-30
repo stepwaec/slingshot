@@ -69,6 +69,17 @@ Landed in [PR #57](https://github.com/stepwaec/slingshot/pull/57), from the even
 - `disrupt` and `accrete` are still proposed scripts. No level has them. Adding them would change gravity, so this pass does not.
 - The star brightening is masked to the photosphere. The sample disc is `#FFE7A0` at α 0.22 and would turn olive on the navy sky.
 
+## Update after PR #45: ghost markers are placeholders
+
+- **The ghosts are one plain ring per moving body** at each node time, brighter under the cursor (`src/render/visuals/ghosts.ts`). Nothing ties a ghost to its path sample, the target's arrival isn't distinct, and collisions or bodies already gone don't show.
+- **Fix:** follow `style.md` §15 and `threejs-notes.md` §18:
+  - the ring and inner ring with their states (burn badge, cursor, arrival with capture radius, collision, gone)
+  - dotted tie lines to the path sample at the same moment
+  - time chips
+  - the target's future track with a tick every 10 s
+
+  The planning view should match `mockups/planning-ghosts.svg`.
+
 ## Priority fixes
 
 Do these first. They are the biggest visible or gameplay gaps after #32.

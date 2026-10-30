@@ -29,6 +29,8 @@ import { shipLoadout } from "./game/upgrades";
 import { mountShipyard, syncShipyard } from "./hud/shipyard";
 import { resetShipLook } from "./render/appearance";
 import { hullRatio, hullSegmentsLit, hullTone, stressLevel } from "./render/ship-art";
+import { burnChipText } from "./render/node-style";
+import { theme } from "./render/theme";
 
 const levels: readonly Level[] = LEVELS;
 
@@ -388,15 +390,17 @@ function syncMarkers(
   height: number,
   fuel: ReturnType<typeof planFuel>,
 ): void {
-  if (!isEditing(current) || width < 2) {
+  if (width < 2) {
     nodeLayer.hidden = true;
     nodeRemove.hidden = true;
     aimLabel.hidden = true;
     return;
   }
+  const editing = isEditing(current);
   nodeLayer.hidden = false;
   let shown = 0;
   for (let i = 0; i < current.nodes.length; i++) {
+    if (nodeSpent(current, i)) continue;
     const pos = nodePosition(current, i);
     if (!pos) continue;
     const screen = worldToScreen(current.camera, width, height, pos.x, pos.y);
@@ -411,7 +415,6 @@ function syncMarkers(
     tag.textContent = String(i + 1);
     tag.style.left = `${screen.x}px`;
     tag.style.top = `${screen.y}px`;
-    tag.dataset.over = fuel.costs[i]?.exceeds ? "true" : "false";
     shown += 1;
   }
   for (let i = shown; i < tagPool.length; i++) tagPool[i].hidden = true;
@@ -419,16 +422,16 @@ function syncMarkers(
   const selected = current.selected;
   const node = selected === null ? undefined : current.nodes[selected];
   const pos = selected === null ? null : nodePosition(current, selected);
-  const canRemove = selected !== null && selected >= current.cursor.index && pos !== null;
+  const canRemove = editing && selected !== null && selected >= current.cursor.index && pos !== null && !nodeSpent(current, selected);
   if (!canRemove || !pos) {
     nodeRemove.hidden = true;
   } else {
     const at = worldToScreen(current.camera, width, height, pos.x, pos.y);
     nodeRemove.hidden = false;
-    nodeRemove.style.left = `${Math.round(at.x + 16)}px`;
-    nodeRemove.style.top = `${Math.round(at.y - 16)}px`;
+    nodeRemove.style.left = `${Math.round(at.x + theme.nodes.deleteX)}px`;
+    nodeRemove.style.top = `${Math.round(at.y + theme.nodes.deleteY)}px`;
   }
-  if (selected === null || !node || !pos) {
+  if (!editing || selected === null || !node || !pos) {
     aimLabel.hidden = true;
     return;
   }
@@ -440,11 +443,20 @@ function syncMarkers(
   const screen = worldToScreen(current.camera, width, height, pos.x, pos.y);
   const tipX = screen.x + offset.x;
   const tipY = screen.y + offset.y;
-  const power = Math.min(1, (fuel.costs[selected]?.cost ?? 0) / current.level.fuel);
+  const cost = fuel.costs[selected]?.cost ?? 0;
+  const exceeds = fuel.costs[selected]?.exceeds ?? false;
   aimLabel.hidden = false;
-  aimLabel.textContent = `${Math.round(power * 100)} %`;
-  aimLabel.style.left = `${Math.round(tipX + 2)}px`;
-  aimLabel.style.top = `${Math.round(tipY + (Math.sin(Math.atan2(offset.y, offset.x)) > 0 ? -14 : 25))}px`;
+  aimLabel.dataset.over = exceeds ? "true" : "false";
+  aimLabel.textContent = burnChipText(Math.hypot(node.dvx, node.dvy), cost, current.level.fuel, exceeds);
+  aimLabel.style.left = `${Math.round(tipX + 8)}px`;
+  aimLabel.style.top = `${Math.round(tipY - 8)}px`;
+}
+
+function nodeSpent(current: Game, index: number): boolean {
+  if (current.mode === "planning") return false;
+  const node = current.nodes[index];
+  if (!node) return false;
+  return (current.ship.step - node.step) * current.level.dt > theme.nodes.ignite;
 }
 
 let clockLatches: ClockLatches | null = null;
