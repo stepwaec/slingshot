@@ -19,7 +19,7 @@
 
        Tokens (v1.5): planet.x.base #3DE0C2 (mint plains) · planet.x.deep #17B39C (teal lowland base) · planet.x.shadow #0E4A40 (basins) ·
        planet.x.highlight / .ice #B5FFF0 (ice fields, bloom, rim) · planet.x.frost #44CFE8 (cyan frost zone) · planet.x.cap #E6FFF9 (caps, wisps,
-       haze edge) · planet.x.atmo #8FFFE6 (haze, rim tail) · planet.x.ring #3DE0C2 · shared from the reference: cloud.shadow #06122E,
+       haze edge) · planet.x.atmo #8FFFE6 (haze, rim tail) · planet.x.ring #3DE0C2 (zone.ring) · shared from the reference: cloud.shadow #06122E,
        terminator.warm #FF9455, night #08122E / #050B1E. Seam/latitude ramps are white #FFFFFF alpha data, not colours.
 
        Draw order:
@@ -52,12 +52,13 @@
        6. haze     circle r 30, radial from the centre: 0.78 #8FFFE6 a0 | 0.96 #8FFFE6 a0.42 | 1.00 #E6FFF9 a0.65; masked by #pxLitMask.
        7. rim      circle r 32.3 (1.077 r): 0.90 #B5FFF0 a0 | 0.928 #B5FFF0 a0.95 | 0.955 #8FFFE6 a0.4 | 1.00 #8FFFE6 a0; masked by #pxLitMask.
        Lit mask    alpha = linear gradient (-21.2,21.2) -> (21.2,-21.2): a1.0 | 0.5 a0.45 | 1.0 a0.06 (lit side only).
-       8. ring     capture ring r 78, #3DE0C2, stroke 1.5, dash 6 6: dash crawl stroke-dashoffset 0 -> -12 over 1 s (= -12 px/s, seamless),
-                   alpha pulse stroke-opacity 0.55 -> 0.70 -> 0.55 -> 0.35 -> 0.55 over 2.4 s (sine) and radius 78 -> 80 -> 78 -> 76 -> 78 (+-2 px, same
-                   2.4 s sine, in phase). Static renders show t = 0: a 0.55, r 78. (Unchanged.)
+       8. ring     the target zone (v3.0, replaces the dashed crawling ring): capture ring r 78, #3DE0C2, stroke 1.5, SOLID, stroke-opacity
+                   0.55 -> 0.78 -> 0.55 over 4 s (sine), over a glow band: circle r 87 filled #pxZone (radial 0.552 #3DE0C2 a0 | 0.897 a1 | 1 a0, i.e. from
+                   r 48 up to the ring and 9 px past it) at fill-opacity 0.14 -> 0.24 -> 0.14, in phase. This is the idle state; the others (inside, too
+                   fast, captured flash, stable, flyby) are in target-zone.svg. Static renders show t = 0: ring a0.55, band a0.14.
        No specular, no limb line, no squash ring. Ids: px*. -->
   <defs>
-    <clipPath id="pxClip"><circle r="30"/></clipPath>
+    <radialGradient id="pxZone" cx="0.5" cy="0.5" r="0.5"><stop offset="0.552" stop-color="#3DE0C2" stop-opacity="0"/><stop offset="0.897" stop-color="#3DE0C2" stop-opacity="1"/><stop offset="1" stop-color="#3DE0C2" stop-opacity="0"/></radialGradient><clipPath id="pxClip"><circle r="30"/></clipPath>
     <radialGradient id="pxHalo" cx="0.5" cy="0.5" r="0.5">
       <stop offset="0" stop-color="#3DE0C2" stop-opacity="0.35"/>
       <stop offset="0.556" stop-color="#3DE0C2" stop-opacity="0.35"/>
@@ -192,10 +193,6 @@
     <circle r="30" fill="url(#pxShade)"/>
     <circle r="30" fill="url(#pxHaze)" mask="url(#pxLitMask)"/>
     <circle r="32.3" fill="url(#pxRim)" mask="url(#pxLitMask)"/>
-    <circle r="78" fill="none" stroke="#3DE0C2" stroke-opacity="0.55" stroke-width="1.5" stroke-dasharray="6 6">
-      <animate attributeName="stroke-dashoffset" from="0" to="-12" dur="1s" repeatCount="indefinite"/>
-      <animate attributeName="stroke-opacity" values="0.55;0.70;0.55;0.35;0.55" keyTimes="0;0.25;0.5;0.75;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1" dur="2.4s" repeatCount="indefinite"/>
-      <animate attributeName="r" values="78;80;78;76;78" keyTimes="0;0.25;0.5;0.75;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1" dur="2.4s" repeatCount="indefinite"/>
-    </circle>
+    <circle r="87" fill="url(#pxZone)" fill-opacity="0.14"><animate attributeName="fill-opacity" values="0.14;0.24;0.14" dur="4s" repeatCount="indefinite" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1"/></circle><circle r="78" fill="none" stroke="#3DE0C2" stroke-opacity="0.55" stroke-width="1.5"><animate attributeName="stroke-opacity" values="0.55;0.78;0.55" dur="4s" repeatCount="indefinite" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1"/></circle>
   </g>
 </svg>

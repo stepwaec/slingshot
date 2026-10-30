@@ -26,10 +26,10 @@ import { shader, srgbVec } from "./materials";
  * design/assets/ghost-markers.svg, style.md §15, threejs-notes.md §18.
  * Positions come from `bodyPose`. Nothing here writes the simulation.
  *
- * The tilted gravity sheet hides these, as it hides the path: the strokes
- * are CSS pixels of the top-down zoom. The mockup's faint full-orbit circle
- * (α 0.12) is not in the header, so it is not drawn. "Other bodies" keep the
- * body's radius; the sample makes them quieter with α 0.6, not a second size.
+ * Strokes are CSS pixels of the top-down zoom. The mockup's faint full-orbit
+ * circle (α 0.12) is not in the header, so it is not drawn. "Other bodies"
+ * keep the body's radius; the sample makes them quieter with α 0.6, not a
+ * second size.
  */
 export const createGhosts: VisualFactory = (theme) => new GhostsVisual(theme);
 
@@ -716,7 +716,7 @@ class GhostsVisual implements Visual {
 
   update(frame: VisualFrame): void {
     const game = frame.game;
-    const show = isEditing(game) && game.gravity !== "sheet";
+    const show = isEditing(game);
     if (!show) {
       this.hideAll();
       return;

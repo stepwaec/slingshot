@@ -366,3 +366,21 @@ Designs: `bodies/supernova-progenitor.svg`, `events/supernova-detonation.svg`, `
 
 **Budget:** under 0.3 ms per hazard (a few quads plus one instanced filament set of at most 240).
 
+## 20. Target zone (orbit capture)
+
+Designs: `target-zone.svg`, `planet-x.svg` part 8, `mockups/planning-capture.svg`. Values in `style.md` §17. This replaces the dashed, crawling ring in `src/render/visuals/planets.ts` (the `ringFrag` path: `uDash`, `uPulsePx`, `ringCrawlPxPerSec`) and the `theme.planet.ring*` constants.
+
+1. **Quads.** Keep the one ring quad per target, sized `captureRadius + pad`. Drop the dash and the radius pulse in the fragment shader. Draw the solid stroke (1.5 px, from `fwidth`) and, in the same shader, the band: `band = smoothstep(R − 30/zoom, R, r) · (1 − smoothstep(R, R + 9/zoom, r))`. Both are px-space, so they hold their width at every zoom.
+2. **State.** Pick it each frame from the game:
+   - *flyby* when `ship.status === "lost"` and `lostReason === "flyby"`
+   - *stable* when the ship has won
+   - *inside* when `ship.enteredCapture` is true and the ship is within the radius
+   - otherwise *idle*
+
+   The alphas and colours come from §17. Pulse on `frame.now` (cosmetic).
+3. **The flash** starts on the frame the status turns `won` and runs on `frame.now` for 1.5 s, once. It is UI feedback, not a hazard. The wave is a second ring quad scaled from R to R + 34 (ease-out). Under the result scrim, freeze the stable look (α 0.95).
+4. **Too fast.** The exit arc sits at the first predicted sample outside the radius after the ship's current step, from the same prediction the path uses. For the hint, Δv = |v| − v_max at the current point, with v_max = √(GM (2/r − 2/(r + R))): the most speed a tangential burn may leave for an apoapsis at R. The chips are DOM.
+5. **Planning.** The entry tick sits at the first predicted sample inside the radius. When the prediction ends captured, draw its `orbit` (closed, about the target) as a px-dashed line strip (4 4) in `zone.ring` α 0.75, and the "capture orbit · peri · apo" chip from `orbitAbout`.
+
+Moving targets (LU2): every quad and point is posed by `bodyPose` at the sim time, like the ring today.
+

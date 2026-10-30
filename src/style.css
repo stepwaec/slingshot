@@ -232,7 +232,6 @@ html, body, #app {
 }
 
 #gravity,
-#gravity-clock,
 #magnetism {
   height: 32px;
   padding: 0 12px;
@@ -240,14 +239,12 @@ html, body, #app {
 }
 
 #gravity[aria-pressed="true"],
-#gravity-clock[aria-pressed="true"],
 #magnetism[aria-pressed="true"] {
   background: var(--accent);
   color: var(--ink);
   border-color: transparent;
 }
 
-#gravity-clock[hidden],
 #magnetism[hidden],
 #mag-legend[hidden] { display: none; }
 

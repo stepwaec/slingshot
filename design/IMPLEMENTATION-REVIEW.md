@@ -104,6 +104,16 @@ Landed in [PR #64](https://github.com/stepwaec/slingshot/pull/64), from the ghos
 - **Stray asteroid:** a body with `drift` and the WP11 rock look (`bodies/stray-asteroid.svg`). No level has one yet.
 - **Realism, for Stephan to decide:** after `at` the sim leaves the star's mass and crash radius unchanged ("Motion is untouched" in `physics.ts`). A real core collapse blows off most of the mass and leaves a neutron star of about 1.4 solar masses and a few km across. Suggested change: from `at`, mass drops to a remnant fraction (a new optional `supernova.remnant`, default 0.15) and the crash radius to 8, with the prediction seeing the change. This alters gameplay, so it isn't in the art.
 
+## Update for the target zone (v3.0): the capture ring is now a zone
+
+- **The design changed, not the code.** Planet X's ring in `src/render/visuals/planets.ts` (`ringFrag` with `uDash` and `uPulsePx`, `theme.planet.ring*`) still draws the v1.2 dashed, crawling, radius-pulsing ring. It matched its old spec; it no longer matches.
+- **Fix:** follow `style.md` §17 and `threejs-notes.md` §20:
+  - a solid px-space ring with a mint glow band, pulsing α over 4 s
+  - the states from the sim: idle, inside and too fast (exit arc and Δv hint), the one capture flash, stable in `#B5FFF0` under the win card, and dimmed with a cross on a flyby
+  - in planning, the entry tick and the predicted capture orbit dashed in mint
+
+  The planning view should match `mockups/planning-capture.svg`, and the result screens `result-win.svg` and `result-lost.svg`.
+
 ## Priority fixes
 
 Do these first. They are the biggest visible or gameplay gaps after #32.
@@ -159,7 +169,7 @@ Do these first. They are the biggest visible or gameplay gaps after #32.
 - **low · `planets.ts:74-76`.** Planet X's halo stops are slightly off, and the halo doesn't breathe (±4 % / 2.4 s).
 - **low · `planets.ts:493-514`.** Planet textures are a fixed 256 × 128 with no rebake on zoom. Size them as `round(2πr) × bucket × DPR`, rebaked at 25 % zoom steps.
 
-**Done right:** sim time is used for positions and `frame.now` for cosmetics everywhere. The planet sphere mapping is correct, with the light computed live from the star and summed for binaries. Surfaces are baked once. The capture ring matches its spec. The WP8 star looks and the magnetar's geometry are right.
+**Done right:** sim time is used for positions and `frame.now` for cosmetics everywhere. The planet sphere mapping is correct, with the light computed live from the star and summed for binaries. Surfaces are baked once. The capture ring matched its v1.2 spec (superseded by the v3.0 target zone, see above). The WP8 star looks and the magnetar's geometry are right.
 
 ## Overlays and effects (`magnetism.ts`, `path.ts`, `recharge.ts`, `comet.ts`, `gravity.ts`, `relativity.ts`)
 
