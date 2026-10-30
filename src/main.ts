@@ -91,7 +91,6 @@ const routeActions = required<HTMLElement>("#route-actions");
 const routeSafe = required<HTMLButtonElement>("#route-safe");
 const routeDeep = required<HTMLButtonElement>("#route-deep");
 const gravityButton = required<HTMLButtonElement>("#gravity");
-const gravityClockButton = required<HTMLButtonElement>("#gravity-clock");
 const magnetismButton = required<HTMLButtonElement>("#magnetism");
 const radiationButton = required<HTMLButtonElement>("#radiation");
 const doseBlock = required<HTMLElement>("#dose");
@@ -160,7 +159,6 @@ bindInput(
     resumeButton,
     slowButton,
     gravityButton,
-    gravityClockButton,
     magnetismButton,
     radiationButton,
   },
@@ -284,11 +282,6 @@ function syncGravity(current: Game): void {
   if (gravityButton.textContent !== label) gravityButton.textContent = label;
   const pressed = current.gravity === "off" ? "false" : "true";
   if (gravityButton.getAttribute("aria-pressed") !== pressed) gravityButton.setAttribute("aria-pressed", pressed);
-  gravityClockButton.hidden = current.gravity !== "grid";
-  const clockPressed = current.gravityClock ? "true" : "false";
-  if (gravityClockButton.getAttribute("aria-pressed") !== clockPressed) {
-    gravityClockButton.setAttribute("aria-pressed", clockPressed);
-  }
 }
 
 function syncHud(current: Game): void {

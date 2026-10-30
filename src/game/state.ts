@@ -25,10 +25,8 @@ import { UPGRADE_POINTS, UPGRADES, isUpgradeId, type UpgradeId } from "./upgrade
 
 export type GameMode = "planning" | "flying" | "paused" | "finished";
 
-/** Gravity map. View only — cycling it must not touch the ship or the plan. */
-export type GravityView = "off" | "grid" | "sheet";
-
-const GRAVITY_VIEWS: readonly GravityView[] = ["off", "grid", "sheet"];
+/** Gravity layer. View only — toggling it must not touch the ship or the plan. */
+export type GravityView = "off" | "on";
 
 export interface Game {
   level: Level;
@@ -61,10 +59,11 @@ export interface Game {
   cursor: { index: number };
   /** How many nodes have already spent fuel during this flight. */
   spentNodes: number;
-  /** Planning gravity map. Does not affect prediction or flight. */
+  /**
+   * Planning gravity layer. On draws the bent grid over the clock-rate field.
+   * Does not affect prediction or flight.
+   */
   gravity: GravityView;
-  /** Rest-frame clock-rate contours drawn over the flat grid. */
-  gravityClock: boolean;
   /** Planning magnetism map. Does not affect prediction or flight. */
   magnetism: boolean;
   /** Planning radiation map. Does not affect prediction or flight. */
@@ -115,31 +114,26 @@ export function createGame(level: Level = passage, camera: Camera = { x: 0, y: 0
     cursor: { index: 0 },
     spentNodes: 0,
     gravity: "off",
-    gravityClock: false,
     magnetism: false,
     radiation: false,
     cursorStep: null,
   };
 }
 
-/** Off → pinched grid → tilted sheet → off. View state only. */
+/** Off → on → off. View state only. */
 export function cycleGravity(game: Game): GravityView {
-  const index = GRAVITY_VIEWS.indexOf(game.gravity);
-  const next = GRAVITY_VIEWS[(index + 1) % GRAVITY_VIEWS.length];
-  game.gravity = next;
-  return next;
+  game.gravity = game.gravity === "on" ? "off" : "on";
+  return game.gravity;
 }
 
-/** Button copy for the gravity cycle. Matches `cycleGravity` one to one. */
+/** Button copy for the gravity layer. Matches `cycleGravity` one to one. */
 export function gravityLabel(view: GravityView): string {
-  if (view === "grid") return "Gravity grid";
-  if (view === "sheet") return "Gravity sheet";
-  return "Gravity off";
+  return view === "on" ? "Gravity on" : "Gravity off";
 }
 
 /**
- * G cycles the map. Repeat and modifier chords do not, so a held key
- * cannot skip a mode. Returns whether the key was consumed.
+ * G toggles the layer. Repeat and modifier chords do not, so a held key
+ * cannot flip it twice. Returns whether the key was consumed.
  */
 export function applyGravityKey(
   game: Game,
@@ -149,11 +143,6 @@ export function applyGravityKey(
   if (event.key !== "g" && event.key !== "G") return false;
   cycleGravity(game);
   return true;
-}
-
-/** Clock-rate overlay for the flat grid. Ignored by the sim. */
-export function setGravityClock(game: Game, on: boolean): void {
-  game.gravityClock = on;
 }
 
 /** Magnetism heatmap. Ignored by the sim and by prediction. */

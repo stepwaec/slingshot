@@ -114,7 +114,7 @@ dτ/dt   = sqrt(1 - 2 Φ_depth / c² - v² / c²)
 - Two clocks side by side, a rate gauge (`1 ship s = N outside s`), the time gap, and a deadline bar in outside time that turns red in the last fifth of the window.
 - In planning, the predicted path is tinted by clock rate (cool where time runs normally, glowing or orange where it slows), and the predicted arrival is shown.
 - Relativistic visuals (aberration, colour shift) appear only in the flight view; planning and pause stay on the clean chart.
-- The gravity map's clock-rate overlay (C key) uses the same rate function with velocity zero.
+- The gravity layer (G, on or off) draws the bending grid over a field coloured by rest-frame clock rate. That rate is the same function with velocity zero. There is no separate clock-rate control.
 
 ### Scoring dilemma
 - Arrival in a stable orbit around Planet X is required.
@@ -139,7 +139,7 @@ dτ/dt   = sqrt(1 - 2 Φ_depth / c² - v² / c²)
 - **Pure physics module.** All physics (gravity, burns, moving bodies, relativity clocks) lives in a pure, engine-independent, deterministic module with a fixed time step. Prediction and flight share the same step function (`advancePlan`), so the dotted prediction matches the flight bit for bit. Sim speed (1x/2x/4x, slow motion) only changes how many fixed steps run per frame. Visual layers only read sim state, never write it.
 - **Language and tooling:** TypeScript, Vite, Vitest tests, CI workflow (from WP1).
 - **WP1 rendering:** HTML Canvas, no engine.
-- **Three.js for visuals** (from WP3, [PR #4](https://github.com/stepwaec/slingshot/pull/4)): chosen over PixiJS because of the warped space-time grid, the tilted camera and parallax. Orthographic scene for the chart; a perspective camera for the tilted gravity sheet.
+- **Three.js for visuals** (from WP3, [PR #4](https://github.com/stepwaec/slingshot/pull/4)): chosen over PixiJS because of the warped space-time grid, the tilted camera and parallax. Orthographic scene for the chart. The perspective camera stays parked; the tilted gravity sheet that used it is retired.
 - **HTML HUD and menus** as layers over the canvas, so no Phaser.
 - **Godot** only if native mobile apps become the main goal (would mean a rewrite).
 - **Swappable visuals:** each visual (ship, planet, star, starfield, trail, path, nodes) is a factory in `src/render/visuals/index.ts`; colours, sizes, asset paths and animation timings live in `src/render/theme.ts`. Stephan found Claude's v1 designs not realistic enough, so realistic art (textured lit planets, bloom, real starfields, lensing black holes, a 3D ship) is meant to drop in later without rework.

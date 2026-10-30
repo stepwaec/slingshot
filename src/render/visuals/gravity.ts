@@ -1,12 +1,10 @@
 import * as THREE from "three";
 import { isEditing, type Game } from "../../game/state";
 import { simConfigFromLevel } from "../../level/catalog";
-import { bodyPose, gravityConstant, isCompactBody, potentialDepth, tidalDangerRadius, type SimConfig } from "../../sim/physics";
+import { bodyPose, gravityConstant, isCompactBody, tidalDangerRadius, type SimConfig } from "../../sim/physics";
 import {
-  cellEdgeFade,
   clipSegment,
   deepestFinite,
-  fieldSpan,
   framedBounds,
   gridX,
   gridY,
@@ -16,27 +14,25 @@ import {
   rampStop,
   sampleGravityGrid,
   screenEdgeFade,
-  sheetDrop,
-  writeClockContours,
   type Disc,
   type GravityGrid,
 } from "../gravityField";
-import { gridRamp01, palette, srgb01 } from "../palette";
+import { clockHeatAlpha, clockHeatRgb, gridRamp01, palette } from "../palette";
 import { shader, srgbVec } from "./materials";
 import type { Theme } from "../theme";
 import { disposeObject, type Visual, type VisualFactory, type VisualFrame } from "../visual";
 
 /**
- * Gravity map for planning and pause.
+ * Gravity layer for planning and pause.
  *
- * Grid is an even mesh slid toward each mass along the potential gradient,
- * so the lines pinch around deep wells. Clock-rate contours draw on that
- * mesh. Sheet is the same samples dropped in Z by `wellHeight` and drawn
- * with the perspective camera. Nothing here steps the simulation.
+ * One view: a time-dilation field coloured by rest-frame clock rate, with
+ * the bent grid drawn over it. The mesh slides toward each mass along the
+ * potential gradient, so the lines pinch around deep wells. The field uses
+ * the same samples (`grid.rate`, velocity zero). Nothing here steps the
+ * simulation. The colours are an interim ramp; Claude has not designed the
+ * palette yet.
  */
 export const createGravity: VisualFactory = (theme) => new GravityVisual(theme);
-
-const MAX_PATH = 1600;
 
 const surfaceVert = /* glsl */ `
 attribute vec3 aColor;
@@ -102,26 +98,6 @@ void main() {
 }
 `;
 
-const inkVert = /* glsl */ `
-void main() {
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-}
-`;
-
-const inkFrag = /* glsl */ `
-uniform vec3 uColor;
-uniform float uAlpha;
-void main() {
-  gl_FragColor = vec4(uColor, uAlpha);
-}
-`;
-
-interface Ink {
-  mesh: THREE.Mesh | THREE.LineSegments;
-  positions: Float32Array;
-  geometry: THREE.BufferGeometry;
-}
-
 class GravityVisual implements Visual {
   readonly space = "world" as const;
   readonly object = new THREE.Group();
@@ -140,22 +116,9 @@ class GravityVisual implements Visual {
   private readonly ribbonHalf: Float32Array;
   private readonly gridLines: THREE.Mesh;
   private readonly viewport: THREE.IUniform<THREE.Vector2>;
-  private readonly contours: Array<{ level: number; ink: Ink }>;
-  private readonly path: Ink;
-  private readonly orbit: Ink;
-  private readonly pathX = new Float64Array(MAX_PATH);
-  private readonly pathY = new Float64Array(MAX_PATH);
-  private readonly pathZ = new Float64Array(MAX_PATH);
   private grid: GravityGrid | null = null;
-  private span = 1;
-  private spanLevel = "";
   private fieldKey = "";
   private drawKey = "";
-  private clockKey = "";
-  private pathForecast: Game["prediction"] | null = null;
-  private pathTime = Number.NaN;
-  private pathKnee = Number.NaN;
-  private pathAmp = Number.NaN;
   private readonly zones: TidalRing[] = [];
   private label: THREE.Sprite | null = null;
 
@@ -225,40 +188,18 @@ class GravityVisual implements Visual {
     this.gridLines.name = "gravity-grid";
     this.gridLines.visible = false;
 
-    const cellVerts = (cols - 1) * (rows - 1) * 4;
-    this.contours = theme.gravity.clockLevels.map((level, index) => {
-      const ink = makeInk(cellVerts, contourHex(level), 1, false);
-      ink.mesh.name = `gravity-clock-${index}`;
-      ink.mesh.visible = false;
-      return { level, ink };
-    });
-
-    this.path = makeInk((MAX_PATH - 1) * 6, theme.colors.path, 1, true);
-    this.path.mesh.name = "gravity-path";
-    this.path.mesh.visible = false;
-    this.orbit = makeInk((MAX_PATH - 1) * 6, theme.colors.resultWin, 0.9, true);
-    this.orbit.mesh.name = "gravity-orbit";
-    this.orbit.mesh.visible = false;
-
-    this.object.add(this.surface, this.gridLines, this.path.mesh, this.orbit.mesh);
-    for (const contour of this.contours) this.object.add(contour.ink.mesh);
+    this.object.add(this.surface, this.gridLines);
     this.object.visible = false;
   }
 
   update(frame: VisualFrame): void {
     const game = frame.game;
-    const show = game.gravity !== "off" && isEditing(game);
+    const show = game.gravity === "on" && isEditing(game);
     this.object.visible = show;
     if (!show || frame.width < 2 || frame.height < 2) return;
 
-    const sheet = game.gravity === "sheet";
     const time = chartTime(game);
     const config = simConfigFromLevel(game.level);
-    if (this.spanLevel !== game.level.id) {
-      this.span = fieldSpan(config);
-      this.spanLevel = game.level.id;
-    }
-    const amplitude = this.span * this.theme.gravity.amplitude;
     const bounds = framedBounds(game.camera, frame.width, frame.height, this.theme.gravity.viewPad);
     const fieldKey = fieldCacheKey(game, time, bounds, frame.width, frame.height);
     if (fieldKey !== this.fieldKey) {
@@ -271,23 +212,16 @@ class GravityVisual implements Visual {
       grid,
       bodyDiscs(config, time, this.theme.gravity.inkBodyGapPx / Math.max(game.camera.zoom, 0.25)),
     );
-    this.syncDanger(config, time, sheet, amplitude, phiMax, frame.now, game.camera.zoom);
+    this.syncDanger(config, time, frame.now, game.camera.zoom);
     this.viewport.value.set(frame.width, frame.height);
 
-    const material = this.surface.material as THREE.ShaderMaterial;
-    material.depthTest = sheet;
-    material.depthWrite = sheet;
-    this.surface.visible = sheet;
+    this.surface.visible = true;
     this.gridLines.visible = true;
-    const lineMaterial = this.gridLines.material as THREE.ShaderMaterial;
-    lineMaterial.depthTest = sheet;
 
-    const drawKey = `${this.fieldKey}|${sheet}|${amplitude}|${frame.width}|${frame.height}`;
+    const drawKey = `${this.fieldKey}|${frame.width}|${frame.height}`;
     if (drawKey !== this.drawKey) {
       const verts = writeInk(
         grid,
-        sheet,
-        amplitude,
         phiMax,
         this.theme,
         game.camera,
@@ -309,84 +243,7 @@ class GravityVisual implements Visual {
       this.gridLines.geometry.setDrawRange(0, verts);
       mark(this.gridLines.geometry);
       this.drawKey = drawKey;
-      this.clockKey = "";
     }
-
-    const clock = !sheet && game.gravityClock;
-    if (!clock) {
-      for (const contour of this.contours) contour.ink.mesh.visible = false;
-      this.clockKey = "";
-    } else if (this.clockKey !== this.fieldKey) {
-      for (const contour of this.contours) {
-        contour.ink.mesh.visible = true;
-        const verts = writeClockContours(grid, contour.level, contour.ink.positions, 0.6);
-        contour.ink.geometry.setDrawRange(0, verts);
-        mark(contour.ink.geometry);
-      }
-      this.clockKey = this.fieldKey;
-    } else {
-      for (const contour of this.contours) contour.ink.mesh.visible = true;
-    }
-
-    if (!sheet) {
-      this.path.mesh.visible = false;
-      this.orbit.mesh.visible = false;
-      return;
-    }
-    this.path.mesh.visible = true;
-    if (
-      this.pathForecast === game.prediction &&
-      this.pathTime === time &&
-      this.pathKnee === grid.knee &&
-      this.pathAmp === amplitude
-    ) {
-      return;
-    }
-    this.pathForecast = game.prediction;
-    this.pathTime = time;
-    this.pathKnee = grid.knee;
-    this.pathAmp = amplitude;
-    const bias = Math.max(1.5, amplitude * 0.018);
-    const half = Math.max(1.25, this.span * 0.004);
-    const pathVerts = writePlanRibbon(
-      game.prediction.path,
-      config,
-      time,
-      grid.knee,
-      phiMax,
-      amplitude,
-      this.theme.gravity.sheetDepthExp,
-      bias,
-      half,
-      this.pathX,
-      this.pathY,
-      this.pathZ,
-      this.path.positions,
-    );
-    this.path.geometry.setDrawRange(0, pathVerts);
-    mark(this.path.geometry);
-    paintInk(this.path, planHex(game, this.theme));
-    const orbit = game.prediction.orbit;
-    const orbitVerts = orbit
-      ? writePlanRibbon(
-          orbit,
-          config,
-          time,
-          grid.knee,
-          phiMax,
-          amplitude,
-          this.theme.gravity.sheetDepthExp,
-          bias,
-          half * 0.7,
-          this.pathX,
-          this.pathY,
-          this.pathZ,
-          this.orbit.positions,
-        )
-      : 0;
-    this.orbit.geometry.setDrawRange(0, orbitVerts);
-    mark(this.orbit.geometry);
-    this.orbit.mesh.visible = orbitVerts > 0;
   }
 
   dispose(): void {
@@ -399,15 +256,7 @@ class GravityVisual implements Visual {
    * is chip level 1), so the ring sits on `tidalDangerRadius`, which is
    * the filled disc it replaces.
    */
-  private syncDanger(
-    config: SimConfig,
-    time: number,
-    sheet: boolean,
-    amplitude: number,
-    phiMax: number,
-    now: number,
-    zoom: number,
-  ): void {
+  private syncDanger(config: SimConfig, time: number, now: number, zoom: number): void {
     const strength = config.tidalStrength ?? 0;
     const g = gravityConstant(config);
     const spec = this.theme.gravity;
@@ -425,8 +274,7 @@ class GravityVisual implements Visual {
           this.zones.push(ring);
         }
         const pose = bodyPose(body, time, config.bodies);
-        const d = inkDepth(potentialDepth(pose.x, pose.y, config, time), 1, Math.max(phiMax, 1));
-        const z = sheet ? sheetDrop(d, amplitude, spec.sheetDepthExp) + 0.8 : 0.5;
+        const z = 0.5;
         ring.mesh.visible = true;
         ring.mesh.position.set(pose.x, pose.y, z);
         const pad = (spec.tidalPx + 2) / Math.max(zoom, 0.25);
@@ -492,8 +340,6 @@ interface RibbonBuffers {
 
 function writeInk(
   grid: GravityGrid,
-  sheet: boolean,
-  amplitude: number,
   phiMax: number,
   theme: Theme,
   camera: { x: number; y: number; zoom: number },
@@ -512,7 +358,6 @@ function writeInk(
   half: Float32Array,
 ): number {
   const spec = theme.gravity;
-  const glass = srgb01(palette.sheetGlass);
   const cols = grid.cols;
   const rows = grid.rows;
   const zoom = camera.zoom > 0 ? camera.zoom : 1;
@@ -521,15 +366,21 @@ function writeInk(
     for (let col = 0; col < cols; col++) {
       const i = row * cols + col;
       const o = i * 3;
-      const d = inkDepth(grid.depth[i], grid.knee, phiMax);
-      const fade = cellEdgeFade(col, row, cols, rows, spec.sheetFadeCells);
-      surfacePositions[o] = sheet ? gridX(grid, col) : grid.pinchX[i];
-      surfacePositions[o + 1] = sheet ? gridY(grid, row) : grid.pinchY[i];
-      surfacePositions[o + 2] = sheet ? sheetDrop(d, amplitude, spec.sheetDepthExp) : 0;
-      surfaceColors[o] = glass[0];
-      surfaceColors[o + 1] = glass[1];
-      surfaceColors[o + 2] = glass[2];
-      surfaceAlphas[i] = sheet ? spec.sheetAlpha * fade : 0;
+      const x = grid.pinchX[i];
+      const y = grid.pinchY[i];
+      surfacePositions[o] = x;
+      surfacePositions[o + 1] = y;
+      surfacePositions[o + 2] = 0;
+      const shown = Math.pow(grid.rate[i] > 0 ? Math.min(1, grid.rate[i]) : 0, spec.heatGamma);
+      const rgb = clockHeatRgb(shown);
+      surfaceColors[o] = rgb[0];
+      surfaceColors[o + 1] = rgb[1];
+      surfaceColors[o + 2] = rgb[2];
+      const sx = (x - camera.x) * zoom + width * 0.5;
+      const sy = height * 0.5 - (y - camera.y) * zoom;
+      const fade = screenEdgeFade(sx, sy, width, height, spec.inkEdgePx);
+      const covered = insideDisc(x, y, discs);
+      surfaceAlphas[i] = covered ? 0 : clockHeatAlpha(shown, spec.heatAlpha) * fade;
     }
   }
   const buffers: RibbonBuffers = { positions, colors, alphas, across, ends, half };
@@ -550,7 +401,6 @@ function writeInk(
     const db = inkDepth(grid.depth[b], grid.knee, phiMax);
     const tone = inkTone((da + db) * 0.5, spec.inkGamma);
     const rgb = gridRamp01(rampStop(tone, spec.inkRamp));
-    const cell = Math.min(surfaceAlphas[a], surfaceAlphas[b]) / Math.max(spec.sheetAlpha, 1e-4);
     for (let p = 0; p < pieces.length; p++) {
       if (cursor > room) return;
       const piece = pieces[p];
@@ -558,13 +408,11 @@ function writeInk(
       const my = (piece[1] + piece[3]) * 0.5;
       const sx = (mx - camera.x) * zoom + width * 0.5;
       const sy = height * 0.5 - (my - camera.y) * zoom;
-      const edge = sheet ? (Number.isFinite(cell) ? cell : 1) : screenEdgeFade(sx, sy, width, height, spec.inkEdgePx);
-      const alpha = sheet
-        ? inkAlpha(tone, major, edge, spec.sheetLineAlpha, spec.sheetLineDepth, spec.inkMajorAlpha)
-        : inkAlpha(tone, major, edge, spec.inkAlpha, spec.inkAlphaDepth, spec.inkMajorAlpha);
+      const edge = screenEdgeFade(sx, sy, width, height, spec.inkEdgePx);
+      const alpha = inkAlpha(tone, major, edge, spec.inkAlpha, spec.inkAlphaDepth, spec.inkMajorAlpha);
       if (alpha < 0.012) continue;
-      const px = major ? (sheet ? spec.sheetLinePx : spec.inkMajorPx) : sheet ? spec.sheetLinePx : spec.inkMinorPx;
-      const zLift = sheet ? Math.max(0.35, amplitude * 0.004) : 0.4;
+      const px = major ? spec.inkMajorPx : spec.inkMinorPx;
+      const zLift = 0.4;
       cursor = pushRibbon(buffers, cursor, piece[0], piece[1], az + zLift, piece[2], piece[3], bz + zLift, rgb, alpha, px * 0.5);
     }
   };
@@ -648,6 +496,16 @@ function visiblePhiMax(grid: GravityGrid, discs: readonly Disc[]): number {
   return finite > 0 ? finite : grid.knee;
 }
 
+function insideDisc(x: number, y: number, discs: readonly Disc[]): boolean {
+  for (let i = 0; i < discs.length; i++) {
+    const disc = discs[i];
+    const dx = x - disc.x;
+    const dy = y - disc.y;
+    if (dx * dx + dy * dy <= disc.r * disc.r) return true;
+  }
+  return false;
+}
+
 function bodyDiscs(config: SimConfig, time: number, pad: number): Disc[] {
   const discs: Disc[] = [];
   const bodies = config.bodies;
@@ -658,74 +516,6 @@ function bodyDiscs(config: SimConfig, time: number, pad: number): Disc[] {
     discs.push({ x: pose.x, y: pose.y, r: body.radius + (pad > 0 ? pad : 0) });
   }
   return discs;
-}
-
-function writePlanRibbon(
-  points: readonly { x: number; y: number }[],
-  config: SimConfig,
-  time: number,
-  knee: number,
-  phiMax: number,
-  amplitude: number,
-  exponent: number,
-  bias: number,
-  half: number,
-  xs: Float64Array,
-  ys: Float64Array,
-  zs: Float64Array,
-  positions: Float32Array,
-): number {
-  const stride = Math.max(1, Math.ceil(points.length / MAX_PATH));
-  let count = 0;
-  for (let i = 0; i < points.length && count < MAX_PATH; i += stride) {
-    const point = points[i];
-    xs[count] = point.x;
-    ys[count] = point.y;
-    zs[count] = sheetDrop(inkDepth(potentialDepth(point.x, point.y, config, time), knee, phiMax), amplitude, exponent) + bias;
-    count += 1;
-  }
-  if (count > 0 && count < MAX_PATH) {
-    const end = points[points.length - 1];
-    if (end.x !== xs[count - 1] || end.y !== ys[count - 1]) {
-      xs[count] = end.x;
-      ys[count] = end.y;
-      zs[count] = sheetDrop(inkDepth(potentialDepth(end.x, end.y, config, time), knee, phiMax), amplitude, exponent) + bias;
-      count += 1;
-    }
-  }
-  if (count < 2) return 0;
-  let cursor = 0;
-  const room = positions.length - 17;
-  for (let i = 0; i < count - 1; i++) {
-    if (cursor > room) break;
-    const x0 = xs[i];
-    const y0 = ys[i];
-    const z0 = zs[i];
-    const x1 = xs[i + 1];
-    const y1 = ys[i + 1];
-    const z1 = zs[i + 1];
-    let dx = x1 - x0;
-    let dy = y1 - y0;
-    const len = Math.hypot(dx, dy) || 1;
-    dx /= len;
-    dy /= len;
-    const px = -dy * half;
-    const py = dx * half;
-    cursor = put(positions, cursor, x0 + px, y0 + py, z0);
-    cursor = put(positions, cursor, x0 - px, y0 - py, z0);
-    cursor = put(positions, cursor, x1 + px, y1 + py, z1);
-    cursor = put(positions, cursor, x0 - px, y0 - py, z0);
-    cursor = put(positions, cursor, x1 - px, y1 - py, z1);
-    cursor = put(positions, cursor, x1 + px, y1 + py, z1);
-  }
-  return cursor / 3;
-}
-
-function put(positions: Float32Array, cursor: number, x: number, y: number, z: number): number {
-  positions[cursor] = x;
-  positions[cursor + 1] = y;
-  positions[cursor + 2] = z;
-  return cursor + 3;
 }
 
 function surfaceIndices(cols: number, rows: number): THREE.BufferAttribute {
@@ -747,36 +537,6 @@ function surfaceIndices(cols: number, rows: number): THREE.BufferAttribute {
     }
   }
   return new THREE.BufferAttribute(indices, 1);
-}
-
-function makeInk(maxVerts: number, hex: string, alpha: number, ribbon: boolean): Ink {
-  const positions = new Float32Array(maxVerts * 3);
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-  geometry.setDrawRange(0, 0);
-  const material = new THREE.ShaderMaterial({
-    uniforms: {
-      uColor: { value: new THREE.Vector3(...srgb01(hex)) },
-      uAlpha: { value: alpha },
-    },
-    vertexShader: inkVert,
-    fragmentShader: inkFrag,
-    transparent: true,
-    depthTest: ribbon,
-    depthWrite: false,
-    toneMapped: false,
-    side: THREE.DoubleSide,
-  });
-  const mesh = ribbon ? new THREE.Mesh(geometry, material) : new THREE.LineSegments(geometry, material);
-  mesh.frustumCulled = false;
-  mesh.renderOrder = ribbon ? -1 : -2;
-  return { mesh, positions, geometry };
-}
-
-function paintInk(ink: Ink, hex: string): void {
-  const material = ink.mesh.material as THREE.ShaderMaterial;
-  const [r, g, b] = srgb01(hex);
-  material.uniforms.uColor.value.set(r, g, b);
 }
 
 function mark(geometry: THREE.BufferGeometry): void {
@@ -865,20 +625,4 @@ function makeTidalLabel(): THREE.Sprite | null {
   sprite.renderOrder = -1;
   sprite.center.set(0.5, 1);
   return sprite;
-}
-
-function contourHex(level: number): string {
-  if (level >= 0.85) return palette.text;
-  if (level >= 0.65) return palette.path;
-  if (level >= 0.4) return palette.fuelLow;
-  return palette.starGlow;
-}
-
-function planHex(game: Game, theme: Theme): string {
-  const forecast = game.prediction;
-  const hasBurn = game.nodes.some((node) => Math.hypot(node.dvx, node.dvy) >= 0.05);
-  if (forecast.status === "won") return theme.colors.resultWin;
-  if (forecast.status === "crashed") return theme.colors.resultCrash;
-  if (hasBurn && forecast.status === "lost" && forecast.lostReason === "flyby") return theme.colors.trail;
-  return theme.colors.path;
 }

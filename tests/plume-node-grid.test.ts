@@ -163,11 +163,11 @@ describe("gravity grid ink", () => {
     const node = game.nodes[0];
     setNodeBurn(game, 0, node.dvx, node.dvy);
     const fuel = game.fuel;
-    game.gravity = "grid";
+    game.gravity = "on";
     launch(game);
     tick(game);
     expect(game.fuel).toBeLessThan(fuel);
-    game.gravity = "sheet";
+    game.gravity = "off";
     const step = game.ship.step;
     tick(game);
     expect(game.ship.step).toBe(step + 1);
