@@ -27,6 +27,7 @@ import {
   stripWindow,
 } from "../art-motion";
 import { shaderFamily } from "../shaders/families";
+import { planetKey } from "../shaders/planet-params";
 import { shaderRendering } from "../shaders/impostor";
 import { zoomBucket } from "../ship-art";
 import {
@@ -130,6 +131,7 @@ class GalleryVisual implements Visual {
       if (body.supernova || body.quasar) continue;
       if (shaderRendering() && shaderFamily(body)) {
         if (body.look === "red-giant") this.addDragEdge(body);
+        if (planetKey(body) === "planetx") this.addPlanetHalo(body);
         continue;
       }
       if (isSolLook(body.look)) {
@@ -349,6 +351,14 @@ class GalleryVisual implements Visual {
     const star: ArtFit = { ...base, spin: "none", bake: { tag: "pulsar-body", prep: pulsarBody } };
     this.add(beams, `${body.id}-beams`, body, null, "beams", 0);
     this.add(star, body.id, body, null, "body", 1);
+  }
+
+  /** Planet X's mint halo stays a sprite. planet.frag does not draw it. */
+  private addPlanetHalo(body: Body): void {
+    const base = artForBody(body, this.theme);
+    if (!base) return;
+    const halo: ArtFit = { ...base, spin: "none", bake: { tag: "px-halo", prep: keepHalo } };
+    this.add(halo, `${body.id}-halo`, body, null, "halo", 0);
   }
 
   private addSurface(body: Body, kind: SurfaceKind): void {

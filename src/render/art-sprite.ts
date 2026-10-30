@@ -57,6 +57,11 @@ export function artForBody(body: Body, theme: Theme): ArtFit | null {
   if (body.look === "moon-icy") return fit(assets.moonIcy, 48, 48, 12, "light", UP_RIGHT);
   if (body.look === "moon-volcanic") return fit(assets.moonVolcanic, 48, 48, 13, "light", UP_RIGHT);
   if (body.look === "dwarf") return fit(assets.dwarf, 40, 40, 10, "light", UP_RIGHT);
+  if (body.look === "rocky") return fit(assets.rocky, 120, 120, 30, "light", UP_RIGHT);
+  if (body.look === "ice") return fit(assets.iceWorld, 120, 120, 28, "light", UP_RIGHT);
+  if (body.look === "lava") return fit(assets.lava, 120, 120, 26, "light", UP_RIGHT);
+  if (body.look === "toxic") return fit(assets.toxic, 120, 120, 32, "light", UP_RIGHT);
+  if (body.look === "cracked") return fit(assets.cracked, 120, 120, 27, "light", UP_RIGHT);
   if (body.look === "moon" || body.kind === "moon") return fit(assets.moon, 60, 60, 14, "light", UP_RIGHT);
   if (body.look === "tau-hot") return tauPlanet(assets.tauCeti, "tce", 12);
   if (body.look === "tau-cold") return tauPlanet(assets.tauCeti, "tcf", 15);

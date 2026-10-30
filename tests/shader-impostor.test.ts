@@ -1,17 +1,23 @@
 import { describe, expect, it } from "vitest";
 import { frost } from "../src/level/catalog";
 import { shaderFamily } from "../src/render/shaders/families";
-import { impostorSide, lightDirection, ringOctaves, shaderRendering } from "../src/render/shaders/impostor";
+import { artLightLocked, impostorSide, lightDirection, planetSide, ringOctaves, shaderRendering } from "../src/render/shaders/impostor";
 import { theme } from "../src/render/theme";
 
 describe("shader impostors", () => {
-  it("keeps the SVG sprites until a family registers", () => {
+  it("draws Frost's rocky bodies with the planet shader and leaves the sun on sprites", () => {
     expect(theme.rendering.shaders).toBe(true);
     expect(shaderRendering()).toBe(true);
-    for (const body of frost.bodies) expect(shaderFamily(body)).toBeNull();
+    expect(shaderRendering("?sprites=1")).toBe(false);
+    expect(artLightLocked("?lit=art")).toBe(true);
+    expect(artLightLocked("")).toBe(false);
+    const family = Object.fromEntries(frost.bodies.map((body) => [body.id, shaderFamily(body)]));
+    expect(family).toEqual({ home: "planet", sun: null, dwarf: "planet", x: "planet" });
   });
 
-  it("sizes a star quad to twice the haze, in body radii", () => {
+  it("sizes a planet quad to the rim, and a star quad to twice the haze", () => {
+    expect(planetSide(34, 1.08)).toBeCloseTo(2 * 1.08 * 34 * 1.06);
+    expect(planetSide(21.6, 1.12)).toBeCloseTo(2 * 1.12 * 21.6 * 1.06);
     expect(impostorSide(46, 4.35)).toBeCloseTo(2 * 4.35 * 46 * 1.06);
     expect(impostorSide(16, 4.35, 1)).toBeCloseTo(2 * 6.25 * 16 * 1.06);
   });
