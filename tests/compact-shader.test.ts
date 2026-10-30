@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { frost } from "../src/level/catalog";
-import { shaderFamily } from "../src/render/shaders/families";
+import { shaderFamily, usesShader } from "../src/render/shaders/families";
 import { COMPACT_FRAGMENT } from "../src/render/shaders/compact-shader";
 import { compactExtent, compactKey, compactMotion } from "../src/render/shaders/compact-params";
 import { STAR_PARAMS, starKind } from "../src/render/shaders/star-params";
@@ -22,6 +22,11 @@ describe("compact object shader", () => {
     expect(STAR_PARAMS["white-dwarf"].smooth).toBe(1);
     expect(shaderFamily(body({ kind: "star", look: "sun" }))).toBe("star");
     expect(frost.bodies.some((item) => compactKey(item) !== null)).toBe(false);
+    const neutron = body({ kind: "star", look: "neutron" });
+    const sun = body({ kind: "star", look: "sun" });
+    expect(usesShader(neutron, false)).toBe(true);
+    expect(usesShader(sun, false)).toBe(false);
+    expect(usesShader(sun, true)).toBe(true);
   });
 
   it("runs pulsar beams on the level reach and the magnetic axis", () => {

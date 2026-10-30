@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { isEditing, type Game } from "../../game/state";
 import { bodyPose, type Body } from "../../sim/physics";
 import { projectToScreen, syncTopDown } from "../camera";
-import { createBodyShader, shaderFamily } from "../shaders/families";
+import { createBodyShader, shaderFamily, usesShader } from "../shaders/families";
 import {
   artLightLocked,
   impostorSide,
@@ -48,7 +48,7 @@ class ImpostorVisual implements Visual {
     this.object.name = "shader-bodies";
     const on = shaderRendering();
     for (const body of level.bodies) {
-      const material = on && shaderFamily(body) ? createBodyShader(body) : null;
+      const material = usesShader(body, on) ? createBodyShader(body) : null;
       const designR = numberUniform(material, "uDesignR", body.radius);
       const hazeR = numberUniform(material, "uHazeR", 1);
       const smooth = numberUniform(material, "uSmooth", 0);
@@ -80,8 +80,9 @@ class ImpostorVisual implements Visual {
 
   update(frame: VisualFrame): void {
     const on = shaderRendering();
-    this.object.visible = on;
-    if (!on) return;
+    const compact = this.slots.some((slot) => slot.mesh.visible && shaderFamily(slot.body) === "compact");
+    this.object.visible = on || compact;
+    if (!this.object.visible) return;
     const game = frame.game;
     const time = chartTime(game);
     const seconds = cosmeticSeconds(frame.now);
