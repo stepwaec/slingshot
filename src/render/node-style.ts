@@ -19,6 +19,8 @@ export interface NodePaint {
   /** 0..1 ignition. Negative hides the flash. */
   flash: number;
   arrow: boolean;
+  /** False once a burn has executed in flight. The marker is not drawn. */
+  drawn: boolean;
 }
 
 export interface NodePaintInput {
@@ -45,12 +47,34 @@ const IDLE: NodePaint = {
   arc: 0,
   flash: -1,
   arrow: false,
+  drawn: true,
 };
 
-/** Which ring to draw. Fired wins, then ignition, then the planning states. */
+/**
+ * Which ring to draw. A burn that has already fired is hidden in flight.
+ * Pause keeps the dashed history ring from burn-node.svg. Planning has no
+ * sim offset, so its markers stay as they are.
+ */
 export function paintNode(input: NodePaintInput, windupAmount: number): NodePaint {
   const offset = input.offset;
   if (offset !== null && offset > input.ignite) {
+    if (!input.editing) {
+      return {
+        radius: 5,
+        width: 1.5,
+        color: "#B8A8FF",
+        alpha: 0,
+        dashed: false,
+        fill: false,
+        core: false,
+        coreColor: "#F7FBFF",
+        outer: false,
+        arc: 0,
+        flash: -1,
+        arrow: false,
+        drawn: false,
+      };
+    }
     return {
       radius: 5,
       width: 1.5,
@@ -64,6 +88,7 @@ export function paintNode(input: NodePaintInput, windupAmount: number): NodePain
       arc: 0,
       flash: -1,
       arrow: false,
+      drawn: true,
     };
   }
   const flash = offset !== null && offset >= 0 && offset <= input.ignite ? offset / Math.max(input.ignite, 1e-6) : -1;

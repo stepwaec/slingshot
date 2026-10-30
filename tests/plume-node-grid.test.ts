@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createGame, launch, setNodeBurn, setPlan, tick } from "../src/game/state";
+import { createGame, launch, pause, setNodeBurn, setPlan, tick } from "../src/game/state";
 import { passage } from "../src/level/catalog";
 import { slingshotPlan } from "../src/level/solutions";
 import { sampleBurnAnim, tailFromBurn } from "../src/render/burn-anim";
@@ -93,10 +93,16 @@ describe("burn node", () => {
     expect(over.coreColor).toBe("#FF5A5F");
     const wind = paintNode({ editing: false, selected: false, placing: false, exceeds: false, offset: -0.25, windup: 0.5, ignite: 0.4 }, 0.5);
     expect(wind.arc).toBe(0.5);
-    const fired = paintNode({ editing: false, selected: false, placing: false, exceeds: false, offset: 0.5, windup: 0.5, ignite: 0.4 }, 0);
+    const fired = paintNode({ editing: true, selected: false, placing: false, exceeds: false, offset: 0.5, windup: 0.5, ignite: 0.4 }, 0);
+    expect(fired.drawn).toBe(true);
     expect(fired.dashed).toBe(true);
     expect(fired.core).toBe(false);
     expect(fired.alpha).toBe(0.45);
+    const spent = paintNode({ editing: false, selected: false, placing: false, exceeds: false, offset: 0.5, windup: 0.5, ignite: 0.4 }, 0);
+    expect(spent.drawn).toBe(false);
+    const ignite = paintNode({ editing: false, selected: false, placing: false, exceeds: false, offset: 0.2, windup: 0.5, ignite: 0.4 }, 0);
+    expect(ignite.drawn).toBe(true);
+    expect(ignite.flash).toBeCloseTo(0.5);
     expect(burnChipText(1.8, 12, 100, false)).toBe("Δv 1.8 · 12 %");
     expect(burnChipText(6.2, 118, 100, true)).toBe("Δv 6.2 · +18 % over");
   });
@@ -114,6 +120,27 @@ describe("burn node", () => {
     expect(game.ship.step).toBe(frozen);
     nodes.dispose();
     ship.dispose();
+  });
+
+  it("does not draw an executed node during flight", () => {
+    const game = createGame(passage);
+    setPlan(game, slingshotPlan);
+    const nodes = createNodes(theme, passage);
+    const frame = { game, width: 1280, height: 720, now: 0, dpr: 1 };
+    nodes.update(frame);
+    const markers = () => nodes.object.children.filter((child) => child.name === "burn-node");
+    expect(markers()[0]?.visible).toBe(true);
+    launch(game);
+    const past = Math.ceil((theme.nodes.ignite + game.level.dt) / game.level.dt);
+    for (let i = 0; i < past; i++) tick(game);
+    expect(game.mode).toBe("flying");
+    nodes.update(frame);
+    expect(markers()[0]?.visible).toBe(false);
+    expect(markers()[1]?.visible).toBe(true);
+    expect(pause(game)).toBe(true);
+    nodes.update(frame);
+    expect(markers()[0]?.visible).toBe(true);
+    nodes.dispose();
   });
 });
 
