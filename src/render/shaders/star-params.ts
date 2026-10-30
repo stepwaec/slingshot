@@ -110,7 +110,7 @@ const SUN: StarParams = {
   haze1: "#E8461A",
   haze2: "#6A1408",
   hazeR: 4.35,
-  hazeA: 1.2,
+  hazeA: 1,
   fl0: "#FFE7A0",
   fl1: "#FFB347",
   fl2: "#FF6A1A",

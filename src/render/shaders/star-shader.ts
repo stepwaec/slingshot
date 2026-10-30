@@ -41,7 +41,8 @@ uniform float uFlare;
 uniform float uNoiseGain;
 uniform float uSmooth;
 ${NOISE_GLSL}
-vec4 over(vec4 dst, vec3 c, float a){a=clamp(a,0.,1.);return vec4(mix(dst.rgb,c,a),dst.a+a*(1.-dst.a));}
+/* straight-alpha over. Premultiply only the final pixel. design/shader-specs.md §1. */
+vec4 over(vec4 d, vec3 c, float a){a=clamp(a,0.,1.);float o=a+d.a*(1.-a);return vec4(o>0.?(c*a+d.rgb*d.a*(1.-a))/o:c,o);}
 vec3 ramp3(float t,vec3 a,vec3 b,vec3 c,float tb){return t<tb?mix(a,b,t/tb):mix(b,c,(t-tb)/(1.-tb));}
 
 void main(){
