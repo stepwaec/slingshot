@@ -136,9 +136,16 @@ export function cycleGravity(game: Game): GravityView {
   return game.gravity;
 }
 
-/** Button copy for the gravity layer. Matches `cycleGravity` one to one. */
+/**
+ * Button copy for the gravity layer. On and off share this word.
+ * The pressed state shows which, the same way Magnetism and Radiation do.
+ */
 export function gravityLabel(view: GravityView): string {
-  return view === "on" ? "Gravity on" : "Gravity off";
+  switch (view) {
+    case "on":
+    case "off":
+      return "Gravity";
+  }
 }
 
 /**
