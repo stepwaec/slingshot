@@ -454,3 +454,28 @@ Designs: `assets/layers-menu.svg`, `mockups/planning-layers.svg`. Values in `sty
 4. **Flight.** The rows stay readable but their switches are disabled. On pause they come back.
 5. **Legends.** Move the magnetism zones and the radiation dots into their rows. Delete the floating legend boxes.
 
+## 24. Gravity and time heat map
+
+Designs: `overlays/gravity-time.svg`, `mockups/planning-gravity-time.svg`. Values in `style.md` §21. This replaces `CLOCK_HEAT_RATES`, `CLOCK_HEAT_COLORS`, `clockHeatRgb` and `clockHeatAlpha` in `src/render/palette.ts`, and `theme.gravity.heatAlpha`, in `src/render/visuals/gravity.ts`. Keep `heatGamma` (2.4).
+
+1. **Bands in the fragment shader.**
+   - Pass the rate per vertex (`grid.rate`), not a colour.
+   - In the fragment, compute s = rate^2.4 and look up the band.
+   - Make each band edge crisp with `fwidth(s)`: a one-pixel `smoothstep` across the edge, not across the band.
+   - Draw the contour lines in the same shader, as a px-wide line where s crosses an edge.
+   - Alpha is the band's own; full rate is clear. Keep the edge fade and the body cut-outs.
+2. **Sample the rate at the display position.** The funnel moves vertices a long way, so evaluate the rate at the pinched (display) position. That way the bands stay at their true radii, independent of the grid warp.
+3. **Labels.** One DOM chip per visible contour, at −58° on the ring around the dominant body, skipped when closer than 22 px to the previous label.
+4. **Grid ink.**
+   - Draw a casing pass (1.9 px, `#050710` α 0.22 + 0.28·depth) under the existing ink.
+   - Where s < 0.60 (warm), draw only `#050710` α 0.55 at 0.9 px.
+5. **The funnel** (replaces the saturating pull in `pinchTowardMasses`):
+   - For each vertex, take the dominant body (the largest Φ contribution).
+   - Compute c = r_s / r_b, where r_s = 2GM/c² (`horizonRadius`), clamped to 1. Then r₀ = r_b (1 + 3c) and a = r_b (1 + 2.2c).
+   - Map the distance with r′ = r_b + (r − r₀) u / (1 + u), where u = ((r − r₀)/a)².
+   - Blend with today's pinch by w = smoothstep(0, 0.6, c).
+   - Where w > 0, skip the `PINCH_CELL` clamp: the radial map is monotonic and cannot fold.
+   - Vertices with r ≤ r₀ go under the disc: hide them, as today's lines already stop at discs.
+   - Between two compact bodies, blend the two maps by their Φ shares.
+6. **The Layers legend** (§20) shows the six band swatches.
+
