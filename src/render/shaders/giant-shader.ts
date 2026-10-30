@@ -52,9 +52,11 @@ uniform float uPole;
 uniform vec3 uPoleCol;
 uniform float uPoleA;
 const float PI = 3.14159265;
+/* straight-alpha over. Premultiply only the final pixel. design/shader-specs.md §1. */
 vec4 over(vec4 d, vec3 c, float a) {
   a = clamp(a, 0.0, 1.0);
-  return vec4(mix(d.rgb, c, a), d.a + a * (1.0 - d.a));
+  float o = a + d.a * (1.0 - a);
+  return vec4(o > 0.0 ? (c * a + d.rgb * d.a * (1.0 - a)) / o : c, o);
 }
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float jet(float v) {

@@ -52,9 +52,11 @@ uniform vec3 uDet0;
 uniform vec3 uDet1;
 uniform vec3 uDet2;
 const float PI = 3.14159265;
+/* straight-alpha over. Premultiply only the final pixel. design/shader-specs.md §1. */
 vec4 over(vec4 d, vec3 c, float a) {
   a = clamp(a, 0.0, 1.0);
-  return vec4(mix(d.rgb, c, a), d.a + a * (1.0 - d.a));
+  float o = a + d.a * (1.0 - a);
+  return vec4(o > 0.0 ? (c * a + d.rgb * d.a * (1.0 - a)) / o : c, o);
 }
 void main() {
   vec2 uv = (gl_FragCoord.xy - uCenter) / uR;
