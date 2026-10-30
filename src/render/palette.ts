@@ -65,6 +65,10 @@ export const palette = {
   gridTidal: "#FF5A5F",
   /** design/assets/overlays/gravity-sheet.svg. */
   sheetGlass: "#0B1430",
+  /** design/style.md §21 time.casing. Also the warm-band grid ink. */
+  timeCasing: "#050710",
+  /** gravity-time.svg header: contour chip fill. */
+  timeChip: "#0A0D1A",
   /** design/style.md §13 and the megastructure SVG headers. */
   engineJet0: "#FFF6D6",
   engineJet1: "#FFD27A",
@@ -262,54 +266,59 @@ export function gridRamp01(u: number): [number, number, number] {
 }
 
 /**
- * Interim clock-rate field. Rates are rest-frame dτ/dt: 1 is a full-rate
- * clock, 0 is stopped. Colours are existing tokens. There is no design
- * header yet; docs/ROADMAP.md asks Claude for the palette.
- *
- * The colour stays blue until dτ/dt is well below 1, then turns gold and
- * orange. Alphas for the same rates live in `theme.gravity.heatAlpha`, and
- * they are already high at the gold stop so the warm colour does not turn
- * olive over the navy.
+ * Clock-rate bands. design/style.md §21 and design/assets/overlays/gravity-time.svg.
+ * Colour is s = (dτ/dt)^heatGamma, in six crisp bands. Above the outer edge the
+ * field is clear. Warm bands are near-opaque so they stay amber, orange and red
+ * on the navy instead of turning olive.
  */
-export const CLOCK_HEAT_RATES: readonly number[] = [0, 0.2, 0.4, 0.55, 0.82, 1];
+export interface TimeBand {
+  id: "slow1" | "slow2" | "amber" | "orange" | "red" | "stop";
+  /** Upper edge of s. The contour and its label sit on this edge. */
+  sHigh: number;
+  /** Design label for that edge, for example "×0.90". */
+  label: string;
+  color: string;
+  alpha: number;
+  contour: string;
+  contourAlpha: number;
+}
 
-export const CLOCK_HEAT_COLORS: readonly string[] = [
-  palette.starGlow,
-  palette.starCorona,
-  palette.fuelLow,
-  palette.planetStartBase,
-  palette.planetStartBase,
-  palette.path,
+export const TIME_BANDS: readonly TimeBand[] = [
+  { id: "slow1", sHigh: 0.9, label: "×0.96", color: "#3D8BFF", alpha: 0.16, contour: "#8FC2FF", contourAlpha: 0.6 },
+  { id: "slow2", sHigh: 0.78, label: "×0.90", color: "#3D8BFF", alpha: 0.32, contour: "#A8D0FF", contourAlpha: 0.8 },
+  { id: "amber", sHigh: 0.6, label: "×0.81", color: "#FFB43A", alpha: 0.92, contour: "#FFE2A8", contourAlpha: 0.9 },
+  { id: "orange", sHigh: 0.42, label: "×0.70", color: "#FF7A2E", alpha: 0.94, contour: "#FFC08A", contourAlpha: 0.9 },
+  { id: "red", sHigh: 0.24, label: "×0.55", color: "#FF4A3A", alpha: 0.95, contour: "#FF9A8A", contourAlpha: 0.9 },
+  { id: "stop", sHigh: 0.1, label: "×0.38", color: "#FFF3D6", alpha: 0.97, contour: "#FFFFFF", contourAlpha: 0.95 },
 ];
 
-function heatBlend(rate: number): { i0: number; i1: number; k: number } {
-  const t = rate > 0 ? (rate < 1 ? rate : 1) : 0;
-  const rates = CLOCK_HEAT_RATES;
-  for (let s = 0; s < rates.length; s++) {
-    if (Math.abs(rates[s] - t) < 1e-6) return { i0: s, i1: s, k: 0 };
+/** s below this is a warm band. The grid ink flips to dark navy there. */
+export const TIME_WARM_S = TIME_BANDS[2].sHigh;
+
+/** Display curve. The stored rate is unchanged; colour reads rate^gamma. */
+export function clockDisplayS(rate: number, gamma: number): number {
+  const r = rate > 0 ? (rate < 1 ? rate : 1) : 0;
+  const g = gamma > 0 ? gamma : 1;
+  return Math.pow(r, g);
+}
+
+/** Rest-frame rate whose display value is `s`. */
+export function rateAtDisplayS(s: number, gamma: number): number {
+  const g = gamma > 0 ? gamma : 1;
+  const t = s > 0 ? (s < 1 ? s : 1) : 0;
+  return Math.pow(t, 1 / g);
+}
+
+/**
+ * Flat band for `s`. Null when the clock is clear (s at or above the outer edge).
+ * A value inside a band is that band exactly: neighbours are not blended.
+ */
+export function timeBand(s: number, bands: readonly TimeBand[] = TIME_BANDS): TimeBand | null {
+  if (bands.length === 0 || !(s < bands[0].sHigh)) return null;
+  for (let i = 0; i < bands.length - 1; i++) {
+    if (s >= bands[i + 1].sHigh) return bands[i];
   }
-  let i = 1;
-  while (i < rates.length - 1 && rates[i] < t) i += 1;
-  const t0 = rates[i - 1];
-  const t1 = rates[i];
-  const k = (t - t0) / (t1 - t0 || 1);
-  return { i0: i - 1, i1: i, k };
-}
-
-/** sRGB channels of the clock-rate ramp. `rate` is dτ/dt. A named stop is that colour exactly. */
-export function clockHeatRgb(rate: number): [number, number, number] {
-  const { i0, i1, k } = heatBlend(rate);
-  const a = srgb01(CLOCK_HEAT_COLORS[i0]);
-  const b = srgb01(CLOCK_HEAT_COLORS[i1]);
-  return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
-}
-
-/** Opacity at `rate`, from the alphas paired with `CLOCK_HEAT_RATES`. */
-export function clockHeatAlpha(rate: number, alphas: readonly number[]): number {
-  const { i0, i1, k } = heatBlend(rate);
-  const a = alphas[i0] ?? 0;
-  const b = alphas[i1] ?? a;
-  return a + (b - a) * k;
+  return bands[bands.length - 1];
 }
 
 /** sRGB hex as 0–1 channels. Custom shaders write these straight out (no extra encode). */

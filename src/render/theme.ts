@@ -433,18 +433,38 @@ export const theme = {
     tidalGap: 4,
     tidalCrawl: 8,
     /**
-     * Opacity of the clock-rate field at `CLOCK_HEAT_RATES`
-     * (dτ/dt = 0, 0.2, 0.4, 0.55, 0.82, 1). Interim until Claude designs it
-     * (docs/ROADMAP.md). Full rate is clear. Gold (0.4) is already opaque
-     * so it does not turn olive over the navy.
-     */
-    heatAlpha: [0.84, 0.8, 0.74, 0.5, 0.1, 0],
-    /**
-     * Display curve. The ramp is sampled at rate^heatGamma, so a mild
-     * slowdown moves toward the warm stops and the well reads at game scale.
-     * The stored rate is unchanged.
+     * Display curve. Colour is rate^heatGamma. The stored rate is unchanged.
+     * design/assets/overlays/gravity-time.svg header.
      */
     heatGamma: 2.4,
+    /** time.casing: 1.9 px under the ink, alpha 0.22 + 0.28·depth. */
+    casingPx: 1.9,
+    casingAlpha: 0.22,
+    casingDepth: 0.28,
+    /** Inside the warm bands the ink is only this dark stroke. */
+    warmPx: 0.9,
+    warmAlpha: 0.55,
+    /**
+     * Funnel. r0 = r_b (1 + funnelR0·c), a = r_b (1 + funnelA·c).
+     * w = smoothstep(0, funnelBlend, c). Below funnelFloor the pull is today's
+     * clamped pinch, so a sun's tiny compactness does not drop the cell clamp.
+     */
+    funnelR0: 3,
+    funnelA: 2.2,
+    funnelBlend: 0.6,
+    funnelFloor: 1e-4,
+    /** Contour chips. gravity-time.svg: −58° and 22 px of clearance. */
+    labelAngle: -58,
+    labelGapPx: 22,
+    labelWidth: 34,
+    labelHeight: 13,
+    labelAlpha: 0.85,
+    /** layers-menu.svg Gravity row: swatch stroke opacity, not the field contour alpha. */
+    legendStrokeAlpha: 0.8,
+    legendSwatchW: 16,
+    legendSwatchH: 10,
+    legendSwatchRx: 2,
+    legendSwatchGap: 4,
   },
   /**
    * Cosmetic timings from the megastructure headers.
