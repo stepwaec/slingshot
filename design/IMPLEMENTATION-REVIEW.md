@@ -59,7 +59,7 @@ PRs #33 and #35 brought back the sun's turning rings and breathing haze, rebaked
   - Planning gets the telegraphs.
   - The Ash level should match `mockups/showcase-burning-planet.svg`.
 
-Landed with the event art (design [PR #50](https://github.com/stepwaec/slingshot/pull/50)):
+Landed in [PR #57](https://github.com/stepwaec/slingshot/pull/57), from the event art in design [PR #50](https://github.com/stepwaec/slingshot/pull/50):
 
 - ✔ Impact draws the flash, shock, rim, ejecta and crater glow, then the debris field.
 - ✔ `consume` draws the dayside glow and the ablation tail. Heat is `1 − (r − R_star) / (r0 − R_star)` from `burn-up.svg`. At `end`: plunge flash, ripple, star brightening.
