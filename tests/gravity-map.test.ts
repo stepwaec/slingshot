@@ -260,8 +260,9 @@ describe("gravity layer toggle", () => {
     expect(game.gravity).toBe("on");
   });
 
-  it("wires the gravity button and the G key to that same cycle", () => {
+  it("wires the Layers button to the panel and the G key to the layer", () => {
     const game = createGame(passage);
+    const layersPanel = { open: false };
     const gravityClicks: Array<() => void> = [];
     const keys: Array<(event: { key: string; repeat: boolean; metaKey: boolean; ctrlKey: boolean; altKey: boolean; preventDefault: () => void }) => void> = [];
     const quietButton = () => ({ addEventListener() {} });
@@ -297,22 +298,21 @@ describe("gravity layer toggle", () => {
           pauseButton: quietButton(),
           resumeButton: quietButton(),
           slowButton: quietButton(),
-          gravityButton: {
+          layersButton: {
             addEventListener(type: string, fn: () => void) {
               if (type === "click") gravityClicks.push(fn);
             },
           },
-          magnetismButton: quietButton(),
-          radiationButton: quietButton(),
+          layersPanel,
         } as unknown as InputElements,
         () => ({ width: 800, height: 600 }),
       );
       const quiet = { repeat: false, metaKey: false, ctrlKey: false, altKey: false, preventDefault() {} };
-      for (const view of ["on", "off"] as const) {
-        gravityClicks[0]();
-        expect(game.gravity).toBe(view);
-        expect(gravityLabel(game.gravity)).toBe("Gravity");
-      }
+      gravityClicks[0]();
+      expect(layersPanel.open).toBe(true);
+      expect(game.gravity).toBe("off");
+      gravityClicks[0]();
+      expect(layersPanel.open).toBe(false);
       for (const view of ["on", "off"] as const) {
         keys[0]({ key: "g", ...quiet });
         expect(game.gravity).toBe(view);
