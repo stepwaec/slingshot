@@ -13,7 +13,7 @@ import {
   type PauseRule,
   keplerMeanMotion,
 } from "../sim/physics";
-import type { DysonSwarm, ShkadovThruster, StellarEngine } from "../sim/mega";
+import type { DysonSwarm, Ringworld, ShkadovThruster, SpaceElevator, StellarEngine, WormholePair } from "../sim/mega";
 
 /**
  * How a level turns clocks and fuel into points.
@@ -107,6 +107,8 @@ export interface Level {
   nebulae?: readonly Nebula[];
   /** Asteroid or Kuiper belts. Omitted means the level has none. */
   belts?: readonly Belt[];
+  /** Wormhole pairs. Omitted means the level has none. */
+  wormholes?: readonly WormholePair[];
 }
 
 /** A level file failed to parse or failed the schema. `issues` names each field. */
@@ -146,6 +148,7 @@ const LEVEL_KEYS = [
   "physics",
   "nebulae",
   "belts",
+  "wormholes",
 ] as const;
 
 const BODY_KEYS = [
@@ -172,10 +175,17 @@ const BODY_KEYS = [
   "engine",
   "dyson",
   "shkadov",
+  "ring",
+  "elevator",
 ] as const;
 const ENGINE_KEYS = ["angle", "burn", "scoop", "push"] as const;
 const DYSON_KEYS = ["coverage", "nick"] as const;
 const SHKADOV_KEYS = ["angle", "accel"] as const;
+const RING_KEYS = ["angle", "mass", "gaps"] as const;
+const RING_GAP_KEYS = ["start", "end"] as const;
+const ELEVATOR_KEYS = ["phase", "omega"] as const;
+const WORMHOLE_KEYS = ["id", "a", "b", "angle", "clockOffset"] as const;
+const MOUTH_KEYS = ["x", "y", "radius"] as const;
 const DRIFT_KEYS = ["vx", "vy"] as const;
 const FLARE_KEYS = ["angle", "period", "start", "duration"] as const;
 const SUPERNOVA_KEYS = ["at", "blast", "speed", "damage"] as const;
@@ -502,6 +512,10 @@ function readBody(value: unknown, path: string, issues: string[]): Body | undefi
   if (Object.prototype.hasOwnProperty.call(value, "dyson")) dyson = readDyson(value.dyson, `${path}.dyson`, issues);
   let shkadov: ShkadovThruster | undefined;
   if (Object.prototype.hasOwnProperty.call(value, "shkadov")) shkadov = readShkadov(value.shkadov, `${path}.shkadov`, issues);
+  let ring: Ringworld | undefined;
+  if (Object.prototype.hasOwnProperty.call(value, "ring")) ring = readRing(value.ring, `${path}.ring`, issues);
+  let elevator: SpaceElevator | undefined;
+  if (Object.prototype.hasOwnProperty.call(value, "elevator")) elevator = readElevator(value.elevator, `${path}.elevator`, issues);
   let look: BodyLook | undefined;
   if (Object.prototype.hasOwnProperty.call(value, "look")) {
     const raw = value.look;
@@ -541,6 +555,8 @@ function readBody(value: unknown, path: string, issues: string[]): Body | undefi
   if (engine) body.engine = engine;
   if (dyson) body.dyson = dyson;
   if (shkadov) body.shkadov = shkadov;
+  if (ring) body.ring = ring;
+  if (elevator) body.elevator = elevator;
   if (harvestRadius !== undefined && radius !== undefined && !(harvestRadius > radius)) {
     issues.push(`${path}.harvestRadius must be greater than radius`);
   }
@@ -571,6 +587,77 @@ function readDyson(value: unknown, path: string, issues: string[]): DysonSwarm |
   const nick = readFinite(value, "nick", path, issues, { min: 0 });
   if (coverage === undefined || nick === undefined) return undefined;
   return { coverage, nick };
+}
+
+function readRing(value: unknown, path: string, issues: string[]): Ringworld | undefined {
+  if (!isObject(value)) {
+    issues.push(`${path} must be an object`);
+    return undefined;
+  }
+  rejectUnknown(value, RING_KEYS, path, issues);
+  const angle = readFinite(value, "angle", path, issues, {});
+  const mass = readFinite(value, "mass", path, issues, { min: 0 });
+  if (!Object.prototype.hasOwnProperty.call(value, "gaps")) issues.push(`${path}.gaps is required`);
+  else if (!Array.isArray(value.gaps)) issues.push(`${path}.gaps must be an array`);
+  const gaps: { start: number; end: number }[] = [];
+  if (Array.isArray(value.gaps)) {
+    for (let i = 0; i < value.gaps.length; i++) {
+      const gap = value.gaps[i];
+      const gapPath = `${path}.gaps[${i}]`;
+      if (!isObject(gap)) {
+        issues.push(`${gapPath} must be an object`);
+        continue;
+      }
+      rejectUnknown(gap, RING_GAP_KEYS, gapPath, issues);
+      const start = readFinite(gap, "start", gapPath, issues, {});
+      const end = readFinite(gap, "end", gapPath, issues, {});
+      if (start === undefined || end === undefined) continue;
+      gaps.push({ start, end });
+    }
+  }
+  if (angle === undefined || mass === undefined) return undefined;
+  if (!Array.isArray(value.gaps)) return undefined;
+  return { angle, mass, gaps };
+}
+
+function readElevator(value: unknown, path: string, issues: string[]): SpaceElevator | undefined {
+  if (!isObject(value)) {
+    issues.push(`${path} must be an object`);
+    return undefined;
+  }
+  rejectUnknown(value, ELEVATOR_KEYS, path, issues);
+  const phase = readFinite(value, "phase", path, issues, {});
+  const omega = readFinite(value, "omega", path, issues, {});
+  if (phase === undefined || omega === undefined) return undefined;
+  return { phase, omega };
+}
+
+function readMouth(value: unknown, path: string, issues: string[]): WormholePair["a"] | undefined {
+  if (!isObject(value)) {
+    issues.push(`${path} must be an object`);
+    return undefined;
+  }
+  rejectUnknown(value, MOUTH_KEYS, path, issues);
+  const x = readFinite(value, "x", path, issues, {});
+  const y = readFinite(value, "y", path, issues, {});
+  const radius = readFinite(value, "radius", path, issues, { min: 0, exclusiveMin: true });
+  if (x === undefined || y === undefined || radius === undefined) return undefined;
+  return { x, y, radius };
+}
+
+function readWormhole(value: unknown, path: string, issues: string[]): WormholePair | undefined {
+  if (!isObject(value)) {
+    issues.push(`${path} must be an object`);
+    return undefined;
+  }
+  rejectUnknown(value, WORMHOLE_KEYS, path, issues);
+  const id = readString(value, "id", path, issues);
+  const a = readMouth(value.a, `${path}.a`, issues);
+  const b = readMouth(value.b, `${path}.b`, issues);
+  const angle = readFinite(value, "angle", path, issues, {});
+  const clockOffset = readFinite(value, "clockOffset", path, issues, {});
+  if (id === undefined || a === undefined || b === undefined || angle === undefined || clockOffset === undefined) return undefined;
+  return { id, a, b, angle, clockOffset };
 }
 
 function readShkadov(value: unknown, path: string, issues: string[]): ShkadovThruster | undefined {
@@ -869,6 +956,21 @@ export function loadLevelData(data: unknown, source = "level"): Level {
     }
   }
 
+  const wormholes: WormholePair[] = [];
+  if (Object.prototype.hasOwnProperty.call(data, "wormholes")) {
+    if (!Array.isArray(data.wormholes)) issues.push("level.wormholes must be an array");
+    else {
+      const seen = new Set<string>();
+      for (let i = 0; i < data.wormholes.length; i++) {
+        const hole = readWormhole(data.wormholes[i], `level.wormholes[${i}]`, issues);
+        if (!hole) continue;
+        if (seen.has(hole.id)) issues.push(`level.wormholes[${i}].id "${hole.id}" is duplicated`);
+        seen.add(hole.id);
+        wormholes.push(hole);
+      }
+    }
+  }
+
   if (
     issues.length > 0 ||
     id === undefined ||
@@ -913,6 +1015,7 @@ export function loadLevelData(data: unknown, source = "level"): Level {
   if (physics) level.physics = physics;
   if (nebulae.length > 0) level.nebulae = nebulae;
   if (belts.length > 0) level.belts = belts;
+  if (wormholes.length > 0) level.wormholes = wormholes;
   return level;
 }
 

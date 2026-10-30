@@ -355,6 +355,17 @@ export const theme = {
     glowRadius: 78,
     strutCount: 9,
     strutLength: 6,
+    /** ringworld.svg: floor strips drift 60 px per 120 s. Five shadow squares orbit in 40 s. */
+    ringScrollPeriod: 120,
+    ringScrollPx: 60,
+    ringShadowPeriod: 40,
+    ringShadowCount: 5,
+    /** space-elevator.svg: climbers ride up in 12 s and down in 9 s. */
+    climberUp: 12,
+    climberDown: 9,
+    /** wormhole.svg: the sky turns 360° in 120 s. */
+    wormholePeriod: 120,
+    wormholeArcCount: 7,
   },
 } as const;
 
