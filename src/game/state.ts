@@ -6,6 +6,7 @@ import {
   frameStepCount,
   horizonSteps,
   makeState,
+  planHorizonEnd,
   predictPlan,
   spendPause,
   step,
@@ -262,11 +263,14 @@ export function queuedBurns(game: Game): number {
 /**
  * True when `step` is still ahead of the ship and inside the current horizon.
  * Planning measures from the pad. A pause measures from the frozen ship.
+ * Burns after that origin push the end out by one look-ahead past the latest burn.
  */
 export function stepInHorizon(game: Game, step: number): boolean {
   const origin = planOrigin(game);
   if (!Number.isInteger(step) || step < origin.step) return false;
-  return step <= origin.step + horizonSteps(origin, simConfigFromLevel(game.level, game.upgrades));
+  const config = simConfigFromLevel(game.level, game.upgrades);
+  if (!config.horizon) return step <= origin.step + horizonSteps(origin, config);
+  return step <= planHorizonEnd(origin, config, game.nodes);
 }
 
 /** Click on the predicted path. An existing node at that step is selected instead. */
@@ -351,7 +355,7 @@ export function buildMoveRail(game: Game, index: number): RailSample[] {
     else return [];
   }
   const nextStep = index + 1 < game.nodes.length ? game.nodes[index + 1].step : config.maxSteps;
-  const horizonEnd = config.horizon ? planOrigin(game).step + horizonSteps(planOrigin(game), config) : Infinity;
+  const horizonEnd = config.horizon ? planHorizonEnd(planOrigin(game), config, game.nodes) : Infinity;
   const blocked = index === 0 ? -1 : prev.step;
   const state = cloneState(prev);
   const samples: RailSample[] = [];
