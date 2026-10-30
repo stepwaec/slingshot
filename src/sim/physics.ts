@@ -12,10 +12,11 @@
  * prediction. A body without an orbit stays at `x`, `y`.
  *
  * `predictPlan` caches the state at each node. Editing node k recomputes from
- * k onward and reuses the path before it. A configured horizon stops the
- * predicted line early; the live flight does not. With burns, that look-ahead
- * is measured from the latest burn's end, so each new node pushes the fade
- * forward by the same amount.
+ * k onward and reuses the path before it. The planning line stops at
+ * `planHorizonEnd`: a coast of `extension` steps after the latest burn, or
+ * after the ship when there is no later burn. The slider sets that extension.
+ * Omit it and the coast is today's look-ahead. The step cap bounds the work.
+ * `dt` stays the flight step. Live flight does not stop early.
  *
  * Each step also advances two clocks. Outside time starts as coordinate time
  * (`step * dt`): Home and Planet X share that one frame. A wormhole exit adds
@@ -463,10 +464,24 @@ export interface PlanReuse {
   kind: "burn" | "coast";
 }
 
-export const SIM_SPEEDS = [1, 2, 4] as const;
+export const SIM_SPEEDS = [1, 2, 4, 8, 16, 32] as const;
 export type SimSpeed = (typeof SIM_SPEEDS)[number];
 
-/** Fixed steps to run for one rendered frame at the given sim speed. */
+/**
+ * Keyboard shortcuts for `SIM_SPEEDS`. 1, 2, 4 and 8 are the multiplier.
+ * Comma and period are 16× and 32×. R, G, M and D stay on reset, gravity,
+ * magnetism and radiation.
+ */
+export const SPEED_KEY: Readonly<Record<string, SimSpeed>> = {
+  "1": 1,
+  "2": 2,
+  "4": 4,
+  "8": 8,
+  ",": 16,
+  ".": 32,
+};
+
+/** Fixed steps to run for one rendered frame at the given sim speed. `dt` is not scaled. */
 export function stepsPerFrame(speed: SimSpeed): number {
   return speed;
 }
@@ -2524,21 +2539,75 @@ export function horizonSteps(state: SimState, config: SimConfig): number {
 }
 
 /**
- * Last step the planning line draws.
- * Without a horizon the flight runs to completion. With one and no burn after
- * `from`, the end is `from.step + horizonSteps` — the look-ahead the line
- * fades across today. With burns, that same duration is time after the latest
- * burn. A burn is one instant at its step, so that step is the burn's end.
+ * Most steps a preview will integrate, measured from the plan origin.
+ * The stroke buffer is smaller (`theme.path.maxSamples`); a longer path is
+ * drawn with a stride. Every integrated step still uses `config.dt`.
  */
-export function planHorizonEnd(from: SimState, config: SimConfig, nodes: readonly BurnNode[]): number {
-  if (!config.horizon) return Number.POSITIVE_INFINITY;
-  const extension = horizonSteps(from, config);
+export const PREDICTION_STEP_CAP = 48_000;
+
+/** World units of level diagonal per second of preview at the slider's maximum. */
+const PREVIEW_EXTENT_PER_SECOND = 40;
+
+/** Steps covered by `seconds` at `dt`. At least one. Does not apply the step cap. */
+export function secondsToSteps(seconds: number, dt: number): number {
+  if (!(dt > 0) || !Number.isFinite(seconds) || seconds <= 0) return 1;
+  return Math.max(1, Math.floor(seconds / dt + 1e-12));
+}
+
+/**
+ * Coast length the slider asks for, in steps.
+ * `null` is today's look-ahead (`horizonSteps`): the level horizon when one
+ * is set, otherwise the room until `maxSteps`. A chosen number of seconds is
+ * fixed and is not shortened again. Both are capped.
+ */
+export function extensionSteps(state: SimState, config: SimConfig, previewSeconds: number | null): number {
+  const raw = previewSeconds == null ? horizonSteps(state, config) : secondsToSteps(previewSeconds, config.dt);
+  return Math.max(1, Math.min(PREDICTION_STEP_CAP, raw));
+}
+
+export interface PreviewRange {
+  /** Shortest slider value, in seconds. Never above the default. */
+  minSeconds: number;
+  /** Longest slider value, in seconds. Grows with the level diagonal until the flight and the step cap. */
+  maxSeconds: number;
+  /** Today's look-ahead, in seconds. The slider starts here. */
+  defaultSeconds: number;
+}
+
+/** Slider limits for a plan that starts at `state`. */
+export function previewRange(state: SimState, config: SimConfig): PreviewRange {
+  const dt = config.dt > 0 ? config.dt : 1 / 60;
+  const defaultSteps = Math.min(PREDICTION_STEP_CAP, Math.max(1, horizonSteps(state, config)));
+  const defaultSeconds = defaultSteps * dt;
+  const extent = Math.hypot(config.bounds.maxX - config.bounds.minX, config.bounds.maxY - config.bounds.minY);
+  const extentSeconds = extent / PREVIEW_EXTENT_PER_SECOND;
+  const flightSeconds = Math.max(0, config.maxSteps - state.step) * dt;
+  const capSeconds = PREDICTION_STEP_CAP * dt;
+  const maxSeconds = Math.max(defaultSeconds, Math.min(extentSeconds, flightSeconds, capSeconds));
+  const minSeconds = Math.min(defaultSeconds, Math.max(dt, 2));
+  return { minSeconds, maxSeconds, defaultSeconds };
+}
+
+/**
+ * Last step the planning line draws.
+ * `extension` is the coast after the latest burn, or after `from` when no
+ * burn is later. A burn is one instant, so its step is the burn's end.
+ * Omit `extension` to use today's look-ahead. The total from `from` never
+ * exceeds `PREDICTION_STEP_CAP`, and the line never runs past `maxSteps`.
+ */
+export function planHorizonEnd(
+  from: SimState,
+  config: SimConfig,
+  nodes: readonly BurnNode[],
+  extension?: number,
+): number {
+  const coast = Math.max(0, Math.min(PREDICTION_STEP_CAP, extension ?? horizonSteps(from, config)));
   let burnEnd = from.step;
   for (let i = 0; i < nodes.length; i++) {
     const step = nodes[i].step;
     if (step > burnEnd) burnEnd = step;
   }
-  return burnEnd + extension;
+  return Math.min(burnEnd + coast, from.step + PREDICTION_STEP_CAP, config.maxSteps);
 }
 
 /** Orbital period of the body that pulls hardest on `state`, or a circular stand-in. */
@@ -2571,14 +2640,16 @@ function dominantPeriod(state: SimState, config: SimConfig): number | null {
 /**
  * Deterministic prediction of `nodes`, with the state at each node cached.
  * Pass `reuse` after an edit so nodes before the edit are not resimulated.
- * The returned path matches `flyPlan` step for step. A horizon stops the line
- * at `planHorizonEnd`; samples up to the stop still match the flight.
+ * The returned path matches `flyPlan` step for step. The line stops at
+ * `planHorizonEnd`. Samples up to that stop still match the flight.
+ * `extension` is the slider's coast; omit it for today's look-ahead.
  */
 export function predictPlan(
   from: SimState,
   config: SimConfig,
   nodes: readonly BurnNode[],
   reuse?: PlanReuse,
+  extension?: number,
 ): PlanForecast {
   const active = reuse !== undefined && reuseIsValid(nodes, reuse) ? reuse : undefined;
   const kept: NodeSnapshot[] = [];
@@ -2635,7 +2706,7 @@ export function predictPlan(
         approach.push({ x: integrated.x, y: integrated.y, step: integrated.step, rate: integrated.rate });
       },
     };
-    const end = planHorizonEnd(from, config, nodes);
+    const end = planHorizonEnd(from, config, nodes, extension);
     let guard = 0;
     const guardLimit = config.maxSteps + nodes.length + 2;
     while (state.status === "flying" && state.step <= end && guard++ <= guardLimit) {
