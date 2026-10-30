@@ -1,33 +1,48 @@
 import * as THREE from "three";
 import { burnHandleOffset, isEditing, nodeIncoming, nodePosition, planFuel } from "../../game/state";
 import type { Vec2 } from "../../sim/physics";
-import { markerPulse, sampleBurnAnim, tailFromBurn, type BurnSample } from "../burn-anim";
+import { sampleBurnAnim, tailFromBurn } from "../burn-anim";
 import { projectToScreen } from "../camera";
+import { shader, srgbVec } from "./materials";
+import { paintNode, type NodePaint } from "../node-style";
 import { powerHex } from "../palette";
 import type { Theme } from "../theme";
 import { disposeObject, type Visual, type VisualFactory, type VisualFrame } from "../visual";
 
 /**
  * Burn nodes and their drag arrows. The handle tip stays on the same screen
- * offset the input hit-test uses. Swap the factory to restyle the arrow;
- * do not change that offset or the sim.
- *
- * During flight and pause, a node inside the wind-up window also gets a
- * marker pulse. The pulse reads sim time and the plan. It does not move
- * the handle or the ship.
+ * offset the input hit-test uses. The ring, core and states are
+ * design/assets/burn-node.svg. They read the plan. They do not move it.
  */
 export const createNodes: VisualFactory = (theme) => new NodesVisual(theme);
 
+interface RingUniforms {
+  uColor: THREE.IUniform<THREE.Vector3>;
+  uRadius: THREE.IUniform<number>;
+  uWidth: THREE.IUniform<number>;
+  uAlpha: THREE.IUniform<number>;
+  uArc: THREE.IUniform<number>;
+  uDash: THREE.IUniform<number>;
+  uDashOn: THREE.IUniform<number>;
+  uDashPeriod: THREE.IUniform<number>;
+}
+
 interface NodeVisual {
-  marker: THREE.Mesh;
-  stroke: THREE.Mesh;
+  root: THREE.Group;
+  fill: THREE.Mesh;
+  ring: THREE.Mesh;
+  outer: THREE.Mesh;
+  core: THREE.Mesh;
+  arc: THREE.Mesh;
+  flash: THREE.Mesh;
   handle: THREE.Mesh;
   shaft: THREE.Mesh;
   head: THREE.Mesh;
   ghost: THREE.Line;
-  pulse: THREE.Group;
-  pulseHalo: THREE.MeshBasicMaterial;
-  pulseRing: THREE.MeshBasicMaterial;
+  ringU: RingUniforms;
+  outerU: RingUniforms;
+  arcU: RingUniforms;
+  flashU: RingUniforms;
 }
 
 class NodesVisual implements Visual {
@@ -45,34 +60,18 @@ class NodesVisual implements Visual {
 
   update(frame: VisualFrame): void {
     const { game, width, height } = frame;
-    const planning = isEditing(game);
+    const editing = isEditing(game);
+    const spec = this.theme.nodes;
     const anim =
       game.mode === "planning"
         ? null
-        : sampleBurnAnim(
-            game.ship.step,
-            game.level.dt,
-            game.nodes,
-            this.theme.burn.windup,
-            tailFromBurn(this.theme.burn),
-          );
-    if (!planning) {
-      for (let i = 0; i < game.nodes.length; i++) {
-        const visual = this.ensure(i);
-        hide(visual);
-        this.paintPulse(visual, frame, anim, i);
-      }
-      for (let i = game.nodes.length; i < this.nodes.length; i++) hide(this.nodes[i]);
-      return;
-    }
-    const fuel = planFuel(game);
-    const spec = this.theme.nodes;
-    const colors = this.theme.colors;
+        : sampleBurnAnim(game.ship.step, game.level.dt, game.nodes, this.theme.burn.windup, tailFromBurn(this.theme.burn));
+    const fuel = editing ? planFuel(game) : null;
     for (let i = 0; i < game.nodes.length; i++) {
       const visual = this.ensure(i);
       const pos = nodePosition(game, i);
       if (!pos) {
-        hide(visual);
+        visual.root.visible = false;
         continue;
       }
       projectToScreen(pos.x, pos.y, width, height, this.scratch);
@@ -80,88 +79,109 @@ class NodesVisual implements Visual {
       const y = height - this.scratch.y;
       const node = game.nodes[i];
       const offset = burnHandleOffset(node.dvx, node.dvy, game.level.dvPerPixel, nodeIncoming(game, i));
-      const tipX = x + offset.x;
-      const tipY = y - offset.y;
-      const exceeds = fuel.costs[i]?.exceeds ?? false;
-      const selected = game.selected === i;
-      const radius = selected ? spec.selectedRadius : spec.markerRadius;
-      visual.marker.visible = true;
-      visual.marker.position.set(x, y, 0);
-      visual.marker.scale.set(radius, radius, 1);
-      (visual.marker.material as THREE.MeshBasicMaterial).color.set(exceeds ? colors.resultCrash : colors.node);
-      visual.stroke.visible = true;
-      visual.stroke.position.set(x, y, 0);
-      visual.stroke.scale.set(radius + spec.strokePad, radius + spec.strokePad, 1);
-      (visual.stroke.material as THREE.MeshBasicMaterial).color.set(selected ? colors.text : colors.shipOutline);
-
-      const ang = Math.atan2(tipY - y, tipX - x);
-      const len = Math.hypot(tipX - x, tipY - y);
+      const cue = anim?.cues.find((item) => item.index === i);
+      const simOffset = game.mode === "planning" ? null : (game.ship.step - node.step) * game.level.dt;
+      const paint = paintNode(
+        {
+          editing,
+          selected: game.selected === i,
+          placing: editing && offset.placing,
+          exceeds: fuel?.costs[i]?.exceeds ?? false,
+          offset: simOffset,
+          windup: this.theme.burn.windup,
+          ignite: spec.ignite,
+        },
+        cue?.phase === "windup" ? cue.amount : 0,
+      );
+      visual.root.visible = true;
+      visual.root.position.set(x, y, 0);
+      this.applyPaint(visual, paint);
+      if (!paint.arrow && !(editing && offset.placing)) {
+        visual.shaft.visible = false;
+        visual.head.visible = false;
+        visual.handle.visible = false;
+        visual.ghost.visible = false;
+        continue;
+      }
+      const tipX = offset.x;
+      const tipY = -offset.y;
+      const ang = Math.atan2(tipY, tipX);
+      const len = Math.hypot(tipX, tipY);
       if (offset.placing) {
         visual.shaft.visible = false;
         visual.head.visible = false;
         visual.handle.visible = true;
         visual.handle.position.set(tipX, tipY, 0);
-        visual.handle.scale.set(4, 4, 1);
-        (visual.handle.material as THREE.MeshBasicMaterial).color.set(colors.text);
-        setLine(visual.ghost, x, y, tipX, tipY);
+        visual.handle.scale.set(spec.handleRadius, spec.handleRadius, 1);
+        setLine(visual.ghost, 0, 0, tipX, tipY);
         visual.ghost.visible = true;
-      } else {
-        visual.ghost.visible = false;
-        const headLen = Math.min(spec.headLength, Math.max(8, len * 0.35));
-        const shaftEnd = Math.max(0, len - headLen);
-        visual.shaft.visible = shaftEnd > 2;
-        visual.shaft.position.set(x + Math.cos(ang) * shaftEnd * 0.5, y + Math.sin(ang) * shaftEnd * 0.5, 0);
-        visual.shaft.scale.set(Math.max(shaftEnd, 0.001), spec.shaftWidth, 1);
-        visual.shaft.rotation.z = ang;
-        (visual.shaft.material as THREE.MeshBasicMaterial).opacity = spec.shaftAlpha;
-        const cost = fuel.costs[i]?.cost ?? 0;
-        const power = Math.min(1, cost / game.level.fuel);
-        const hex = exceeds ? colors.resultCrash : powerHex(power);
-        visual.head.visible = true;
-        visual.head.position.set(tipX - Math.cos(ang) * headLen, tipY - Math.sin(ang) * headLen, 0);
-        visual.head.scale.set(headLen / spec.headLength, headLen / spec.headLength, 1);
-        visual.head.rotation.z = ang;
-        (visual.head.material as THREE.MeshBasicMaterial).color.set(hex);
-        visual.handle.visible = false;
+        continue;
       }
-      this.paintPulse(visual, frame, anim, i);
+      visual.ghost.visible = false;
+      visual.handle.visible = false;
+      const headLen = Math.min(spec.headLength, Math.max(8, len * 0.35));
+      const shaftEnd = Math.max(0, len - headLen);
+      visual.shaft.visible = shaftEnd > 2;
+      visual.shaft.position.set(Math.cos(ang) * shaftEnd * 0.5, Math.sin(ang) * shaftEnd * 0.5, 0);
+      visual.shaft.scale.set(Math.max(shaftEnd, 0.001), spec.shaftWidth, 1);
+      visual.shaft.rotation.z = ang;
+      const cost = fuel?.costs[i]?.cost ?? 0;
+      const power = Math.min(1, cost / game.level.fuel);
+      const hex = paint.color === "#FF5A5F" ? paint.color : powerHex(power);
+      visual.head.visible = true;
+      visual.head.position.set(tipX - Math.cos(ang) * headLen, tipY - Math.sin(ang) * headLen, 0);
+      visual.head.scale.set(headLen / spec.headLength, headLen / spec.headLength, 1);
+      visual.head.rotation.z = ang;
+      (visual.head.material as THREE.MeshBasicMaterial).color.set(hex);
     }
-    for (let i = game.nodes.length; i < this.nodes.length; i++) hide(this.nodes[i]);
-  }
-
-  /** Soft ring on a node whose burn is inside the wind-up window. */
-  private paintPulse(visual: NodeVisual, frame: VisualFrame, anim: BurnSample | null, index: number): void {
-    const cue = anim?.cues.find((item) => item.index === index && item.phase === "windup");
-    if (!anim || !cue || cue.amount <= 0) {
-      visual.pulse.visible = false;
-      return;
-    }
-    const pos = nodePosition(frame.game, index);
-    if (!pos) {
-      visual.pulse.visible = false;
-      return;
-    }
-    projectToScreen(pos.x, pos.y, frame.width, frame.height, this.scratch);
-    const beat = markerPulse(anim.time, this.theme.burn.pulseHz);
-    const radius = this.theme.nodes.markerRadius * (2.4 + 3.2 * beat) * (0.55 + 0.45 * cue.amount);
-    visual.pulse.visible = true;
-    visual.pulse.position.set(this.scratch.x, frame.height - this.scratch.y, 0);
-    visual.pulse.scale.set(radius, radius, 1);
-    visual.pulseHalo.opacity = 0.28 * cue.amount * (0.45 + 0.55 * beat);
-    visual.pulseRing.opacity = cue.amount * (0.35 + 0.65 * beat);
+    for (let i = game.nodes.length; i < this.nodes.length; i++) this.nodes[i].root.visible = false;
   }
 
   dispose(): void {
     disposeObject(this.object);
   }
 
+  private applyPaint(visual: NodeVisual, paint: NodePaint): void {
+    const spec = this.theme.nodes;
+    visual.fill.visible = paint.fill;
+    visual.ring.visible = true;
+    visual.fill.scale.set(paint.radius, paint.radius, 1);
+    visual.core.visible = paint.core;
+    visual.core.scale.set(spec.coreRadius, spec.coreRadius, 1);
+    (visual.core.material as THREE.MeshBasicMaterial).color.set(paint.coreColor);
+    setRing(visual.ringU, paint.color, paint.radius, paint.width, paint.alpha, 0, paint.dashed ? spec.firedDash : 0, paint.dashed ? spec.firedDash + spec.firedGap : 0);
+    visual.outer.visible = paint.outer;
+    if (paint.outer) {
+      setRing(visual.outerU, "#B8A8FF", spec.selectedOuter, spec.selectedOuterWidth, spec.selectedOuterAlpha, 0, 0, 0);
+    }
+    visual.arc.visible = paint.arc > 0.001;
+    if (visual.arc.visible) {
+      setRing(visual.arcU, "#F7FBFF", spec.windupRadius, spec.windupWidth, 1, paint.arc * Math.PI * 2, 0, 0);
+    }
+    visual.flash.visible = paint.flash >= 0;
+    if (visual.flash.visible) {
+      const radius = spec.igniteRadius0 + (spec.igniteRadius1 - spec.igniteRadius0) * paint.flash;
+      setRing(visual.flashU, "#F7FBFF", radius, spec.igniteWidth, 1 - paint.flash, 0, 0, 0);
+    }
+  }
+
   private ensure(index: number): NodeVisual {
     const colors = this.theme.colors;
     const spec = this.theme.nodes;
     while (this.nodes.length <= index) {
-      const marker = disc(colors.node);
-      const stroke = disc(colors.shipOutline);
-      const handle = disc(colors.text);
+      const root = new THREE.Group();
+      root.name = "burn-node";
+      const fill = disc(colors.nodeFill);
+      const ringU = ringUniforms("#B8A8FF");
+      const ring = ringMesh(ringU, 12);
+      const outerU = ringUniforms("#B8A8FF");
+      const outer = ringMesh(outerU, 13);
+      const core = disc(colors.nodeCore);
+      const arcU = ringUniforms("#F7FBFF");
+      const arc = ringMesh(arcU, 11);
+      const flashU = ringUniforms("#F7FBFF");
+      const flash = ringMesh(flashU, 10);
+      const handle = disc(colors.nodeHandle);
       const shaft = new THREE.Mesh(
         new THREE.PlaneGeometry(1, 1),
         new THREE.MeshBasicMaterial({
@@ -192,52 +212,100 @@ class NodesVisual implements Visual {
         new THREE.LineDashedMaterial({
           color: colors.arrow,
           transparent: true,
-          opacity: 0.45,
-          dashSize: 2,
-          gapSize: 4,
+          opacity: spec.ghostAlpha,
+          dashSize: spec.ghostDash,
+          gapSize: spec.ghostGap,
           depthTest: false,
           toneMapped: false,
         }),
       );
       ghost.frustumCulled = false;
       ghost.computeLineDistances();
-      ghost.renderOrder = 12;
-      stroke.renderOrder = 13;
-      marker.renderOrder = 14;
-      shaft.renderOrder = 15;
-      head.renderOrder = 16;
-      handle.renderOrder = 17;
-      const pulseHalo = additive(colors.thrustOuter, 0.4);
-      const pulseRing = additive(colors.thrustCore, 0.9);
-      const halo = new THREE.Mesh(new THREE.CircleGeometry(1, 24), pulseHalo);
-      const ring = new THREE.Mesh(new THREE.RingGeometry(0.68, 1, 28), pulseRing);
-      halo.frustumCulled = false;
-      ring.frustumCulled = false;
-      halo.renderOrder = 11;
-      ring.renderOrder = 12;
-      const pulse = new THREE.Group();
-      pulse.name = "burn-pulse";
-      pulse.visible = false;
-      pulse.add(halo, ring);
-      this.object.add(pulse, ghost, stroke, marker, shaft, head, handle);
-      this.nodes.push({ marker, stroke, handle, shaft, head, ghost, pulse, pulseHalo, pulseRing });
+      fill.renderOrder = 14;
+      ring.renderOrder = 15;
+      outer.renderOrder = 13;
+      core.renderOrder = 16;
+      shaft.renderOrder = 17;
+      head.renderOrder = 18;
+      handle.renderOrder = 19;
+      root.add(flash, arc, outer, fill, ring, core, ghost, shaft, head, handle);
+      this.object.add(root);
+      this.nodes.push({ root, fill, ring, outer, core, arc, flash, handle, shaft, head, ghost, ringU, outerU, arcU, flashU });
     }
     return this.nodes[index];
   }
 }
 
-function additive(color: string, opacity: number): THREE.MeshBasicMaterial {
-  return new THREE.MeshBasicMaterial({
-    color,
-    transparent: true,
-    opacity,
-    blending: THREE.AdditiveBlending,
-    depthTest: false,
-    depthWrite: false,
-    toneMapped: false,
-    side: THREE.DoubleSide,
-  });
+function setRing(
+  uniforms: RingUniforms,
+  color: string,
+  radius: number,
+  width: number,
+  alpha: number,
+  arc: number,
+  dashOn: number,
+  dashPeriod: number,
+): void {
+  uniforms.uColor.value.copy(srgbVec(color));
+  uniforms.uRadius.value = radius;
+  uniforms.uWidth.value = width;
+  uniforms.uAlpha.value = alpha;
+  uniforms.uArc.value = arc;
+  uniforms.uDash.value = 0;
+  uniforms.uDashOn.value = dashOn;
+  uniforms.uDashPeriod.value = dashPeriod;
 }
+
+function ringUniforms(color: string): RingUniforms {
+  return {
+    uColor: { value: srgbVec(color) },
+    uRadius: { value: 5 },
+    uWidth: { value: 2 },
+    uAlpha: { value: 1 },
+    uArc: { value: 0 },
+    uDash: { value: 0 },
+    uDashOn: { value: 0 },
+    uDashPeriod: { value: 0 },
+  };
+}
+
+function ringMesh(uniforms: RingUniforms, order: number): THREE.Mesh {
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(48, 48), shader(ringFrag, uniforms as unknown as Record<string, THREE.IUniform>));
+  mesh.frustumCulled = false;
+  mesh.renderOrder = order;
+  mesh.visible = false;
+  return mesh;
+}
+
+const ringFrag = /* glsl */ `
+varying vec2 vLocal;
+uniform vec3 uColor;
+uniform float uRadius;
+uniform float uWidth;
+uniform float uAlpha;
+uniform float uArc;
+uniform float uDash;
+uniform float uDashOn;
+uniform float uDashPeriod;
+void main() {
+  float r = length(vLocal);
+  float dist = abs(r - uRadius);
+  float aa = fwidth(dist);
+  float band = 1.0 - smoothstep(uWidth * 0.5, uWidth * 0.5 + aa, dist);
+  if (band <= 0.0) discard;
+  if (uArc > 0.0) {
+    float ang = atan(vLocal.x, vLocal.y);
+    if (ang < 0.0) ang += 6.2831853;
+    if (ang > uArc) discard;
+  }
+  if (uDashPeriod > 0.0) {
+    float along = atan(vLocal.y, vLocal.x) * uRadius;
+    float u = fract((along - uDash) / uDashPeriod);
+    if (u > uDashOn / uDashPeriod) discard;
+  }
+  gl_FragColor = vec4(uColor, band * uAlpha);
+}
+`;
 
 function disc(color: string): THREE.Mesh {
   const mesh = new THREE.Mesh(
@@ -252,16 +320,6 @@ function headGeometry(length: number, halfWidth: number): THREE.BufferGeometry {
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute("position", new THREE.Float32BufferAttribute([length, 0, 0, 0, halfWidth, 0, 0, -halfWidth, 0], 3));
   return geometry;
-}
-
-function hide(node: NodeVisual): void {
-  node.marker.visible = false;
-  node.stroke.visible = false;
-  node.handle.visible = false;
-  node.shaft.visible = false;
-  node.head.visible = false;
-  node.ghost.visible = false;
-  node.pulse.visible = false;
 }
 
 function setLine(line: THREE.Line, x0: number, y0: number, x1: number, y1: number): void {
