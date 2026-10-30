@@ -69,6 +69,44 @@ interface Targets {
   h: number;
 }
 
+/** True when a visible mesh on the emissive layer will be drawn. */
+function chainVisible(object: THREE.Object3D): boolean {
+  let current: THREE.Object3D | null = object;
+  while (current) {
+    if (!current.visible) return false;
+    current = current.parent;
+  }
+  return true;
+}
+
+function emissiveOnScreen(root: THREE.Object3D): boolean {
+  let found = false;
+  root.traverse((object) => {
+    if (found || !chainVisible(object)) return;
+    const mesh = object as THREE.Mesh;
+    if (!mesh.isMesh && !(object as THREE.Points).isPoints) return;
+    if (object.layers.isEnabled(EMISSIVE_LAYER)) found = true;
+  });
+  return found;
+}
+
+/**
+ * Star and compact impostors write `gl_FragCoord` against `uCenter` and `uR`
+ * in full drawing-buffer pixels. Scale those while the emissive target is half size.
+ */
+function scalePixelUniforms(root: THREE.Object3D, factor: number): void {
+  root.traverse((object) => {
+    if (!object.layers.isEnabled(EMISSIVE_LAYER)) return;
+    const material = (object as THREE.Mesh).material as THREE.ShaderMaterial | undefined;
+    const center = material?.uniforms?.uCenter?.value as THREE.Vector2 | undefined;
+    const radius = material?.uniforms?.uR;
+    if (center && typeof radius?.value === "number") {
+      center.multiplyScalar(factor);
+      radius.value *= factor;
+    }
+  });
+}
+
 function makeTarget(w: number, h: number, depth: boolean): THREE.WebGLRenderTarget {
   const target = new THREE.WebGLRenderTarget(Math.max(1, w), Math.max(1, h), {
     depthBuffer: depth,
@@ -141,6 +179,7 @@ export class SelectiveBloom {
   ): boolean {
     renderer.getDrawingBufferSize(this.size);
     if (this.size.x < 2 || this.size.y < 2) return false;
+    if (!emissiveOnScreen(world) && !emissiveOnScreen(screen)) return false;
     const targets = this.ensure(this.size.x, this.size.y);
     renderer.getClearColor(this.saved);
     const clearAlpha = renderer.getClearAlpha();
@@ -156,7 +195,11 @@ export class SelectiveBloom {
     renderer.clear(true, true, true);
     const worldMask = worldCamera.layers.mask;
     worldCamera.layers.set(EMISSIVE_LAYER);
+    // Impostors place themselves with gl_FragCoord in full-buffer pixels.
+    // The emissive target is half resolution, so those uniforms scale to match.
+    scalePixelUniforms(world, 0.5);
     renderer.render(world, worldCamera);
+    scalePixelUniforms(world, 2);
     worldCamera.layers.mask = worldMask;
     const screenMask = screenCamera.layers.mask;
     screenCamera.layers.set(EMISSIVE_LAYER);
@@ -183,7 +226,7 @@ export class SelectiveBloom {
     const qw = Math.max(1, Math.floor(w / 4));
     const qh = Math.max(1, Math.floor(h / 4));
     const next = {
-      emit: makeTarget(w, h, true),
+      emit: makeTarget(Math.max(1, Math.floor(w / 2)), Math.max(1, Math.floor(h / 2)), true),
       h1: makeTarget(hw, hh, false),
       h2: makeTarget(hw, hh, false),
       q1: makeTarget(qw, qh, false),
