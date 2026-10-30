@@ -1676,15 +1676,38 @@ export function spreadAlong(
 const SHIP_LENGTH = 6;
 const CLOSE_FACTOR = 1.12;
 const CLOSE_RATE = 18;
-/** Hull damage per second that draws the red zone and the warning. */
+/** Hull damage per second that draws the level-3 ring and the warning. */
 export const STRESS_WARN = 4;
+
+/**
+ * Summed tidal tensor at a point. S is hull per second from compact bodies.
+ * T = Σ k · 2GM · L / r³ · (3 r̂r̂ − I) / 2. The larger eigenvalue is the
+ * stretch (equal to S for one body) and `angle` is that eigenvector.
+ * design/style.md §22 and design/threejs-notes.md §26.
+ */
+export interface TidalTensor {
+  stress: number;
+  txx: number;
+  txy: number;
+  tyy: number;
+  stretch: number;
+  /** Undirected axis: `angle` and `angle + π` are the same stretch direction. */
+  angle: number;
+}
 
 /** Hull per second from the gravity gradient across the ship. */
 export function tidalStressAt(x: number, y: number, config: SimConfig, time: number): number {
+  return tidalTensorAt(x, y, config, time).stress;
+}
+
+export function tidalTensorAt(x: number, y: number, config: SimConfig, time: number): TidalTensor {
   const strength = config.tidalStrength ?? 0;
-  if (!(strength > 0)) return 0;
+  if (!(strength > 0)) return { stress: 0, txx: 0, txy: 0, tyy: 0, stretch: 0, angle: 0 };
   const g = gravityConstant(config);
   let stress = 0;
+  let txx = 0;
+  let txy = 0;
+  let tyy = 0;
   const bodies = config.bodies;
   for (let i = 0; i < bodies.length; i++) {
     const body = bodies[i];
@@ -1695,10 +1718,33 @@ export function tidalStressAt(x: number, y: number, config: SimConfig, time: num
     const r2 = dx * dx + dy * dy;
     const r = Math.sqrt(r2);
     if (!(r > body.radius)) continue;
-    const gradient = (2 * g * body.mass * SHIP_LENGTH) / (r2 * r);
-    stress += strength * gradient;
+    const radial = (strength * (2 * g * body.mass * SHIP_LENGTH)) / (r2 * r);
+    stress += radial;
+    const nx = dx / r;
+    const ny = dy / r;
+    const half = radial * 0.5;
+    // (3 r̂r̂ − I) / 2, scaled by the radial stretch.
+    txx += half * (3 * nx * nx - 1);
+    txy += half * 3 * nx * ny;
+    tyy += half * (3 * ny * ny - 1);
   }
-  return stress;
+  const disc = Math.hypot(txx - tyy, 2 * txy);
+  return {
+    stress,
+    txx,
+    txy,
+    tyy,
+    stretch: (txx + tyy + disc) * 0.5,
+    angle: 0.5 * Math.atan2(2 * txy, txx - tyy),
+  };
+}
+
+/**
+ * Hull per second from tidal stress. The rate is S itself, so it grows as
+ * 1/r³ through the level-3 ring. It does not step from zero at `STRESS_WARN`.
+ */
+export function tidalDamageRate(stress: number): number {
+  return stress > 0 ? stress : 0;
 }
 
 /** Radius where tidal stress reaches `STRESS_WARN`, or 0 when the knob is off. */
@@ -2109,7 +2155,9 @@ function applyShipSystems(state: SimState, config: SimConfig, time: number): voi
   const g = gravityConstant(config);
   const engine = engineRates(state.x, state.y, time, config.bodies, g);
   const nick = dysonNick(state.x, state.y, time, config.bodies, g);
-  const damage = (stress + pass + beam + beltDust(state.x, state.y, config, time) + engine.burn + nick) * config.dt;
+  const damage =
+    (tidalDamageRate(stress) + pass + beam + beltDust(state.x, state.y, config, time) + engine.burn + nick) *
+    config.dt;
   if (damage > 0) {
     state.hull -= damage;
     if (!(state.hull > 0)) {

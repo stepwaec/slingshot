@@ -74,6 +74,8 @@ export interface Game {
   radiation: boolean;
   /** Astrophage map. Planning and pause only. Does not affect prediction or flight. */
   astrophage: boolean;
+  /** Tidal stress lattice. Planning and pause only. Does not affect prediction or flight. */
+  tidal: boolean;
   /**
    * Path sample under the pointer, in planning and pause.
    * Ghosts read it. Prediction and flight do not.
@@ -129,6 +131,7 @@ export function createGame(level: Level = passage, camera: Camera = { x: 0, y: 0
     magnetism: false,
     radiation: false,
     astrophage: false,
+    tidal: false,
     cursorStep: null,
     previewSeconds: null,
   };

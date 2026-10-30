@@ -6,11 +6,10 @@ import { hasMagneticBody, isCompactBody, starLuminosity } from "../sim/physics";
  * Map layers menu. One table drives the rows, so a later layer is one entry.
  * design/style.md §20 and design/threejs-notes.md §23.
  *
- * Gravity, magnetism, radiation and Astrophage keep their view flags.
- * T stays unbound until the tidal-stress layer exists.
+ * Gravity, magnetism, radiation, Astrophage and tidal stress keep their view flags.
  */
 
-export type LayerLegend = "gravity" | "magnetism" | "radiation" | "astrophage";
+export type LayerLegend = "gravity" | "magnetism" | "radiation" | "astrophage" | "tidal";
 
 export interface LayerGame {
   level: Level;
@@ -19,6 +18,8 @@ export interface LayerGame {
   magnetism: boolean;
   radiation: boolean;
   astrophage: boolean;
+  /** Tidal stress lattice. Planning and pause only. Does not affect prediction or flight. */
+  tidal: boolean;
 }
 
 export interface LayerDef {
@@ -55,6 +56,12 @@ export function hasTidalBody(level: Level): boolean {
     if (isCompactBody(level.bodies[i])) return true;
   }
   return false;
+}
+
+/** Compact body and a positive tidalStrength. Otherwise the row stays dim. */
+export function tidalLayerReady(level: Level): boolean {
+  const strength = level.physics?.tidalStrength ?? 0;
+  return strength > 0 && hasTidalBody(level);
 }
 
 export const LAYERS: readonly LayerDef[] = [
@@ -110,11 +117,13 @@ export const LAYERS: readonly LayerDef[] = [
     id: "tidal",
     name: "Tidal stress",
     key: "T",
-    available: hasTidalBody,
+    available: tidalLayerReady,
     reason: "no tidal body here",
-    legend: null,
-    isOn: () => false,
-    setOn: null,
+    legend: "tidal",
+    isOn: (game) => game.tidal,
+    setOn: (game, on) => {
+      game.tidal = on;
+    },
   },
 ];
 
@@ -244,20 +253,20 @@ function chord(event: LayerKeyEvent): boolean {
 }
 
 /**
- * L toggles the panel. G, M, D and A toggle their layers, in planning and pause.
- * T stays unbound until the tidal layer exists. Repeats and modifier chords
- * do nothing, the same way `applyGravityKey` treats G.
+ * L toggles the panel. G, M, D, A and T toggle their layers, in planning and pause.
+ * Repeats and modifier chords do nothing, the same way `applyGravityKey` treats G.
  * Returns whether the key was consumed.
  */
 export function applyLayerKey(game: LayerGame, panel: LayersPanelState, event: LayerKeyEvent): boolean {
   const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
-  if (key !== "l" && key !== "g" && key !== "m" && key !== "d" && key !== "a") return false;
+  if (key !== "l" && key !== "g" && key !== "m" && key !== "d" && key !== "a" && key !== "t") return false;
   if (chord(event)) return false;
   if (key === "l") {
     panel.open = !panel.open;
     return true;
   }
-  const id = key === "g" ? "gravity" : key === "m" ? "magnetism" : key === "d" ? "radiation" : "astrophage";
+  const id =
+    key === "g" ? "gravity" : key === "m" ? "magnetism" : key === "d" ? "radiation" : key === "a" ? "astrophage" : "tidal";
   return toggleLayer(game, id);
 }
 

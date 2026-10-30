@@ -264,7 +264,6 @@ class GravityVisual implements Visual {
   private bodyKey = "";
   private bandsVisible = false;
   private readonly zones: TidalRing[] = [];
-  private label: THREE.Sprite | null = null;
   private readonly contours: HTMLElement | null;
   private readonly chips: HTMLElement[] = [];
 
@@ -374,14 +373,29 @@ class GravityVisual implements Visual {
 
   update(frame: VisualFrame): void {
     const game = frame.game;
-    const show = game.gravity === "on" && isEditing(game);
-    this.object.visible = show;
-    if (this.contours) this.contours.hidden = !show;
-    if (!show || frame.width < 2 || frame.height < 2) return;
+    const editing = isEditing(game);
+    const gridOn = game.gravity === "on" && editing;
+    // The dashed level-3 ring stays with this visual. The tidal layer shows it
+    // on its own; gravity still shows it when that layer is on.
+    const ringsOn = editing && (gridOn || game.tidal);
+    this.object.visible = gridOn || ringsOn;
+    if (this.contours) this.contours.hidden = !gridOn;
+    if ((!gridOn && !ringsOn) || frame.width < 2 || frame.height < 2) {
+      if (!ringsOn) this.hideDanger();
+      return;
+    }
 
     const time = chartTime(game);
     const config = simConfigFromLevel(game.level);
     const zoom = game.camera.zoom > 0 ? game.camera.zoom : 1;
+    // The lattice draws its own chip above the rings. This label is the
+    // gravity-only copy, so the two do not stack.
+    this.syncDanger(config, time, frame.now, zoom, !game.tidal);
+    if (!gridOn) {
+      this.surface.visible = false;
+      this.gridLines.visible = false;
+      return;
+    }
     this.fieldCam.value.set(game.camera.x, game.camera.y);
     this.fieldZoom.value = zoom;
     this.fieldView.value.set(frame.width, frame.height);
@@ -397,7 +411,6 @@ class GravityVisual implements Visual {
 
     const bounds = framedBounds(game.camera, frame.width, frame.height, this.theme.gravity.viewPad);
     const fieldKey = fieldCacheKey(game, time, bounds, frame.width, frame.height);
-    this.syncDanger(config, time, frame.now, game.camera.zoom);
     this.viewport.value.set(frame.width, frame.height);
     this.gridLines.visible = true;
     if (fieldKey === this.fieldKey) return;
@@ -465,12 +478,19 @@ class GravityVisual implements Visual {
   }
 
   /**
-   * Dashed ring where tidal stress reaches the sim's warning line.
-   * The header's "level 1" has no finite outer radius (any stress above 0
-   * is chip level 1), so the ring sits on `tidalDangerRadius`, which is
-   * the filled disc it replaces.
+   * Dashed ring where tidal stress reaches level 3 (`STRESS_WARN`).
+   * design/style.md §22 keeps this ring as the level-3 boundary.
+   * The chip reads "tidal 3 · hull".
    */
-  private syncDanger(config: SimConfig, time: number, now: number, zoom: number): void {
+  private hideDanger(): void {
+    for (let i = 0; i < this.zones.length; i++) {
+      const zone = this.zones[i];
+      zone.mesh.visible = false;
+      if (zone.label) zone.label.visible = false;
+    }
+  }
+
+  private syncDanger(config: SimConfig, time: number, now: number, zoom: number, showLabel: boolean): void {
     const strength = config.tidalStrength ?? 0;
     const g = gravityConstant(config);
     const spec = this.theme.gravity;
@@ -497,12 +517,23 @@ class GravityVisual implements Visual {
         ring.radius.value = radius;
         ring.dash.value = (now / 1000) * spec.tidalCrawl;
         ring.zoom.value = zoom > 0 ? zoom : 1;
-        if (count === 0) this.placeLabel(pose.x, pose.y - radius, z, zoom);
+        if (showLabel) {
+          if (!ring.label) {
+            ring.label = makeTidalLabel();
+            if (ring.label) this.object.add(ring.label);
+          }
+          if (ring.label) this.placeLabel(ring.label, pose.x, pose.y, radius, z, zoom);
+        } else if (ring.label) {
+          ring.label.visible = false;
+        }
         count += 1;
       }
     }
-    for (let i = count; i < this.zones.length; i++) this.zones[i].mesh.visible = false;
-    if (count === 0 && this.label) this.label.visible = false;
+    for (let i = count; i < this.zones.length; i++) {
+      const zone = this.zones[i];
+      zone.mesh.visible = false;
+      if (zone.label) zone.label.visible = false;
+    }
   }
 
   private syncContours(
@@ -547,14 +578,13 @@ class GravityVisual implements Visual {
     }
   }
 
-  private placeLabel(x: number, y: number, z: number, zoom: number): void {
-    if (!this.label) this.label = makeTidalLabel();
-    if (!this.label) return;
-    if (!this.label.parent) this.object.add(this.label);
-    this.label.visible = true;
-    this.label.position.set(x, y, z);
-    const scale = 70 / Math.max(zoom, 0.25);
-    this.label.scale.set(scale, scale * 0.28, 1);
+  private placeLabel(label: THREE.Sprite, x: number, y: number, radius: number, z: number, zoom: number): void {
+    const ang = Math.atan2(1, 0.8);
+    const zf = Math.max(zoom, 0.25);
+    label.visible = true;
+    label.position.set(x + Math.cos(ang) * radius, y + Math.sin(ang) * radius, z);
+    label.scale.set(90 / zf, 16 / zf, 1);
+    label.center.set(0, 0.5);
   }
 }
 
@@ -804,6 +834,7 @@ interface TidalRing {
   dash: THREE.IUniform<number>;
   zoom: THREE.IUniform<number>;
   scale: THREE.IUniform<number>;
+  label: THREE.Sprite | null;
 }
 
 function makeTidalRing(widthPx: number, alpha: number): TidalRing {
@@ -826,7 +857,7 @@ function makeTidalRing(widthPx: number, alpha: number): TidalRing {
   mesh.name = "tidal-ring";
   mesh.frustumCulled = false;
   mesh.renderOrder = -2;
-  return { mesh, radius, dash, zoom, scale };
+  return { mesh, radius, dash, zoom, scale, label: null };
 }
 
 const tidalFrag = /* glsl */ `
@@ -854,19 +885,25 @@ void main() {
 function makeTidalLabel(): THREE.Sprite | null {
   if (typeof document === "undefined") return null;
   const canvas = document.createElement("canvas");
-  canvas.width = 160;
-  canvas.height = 32;
+  const dpr = 2;
+  const cssW = 90;
+  const cssH = 16;
+  canvas.width = cssW * dpr;
+  canvas.height = cssH * dpr;
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.font = "500 20px ui-sans-serif, sans-serif";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.lineWidth = 6;
-  ctx.strokeStyle = "#0B1024";
-  ctx.strokeText("tidal stress", 80, 16);
+  ctx.scale(dpr, dpr);
+  ctx.beginPath();
+  ctx.roundRect(0.5, 0.5, cssW - 1, cssH - 1, 4);
+  ctx.fillStyle = "rgba(10, 13, 26, 0.92)";
+  ctx.fill();
+  ctx.strokeStyle = "rgba(255, 90, 95, 0.6)";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.font = "9.5px ui-monospace, 'SF Mono', Menlo, Consolas, monospace";
   ctx.fillStyle = "#FF5A5F";
-  ctx.fillText("tidal stress", 80, 16);
+  ctx.textBaseline = "middle";
+  ctx.fillText("tidal 3 · hull", 5, cssH / 2);
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   const sprite = new THREE.Sprite(
@@ -874,6 +911,6 @@ function makeTidalLabel(): THREE.Sprite | null {
   );
   sprite.name = "tidal-label";
   sprite.renderOrder = -1;
-  sprite.center.set(0.5, 1);
+  sprite.center.set(0, 0.5);
   return sprite;
 }

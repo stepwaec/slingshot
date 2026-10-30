@@ -21,6 +21,7 @@ import { createRadiation } from "./radiation";
 import { createRecharge } from "./recharge";
 import { createRogue } from "./rogue";
 import { createStray } from "./stray";
+import { createTidal } from "./tidal";
 import { createRelativity } from "./relativity";
 import { createShip } from "./ship";
 import { createStar } from "./star";
@@ -41,6 +42,7 @@ export const visualFactories = {
   magnetism: createMagnetism,
   radiation: createRadiation,
   astroMap: createAstroMap,
+  tidal: createTidal,
   star: createStar,
   scenery: createScenery,
   belts: createBelts,

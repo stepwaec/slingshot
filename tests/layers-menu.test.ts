@@ -13,7 +13,7 @@ import {
 } from "../src/game/layers";
 import { createGame, loadLevel } from "../src/game/state";
 import type { Level } from "../src/level/schema";
-import { dim, needle, passage, rescue, shade } from "../src/level/catalog";
+import { dim, ember, needle, passage, rescue, shade } from "../src/level/catalog";
 
 const press = { repeat: false, metaKey: false, ctrlKey: false, altKey: false };
 
@@ -43,8 +43,10 @@ describe("layers menu table", () => {
       "magnetism",
       "radiation",
       "astrophage",
+      "tidal",
     ]);
-    expect(layerById("tidal").setOn).toBeNull();
+    expect(layerById("tidal").legend).toBe("tidal");
+    expect(layerById("tidal").setOn).not.toBeNull();
   });
 
   it("keeps Gravity as the label when the layer is on", () => {
@@ -77,7 +79,8 @@ describe("layers menu table", () => {
     expect(astro.disabled).toBe(false);
     expect(astro.dim).toBe(false);
     expect(layerById("tidal").available(passage)).toBe(false);
-    expect(layerById("tidal").available(rescue)).toBe(true);
+    expect(layerById("tidal").available(rescue)).toBe(false);
+    expect(layerById("tidal").available(ember)).toBe(true);
     expect(layerById("tidal").reason).toBe("no tidal body here");
 
     const off = layerView(layerById("magnetism"), createGame(passage));
@@ -116,7 +119,7 @@ describe("layers menu keys", () => {
     expect(magnetic.prediction).toBe(before);
   });
 
-  it("toggles Astrophage with A on an infected star, and leaves T unbound", () => {
+  it("toggles Astrophage with A on an infected star, and Tidal stress with T on Ember", () => {
     const game = createGame(dim);
     const panel = { open: false };
     const before = game.prediction;
@@ -127,12 +130,20 @@ describe("layers menu keys", () => {
     expect(game.prediction).toBe(before);
     expect(applyLayerKey(game, panel, { key: "a", repeat: true, metaKey: false, ctrlKey: false, altKey: false })).toBe(false);
     expect(applyLayerKey(game, panel, { key: "t", ...press })).toBe(false);
-    expect(applyLayerKey(game, panel, { key: "T", ...press })).toBe(false);
     expect(toggleLayer(game, "tidal")).toBe(false);
 
     const plain = createGame(passage);
     expect(applyLayerKey(plain, panel, { key: "a", ...press })).toBe(false);
     expect(plain.astrophage).toBe(false);
+
+    const tides = createGame(ember);
+    const tideBefore = tides.prediction;
+    expect(applyLayerKey(tides, panel, { key: "t", ...press })).toBe(true);
+    expect(tides.tidal).toBe(true);
+    expect(layerView(layerById("tidal"), tides).showLegend).toBe(true);
+    expect(applyLayerKey(tides, panel, { key: "T", ...press })).toBe(true);
+    expect(tides.tidal).toBe(false);
+    expect(tides.prediction).toBe(tideBefore);
   });
 
   it("ignores repeats, modifier chords, C, R, and A where there is no infection", () => {
