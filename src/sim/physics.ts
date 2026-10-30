@@ -36,6 +36,18 @@
  * This module does not touch the DOM.
  */
 
+import {
+  ASTRO_CAPACITY,
+  ASTRO_DV,
+  ASTRO_HARVEST_RATE,
+  curvePoint,
+  harvestKnots,
+  luminosityScale,
+  petrovaCurve,
+  spinCost,
+  type KnotSite,
+  type PetrovaLine,
+} from "./astrophage";
 import { beltDrift, pointInBelt, type Belt, type BeltRock } from "./belts";
 import { blastHits, quasarDamage, shockCrosses, type QuasarJet, type Supernova } from "./events";
 import {
@@ -95,6 +107,10 @@ export const BODY_LOOKS = [
   "magnetar",
   "comet",
   "asteroid",
+  "tau-ceti",
+  "tau-hot",
+  "tau-cold",
+  "tau-green",
   "sol-sun",
   "mercury",
   "venus",
@@ -238,6 +254,11 @@ export interface Body {
   /** Space elevator. Omitted planets have no tether. */
   elevator?: SpaceElevator;
   /**
+   * Astrophage infection. Omitted stars are clean: full luminosity, no cells.
+   * `dims` multiplies this star's solar recharge and its radiation term.
+   */
+  astrophage?: { level: number; dims: number };
+  /**
    * When false, the body is drawn and may move, but it never crashes the ship
    * and never blocks starlight. Omitted means solid. Voyager is never solid.
    */
@@ -363,6 +384,25 @@ export interface SimConfig {
   beltRocks?: readonly BeltRock[];
   /** Wormhole pairs. Omitted leaves transit off. */
   wormholes?: readonly WormholePair[];
+  /**
+   * Spin drive. Omitted keeps today's chemical tank. `"spin"` spends the
+   * Astrophage tank instead of `tank` when a burn fires.
+   */
+  engine?: "chemical" | "ion" | "pulse" | "spin";
+  /** Gas scoop fitted. Knots only refill the Astrophage tank when this is set. */
+  scoop?: boolean;
+  /** Astrophage tank size. Omitted is 1 when a spin drive is fitted. */
+  astroCapacity?: number;
+  /** Astrophage in the tank at launch. */
+  astroStart?: number;
+  /** Fraction of the tank per second inside a knot. Omitted is the design 0.024. */
+  astroRate?: number;
+  /** Δv a full tank can buy. Cost of a burn is `|dv| / astroDv`. */
+  astroDv?: number;
+  /** Petrova lines. Omitted levels have none. */
+  petrova?: readonly PetrovaLine[];
+  /** Starting fuel in each knot, same order as `flattenKnots`. */
+  knotFuel?: readonly number[];
 }
 
 /** How many times a flight may freeze so the player can edit burns. */
@@ -424,6 +464,16 @@ export interface SimState {
    * Stops that contact from firing again until the ship has left it.
    */
   transit: string | null;
+  /** Astrophage in the spin tank. 0 on a ship with no spin drive. */
+  astro: number;
+  /** Astrophage scooped this flight. Burns do not reduce it. The planning ghost reads it. */
+  astroGained: number;
+  /** Astrophage spent on spin burns. */
+  astroSpent: number;
+  /** Fraction of the tank per second being scooped this step. 0 when the scoop is idle. */
+  astroRate: number;
+  /** Fuel still in each Petrova knot. Empty when the level has no knots. */
+  knots: number[];
 }
 
 /** One impulsive burn at an exact sim step. Nodes are ordered by `step`. */
@@ -550,7 +600,7 @@ export function spendPause(rule: PauseRule, budget: PauseBudget): PauseBudget | 
 }
 
 export function cloneState(state: SimState): SimState {
-  return { ...state };
+  return { ...state, knots: state.knots.slice() };
 }
 
 function findBody(bodies: readonly Body[], id: string): Body | undefined {
@@ -1158,6 +1208,11 @@ export function makeState(
     doseRate: 0,
     doseSource: "cosmic",
     transit: null,
+    astro: config.astroStart ?? 0,
+    astroGained: 0,
+    astroSpent: 0,
+    astroRate: 0,
+    knots: config.knotFuel ? config.knotFuel.slice() : [],
   };
 }
 
@@ -1776,7 +1831,7 @@ export function doseAt(x: number, y: number, time: number, bodies: readonly Body
     const pose = bodyPose(body, time, bodies, g);
     const distance = Math.max(1, Math.hypot(x - pose.x, y - pose.y));
     if (body.kind === "star") {
-      const luminosity = starLuminosity(body);
+      const luminosity = starLuminosity(body) * luminosityScale(body.astrophage?.dims);
       const shadowed = starShadowed(x, y, pose.x, pose.y, body.id, bodies, time, g);
       if (shadowed) blockedStar = true;
       if (!shadowed && luminosity > 0) {
@@ -1849,7 +1904,7 @@ export function solarRechargeRate(
   for (let i = 0; i < bodies.length; i++) {
     const body = bodies[i];
     if (body.kind !== "star") continue;
-    const luminosity = starLuminosity(body);
+    const luminosity = starLuminosity(body) * luminosityScale(body.astrophage?.dims);
     if (!(luminosity > 0)) continue;
     const pose = body.orbit ? bodyPose(body, time, bodies, g) : { x: body.x, y: body.y, vx: 0, vy: 0 };
     const distance = Math.hypot(x - pose.x, y - pose.y);
@@ -2061,13 +2116,61 @@ function applyShipSystems(state: SimState, config: SimConfig, time: number): voi
   const scoop = nebulaScoopRate(state.x, state.y, config.nebulae);
   const ice = iceHarvestRate(state.x, state.y, time, config.bodies, g);
   const inflow = solar + scoop + ice + engine.scoop;
-  if (!(inflow > 0)) return;
-  const cap = config.fuelMax ?? state.tank;
-  const room = cap - state.tank;
-  if (!(room > 0)) return;
-  const gain = Math.min(inflow * config.dt, room);
-  state.tank += gain;
-  state.recharged += gain;
+  if (inflow > 0) {
+    const cap = config.fuelMax ?? state.tank;
+    const room = cap - state.tank;
+    if (room > 0) {
+      const gain = Math.min(inflow * config.dt, room);
+      state.tank += gain;
+      state.recharged += gain;
+    }
+  }
+  applyAstroHarvest(state, config, time);
+}
+
+/**
+ * Scoop Astrophage from any knot the ship is inside. No-op without a spin
+ * drive and a scoop, so stock levels never touch the tank.
+ */
+function applyAstroHarvest(state: SimState, config: SimConfig, time: number): void {
+  state.astroRate = 0;
+  const lines = config.petrova;
+  if (!lines || lines.length === 0) return;
+  if (config.engine !== "spin" || !config.scoop) return;
+  const capacity = config.astroCapacity ?? ASTRO_CAPACITY;
+  const rate = config.astroRate ?? ASTRO_HARVEST_RATE;
+  if (!(capacity > 0) || !(rate > 0)) return;
+  const g = gravityConstant(config);
+  const sites: KnotSite[] = [];
+  let index = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const from = findBody(config.bodies, line.from);
+    const to = findBody(config.bodies, line.to);
+    if (!from || !to) {
+      index += line.knots.length;
+      continue;
+    }
+    const start = bodyPose(from, time, config.bodies, g);
+    const end = bodyPose(to, time, config.bodies, g);
+    const curve = petrovaCurve(start.x, start.y, from.radius, end.x, end.y, to.radius, line.bulge);
+    for (let k = 0; k < line.knots.length; k++) {
+      const knot = line.knots[k];
+      const point = curvePoint(curve, knot.t);
+      sites.push({
+        x: point.x,
+        y: point.y,
+        radius: knot.radius,
+        remaining: state.knots[index] ?? 0,
+      });
+      index += 1;
+    }
+  }
+  const result = harvestKnots(state.x, state.y, sites, state.astro, capacity, rate, config.dt);
+  state.astro = result.tank;
+  state.astroGained += result.gained;
+  state.astroRate = result.rate;
+  for (let i = 0; i < result.remaining.length; i++) state.knots[i] = result.remaining[i];
 }
 
 /**
@@ -2429,16 +2532,28 @@ export function advancePlan(
     const node = nodes[index];
     const before = hooks?.onBurn ? cloneState(state) : null;
     const scale = burnScale(config);
-    if (scale === 1) {
+    if (config.engine === "spin") {
+      const mag = Math.hypot(node.dvx, node.dvy);
+      const cost = spinCost(mag, config.astroDv ?? ASTRO_DV);
+      const have = state.astro;
+      const paid = cost > have ? have : cost;
+      const frac = cost > 1e-12 ? paid / cost : 1;
+      state.vx += node.dvx * scale * frac;
+      state.vy += node.dvy * scale * frac;
+      state.astro = have - paid;
+      state.astroSpent += paid;
+    } else if (scale === 1) {
       state.vx += node.dvx;
       state.vy += node.dvy;
     } else {
       state.vx += node.dvx * scale;
       state.vy += node.dvy * scale;
     }
-    const perDv = config.fuelPerDv ?? 1;
-    state.tank -= fuelCost(node.dvx, node.dvy, perDv);
-    if (state.tank < 0) state.tank = 0;
+    if (config.engine !== "spin") {
+      const perDv = config.fuelPerDv ?? 1;
+      state.tank -= fuelCost(node.dvx, node.dvy, perDv);
+      if (state.tank < 0) state.tank = 0;
+    }
     cursor.index = index + 1;
     const more = cursor.index < nodes.length && nodes[cursor.index].step === state.step;
     if (!more && isCapturedOrbit(state, config)) state.status = "won";

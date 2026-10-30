@@ -64,6 +64,9 @@ const LOOK_KIND: Partial<Record<BodyLook, BodyKind>> = {
   dwarf: "planet",
   comet: "planet",
   asteroid: "planet",
+  "tau-hot": "planet",
+  "tau-cold": "planet",
+  "tau-green": "planet",
 };
 
 const LOOK_NAME: Partial<Record<BodyLook, string>> = {
@@ -82,6 +85,10 @@ const LOOK_NAME: Partial<Record<BodyLook, string>> = {
   magnetar: "Magnetar",
   comet: "Comet",
   asteroid: "Stray asteroid",
+  "tau-ceti": "Tau Ceti",
+  "tau-hot": "Hot world",
+  "tau-cold": "Cold world",
+  "tau-green": "Green world",
 };
 
 const KIND_NAME: Partial<Record<BodyKind, string>> = {
@@ -139,12 +146,6 @@ interface ExhibitSpec {
 
 /** Known pictures. A look that is not listed still gets a body, from `defaultLook`. */
 const LOOK_SPEC: Partial<Record<BodyLook, ExhibitSpec>> = {
-  sun: {
-    radius: 22,
-    mass: 1400,
-    reach: 130,
-    extra: { flare: { angle: 0.4, period: 22, start: 0, duration: 8 } },
-  },
   "binary-hot": { radius: 18, mass: 1200, reach: 140 },
   "binary-cool": { radius: 14, mass: 900, reach: 140 },
   "white-dwarf": { radius: 12, mass: 1600, reach: 110 },
@@ -172,6 +173,16 @@ const LOOK_SPEC: Partial<Record<BodyLook, ExhibitSpec>> = {
   },
   magnetar: { radius: 9, mass: 2000, reach: 170, extra: { magnet: { b1Reach: 84, tilt: 0.35 } } },
   comet: { radius: 4, mass: 80, reach: 200, extra: { harvest: 6, harvestRadius: 36 } },
+  "tau-ceti": { radius: 16, mass: 1400, reach: 72 },
+  "tau-hot": { radius: 12, mass: 400, reach: 40 },
+  "tau-cold": { radius: 15, mass: 500, reach: 40 },
+  "tau-green": { radius: 18, mass: 700, reach: 44 },
+  sun: {
+    radius: 22,
+    mass: 1400,
+    reach: 130,
+    extra: { flare: { angle: 0.4, period: 22, start: 0, duration: 8 }, astrophage: { level: 6, dims: 0.03 } },
+  },
 };
 
 /**
@@ -695,6 +706,14 @@ function build(): Level {
     c: 1_000_000,
     horizon: { seconds: 18, oneOrbit: false, shorten: 0, ref: 6 },
     physics: { dosePerD1: 0.04, doseLimit: 8000 },
+    petrova: [
+      {
+        from: "look-sun",
+        to: "look-tau-green",
+        bulge: 26,
+        knots: [{ t: 0.45, fuel: 0.4, radius: 34 }],
+      },
+    ],
     nebulae,
     belts,
     wormholes,
@@ -771,9 +790,19 @@ export function observatoryPlacards(level: Level = observatory): Placard[] {
 
 export function observatoryFramePoints(): FramePoint[] {
   const points: FramePoint[] = [];
+  let minY = Infinity;
+  let xAtMin = 0;
   for (const card of observatoryPlacards()) {
     points.push({ x: card.x, y: card.y, reach: card.clearance + 36 });
+    const bottom = card.y - card.clearance;
+    if (bottom < minY) {
+      minY = bottom;
+      xAtMin = card.x;
+    }
   }
+  // The chart is tall enough that a 16 px label sits on the HUD line.
+  // A little extra room below the lowest label keeps that line clear.
+  points.push({ x: xAtMin, y: minY - 48, reach: 0 });
   return points;
 }
 

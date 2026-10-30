@@ -3,7 +3,6 @@ import { bodyPose, type Body } from "../../sim/physics";
 import { isEditing } from "../../game/state";
 import { hashId } from "../event-look";
 import { artMesh, loadArtTexture, poseArt, rasterPixels, type ArtFit } from "../art-sprite";
-import { zoomBucket } from "../ship-art";
 import { silenceNightRim } from "../surface-art";
 import type { Theme } from "../theme";
 import { disposeObject, type Visual, type VisualFactory, type VisualFrame } from "../visual";
@@ -103,7 +102,6 @@ class StrayVisual implements Visual {
   private readonly g: number;
   private readonly views: StrayView[] = [];
   private readonly dummy = new THREE.Object3D();
-  private bakeKey = "";
   private bakeGen = 0;
 
   constructor(theme: Theme, level: Parameters<VisualFactory>[1]) {
@@ -115,6 +113,7 @@ class StrayVisual implements Visual {
       if (body.look !== "asteroid") continue;
       this.views.push(this.build(body));
     }
+    this.bakeOnce();
   }
 
   update(frame: VisualFrame): void {
@@ -124,7 +123,6 @@ class StrayVisual implements Visual {
     const zoom = Math.max(0.05, game.camera.zoom);
     const editing = isEditing(game);
     const spec = this.theme.stray;
-    this.ensureBake(frame);
     for (const view of this.views) {
       const pose = bodyPose(view.body, time, this.bodies, this.g);
       const star = brightest(pose.x, pose.y, time, this.bodies, this.g);
@@ -252,19 +250,20 @@ class StrayVisual implements Visual {
     return { body, rock, fit, dust, specks, arrow, head, arrowLength, arrowZoom, arrowOffset, period, chip };
   }
 
-  private ensureBake(frame: VisualFrame): void {
-    const zoom = frame.game.camera.zoom;
-    const bucket = zoomBucket(zoom);
-    const dpr = Math.min(Math.max(frame.dpr, 1), 2);
-    const key = `${bucket}|${dpr}`;
-    if (key === this.bakeKey) return;
-    this.bakeKey = key;
+  /** One raster. Later frames only move, turn and scale the mesh. */
+  private bakeOnce(): void {
+    if (this.views.length === 0) return;
     const gen = ++this.bakeGen;
-    for (const view of this.views) void this.paint(view.rock, view.fit, dpr, zoom, gen);
+    for (const view of this.views) {
+      void this.paint(view.rock, view.fit, rasterPixels(view.fit.viewW, view.fit.viewH, 2, 1), gen);
+    }
   }
 
-  private async paint(mesh: THREE.Mesh, fit: ArtFit, dpr: number, zoom: number, gen: number): Promise<void> {
-    const texture = await loadArtTexture(fit, rasterPixels(fit.viewW, fit.viewH, dpr, zoom), zoom);
+  private async paint(mesh: THREE.Mesh, fit: ArtFit, pixels: { width: number; height: number }, gen: number): Promise<void> {
+    const texture = await loadArtTexture(fit, pixels, 1);
+    texture.generateMipmaps = true;
+    texture.minFilter = THREE.LinearMipmapLinearFilter;
+    texture.needsUpdate = true;
     if (gen !== this.bakeGen) {
       texture.dispose();
       return;

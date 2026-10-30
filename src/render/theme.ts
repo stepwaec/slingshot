@@ -26,6 +26,14 @@ import shieldUrl from "../../design/assets/ship/module-shield.svg?url";
 import engineChemicalUrl from "../../design/assets/ship/engine-chemical.svg?url";
 import engineIonUrl from "../../design/assets/ship/engine-ion.svg?url";
 import enginePulseUrl from "../../design/assets/ship/engine-pulse.svg?url";
+import engineSpinUrl from "../../design/assets/ship/engine-spin.svg?url";
+import infectedStarUrl from "../../design/assets/astro/infected-star.svg?url";
+import petrovaLineUrl from "../../design/assets/astro/petrova-line.svg?url";
+import astroKnotUrl from "../../design/assets/astro/astrophage-knot.svg?url";
+import astroHarvestUrl from "../../design/assets/astro/astrophage-harvest.svg?url";
+import hudAstroUrl from "../../design/assets/astro/hud-astrophage.svg?url";
+import tauCetiUrl from "../../design/assets/astro/tau-ceti.svg?url";
+import astroMapUrl from "../../design/assets/overlays/astrophage-map.svg?url";
 import damage75Url from "../../design/assets/ship/damage-75.svg?url";
 import damage45Url from "../../design/assets/ship/damage-45.svg?url";
 import damage15Url from "../../design/assets/ship/damage-15.svg?url";
@@ -135,6 +143,14 @@ export const theme = {
     engineChemical: engineChemicalUrl,
     engineIon: engineIonUrl,
     enginePulse: enginePulseUrl,
+    engineSpin: engineSpinUrl,
+    infectedStar: infectedStarUrl,
+    petrovaLine: petrovaLineUrl,
+    astroKnot: astroKnotUrl,
+    astroHarvest: astroHarvestUrl,
+    hudAstro: hudAstroUrl,
+    tauCeti: tauCetiUrl,
+    astroMap: astroMapUrl,
     damage75: damage75Url,
     damage45: damage45Url,
     damage15: damage15Url,
@@ -782,6 +798,67 @@ export const theme = {
     cityNight1: 0.66,
     /** The gradient runs from 0.706 r on the lit side to the opposite limb. */
     cityLitReach: 0.706,
+  },
+  /**
+   * Astrophage. design/style.md §19 and the asset headers.
+   * Cosmetic periods run on frame.now. Harvest radius comes from the level.
+   */
+  astro: {
+    /** infected-star.svg: cells turn once per 240 s. */
+    cellPeriod: 240,
+    cellAlpha: 0.85,
+    /** Clip radius in the cell bake is 45 inside a 120 view. */
+    cellClip: 45,
+    cellView: 120,
+    /** IR shimmer: 220 motes at r+7, sd 3.2, ring −360° / 90 s. */
+    moteCount: 220,
+    moteRadius: 7,
+    moteSpread: 3.2,
+    motePeriod: 90,
+    moteMin: 0.45,
+    moteMax: 1.05,
+    /** petrova-line.svg layer counts. Header sums to 324; the budget note says 300. The header wins. */
+    ribbonMotes: 140,
+    glints: 22,
+    sparkles: 52,
+    breeding: 110,
+    /** tau-ceti.svg: 60 motes on the sea-green world. */
+    eatenShimmer: 60,
+    /** Knot motes, thinned by the remaining share. */
+    knotMotes: 110,
+    knotSpreadAlong: 18,
+    knotSpreadAcross: 10,
+    /** Harvest streams. */
+    harvestMotes: 46,
+    harvestTripMin: 1.4,
+    harvestTripMax: 2.6,
+    scoopMouthX: 7.5,
+    scoopMouthY: -13.5,
+    /** engine-spin.svg: L = 44 + 30·Δv, cap 160. Throat at local y 25.6. */
+    beamBase: 44,
+    beamPerDv: 30,
+    beamCap: 160,
+    beamRoot: 25.6,
+    beamWidth0: 7.2,
+    beamWidth1: 8.4,
+    ringRx: 4.4,
+    ringRy: 1.4,
+    ringY: 24.2,
+    /** astrophage-map.svg: 14 px grid, gauge at r+24. */
+    mapCell: 14,
+    starPad: 14,
+    planetPad: 6,
+    gaugeRadius: 24,
+    gaugeWidth: 3,
+    cleanWidth: 1.6,
+    /** tau-ceti.svg disk. */
+    diskInner: 235,
+    diskOuter: 380,
+    diskSquash: 0.42,
+    diskCount: 2300,
+    diskSeed: 19,
+    /** Star the disk radii were drawn against. */
+    diskStar: 40,
   },
 } as const;
 

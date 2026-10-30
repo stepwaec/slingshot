@@ -1,4 +1,6 @@
 import type { VisualFactory } from "../visual";
+import { createAstroMap } from "./astro-map";
+import { createAstrophage } from "./astrophage";
 import { createBelts } from "./belts";
 import { createFates } from "./fates";
 import { createGallery } from "./gallery";
@@ -37,10 +39,12 @@ export const visualFactories = {
   gravity: createGravity,
   magnetism: createMagnetism,
   radiation: createRadiation,
+  astroMap: createAstroMap,
   star: createStar,
   scenery: createScenery,
   belts: createBelts,
   gallery: createGallery,
+  astrophage: createAstrophage,
   mega: createMega,
   fates: createFates,
   planets: createPlanets,

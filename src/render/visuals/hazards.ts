@@ -24,7 +24,6 @@ import {
 } from "../hazard-look";
 import { formatClock, hashId } from "../event-look";
 import { silenceNightRim } from "../surface-art";
-import { zoomBucket } from "../ship-art";
 import type { Theme } from "../theme";
 import { disposeObject, type Visual, type VisualFactory, type VisualFrame } from "../visual";
 import { shader, srgbVec } from "./materials";
@@ -365,7 +364,6 @@ class HazardsVisual implements Visual {
   private readonly quasars: QuasarView[] = [];
   private readonly chips: Chip[] = [];
   private readonly dummy = new THREE.Object3D();
-  private bakeKey = "";
   private bakeGen = 0;
 
   constructor(theme: Theme, level: Parameters<VisualFactory>[1]) {
@@ -382,10 +380,10 @@ class HazardsVisual implements Visual {
       this.chips.push(chip);
       this.object.add(chip.mesh);
     }
+    this.bakeOnce();
   }
 
   update(frame: VisualFrame): void {
-    this.ensureBake(frame);
     const game = frame.game;
     const time = shownTime(game);
     const seconds = frame.now / 1000;
@@ -812,23 +810,22 @@ class HazardsVisual implements Visual {
     return { body, jet, glow, glowFit, core, coreFit, jets, jetTan, jetHalf, jetZoom, jetNow, edges, arcs };
   }
 
-  private ensureBake(frame: VisualFrame): void {
-    const zoom = frame.game.camera.zoom;
-    const bucket = zoomBucket(zoom);
-    const dpr = Math.min(Math.max(frame.dpr, 1), 2);
-    const key = `${bucket}|${dpr}`;
-    if (key === this.bakeKey) return;
-    this.bakeKey = key;
+  /** One raster per picture. Zoom and motion after that are transforms and uniforms. */
+  private bakeOnce(): void {
     const gen = ++this.bakeGen;
-    for (const view of this.novas) void this.paint(view.star, view.fit, dpr, zoom, gen);
+    const pixels = (fit: ArtFit) => rasterPixels(fit.viewW, fit.viewH, 2, 1);
+    for (const view of this.novas) void this.paint(view.star, view.fit, pixels(view.fit), gen);
     for (const view of this.quasars) {
-      void this.paint(view.glow, view.glowFit, dpr, zoom, gen);
-      void this.paint(view.core, view.coreFit, dpr, zoom, gen);
+      void this.paint(view.glow, view.glowFit, pixels(view.glowFit), gen);
+      void this.paint(view.core, view.coreFit, pixels(view.coreFit), gen);
     }
   }
 
-  private async paint(mesh: THREE.Mesh, fit: ArtFit, dpr: number, zoom: number, gen: number): Promise<void> {
-    const texture = await loadArtTexture(fit, rasterPixels(fit.viewW, fit.viewH, dpr, zoom), zoom);
+  private async paint(mesh: THREE.Mesh, fit: ArtFit, pixels: { width: number; height: number }, gen: number): Promise<void> {
+    const texture = await loadArtTexture(fit, pixels, 1);
+    texture.generateMipmaps = true;
+    texture.minFilter = THREE.LinearMipmapLinearFilter;
+    texture.needsUpdate = true;
     if (gen !== this.bakeGen) {
       texture.dispose();
       return;

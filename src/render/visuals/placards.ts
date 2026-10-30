@@ -161,6 +161,7 @@ class ExhibitShips {
       add("engine", 6, "chemical");
       add("engine", 6, "ion");
       add("engine", 6, "pulse");
+      add("engine", 6, "spin");
       add("hull", 6);
       add("platingFront", 7);
       add("cryo", 7);
@@ -204,7 +205,7 @@ async function paintShips(
     return texture;
   };
   try {
-    const [hull, solar, tanks, platingBack, platingFront, cryo, scoop, sensors, shield, chemical, ion, pulse] = await Promise.all([
+    const [hull, solar, tanks, platingBack, platingFront, cryo, scoop, sensors, shield, chemical, ion, pulse, spin] = await Promise.all([
       load(assets.hull),
       load(assets.solar),
       load(assets.tanks),
@@ -217,6 +218,7 @@ async function paintShips(
       load(assets.engineChemical, ENGINE_PLUME_IDS.chemical),
       load(assets.engineIon, ENGINE_PLUME_IDS.ion),
       load(assets.enginePulse, ENGINE_PLUME_IDS.pulse),
+      load(assets.engineSpin),
     ]);
     const byKey = new Map<PartKey, THREE.Texture>([
       ["hull", hull],
@@ -233,6 +235,7 @@ async function paintShips(
       ["chemical", chemical],
       ["ion", ion],
       ["pulse", pulse],
+      ["spin", spin],
     ]);
     for (const item of meshes) {
       const texture = item.engine ? byEngine.get(item.engine) : byKey.get(item.key);
