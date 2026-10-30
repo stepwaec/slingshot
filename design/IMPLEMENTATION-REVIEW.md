@@ -114,6 +114,15 @@ Landed in [PR #64](https://github.com/stepwaec/slingshot/pull/64), from the ghos
 
   The planning view should match `mockups/planning-capture.svg`, and the result screens `result-win.svg` and `result-lost.svg`.
 
+## Sol campaign: the art is ready (v3.1)
+
+- **New, no code yet.** `design/assets/sol/` has the Sun, the eight planets, the Moon, Titan, Pluto, Charon, Eris, Arrokoth and Voyager. Follow `style.md` §18 and `threejs-notes.md` §21.
+  - Add one `look` per body.
+  - Use the size ladder for radii.
+  - Keep Earth's city lights, Saturn's and Uranus's front and back rings, and the Sun's spots as separate layers.
+  - Keep the locked faces fixed.
+- **Mission 1** should match `mockups/sol-moon.svg`: the Moon in its target zone (§17), with a capture into lunar orbit.
+
 ## Priority fixes
 
 Do these first. They are the biggest visible or gameplay gaps after #32.

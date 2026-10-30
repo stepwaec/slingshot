@@ -146,6 +146,29 @@ Background-pass art (`style.md` §9): drawn after the starfield, before the bodi
 | `asteroid-field.svg` | **Asteroid field**: a −18° belt of 88 rocks (62 dust, 20 small, 6 large) — irregular polygons with crisp sunward lit rims, tinted S / mixed / C-type textures, craters, a static hard terminator with a warm band — tumbling 20–90 s; belt drift ±6 px / 60 s; dust haze | `0 0 720 360`; 68.1 KB | `#asteroidField` (360, 180); `af*` | `rock.base` #7E7468 · `.dark` #3E3833 · `.highlight` #C9BBA8 · rust #B04A22 · ochre #D8B26E · light #FFF0DC / #FF9455 / #050B1E · haze #AAB8DD α ≤ 0.05 | §4e: dust + haze as one drifting layer; small rocks 16 lit frames, large 24 (blended); crash-body hook (6 large rocks) not in scope |
 | `wreck-debris.svg` | **Wreck debris**: 20 tumbling metal pieces (hull panel with hazard stripe and scorched puncture, solar panel, truss, bent pipe, shards, flakes) with crisp bevels, tinted brushed metal, a broad fixed light and 7 twinkling glints | `0 0 400 260`; 28.4 KB | `#wreckDebris` (200, 130); `wr*` | `metal.base` #8B95B5 · `.dark` #4B5470 · `.highlight` #ECF0FA · `.edge` #2A3245 · hazard #FFC857 · scorch #3A2A2A · solar #5EA0FF → #142B5E → #0A0D1A · glints #FFFFFF | §4e: 36 lit frames for R ≥ 10 (blended), 12 for flakes; glint sprites with their own alpha |
 
+## Sol system (`design/assets/sol/`, v3.1, the Sol campaign)
+
+Real bodies at game scale on the size ladder r = 34 √(R / R⊕) (the Sun stays r 46). Each file is ONE group with a canon header; lit from the upper-right (`style.md` §18, `threejs-notes.md` §21).
+
+| File | What | Group; ids | Size |
+|---|---|---|---|
+| `sun.svg` | **The Sun**: the approved sun J (ids re-prefixed `solSun*`) plus five sunspot groups | `#solSun`; `solSun* sol*` | r 46 |
+| `mercury.svg` | **Mercury**: cratered regolith, Caloris, ray craters; airless | `#mercury`; `mer*` | r 21 |
+| `venus.svg` | **Venus**: cloud deck, Y chevrons, retrograde, bright haze | `#venus`; `ven*` | r 33 |
+| `earth.svg` | **Earth**: real continents and biomes, deserts, shelves, sea ice, weighted clouds, night-side city lights | `#earth`; `eth*` | r 34 |
+| `moon.svg` | **The Moon**: locked near side, maria, ray craters | `#luna`; `lun*` | r 18 |
+| `mars.svg` | **Mars**: albedo features, Hellas, Tharsis, Valles Marineris, caps, pink haze | `#mars`; `mar*` | r 24.8 |
+| `jupiter.svg` | **Jupiter**: real belts and zones, Great Red Spot, Oval BA, hot spots, barges | `#jupiter`; `jup*` | r 114 |
+| `saturn.svg` | **Saturn**: bands, hexagon, rings at real radii with the Cassini Division and Encke Gap, shadows | `#saturn`; `sat*` | r 104.6 |
+| `titan.svg` | **Titan**: orange haze, blue outer layer | `#titan`; `tit*` | r 21.6 |
+| `uranus.svg` | **Uranus**: tipped 98°, pole-to-pole bands, faint rings | `#uranus`; `ura*` | r 68.1 |
+| `neptune.svg` | **Neptune**: deep blue, Great Dark Spot, Scooter, cirrus | `#neptune`; `nep*` | r 67 |
+| `pluto.svg` | **Pluto**: Tombaugh heart, Cthulhu, blue haze; locked | `#pluto`; `plu*` | r 14.7 |
+| `charon.svg` | **Charon**: Mordor Macula; locked | `#charon`; `cha*` | r 10.5 |
+| `eris.svg` | **Eris**: bright ice | `#eris`; `eri*` | r 14.5 |
+| `arrokoth.svg` | **Arrokoth**: red contact binary at a minimum size | `#arrokoth`; `arr*` | r 6 |
+| `voyager.svg` | **Voyager**: dish, bus, golden record, booms, antennas; not solid | `#voyager`; `voy*` | r — |
+
 ## Previews (`design/preview/`)
 
 All self-contained pages (inline CSS, no scripts) on `bg.base`, inlining the assets **verbatim** (only the group translate changes); open from `file://` to see the SMIL animation. Because all inlined `<defs>` share one document, the id prefixes must stay unique (they are).
@@ -160,10 +183,11 @@ All self-contained pages (inline CSS, no scripts) on `bg.base`, inlining the ass
 | `space.html` late-game row (v2.6) | The six late-game structures at 1×, plus the living-sun reference |
 | `space.html` events row (v2.7) | The six scripted-event samples at 1× |
 | `space.html` WP12 row (v2.9) | The supernova progenitor, detonation and remnant, the quasar and its sweep, and the stray asteroid, each at 1× |
+| `sol.html` (v3.1) | The Sol bodies inlined at 1× in three rows (inner system, outer system, Kuiper belt and Voyager), plus a 3× detail row that shows the same files as images |
 
 ## Mockups (`design/mockups/`, all `0 0 1440 900`; **PNG = 2× render**)
 
-Every PNG is a 2× render of its SVG (2880 × 1800, `--force-device-scale-factor=2`, same filename). All twenty share the v1.1 background (the upgrade screen dims it) (a `bg.edge` rect, the vignette centred (720, 450) r 900, then the `#starfield` group verbatim) and splice every body group **verbatim** from the v1.5 assets with only its translate changed; where a library body's upper-right light does not face the scene's star, its lighting layers sit in a scene-local `rotate(angle(L_scene) − angle(L_library))` wrapper (strips and the asset files untouched). v3.0 swapped the dashed capture ring for the idle target zone in every mockup (stable on the win screen, dimmed on the lost screen) and re-rendered all PNGs.
+Every PNG is a 2× render of its SVG (2880 × 1800, `--force-device-scale-factor=2`, same filename). All twenty-one share the v1.1 background (the upgrade screen dims it) (a `bg.edge` rect, the vignette centred (720, 450) r 900, then the `#starfield` group verbatim) and splice every body group **verbatim** from the v1.5 assets with only its translate changed; where a library body's upper-right light does not face the scene's star, its lighting layers sit in a scene-local `rotate(angle(L_scene) − angle(L_library))` wrapper (strips and the asset files untouched). v3.0 swapped the dashed capture ring for the idle target zone in every mockup (stable on the win screen, dimmed on the lost screen) and re-rendered all PNGs.
 
 | File | Mode | What it demonstrates |
 |---|---|---|
@@ -187,6 +211,7 @@ Every PNG is a 2× render of its SVG (2880 × 1800, `--force-device-scale-factor
 | `planning-ghosts.svg` / `.png` (v2.8) | Planning, ghost markers | Planet X on a circular orbit around the sun; its future track with a tick every 10 s; a ghost at burn 2 and under the cursor, each tied to its path sample; the path ends in the arrival ghost's capture radius |
 | `supernova-level.svg` / `.png` (v2.9, WP12) | Planning, a supernova level | The sun replaced by the red-giant asset (at 0.5, breathing unevenly) as the progenitor, with old shells, the countdown arc and the dashed lethal blast radius r 150; a quasar upper left with its swept cone dashed across the top; a stray asteroid drifting across the lower right; the planning path with "path leaves the blast zone at 0:41 · 0:07 to spare" |
 | `planning-capture.svg` / `.png` (v3.0) | Planning, a capture | The planning scene with planet X's solid glowing zone; the predicted path runs on into the zone (entry tick, "enters zone 0:52"), bends round X to periapsis where capture burn 1 sits ("burn 1 · Δv 0.9 retrograde"), and the orbit it makes is dashed mint inside the ring ("capture orbit · peri 43 · apo 68") |
+| `sol-moon.svg` / `.png` (v3.1) | Planning, Sol mission 1 (Moon orbit) | Earth (330, 650) r 34 with the ship on its upper-right limb and the drag arrow at 62 %; the Sun off-screen to the upper-right; a transfer path to the Moon (1110, 250) r 18 in its target zone (r 72, idle); entry tick, capture burn 1 at periapsis, the lunar orbit dashed mint ("lunar orbit · peri 30 · apo 54"); a mission chip |
 
 ## Usage rules
 

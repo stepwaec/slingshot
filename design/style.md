@@ -1,6 +1,6 @@
 # Slingshot — visual style v1.5
 
-Calm, cinematic space for Slingshot. This file is the look; `canvas-notes.md` is the pixel-exact drawing reference (how each SVG recipe looks and what it costs, written for Canvas 2D); `threejs-notes.md` maps it onto the game's Three.js renderer (WP3); `assets.md` indexes every file. Sections: §1 mood · §2 palette (background, sky, the sun, the two original planets, the shared lighting tokens, UI) · §3 typography · §4 glow and blur rules, with **§4.1 Realism, vibrancy and crispness rules** · §5 motion · §6 layout · §7 asset index · §8 the **body library** (31 bodies: 12 planets, 6 stars and compact objects, 4 moons, 3 ringed planets, the 3 WP8 objects: binary star, red giant, moon chain, the 2 WP9 compact objects: pulsar, magnetar, and the WP10 comet) plus the WP9 **magnetism map** and the WP10 **solar recharge indicator** · §9 the **space environment** (nebulae, asteroid field, wreck debris) · §10 **ship systems** (modular ship, damage states, hull HUD, tidal-stress warning, upgrade screen) · §11 **WP11** (asteroid belts, Kuiper belt, rogue planet, radiation map, dose meter) · §12 **ship and planning view** (burn plume, burn node, gravity grid and sheet) · §13 **late game** (stellar engine, Dyson swarm, ringworld, Shkadov thruster, space elevator, wormhole pair) and **living surfaces** · §14 **collisions and consumption** (impact, debris field, tidal disruption, burning up in a star, accretion, event telegraphs) · §15 **ghost markers** (where a moving body will be) · §16 **supernova, quasar and stray asteroid** (WP12) · §17 **target zone** (orbit capture). Coding agents: read `IMPLEMENTING.md` first. Assets live in `design/assets` (bodies in `design/assets/bodies`, the environment in `design/assets/space`, map overlays in `design/assets/overlays`, the modular ship in `design/assets/ship`, late-game structures in `design/assets/mega`, scripted events in `design/assets/events`), mockups (1440×900, PNG = 2× render) in `design/mockups`, animated previews in `design/preview/planets.html`, `bodies.html` and `space.html`.
+Calm, cinematic space for Slingshot. This file is the look; `canvas-notes.md` is the pixel-exact drawing reference (how each SVG recipe looks and what it costs, written for Canvas 2D); `threejs-notes.md` maps it onto the game's Three.js renderer (WP3); `assets.md` indexes every file. Sections: §1 mood · §2 palette (background, sky, the sun, the two original planets, the shared lighting tokens, UI) · §3 typography · §4 glow and blur rules, with **§4.1 Realism, vibrancy and crispness rules** · §5 motion · §6 layout · §7 asset index · §8 the **body library** (31 bodies: 12 planets, 6 stars and compact objects, 4 moons, 3 ringed planets, the 3 WP8 objects: binary star, red giant, moon chain, the 2 WP9 compact objects: pulsar, magnetar, and the WP10 comet) plus the WP9 **magnetism map** and the WP10 **solar recharge indicator** · §9 the **space environment** (nebulae, asteroid field, wreck debris) · §10 **ship systems** (modular ship, damage states, hull HUD, tidal-stress warning, upgrade screen) · §11 **WP11** (asteroid belts, Kuiper belt, rogue planet, radiation map, dose meter) · §12 **ship and planning view** (burn plume, burn node, gravity grid and sheet) · §13 **late game** (stellar engine, Dyson swarm, ringworld, Shkadov thruster, space elevator, wormhole pair) and **living surfaces** · §14 **collisions and consumption** (impact, debris field, tidal disruption, burning up in a star, accretion, event telegraphs) · §15 **ghost markers** (where a moving body will be) · §16 **supernova, quasar and stray asteroid** (WP12) · §17 **target zone** (orbit capture) · §18 **Sol bodies** (the Sol campaign). Coding agents: read `IMPLEMENTING.md` first. Assets live in `design/assets` (bodies in `design/assets/bodies`, the environment in `design/assets/space`, map overlays in `design/assets/overlays`, the modular ship in `design/assets/ship`, late-game structures in `design/assets/mega`, scripted events in `design/assets/events`), mockups (1440×900, PNG = 2× render) in `design/mockups`, animated previews in `design/preview/planets.html`, `bodies.html` and `space.html`.
 
 **History in one paragraph.** v1 set the layout, UI and the two-glow rule. v1.1 was the first realism pass (limb-darkened star, planets with a terminator and a rim, a tinted starfield with a Milky Way). v1.2 made the planets rotate: a seamless texture strip slides under a lighting overlay that never moves. v1.3 built the body library (12 planets, 6 stars and compact objects) and gave the stars prominences and a flare. v1.4 adds moons, ringed planets, nebulae and debris fields (§8, §9). **v1.5 (revised) is the realism, vibrancy and crispness pass**, agreed with the client on two approved reference assets — the ocean world "variant F" and the sun "variant J" — and applied to every body: vivid multi-zone surfaces with crisp edges, elongated clouds with cast shadows, a warm terminator band, a lit-side haze and rim, a fiery plasma sun with ragged flame rings and an irregular rim, and no untinted grey anywhere. The earlier v1.5 "crispness pass" numbers (halve blurs, ±12 % lightness, limb line at α 0.30) were rejected as indistinguishable from v1.2 and are **not** used; §4.1 holds the rules that replaced them.
 
@@ -1354,4 +1354,49 @@ Files: `assets/target-zone.svg` (six states), `assets/planet-x.svg` part 8 (the 
 | `zone.flash` | `#FFFFFF` | The ring's peak at the moment of capture |
 | `zone.exit` | `#FFC857` | Exit arc and the too-fast hint (= `event.next`) |
 | `zone.lost` | `#B48CFF` | The flyby cross and chip (= `result.lost`) |
+
+## 18. Sol bodies (v3.1, the Sol campaign)
+
+Files: `assets/sol/*.svg` (16 assets), mockup `mockups/sol-moon.svg` (mission 1, Moon orbit), gallery `preview/sol.html`. Renderer notes: `threejs-notes.md` §21. These are our own Sun, planets, moons and Kuiper objects. They must read as the real bodies at a glance, in the same realistic, vibrant and crisp style as the library.
+
+- **Size ladder.** r = 34 √(R / R⊕): Earth keeps the home planet's r 34, and the order and proportions stay true while Jupiter still fits on screen. The crash radius is r. The Sun is off the ladder (109 R⊕) and stays a game-scale star, r 46. Arrokoth is drawn at a minimum readable size.
+- **Real geography.** Features are placed from longitude and latitude, never random noise: Earth's continents and deserts, the Moon's maria, Mars's albedo features, Jupiter's belts and spots, Saturn's ring radii. Noise only roughens edges and adds texture inside them.
+- **Strips.** Rotating bodies use the planet strip construction: x = (lon + 180)/360 · P and y = r − r sin(lat), with every feature drawn at x and x + P. They scroll west → east, except Venus's clouds, which run retrograde. The visual periods are slow game periods, not real ones.
+- **Fixed faces.** The Moon, Pluto and Charon are tidally locked and keep fixed faces: the Moon's near side, and the sides New Horizons saw.
+- **Lighting.** Everything is lit from the upper-right with the planet reference construction (§4.1). Airless bodies get a hard terminator and no haze. Earth's city lights show on the night side only.
+- **Easter-egg hints only:** Voyager's golden record, and the sunspots as a nod to an active, living Sun. No logos, no characters.
+
+| Body | File · group · ids | r | Motion | What makes it read as itself |
+|---|---|---|---|---|
+| The Sun | `sun.svg` · `#solSun` · `solSun*`, `sol*` | 46 | star.svg motion; spots 180 s | the approved sun J plus five sunspot groups in the ±10–18° activity belts (penumbra `#B8401E`, umbra `#4A1006`) |
+| Mercury | `mercury.svg` · `#mercury` · `mer*` | 21 | 300 s | warm tan-grey regolith, craters, Caloris, ray craters; airless |
+| Venus | `venus.svg` · `#venus` · `ven*` | 33 | 96 s retrograde | unbroken pale-gold cloud deck, soft bands, faint Y chevrons, bright haze |
+| Earth | `earth.svg` · `#earth` · `eth*` | 34 | 90 s, clouds 64 s | real continents with biome colour by latitude, real deserts, shallow shelves, sea ice, clouds weighted to the ITCZ and storm tracks, night-side city lights |
+| The Moon | `moon.svg` · `#luna` · `lun*` | 18 | locked | near-side maria, Tycho, Copernicus and Kepler rays; airless |
+| Mars | `mars.svg` · `#mars` · `mar*` | 24.8 | 92 s | rust plains, Syrtis Major, Meridiani, Acidalium, Hellas, Argyre, Tharsis, Valles Marineris, caps, thin pink haze |
+| Jupiter | `jupiter.svg` · `#jupiter` · `jup*` | 114 | 240 s | the real belts and zones (LUT on latitude), Great Red Spot in its hollow, Oval BA, white ovals, NEB hot spots and festoons, barges, lavender poles |
+| Saturn | `saturn.svg` · `#saturn` · `sat*` | 104.6 | 260 s | pale-gold bands, blue polar hexagon; rings at real radii (C, B, Cassini Division, A, Encke Gap, F), back half behind and front half over the planet, the planet's shadow on the rings, the rings' shadow on the globe |
+| Titan | `titan.svg` · `#titan` · `tit*` | 21.6 | 160 s | orange haze with no surface, a darker north hood, the detached blue outer haze |
+| Uranus | `uranus.svg` · `#uranus` · `ura*` | 68.1 | 140 s | pale cyan; axis tipped 98°, so the bands run pole to pole on screen; faint, nearly face-on rings |
+| Neptune | `neptune.svg` · `#neptune` · `nep*` | 67 | 120 s | deep blue, Great Dark Spot with its white companion, the Scooter, D2, white cirrus |
+| Pluto | `pluto.svg` · `#pluto` · `plu*` | 14.7 | locked | Tombaugh Regio (the heart), Cthulhu, a thin blue haze |
+| Charon | `charon.svg` · `#charon` · `cha*` | 10.5 | locked | grey with the red Mordor Macula at the north pole |
+| Eris | `eris.svg` · `#eris` · `eri*` | 14.5 | — | bright ice |
+| Arrokoth | `arrokoth.svg` · `#arrokoth` · `arr*` | 6 (min) | — | red two-lobed contact binary |
+| Voyager | `voyager.svg` · `#voyager` · `voy*` | — | — | high-gain dish, bus, golden record, RTG and science booms, antennas; not solid |
+
+| Token | Hex | Used for |
+|---|---|---|
+| `earth.ocean` | `#1D56CF` | Earth's oceans (shelf `#36B9D8` = `ocean.shallow`) |
+| `earth.desert` | `#E2B66A` | Real deserts (dunes `#F0CC84`, rock `#B5763E`) |
+| `earth.city` | `#FFD27A` | City lights, core `#FFF1C2`, fringe `#FF9A3C`, night side only |
+| `mars.rust` / `mars.dark` | `#C8643A` / `#7E3E2A` | Mars plains and albedo features |
+| `jupiter.zone` / `jupiter.belt` / `jupiter.grs` | `#F5E3C6` / `#A3502D` / `#DC5C34` | Jupiter's zones, belts and the Great Red Spot |
+| `saturn.ringB` / `saturn.ringA` / `saturn.ringC` | `#F2E6D2` / `#DCC398` / `#B49A76` | Saturn's rings (ivory, never grey) |
+| `uranus.body` | `#99DDE6` | Uranus |
+| `neptune.body` / `neptune.spot` | `#4B7DF2` / `#1C2F86` | Neptune and its dark spot |
+| `titan.haze` | `#E2A04A` | Titan (outer haze `#9CC4FF`) |
+| `pluto.heart` / `pluto.cthulhu` | `#F6EBDD` / `#6B3322` | Pluto |
+
+Every other hex value is listed in its asset's header, which is canon.
 
