@@ -12,6 +12,7 @@ import { createGravity } from "./gravity";
 import { createMagnetism } from "./magnetism";
 import { createNodes } from "./nodes";
 import { createPath } from "./path";
+import { createPlacards } from "./placards";
 import { createPlanets } from "./planets";
 import { createRadiation } from "./radiation";
 import { createRecharge } from "./recharge";
@@ -48,6 +49,7 @@ export const visualFactories = {
   clouds: createClouds,
   ghosts: createGhosts,
   hazards: createHazards,
+  placards: createPlacards,
   path: createPath,
   recharge: createRecharge,
   ship: createShip,
