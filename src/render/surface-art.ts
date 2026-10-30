@@ -189,6 +189,24 @@ export function isBakedCaptureZone(attrs: {
   return Boolean(attrs.stroke) && bare;
 }
 
+/**
+ * A circle outside the shade disc. That is the rim (`planet-start.svg` r 36.6
+ * on a disc of 34, and the same 1.077 r on the other bodies).
+ */
+export function isOuterRim(radius: number, discRadius: number): boolean {
+  return Number.isFinite(radius) && Number.isFinite(discRadius) && radius > discRadius + 0.05;
+}
+
+/**
+ * The lit mask ends at alpha 0.06, and the gradient pads that over the whole
+ * night limb, which is the thin arc under the planet. The day stop stays.
+ */
+export function clearedNightOpacity(stops: readonly { offset: number; opacity: number }[]): number[] {
+  if (stops.length === 0) return [];
+  const max = Math.max(...stops.map((stop) => stop.offset));
+  return stops.map((stop) => (Math.abs(stop.offset - max) < 1e-6 ? 0 : stop.opacity));
+}
+
 /** Shade, haze, rim and glint. Strips, the flat base, the halo and the target zone go. */
 export function keepLight(doc: Document, rootId: string): void {
   const root = doc.getElementById(rootId);
@@ -210,6 +228,78 @@ export function keepLight(doc: Document, rootId: string): void {
     const fill = child.getAttribute("fill") ?? "";
     if (fill.startsWith("#") || child.hasAttribute("stroke-dasharray") || child.getAttribute("r") === "54") {
       child.remove();
+    }
+  }
+  silenceNightRim(doc, root);
+}
+
+const URL_ID = /url\(\s*#([^)]+?)\s*\)/;
+
+function silenceNightRim(doc: Document, root: Element): void {
+  const circles = [...root.querySelectorAll("circle")];
+  const radii = circles.map((circle) => Number.parseFloat(circle.getAttribute("r") ?? "")).filter((radius) => radius > 0);
+  if (radii.length === 0) return;
+  const disc = Math.min(...radii);
+  for (const circle of circles) {
+    const radius = Number.parseFloat(circle.getAttribute("r") ?? "");
+    const mask = circle.getAttribute("mask");
+    if (!mask || !isOuterRim(radius, disc)) continue;
+    circle.setAttribute("mask", dayRimMask(doc, mask));
+  }
+}
+
+function dayRimMask(doc: Document, ref: string): string {
+  const id = URL_ID.exec(ref)?.[1];
+  if (!id) return ref;
+  const dayId = `${id}-day`;
+  if (!doc.getElementById(dayId)) {
+    const mask = doc.getElementById(id);
+    if (!mask?.parentElement) return ref;
+    const clone = mask.cloneNode(true) as Element;
+    clone.setAttribute("id", dayId);
+    const gradients = new Map<string, string>();
+    for (const node of [clone, ...clone.querySelectorAll("*")]) {
+      for (const attr of ["fill", "stroke"]) {
+        const found = URL_ID.exec(node.getAttribute(attr) ?? "");
+        if (found?.[1]) gradients.set(found[1], `${found[1]}-day`);
+      }
+    }
+    for (const [gradId, dayGradId] of gradients) {
+      const grad = doc.getElementById(gradId);
+      if (!grad?.parentElement || doc.getElementById(dayGradId)) continue;
+      const copy = grad.cloneNode(true) as Element;
+      copy.setAttribute("id", dayGradId);
+      clearNightStops(copy);
+      grad.parentElement.insertBefore(copy, grad.nextSibling);
+    }
+    rewritePaintUrls(clone, gradients);
+    mask.parentElement.insertBefore(clone, mask.nextSibling);
+  }
+  return `url(#${dayId})`;
+}
+
+function clearNightStops(grad: Element): void {
+  const stops = [...grad.querySelectorAll("stop")];
+  const parsed = stops.map((stop) => ({
+    offset: Number.parseFloat(stop.getAttribute("offset") ?? "0"),
+    opacity: Number.parseFloat(stop.getAttribute("stop-opacity") ?? "1"),
+  }));
+  const cleared = clearedNightOpacity(parsed);
+  stops.forEach((stop, index) => {
+    if (cleared[index] === 0) stop.setAttribute("stop-opacity", "0");
+  });
+}
+
+function rewritePaintUrls(root: Element, gradients: ReadonlyMap<string, string>): void {
+  for (const node of [root, ...root.querySelectorAll("*")]) {
+    for (const attr of ["fill", "stroke"]) {
+      const value = node.getAttribute(attr);
+      if (!value) continue;
+      const next = value.replace(new RegExp(URL_ID.source, "g"), (all, id: string) => {
+        const mapped = gradients.get(id);
+        return mapped ? `url(#${mapped})` : all;
+      });
+      if (next !== value) node.setAttribute(attr, next);
     }
   }
 }

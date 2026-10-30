@@ -211,7 +211,7 @@ class GalleryVisual implements Visual {
     const rootId = root.id;
     const fill = root.fill;
     const disc: ArtFit = { ...base, spin: "none", bake: { tag: `${kind}-base`, prep: (doc) => keepBase(doc, rootId, fill) } };
-    const light: ArtFit = { ...base, bake: { tag: `${kind}-light`, prep: (doc) => keepLight(doc, rootId) } };
+    const light: ArtFit = { ...base, bake: { tag: `${kind}-light-dayrim`, prep: (doc) => keepLight(doc, rootId) } };
     if (kind === "planetx") {
       const halo: ArtFit = { ...base, spin: "none", bake: { tag: "px-halo", prep: keepHalo } };
       this.add(halo, `${body.id}-halo`, body, null, "halo", 0);
