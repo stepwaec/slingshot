@@ -33,6 +33,32 @@ export const palette = {
   resultCrash: "#FF5A5F",
   resultLost: "#B48CFF",
   node: "#FFC857",
+  /** design/style.md §12 and design/assets/ship/plume-states.svg. */
+  plumeChem0: "#F7FBFF",
+  plumeChem1: "#D6C8FF",
+  plumeChem2: "#A06BFF",
+  plumeChem3: "#7A4AD8",
+  plumeCore0: "#FFFFFF",
+  plumeCore1: "#E6F4FF",
+  plumeCore2: "#C8D8FF",
+  plumeGlow: "#E2D4FF",
+  plumeFlash: "#F7FBFF",
+  /** design/assets/burn-node.svg. The gold disc (`node`) is retired for the marker. */
+  nodeRing: "#B8A8FF",
+  nodeCore: "#F7FBFF",
+  nodeFill: "#0A0D1A",
+  nodeSelected: "#FFFFFF",
+  nodeOver: "#FF5A5F",
+  nodeHandle: "#ECF0FA",
+  /** design/assets/overlays/gravity-grid.svg. #2A4A8A is new; the rest match existing tokens. */
+  gridDepth0: "#2A4A8A",
+  gridDepth1: "#3D8BFF",
+  gridDepth2: "#3DE0C2",
+  gridDepth3: "#FFC857",
+  gridDepth4: "#FF5A1F",
+  gridTidal: "#FF5A5F",
+  /** design/assets/overlays/gravity-sheet.svg. */
+  sheetGlass: "#0B1430",
   /** design/style.md §13 and the megastructure SVG headers. */
   engineJet0: "#FFF6D6",
   engineJet1: "#FFD27A",
@@ -105,6 +131,28 @@ export function powerHex(power: number): string {
   const p = Math.min(1, Math.max(0, power));
   if (p < 0.5) return lerpHex(palette.planetXBase, palette.fuelLow, p * 2);
   return lerpHex(palette.fuelLow, palette.fuelCritical, (p - 0.5) * 2);
+}
+
+/** grid.depth stops. design/style.md §12. */
+export const GRID_RAMP: ReadonlyArray<readonly [number, string]> = [
+  [0, palette.gridDepth0],
+  [0.18, palette.gridDepth1],
+  [0.42, palette.gridDepth2],
+  [0.68, palette.gridDepth3],
+  [1, palette.gridDepth4],
+];
+
+/** sRGB channels of the depth ramp at `u` in 0..1. */
+export function gridRamp01(u: number): [number, number, number] {
+  const t = u < 0 ? 0 : u > 1 ? 1 : u;
+  let i = 1;
+  while (i < GRID_RAMP.length - 1 && GRID_RAMP[i][0] < t) i += 1;
+  const [t0, c0] = GRID_RAMP[i - 1];
+  const [t1, c1] = GRID_RAMP[i];
+  const k = (t - t0) / (t1 - t0 || 1);
+  const a = srgb01(c0);
+  const b = srgb01(c1);
+  return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
 }
 
 /** sRGB hex as 0–1 channels. Custom shaders write these straight out (no extra encode). */

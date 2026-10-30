@@ -54,6 +54,8 @@ Never edit anything in `design/` to make an implementation match. If a design is
 
 **Living surfaces.** Bodies must never look like still pictures. Stars boil and flow, planets turn under fixed lighting, and gas giants flow in counter-moving bands. The values are in `style.md` §13 "Living surfaces", with an animated reference in `assets/star-surface-motion.svg`. This motion is cosmetic, so it runs on `frame.now`, slowly, never strobes, and never moves the rim, the radius or the lighting.
 
+**Scripted events** (collisions, consumption, supernovae): the event is sim data, so its visuals play on **sim time** from the script fields (`at`, `start`, `end`). Pausing or scrubbing the plan shows the same frame. Every event the plan reaches gets a telegraph in planning: the course dashed in `#FF9F43`, a reticle, a countdown chip, and the follow-on in `#FFC857`. Use `style.md` §14 and `assets/events/`.
+
 **Lighting**
 - Bodies are lit **toward their star**, computed every frame from positions, and summed for binary stars.
 - The lit side never rotates with a texture. Only the surface scrolls under fixed lighting.

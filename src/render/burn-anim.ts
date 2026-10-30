@@ -35,6 +35,8 @@ export interface BurnSample {
    * 1 is a burn at the cap; a small correction is shorter.
    */
   thrustStretch: number;
+  /** |Δv| of the burn that owns `thrust`. 0 when the plume is dark. */
+  thrustMag: number;
   cues: BurnCue[];
 }
 
@@ -110,6 +112,7 @@ export function sampleBurnAnim(
   let windupAmount = 0;
   let thrustAmount = 0;
   let thrustStretch = 0;
+  let thrustMag = 0;
   const cap = tail.max > 0 ? tail.max : 0;
   for (let i = 0; i < nodes.length; i++) {
     const node = nodes[i];
@@ -126,9 +129,10 @@ export function sampleBurnAnim(
     if (window.amount > thrustAmount || (window.amount === thrustAmount && stretch > thrustStretch)) {
       thrustAmount = window.amount;
       thrustStretch = stretch;
+      thrustMag = mag;
     }
   }
-  return { time, windup: windupAmount, thrust: thrustAmount, thrustStretch, cues };
+  return { time, windup: windupAmount, thrust: thrustAmount, thrustStretch, thrustMag, cues };
 }
 
 /**

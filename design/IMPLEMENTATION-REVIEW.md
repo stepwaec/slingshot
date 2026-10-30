@@ -50,6 +50,26 @@ PRs #33 and #35 brought back the sun's turning rings and breathing haze, rebaked
 - **The sun's disc is a still raster** (`gallery.ts`, the `starDisc` layer), so the surface looks dead. **The planet surfaces** (Planet X, the home planet, moons) **and the gas-giant bands** don't move either: nothing scrolls `#pxSurfaceAnim`, `#pxWispAnim` or `#gbAnimA`–`C`.
 - **Fix:** follow `style.md` §13 "Living surfaces" and `threejs-notes.md` §4.6. Use two counter-flowing plasma layers, three cross-fading cell layers, faculae, and a limb shimmer for stars; scroll the surface strips under fixed lighting for planets; flow the band groups for gas giants. The animated reference is `assets/star-surface-motion.svg`.
 
+## Update after PR #47: collision visuals are placeholders
+
+- **The scripted events draw only an orange ring** (`src/render/visuals/fates.ts`): a growing ring on a falling body, and a ring at an impact point for 3 s.
+- **Fix:** replace it with the LU3 pack: `style.md` §14, `threejs-notes.md` §17 and `assets/events/`.
+  - The impact gets its flash, shock, ejecta and afterglow, then the debris field.
+  - `consume` gets the dayside glow and ablation tail growing with `u`, the plunge flash, the ripple and the star brightening.
+  - Planning gets the telegraphs.
+  - The Ash level should match `mockups/showcase-burning-planet.svg`.
+
+## Update after PR #45: ghost markers are placeholders
+
+- **The ghosts are one plain ring per moving body** at each node time, brighter under the cursor (`src/render/visuals/ghosts.ts`). Nothing ties a ghost to its path sample, the target's arrival isn't distinct, and collisions or bodies already gone don't show.
+- **Fix:** follow `style.md` §15 and `threejs-notes.md` §18:
+  - the ring and inner ring with their states (burn badge, cursor, arrival with capture radius, collision, gone)
+  - dotted tie lines to the path sample at the same moment
+  - time chips
+  - the target's future track with a tick every 10 s
+
+  The planning view should match `mockups/planning-ghosts.svg`.
+
 ## Priority fixes
 
 Do these first. They are the biggest visible or gameplay gaps after #32.

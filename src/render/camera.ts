@@ -104,9 +104,10 @@ export function zoomAt(camera: Camera, width: number, height: number, sx: number
  * orthographic view. The offset keeps the original rig's tilt: south of
  * the chart and above the plane, with world Z as up so a well reads as depth.
  */
-const SHEET_SLANT = Math.hypot(1400, 1100);
-const SHEET_DIR_Y = -1400 / SHEET_SLANT;
-const SHEET_DIR_Z = 1100 / SHEET_SLANT;
+/** design/assets/overlays/gravity-sheet.svg: tilt 62° off vertical. */
+const SHEET_TILT = (62 * Math.PI) / 180;
+const SHEET_DIR_Y = -Math.sin(SHEET_TILT);
+const SHEET_DIR_Z = Math.cos(SHEET_TILT);
 
 let spaceCam: THREE.PerspectiveCamera | null = null;
 let sheetOn = false;

@@ -4,7 +4,7 @@ How to build the v1.5 realistic look in the game's actual renderer: the orthogra
 
 Read with: `style.md` (tokens and rules), `assets.md` (one row per asset), the asset SVG header comments (the canon for every number), and in the code `src/render/visual.ts`, `src/render/visuals/index.ts`, `src/render/theme.ts`, `src/render/palette.ts`.
 
-Sections: §0 how the renderer is put together · §1 rules for the realistic visuals · §2 translating SVG filter recipes to GLSL · §3 planets · §4 stars · §5 compact objects · §6 moons and moon chains · §7 environment (nebulae, debris, rings) · §8 palette and colour · §9 budget · §10 asset → factory map, with what WP8 needs · §11 the magnetism map and fuzzy prediction (WP9) · §12 comets and the solar recharge indicator (WP10) · §13 the modular ship, damage, hull HUD and upgrade screen (ship systems) · §14 belts, Kuiper belt, rogue planet, radiation map and dose (WP11) · §15 burn plume, burn node and gravity grid styling · §16 late-game megastructures and wormholes; §4.6 living star surfaces. Coding agents: `IMPLEMENTING.md` is the rulebook; `IMPLEMENTATION-REVIEW.md` lists fixes for what is already built.
+Sections: §0 how the renderer is put together · §1 rules for the realistic visuals · §2 translating SVG filter recipes to GLSL · §3 planets · §4 stars · §5 compact objects · §6 moons and moon chains · §7 environment (nebulae, debris, rings) · §8 palette and colour · §9 budget · §10 asset → factory map, with what WP8 needs · §11 the magnetism map and fuzzy prediction (WP9) · §12 comets and the solar recharge indicator (WP10) · §13 the modular ship, damage, hull HUD and upgrade screen (ship systems) · §14 belts, Kuiper belt, rogue planet, radiation map and dose (WP11) · §15 burn plume, burn node and gravity grid styling · §16 late-game megastructures and wormholes; §4.6 living star surfaces · §17 collisions and consumption (LU3) · §18 ghost markers (LU2). Coding agents: `IMPLEMENTING.md` is the rulebook; `IMPLEMENTATION-REVIEW.md` lists fixes for what is already built.
 
 ---
 
@@ -310,3 +310,45 @@ Designs: `mega/*.svg`, `mockups/late-game.svg`. Values in `style.md` §13. Every
 - **Shkadov thruster:** a mirror arc mesh, a reflected-glow stroke, and 11 ray quads. The drift is `drift { ax, ay }` in level data, applied in `bodyPose` to every body. It is deterministic, and prediction sees it.
 - **Space elevator:** a line from the planet's surface along its spin angle (the planet's own rotation), a station sprite, a counterweight sprite and climber sprites moving along it. Release velocity is `ω × r` at the counterweight, shown by the release arrow in planning.
 - **Wormhole pair:** each mouth is a disc sampling a baked sky texture of the other end (rotating slowly) with radial compression toward the rim, an Einstein ring, a halo and a few arc sprites. Transit and the clock offset belong in the sim (`wormhole { a, b, angle, clockOffset }`).
+
+## 17. Collisions and consumption (LU3)
+
+Designs: `events/*.svg`, `mockups/showcase-burning-planet.svg`. Values in `style.md` §14. These replace the placeholder ring in `src/render/visuals/fates.ts`. Every event plays on **sim time**, from the script fields, so scrubbing the plan or pausing shows the same frame.
+
+- **Impact** (`impact { at, into }`): at `at`, spawn at the impact point (the struck body's limb, along the line from the impactor):
+  - a flash quad (radial `event.flash`, r 4 → 34 over 0.6 s)
+  - a shock ring quad (r 6 → 80 over 1.3 s, px-space stroke)
+  - a rim-flash ring on the struck body
+  - 20 ejecta points on seeded ease-out paths in a ±35° cone along the surface normal, 2.7 s
+  - a crater-glow sprite that fades over 3.6 s
+
+  Afterwards, hand over to the debris field.
+- **Debris field:** seeded chunks from the WP11 rock atlas (lit toward the star) placed along the struck body's orbit and spreading with time. Chunks with r ≥ 4 are crash bodies in the sim, so they come from the same seed there. In planning, draw the field's outline as a px-space dashed path, with the narrowing-gap chip.
+- **Burning up** (`consume { centerId, start, end, radius }`): with `u = (t − start) / (end − start)`:
+  - scale the dayside glow sprite (toward the centre body) and the ablation tail quad (trailing the velocity, length 90 · u, flicker 0.4 s on `frame.now`)
+  - at `end`, play the plunge flash, the ripple ring clipped to the star's disc, and the star brightening
+
+  Planning shows the remaining spiral dashed in `event.warn` and a "burns up in m:ss" chip.
+- **Tidal disruption** (proposed `disrupt { centerId, start, end }`): scale the body along the line to the mass (1 → 1.55 × 0.7) over the event. Draw the bound stream and the unbound tail as baked strand textures on quads that bend with the orbit, with particles along the strands. The heating gradient runs from the body's colours to `#FFF6D6` at the disk.
+- **Accretion** (proposed `accrete { centerId, start, end }`): stretch the star toward the hole (1 → 1.12). Draw a stream of 6 strands from its near side to the disk, a flickering hotspot, and disk rings turning faster inside. Move mass from the star to the hole over the event in the sim, so prediction sees the gravity change.
+- **Telegraphs:** for every scripted event the plan reaches, draw the course or spiral dashed in `event.warn`, the reticle at the predicted point, and the countdown chip (DOM), plus the follow-on dashed in `event.next`.
+
+**Budget:** each event is a handful of quads plus at most 30 points, under 0.2 ms.
+
+## 18. Ghost markers (LU2)
+
+Designs: `ghost-markers.svg`, `mockups/planning-ghosts.svg`. Values in `style.md` §15. This replaces the plain rings in `src/render/visuals/ghosts.ts`. Keep `ghostSteps` and `movingBodies`. Per ghost:
+
+1. **Pose.** Take the position from `bodyPose(body, step · dt)`. The ring radius is `max(body.radius, 8)` in world units, but the strokes are px-space (1.2 / 0.7 px, from `fwidth`).
+2. **State.** Pick it in this order:
+   - *gone* when `bodyPresent` is false (or a `consume` script has ended)
+   - *collision* when the predicted ship position at that step is inside the body
+   - *arrival* for the target at the capture step
+   - *cursor* at `cursorStep`
+   - otherwise *at a burn*
+
+   The colours and the badge come from §15.
+3. **Tie line.** Draw a px-dashed line quad from the ship's predicted position at the same step to the ghost centre.
+4. **Labels.** The time chip is DOM, like the Δv chip; for the target's arrival it reads "arrive m:ss".
+
+The target's future track is one line strip sampled from `bodyPose` between now and the arrival step, dashed in px-space, with a tick quad every 10 s of sim time. Draw it at renderOrder below the path dots. Ghosts never write the sim.
