@@ -1,27 +1,7 @@
-import shipUrl from "../../design/assets/ship.svg?url";
-import shipThrustUrl from "../../design/assets/ship-thrust.svg?url";
-import planetStartUrl from "../../design/assets/planet-start.svg?url";
-import planetXUrl from "../../design/assets/planet-x.svg?url";
 import starUrl from "../../design/assets/star.svg?url";
 import starfieldUrl from "../../design/assets/starfield.svg?url";
 import predictedPathUrl from "../../design/assets/predicted-path.svg?url";
 import dragArrowUrl from "../../design/assets/drag-arrow.svg?url";
-import binaryStarUrl from "../../design/assets/bodies/binary-star.svg?url";
-import redGiantUrl from "../../design/assets/bodies/red-giant.svg?url";
-import whiteDwarfUrl from "../../design/assets/bodies/white-dwarf.svg?url";
-import gasBandedUrl from "../../design/assets/bodies/gas-banded.svg?url";
-import gasRingedUrl from "../../design/assets/bodies/gas-ringed.svg?url";
-import iceRingUrl from "../../design/assets/bodies/ring-saturn.svg?url";
-import moonUrl from "../../design/assets/bodies/moon.svg?url";
-import moonIcyUrl from "../../design/assets/bodies/moon-icy.svg?url";
-import moonVolcanicUrl from "../../design/assets/bodies/moon-volcanic.svg?url";
-import dwarfUrl from "../../design/assets/bodies/dwarf.svg?url";
-import rockyUrl from "../../design/assets/bodies/rocky.svg?url";
-import iceWorldUrl from "../../design/assets/bodies/ice.svg?url";
-import lavaUrl from "../../design/assets/bodies/lava.svg?url";
-import toxicUrl from "../../design/assets/bodies/toxic.svg?url";
-import crackedUrl from "../../design/assets/bodies/cracked.svg?url";
-import moonChainUrl from "../../design/assets/bodies/moon-chain.svg?url";
 import hullBaseUrl from "../../design/assets/ship/hull-base.svg?url";
 import platingUrl from "../../design/assets/ship/module-plating.svg?url";
 import solarUrl from "../../design/assets/ship/module-solar.svg?url";
@@ -34,22 +14,12 @@ import engineChemicalUrl from "../../design/assets/ship/engine-chemical.svg?url"
 import engineIonUrl from "../../design/assets/ship/engine-ion.svg?url";
 import enginePulseUrl from "../../design/assets/ship/engine-pulse.svg?url";
 import engineSpinUrl from "../../design/assets/ship/engine-spin.svg?url";
-import infectedStarUrl from "../../design/assets/astro/infected-star.svg?url";
-import petrovaLineUrl from "../../design/assets/astro/petrova-line.svg?url";
-import astroKnotUrl from "../../design/assets/astro/astrophage-knot.svg?url";
-import astroHarvestUrl from "../../design/assets/astro/astrophage-harvest.svg?url";
-import hudAstroUrl from "../../design/assets/astro/hud-astrophage.svg?url";
 import tauCetiUrl from "../../design/assets/astro/tau-ceti.svg?url";
 import astroMapUrl from "../../design/assets/overlays/astrophage-map.svg?url";
 import damage75Url from "../../design/assets/ship/damage-75.svg?url";
 import damage45Url from "../../design/assets/ship/damage-45.svg?url";
 import damage15Url from "../../design/assets/ship/damage-15.svg?url";
-import neutronStarUrl from "../../design/assets/bodies/neutron-star.svg?url";
-import pulsarUrl from "../../design/assets/bodies/pulsar.svg?url";
-import magnetarUrl from "../../design/assets/bodies/magnetar.svg?url";
-import blackHoleUrl from "../../design/assets/bodies/black-hole.svg?url";
 import quasarUrl from "../../design/assets/bodies/quasar.svg?url";
-import strayAsteroidUrl from "../../design/assets/bodies/stray-asteroid.svg?url";
 import magnetismUrl from "../../design/assets/overlays/magnetism-heatmap.svg?url";
 import cometUrl from "../../design/assets/bodies/comet.svg?url";
 import solarRechargeUrl from "../../design/assets/solar-recharge.svg?url";
@@ -58,24 +28,6 @@ import nebulaReflectionUrl from "../../design/assets/space/nebula-reflection.svg
 import nebulaDarkUrl from "../../design/assets/space/nebula-dark.svg?url";
 import rogueUrl from "../../design/assets/bodies/rogue-planet.svg?url";
 import radiationUrl from "../../design/assets/overlays/radiation-map.svg?url";
-import beltSparseUrl from "../../design/assets/space/belt-sparse.svg?url";
-import beltMediumUrl from "../../design/assets/space/belt-medium.svg?url";
-import beltDenseUrl from "../../design/assets/space/belt-dense.svg?url";
-import kuiperUrl from "../../design/assets/space/kuiper-belt.svg?url";
-import solSunUrl from "../../design/assets/sol/sun.svg?url";
-import solMercuryUrl from "../../design/assets/sol/mercury.svg?url";
-import solVenusUrl from "../../design/assets/sol/venus.svg?url";
-import solEarthUrl from "../../design/assets/sol/earth.svg?url";
-import solLunaUrl from "../../design/assets/sol/moon.svg?url";
-import solMarsUrl from "../../design/assets/sol/mars.svg?url";
-import solJupiterUrl from "../../design/assets/sol/jupiter.svg?url";
-import solSaturnUrl from "../../design/assets/sol/saturn.svg?url";
-import solTitanUrl from "../../design/assets/sol/titan.svg?url";
-import solUranusUrl from "../../design/assets/sol/uranus.svg?url";
-import solNeptuneUrl from "../../design/assets/sol/neptune.svg?url";
-import solPlutoUrl from "../../design/assets/sol/pluto.svg?url";
-import solCharonUrl from "../../design/assets/sol/charon.svg?url";
-import solErisUrl from "../../design/assets/sol/eris.svg?url";
 import solArrokothUrl from "../../design/assets/sol/arrokoth.svg?url";
 import solVoyagerUrl from "../../design/assets/sol/voyager.svg?url";
 import { palette } from "./palette";
@@ -87,41 +39,9 @@ import { palette } from "./palette";
  * `visuals/index.ts`. The sim does not import this module.
  */
 export const theme = {
-  /**
-   * Rendering v2. `false` keeps today's SVG sprites (`?sprites=1` does the
-   * same for one load). design/shader-specs.md §1.
-   */
-  rendering: {
-    shaders: true,
-  },
   assets: {
-    ship: shipUrl,
-    shipThrust: shipThrustUrl,
-    planetStart: planetStartUrl,
-    planetX: planetXUrl,
     star: starUrl,
-    binaryStar: binaryStarUrl,
-    redGiant: redGiantUrl,
-    whiteDwarf: whiteDwarfUrl,
-    gasGiant: gasBandedUrl,
-    gasRinged: gasRingedUrl,
-    iceRing: iceRingUrl,
-    moon: moonUrl,
-    moonIcy: moonIcyUrl,
-    moonVolcanic: moonVolcanicUrl,
-    dwarf: dwarfUrl,
-    rocky: rockyUrl,
-    iceWorld: iceWorldUrl,
-    lava: lavaUrl,
-    toxic: toxicUrl,
-    cracked: crackedUrl,
-    moonChain: moonChainUrl,
-    neutronStar: neutronStarUrl,
-    pulsar: pulsarUrl,
-    magnetar: magnetarUrl,
-    blackHole: blackHoleUrl,
     quasar: quasarUrl,
-    strayAsteroid: strayAsteroidUrl,
     magnetism: magnetismUrl,
     comet: cometUrl,
     solarRecharge: solarRechargeUrl,
@@ -130,24 +50,6 @@ export const theme = {
     nebulaDark: nebulaDarkUrl,
     rogue: rogueUrl,
     radiation: radiationUrl,
-    beltSparse: beltSparseUrl,
-    beltMedium: beltMediumUrl,
-    beltDense: beltDenseUrl,
-    kuiper: kuiperUrl,
-    solSun: solSunUrl,
-    solMercury: solMercuryUrl,
-    solVenus: solVenusUrl,
-    solEarth: solEarthUrl,
-    solLuna: solLunaUrl,
-    solMars: solMarsUrl,
-    solJupiter: solJupiterUrl,
-    solSaturn: solSaturnUrl,
-    solTitan: solTitanUrl,
-    solUranus: solUranusUrl,
-    solNeptune: solNeptuneUrl,
-    solPluto: solPlutoUrl,
-    solCharon: solCharonUrl,
-    solEris: solErisUrl,
     solArrokoth: solArrokothUrl,
     solVoyager: solVoyagerUrl,
     starfield: starfieldUrl,
@@ -165,11 +67,6 @@ export const theme = {
     engineIon: engineIonUrl,
     enginePulse: enginePulseUrl,
     engineSpin: engineSpinUrl,
-    infectedStar: infectedStarUrl,
-    petrovaLine: petrovaLineUrl,
-    astroKnot: astroKnotUrl,
-    astroHarvest: astroHarvestUrl,
-    hudAstro: hudAstroUrl,
     tauCeti: tauCetiUrl,
     astroMap: astroMapUrl,
     damage75: damage75Url,

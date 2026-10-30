@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import type { Game } from "../../game/state";
+import { isEditing, type Game } from "../../game/state";
 import { bodyPose, type Body } from "../../sim/physics";
 import { projectToScreen, syncTopDown } from "../camera";
 import { createBodyShader, shaderFamily } from "../shaders/families";
@@ -11,19 +11,19 @@ import {
   planetSide,
   ringOctaves,
   screenRadius,
-  shaderRendering,
   cosmeticSeconds,
-  simSeconds,
 } from "../shaders/impostor";
+import { compactMotion } from "../shaders/compact-params";
 import { giantArtLight } from "../shaders/giant-params";
 import { planetArtLight } from "../shaders/planet-params";
+import { markEmissive } from "../shaders/bloom";
 import { theme, type Theme } from "../theme";
 import { disposeObject, type Visual, type VisualFactory, type VisualFrame } from "../visual";
 
 /**
  * One impostor quad per body (design/shader-specs.md §1).
  * A quad stays hidden until its family registers a shader. The SVG gallery
- * draws the rest, and draws everything when `rendering.shaders` is off.
+ * draws the rest. A family with a shader does not fall back to a sprite.
  */
 export const createImpostors: VisualFactory = (theme, level) => new ImpostorVisual(theme, level);
 
@@ -46,9 +46,8 @@ class ImpostorVisual implements Visual {
 
   constructor(_theme: Theme, level: Parameters<VisualFactory>[1]) {
     this.object.name = "shader-bodies";
-    const on = shaderRendering();
     for (const body of level.bodies) {
-      const material = on && shaderFamily(body) ? createBodyShader(body) : null;
+      const material = shaderFamily(body) ? createBodyShader(body) : null;
       const designR = numberUniform(material, "uDesignR", body.radius);
       const hazeR = numberUniform(material, "uHazeR", 1);
       const smooth = numberUniform(material, "uSmooth", 0);
@@ -62,8 +61,9 @@ class ImpostorVisual implements Visual {
       mesh.name = `${body.id}-impostor`;
       mesh.frustumCulled = false;
       const family = shaderFamily(body);
-      mesh.renderOrder = family === "planet" || family === "giant" ? 4 : -1;
+      mesh.renderOrder = family === "star" || family === null ? -1 : 4;
       mesh.visible = material !== null;
+      if (family === "star") markEmissive(mesh);
       mesh.scale.set(side, side, 1);
       this.object.add(mesh);
       this.slots.push({
@@ -79,13 +79,12 @@ class ImpostorVisual implements Visual {
   }
 
   update(frame: VisualFrame): void {
-    const on = shaderRendering();
-    this.object.visible = on;
-    if (!on) return;
+    this.object.visible = this.slots.some((slot) => slot.mesh.visible);
+    if (!this.object.visible) return;
     const game = frame.game;
     const time = chartTime(game);
     const seconds = cosmeticSeconds(frame.now);
-    const sim = simSeconds(game.mode === "planning" ? 0 : game.ship.step, game.level.dt);
+    const sim = shownTime(game);
     const zoom = game.camera.zoom > 0 ? game.camera.zoom : 1;
     const dpr = frame.dpr > 0 ? frame.dpr : 1;
     syncTopDown(game.camera, frame.width, frame.height);
@@ -134,6 +133,13 @@ class ImpostorVisual implements Visual {
       if (uniforms.uFaculae) uniforms.uFaculae.value = near ? 0 : slot.baseFaculae;
       if (uniforms.uProW && slot.designR > 0) uniforms.uProW.value = slot.baseProW * (uR / slot.designR);
       if (uniforms.uCoverage) uniforms.uCoverage.value = slot.body.dyson?.coverage ?? 0;
+      if (uniforms.uPeriod && uniforms.uReach) {
+        const motion = compactMotion(slot.body);
+        uniforms.uPeriod.value = motion.period;
+        uniforms.uPhase.value = motion.phase;
+        uniforms.uReach.value = motion.reach;
+        uniforms.uTilt.value = motion.tilt;
+      }
     }
   }
 
@@ -144,6 +150,14 @@ class ImpostorVisual implements Visual {
 
 function chartTime(game: Game): number {
   return (game.mode === "planning" ? 0 : game.ship.step) * game.level.dt;
+}
+
+/** Same clock the pulsar's damage uses, including a scrubbed plan. */
+function shownTime(game: Game): number {
+  if (isEditing(game) && game.mode === "planning") {
+    return game.cursorStep === null ? 0 : game.cursorStep * game.level.dt;
+  }
+  return game.ship.t;
 }
 
 function numberUniform(material: THREE.ShaderMaterial | null, name: string, fallback: number): number {

@@ -146,7 +146,12 @@ describe("Sol bodies", () => {
       const placed = observatory.bodies.find((item) => item.look === look);
       expect(placed, look).toBeTruthy();
       expect(placed?.radius).toBe(art.radius);
-      expect(artForBody(placed as Body, theme)?.url).toBe(theme.assets[art.asset]);
+      const fit = artForBody(placed as Body, theme);
+      if (look === "voyager" || look === "arrokoth") {
+        expect(fit?.url).toBe(look === "voyager" ? theme.assets.solVoyager : theme.assets.solArrokoth);
+      } else {
+        expect(fit).toBeNull();
+      }
     }
   });
 

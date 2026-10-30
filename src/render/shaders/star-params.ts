@@ -110,7 +110,7 @@ const SUN: StarParams = {
   haze1: "#E8461A",
   haze2: "#6A1408",
   hazeR: 4.35,
-  hazeA: 1.2,
+  hazeA: 1,
   fl0: "#FFE7A0",
   fl1: "#FFB347",
   fl2: "#FF6A1A",
@@ -345,7 +345,8 @@ export const STAR_PARAMS: Record<StarKind, StarParams> = {
 const SHADER_LOOKS = new Set<string>(STAR_KINDS);
 
 /** Looks that stay on the SVG path until a later family. */
-const SPRITE_LOOKS = new Set<BodyLook>(["tau-ceti", "neutron", "pulsar", "magnetar"]);
+/** Tau Ceti has no star-shader column yet. Compact looks are a different family. */
+const SPRITE_LOOKS = new Set<BodyLook>(["tau-ceti"]);
 
 export function starKind(body: Body): StarKind | null {
   const look = body.look;

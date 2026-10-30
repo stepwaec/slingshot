@@ -1,12 +1,12 @@
 import * as THREE from "three";
 import { brightestOffset } from "../art-motion";
-import { theme } from "../theme";
 import { bodyPose, type Body } from "../../sim/physics";
 
 /**
  * Rendering v2 conventions. design/shader-specs.md §1 and threejs-notes.md §25.
- * One impostor quad per body. SVG sprites stay when `rendering.shaders` is off
- * (`?sprites=1`).
+ * One impostor quad per body that has a shader family. Bodies without a
+ * family still use their sprites. There is no sprite fallback for a family
+ * that has a shader.
  */
 
 /** Extra scale so a ±3 % breathe does not clip the haze. */
@@ -20,12 +20,6 @@ export const LOD_RADIUS_PX = 6;
 
 /** Ring noise bakes down when the quad covers more than this fraction of the view. */
 export const LOD_SCREEN_FRACTION = 0.25;
-
-export function shaderRendering(search?: string): boolean {
-  const query = search ?? (typeof location !== "undefined" ? location.search : "");
-  if (new URLSearchParams(query).has("sprites")) return false;
-  return theme.rendering.shaders;
-}
 
 /** Frozen clock for side-by-side shots (`?t=13.9`). Otherwise `frame.now` in seconds. */
 export function cosmeticSeconds(nowMs: number, search?: string): number {
