@@ -111,6 +111,12 @@ describe("level loader", () => {
         },
         pattern: /level\.targetId "missing"/,
       },
+      {
+        mutate: (copy) => {
+          copy.maxSpeed = 3;
+        },
+        pattern: /level\.maxSpeed must be one of/,
+      },
     ];
 
     for (const item of cases) {
@@ -136,5 +142,12 @@ describe("level loader", () => {
     };
     const level = loadLevelData(copy, "tuned.json");
     expect(level.physics).toEqual(copy.physics);
+  });
+
+  it("accepts a per-level sim speed cap and leaves it off otherwise", () => {
+    expect(passage.maxSpeed).toBeUndefined();
+    const copy = JSON.parse(passageText()) as Record<string, unknown>;
+    copy.maxSpeed = 16;
+    expect(loadLevelData(copy, "capped.json").maxSpeed).toBe(16);
   });
 });

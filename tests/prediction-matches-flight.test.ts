@@ -5,10 +5,12 @@ import { createGame, launch, setPlan, tick } from "../src/game/state";
 import {
   SIM_SPEEDS,
   flyPlan,
+  horizonSteps,
   makeState,
   predictPlan,
   stepsPerFrame,
   type BurnNode,
+  type Horizon,
   type PathSample,
   type Prediction,
 } from "../src/sim/physics";
@@ -81,6 +83,33 @@ describe("prediction uses the flight integrator", () => {
         if (played[i].x !== reference.path[i].x || played[i].y !== reference.path[i].y || played[i].step !== reference.path[i].step) {
           throw new Error(`game ${speed}x diverged at sample ${i}`);
         }
+      }
+    }
+  });
+
+  it("matches the flight over the whole horizon past the last burn", () => {
+    const { config, state } = initial();
+    const horizon: Horizon = { seconds: 12, oneOrbit: false, shorten: 0, ref: 1 };
+    const limited = { ...config, horizon };
+    const extension = horizonSteps(state, limited);
+    const predicted = predictPlan(state, limited, nodes);
+    const flown = flyPlan(state, config, nodes, 1);
+    const end = nodes[nodes.length - 1].step + extension;
+
+    expect(predicted.status).toBe("flying");
+    expect(predicted.path.length).toBeGreaterThan(nodes[2].step);
+    expect(predicted.path[predicted.path.length - 1].step).toBe(end);
+    expect(predicted.path.length).toBeLessThan(flown.path.length);
+    expect(predicted.path.some((sample) => sample.step > nodes[0].step)).toBe(true);
+    expect(predicted.path.some((sample) => sample.step > nodes[1].step)).toBe(true);
+    expect(predicted.path.some((sample) => sample.step > nodes[2].step)).toBe(true);
+    for (let i = 0; i < predicted.path.length; i++) {
+      const got = predicted.path[i];
+      const want = flown.path[i];
+      if (got.x !== want.x || got.y !== want.y || got.step !== want.step || got.rate !== want.rate) {
+        throw new Error(
+          `horizon diverged at sample ${i} (step ${want.step}): (${got.x}, ${got.y}) vs (${want.x}, ${want.y})`,
+        );
       }
     }
   });

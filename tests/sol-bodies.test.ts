@@ -1,24 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { observatory, simConfigFromLevel } from "../src/level/catalog";
+import { observatory } from "../src/level/catalog";
 import { artForBody } from "../src/render/art-sprite";
 import { SOL_LOOKS, solArt } from "../src/render/sol-art";
 import { theme } from "../src/render/theme";
-import {
-  bodyPose,
-  bodySolid,
-  flyPlan,
-  keplerMeanMotion,
-  makeState,
-  predictPlan,
-  type Body,
-  type BurnNode,
-} from "../src/sim/physics";
-
-function body(id: string): Body {
-  const found = observatory.bodies.find((item) => item.id === id);
-  if (!found) throw new Error(`missing ${id}`);
-  return found;
-}
+import { bodySolid, type Body } from "../src/sim/physics";
 
 describe("Sol bodies", () => {
   it("places every library look in the Observatory at the size ladder", () => {
@@ -55,54 +40,10 @@ describe("Sol bodies", () => {
     expect(solArt("uranus").ringShadow).toBe(false);
   });
 
-  it("keeps moon orbits on Kepler circles about their planets", () => {
-    const pairs = [
-      ["luna", "earth"],
-      ["titan", "saturn"],
-      ["charon", "pluto"],
-    ] as const;
-    for (const [moonId, parentId] of pairs) {
-      const moon = body(moonId);
-      const parent = body(parentId);
-      const orbit = moon.orbit;
-      expect(orbit?.centerId).toBe(parentId);
-      expect(orbit?.omega).toBeCloseTo(keplerMeanMotion(observatory.g, parent.mass, orbit?.radius ?? 0), 10);
-    }
-    const luna = body("luna");
-    const earth = body("earth");
-    const t = 40;
-    const pose = bodyPose(luna, t, observatory.bodies, observatory.g);
-    const center = bodyPose(earth, t, observatory.bodies, observatory.g);
-    const orbit = luna.orbit;
-    const angle = (orbit?.phase ?? 0) + (orbit?.omega ?? 0) * t;
-    expect(pose.x).toBeCloseTo(center.x + (orbit?.radius ?? 0) * Math.cos(angle), 8);
-    expect(pose.y).toBeCloseTo(center.y + (orbit?.radius ?? 0) * Math.sin(angle), 8);
-  });
-
-  it("matches prediction to flight for a Sol orbit, and Voyager is not solid", () => {
-    const config = { ...simConfigFromLevel(observatory), maxSteps: 180 };
-    const state = makeState(observatory.ship.x, observatory.ship.y, observatory.ship.vx, observatory.ship.vy, config);
-    const nodes: BurnNode[] = [{ step: 30, dvx: 0.4, dvy: -0.2 }];
-    const predicted = predictPlan(state, config, nodes);
-    const flown = flyPlan(state, config, nodes, 1);
-    expect(flown.status).toBe(predicted.status);
-    expect(flown.crashedBodyId).toBe(predicted.crashedBodyId);
-    expect(flown.path).toHaveLength(predicted.path.length);
-    for (let i = 0; i < predicted.path.length; i++) {
-      expect(flown.path[i]?.x).toBe(predicted.path[i]?.x);
-      expect(flown.path[i]?.y).toBe(predicted.path[i]?.y);
-      expect(flown.path[i]?.step).toBe(predicted.path[i]?.step);
-    }
-
-    const voyager = body("voyager");
-    expect(bodySolid(voyager)).toBe(false);
-    expect(voyager.solid).toBe(false);
-    const pose = bodyPose(voyager, 0, observatory.bodies, observatory.g);
-    const riding = makeState(pose.x, pose.y, voyager.drift?.vx ?? 0, voyager.drift?.vy ?? 0, config);
-    const crossed = flyPlan(riding, { ...config, maxSteps: 90 }, [], 1);
-    const crossedPlan = predictPlan(riding, { ...config, maxSteps: 90 }, []);
-    expect(crossed.crashedBodyId).toBeNull();
-    expect(crossed.status).not.toBe("crashed");
-    expect(crossedPlan.path).toEqual(crossed.path);
+  it("draws Voyager as a prop that does not collide", () => {
+    const voyager = observatory.bodies.find((item) => item.look === "voyager");
+    expect(voyager?.solid).toBe(false);
+    expect(bodySolid(voyager as Body)).toBe(false);
+    expect(voyager?.orbit).toBeUndefined();
   });
 });

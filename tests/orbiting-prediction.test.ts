@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createGame, launch, setPlan, setSlow, tick } from "../src/game/state";
 import { relay, simConfigFromLevel } from "../src/level/catalog";
-import { relayFull } from "../src/level/solutions";
+import { relayFull, relayOpening } from "../src/level/solutions";
 import {
   SIM_SPEEDS,
   bodyPose,
@@ -109,9 +109,12 @@ describe("orbiting bodies", () => {
   it("stops the predicted line at the horizon and still matches that prefix", () => {
     const state = start();
     const horizon: Horizon = { seconds: 2, oneOrbit: false, shorten: 0, ref: 1 };
-    const limited = predictPlan(state, { ...open, horizon }, relayFull);
-    const flown = flyPlan(state, open, relayFull, 1);
+    const config = { ...open, horizon };
+    const limited = predictPlan(state, config, relayOpening);
+    const flown = flyPlan(state, open, relayOpening, 1);
+    const end = relayOpening[relayOpening.length - 1].step + horizonSteps(state, config);
     expect(limited.path.length).toBeGreaterThan(10);
+    expect(limited.path[limited.path.length - 1].step).toBe(end);
     expect(limited.path.length).toBeLessThan(flown.path.length);
     expect(limited.status).toBe("flying");
     for (let i = 0; i < limited.path.length; i++) {
