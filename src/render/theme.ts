@@ -509,6 +509,86 @@ export const theme = {
     captureGap: 6,
     captureAlpha: 0.35,
   },
+  /**
+   * Where a moving body will be. design/assets/ghost-markers.svg header,
+   * style.md §15, threejs-notes.md §18.
+   * The ring radius is world units. Strokes, the badge, the chip and the
+   * tie line are CSS pixels and do not grow with zoom.
+   */
+  ghost: {
+    /** Header minimum 8 px, applied as world units so the ring stays on the body. */
+    minRadius: 8,
+    ringWidth: 1.2,
+    innerRatio: 0.62,
+    innerWidth: 0.7,
+    /** Half the outer ring's alpha. */
+    innerAlpha: 0.5,
+    alphaBurn: 0.85,
+    alphaOther: 0.6,
+    alphaCursor: 1,
+    alphaArrival: 1,
+    alphaCollision: 1,
+    alphaGone: 1,
+    widthCursor: 1.6,
+    widthArrival: 1.4,
+    widthCollision: 1.6,
+    fillBurn: 0.07,
+    fillOther: 0.07,
+    fillCursor: 0.12,
+    fillArrival: 0.1,
+    fillCollision: 0.14,
+    goneDash: 2,
+    goneGap: 3,
+    /** Sample cross ends 6.8 px from the centre on an r 15 ring: 0.64 r along the diagonal. */
+    crossReach: 0.64,
+    /** Sample slash runs to the ring. */
+    slashReach: 1,
+    collisionPeriod: 0.8,
+    collisionHigh: 1,
+    collisionLow: 0.45,
+    badgeRadius: 6.5,
+    badgeWidth: 1.4,
+    badgeFont: 9,
+    /** Up and to the right. The SVG's −0.72 r is screen-up. */
+    badgeOffset: 0.72,
+    chipHeight: 16,
+    chipPad: 6,
+    chipFont: 10.5,
+    chipRadius: 5,
+    chipFill: 0.88,
+    chipStroke: 0.7,
+    chipOffsetX: 8,
+    chipOffsetY: 4,
+    tieWidth: 1,
+    tieAlpha: 0.75,
+    tieCursorAlpha: 0.85,
+    tieDash: 1.5,
+    tieGap: 3.5,
+    pathRing: 2.6,
+    pathRingWidth: 1,
+    pathDot: 4,
+    trackWidth: 1.4,
+    trackAlpha: 0.55,
+    trackDash: 1,
+    trackGap: 5,
+    tickSeconds: 10,
+    /** Sample ticks measure about 8 px. The header sets the width at 1 px and the sample alpha at 0.5. */
+    tickLength: 8,
+    tickWidth: 1,
+    tickAlpha: 0.5,
+    captureWidth: 1,
+    captureDash: 6,
+    captureGap: 6,
+    captureAlpha: 0.45,
+    /** px per second. Cosmetic, so it runs on frame.now. */
+    captureCrawl: 12,
+    farBurns: 3,
+    farAlpha: 0.3,
+    /** Room for a long orbit sampled every 6 px. */
+    maxDots: 800,
+    maxTicks: 48,
+    maxSamples: 480,
+  },
 } as const;
 
 export type Theme = typeof theme;
