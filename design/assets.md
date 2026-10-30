@@ -194,6 +194,7 @@ Reference shaders: GLSL ES 1.00, one impostor quad per body, with uniforms named
 |---|---|---|
 | `planet.frag` | **Rocky planets and moons (R2.2)**: a baked surface map on a rotating sphere (or a locked face map), lit by `uLight` with the planet reference construction: bloom, warm terminator, navy night, lit-side haze and rim; clouds and cloud shadows, ocean glint, night lights or day glow | `shader-specs.md` §3 |
 | `giant.frag` | **Gas giants and rings (R2.3)**: band strip on a sphere with differential rotation (17-row wind profile), body-frame roll, ring plane in 3D with the near half over the planet, the planet's shadow on the rings and the rings' shadow on the globe, box-filtered ring profile, Keplerian sparkle, Saturn's hexagon, Uranus's polar cap | `shader-specs.md` §4 |
+| `compact.frag` | **Compact objects (R2.4)**: quiet neutron star, pulsar (beams on sim time), magnetar (analytic dipole field lines, interference grain, starquake), black hole (lensed arcs, tilted fiery disk front and back, Doppler, ragged photon ring, Einstein ring) | `shader-specs.md` §5 |
 | `maps/*.png` | **Baked maps** for R2.2 and R2.3 (band strips and 1024 × 4 ring profiles): 1024 × 256 surface, cloud and light/glow strips (one period of each SVG strip) and 512 × 512 locked faces, for 20 bodies (3.2 MB) | `shader-specs.md` §3 |
 | `star.frag` | **Stars (R2.1)**: haze, counter-rotating wisp and flame rings, a sphere photosphere (two plasma flows, boiling granulation, faculae, spots, gentle limb darkening under the bright rim), ragged rim, prominences, flare; plus a white-dwarf mode | `shader-specs.md` §2 |
 
@@ -213,7 +214,7 @@ All self-contained pages (inline CSS, no scripts) on `bg.base`, inlining the ass
 | `space.html` WP12 row (v2.9) | The supernova progenitor, detonation and remnant, the quasar and its sweep, and the stray asteroid, each at 1× |
 | `sol.html` (v3.1) | The Sol bodies inlined at 1× in three rows (inner system, outer system, Kuiper belt and Voyager), plus a 3× detail row that shows the same files as images |
 | `space.html` Astrophage row (v3.2) | The infected star, Petrova line, knot, harvest, fuel row, Tau Ceti and the Astrophage map at 1×; `ship.html` gains the spin drive in the engines row and an "Astrophage runner" build |
-| `shaders.html` (v3.5) | Rendering v2 reference: each approved SVG star, rocky body and gas giant next to its reference shader running live in WebGL; `?t=` freezes the clock, `&only=stars|planets|giants` shows one family. Needs WebGL; the only preview page with a script (one shared WebGL context) |
+| `shaders.html` (v3.5) | Rendering v2 reference: each approved SVG star, rocky body, gas giant and compact object next to its reference shader running live in WebGL; `?t=` freezes the clock, `&only=stars|planets|giants|compact` shows one family. Needs WebGL; the only preview page with a script (one shared WebGL context) |
 
 ## Mockups (`design/mockups/`, all `0 0 1440 900`; **PNG = 2× render**)
 

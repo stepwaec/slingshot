@@ -19,7 +19,8 @@ uniform float uSparkle, uSparkleT, uSparkleRho;          /* ring particle sparkl
 uniform float uHex; uniform vec3 uHexCol, uHexEdge;      /* Saturn's north-polar hexagon */
 uniform float uPole; uniform vec3 uPoleCol; uniform float uPoleA;   /* a bright polar cap (Uranus) */
 const float PI = 3.14159265;
-vec4 over(vec4 d, vec3 c, float a){a=clamp(a,0.,1.);return vec4(mix(d.rgb,c,a),d.a+a*(1.-d.a));}
+/* straight-alpha 'over': colour c with alpha a on top of d (d.rgb is straight, not premultiplied) */
+vec4 over(vec4 d, vec3 c, float a){a=clamp(a,0.,1.);float o=a+d.a*(1.-a);return vec4(o>0.?(c*a+d.rgb*d.a*(1.-a))/o:c,o);}
 vec4 under(vec4 d, vec3 c, float a){a=clamp(a,0.,1.)*(1.-d.a);return vec4((d.rgb*d.a+c*a)/max(d.a+a,1e-5),d.a+a);}
 float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
 float jet(float v){ float r=0.; for(int i=0;i<16;i++){ float a=float(i)/16.; if(v>=a && v<=a+1./16.) r=mix(uJet[i],uJet[i+1],(v-a)*16.); } return r; }

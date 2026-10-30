@@ -19,7 +19,8 @@ uniform float uAirless;                     // 1: hard terminator, no haze, no r
 uniform vec3  uHaze0, uHaze1; uniform float uHazeA0, uHazeA1;   // limb haze 0.78 a0 | 0.96 uHaze0 uHazeA0 | 1.0 uHaze1 uHazeA1
 uniform vec3  uRim0, uRim1;                 // rim outside the disc to 1.077 r: 0.969 a0 | 1.0 uRim0 a0.95 | 1.028 uRim1 a0.4 | 1.077 a0
 const float PI = 3.14159265;
-vec4 over(vec4 d, vec3 c, float a){a=clamp(a,0.,1.);return vec4(mix(d.rgb,c,a),d.a+a*(1.-d.a));}
+/* straight-alpha 'over': colour c with alpha a on top of d (d.rgb is straight, not premultiplied) */
+vec4 over(vec4 d, vec3 c, float a){a=clamp(a,0.,1.);float o=a+d.a*(1.-a);return vec4(o>0.?(c*a+d.rgb*d.a*(1.-a))/o:c,o);}
 void main(){
   vec2 uv=(gl_FragCoord.xy-uCenter)/uR; float r=length(uv); float px=1./uR;
   vec2 Lxy=normalize(uLight.xy); float s=dot(uv,Lxy)/.706;                     // the lit-side mask coordinate (the SVG's linear mask)

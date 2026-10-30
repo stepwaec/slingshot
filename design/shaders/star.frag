@@ -45,7 +45,8 @@ float snoise(vec3 v){const vec2 C=vec2(1./6.,1./3.);const vec4 D=vec4(0.,.5,1.,2
 float fbm(vec3 p){float a=.5,s=0.;for(int i=0;i<5;i++){s+=a*snoise(p);p*=2.02;a*=.5;}return .5+.5*s;}      // ~0..1, mean 0.5 (the SVG fractalNoise)
 float turb(vec3 p){float a=.5,s=0.;for(int i=0;i<5;i++){s+=a*abs(snoise(p));p*=2.03;a*=.5;}return s;}    // ~0..1 (the SVG turbulence)
 vec3 rotY(vec3 p,float a){float c=cos(a),s=sin(a);return vec3(c*p.x+s*p.z,p.y,-s*p.x+c*p.z);}
-vec4 over(vec4 dst, vec3 c, float a){a=clamp(a,0.,1.);return vec4(mix(dst.rgb,c,a),dst.a+a*(1.-dst.a));}
+/* straight-alpha 'over': colour c with alpha a on top of d (d.rgb is straight, not premultiplied) */
+vec4 over(vec4 d, vec3 c, float a){a=clamp(a,0.,1.);float o=a+d.a*(1.-a);return vec4(o>0.?(c*a+d.rgb*d.a*(1.-a))/o:c,o);}
 float band(float x,float a,float b,float c,float d){return smoothstep(a,b,x)*(1.-smoothstep(c,d,x));}
 vec3 ramp3(float t,vec3 a,vec3 b,vec3 c,float tb){return t<tb?mix(a,b,t/tb):mix(b,c,(t-tb)/(1.-tb));}
 

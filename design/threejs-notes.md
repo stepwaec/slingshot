@@ -481,7 +481,7 @@ Designs: `overlays/gravity-time.svg`, `mockups/planning-gravity-time.svg`. Value
 
 ## 25. Rendering v2: shader bodies
 
-Specs: `shader-specs.md`. Reference shaders: `shaders/*.frag`. Live comparison: `preview/shaders.html`. So far: R2.0 conventions (§1 there), R2.1 stars (§2, `shaders/star.frag`) R2.2 rocky planets and moons (§3, `shaders/planet.frag` with the baked maps in `shaders/maps/`) and R2.3 gas giants and rings (§4, `shaders/giant.frag`).
+Specs: `shader-specs.md`. Reference shaders: `shaders/*.frag`. Live comparison: `preview/shaders.html`. So far: R2.0 conventions (§1 there), R2.1 stars (§2, `shaders/star.frag`) R2.2 rocky planets and moons (§3, `shaders/planet.frag` with the baked maps in `shaders/maps/`) R2.3 gas giants and rings (§4, `shaders/giant.frag`) and R2.4 compact objects (§5, `shaders/compact.frag`).
 
 - **Port as written.** Port each reference shader into a `THREE.ShaderMaterial` on an impostor quad per body. Keep the uniform names, so the parameter tables apply one to one.
 - **Body radius.** `uR` is the body radius in device pixels (r · zoom · DPR).
@@ -491,3 +491,4 @@ Specs: `shader-specs.md`. Reference shaders: `shaders/*.frag`. Live comparison: 
 - **Budget.** As §9: bake the star rings into frames when a star covers more than a quarter of the screen. Drop to 3 octaves below 6 px.
 - **Planets.** Load the maps once as power-of-two textures with `wrapS = RepeatWrapping` and `flipY = true`. `uLight` comes from the brightest star each frame; the art's default only stands in for the preview. Bake new bodies with the procedure in `shader-specs.md` §3.
 - **Giants.** Upload `uJet` as a 17-float uniform array. Ring profile maps use `ClampToEdgeWrapping`. Size the quad to the ring's outer edge (`rho1` × r). A ringed giant is one quad, because the shader orders the far ring, the planet and the near ring itself.
+- **Compact objects.** The pulsar's `uSimTime` is `shownTime(game)`, the same clock as its damage. Size its quad to the beam reach (2 × `uReach` × r), or draw the beams as a separate long quad, so the body quad stays small.
