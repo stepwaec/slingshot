@@ -10,6 +10,8 @@ import binaryStarUrl from "../../design/assets/bodies/binary-star.svg?url";
 import redGiantUrl from "../../design/assets/bodies/red-giant.svg?url";
 import whiteDwarfUrl from "../../design/assets/bodies/white-dwarf.svg?url";
 import gasBandedUrl from "../../design/assets/bodies/gas-banded.svg?url";
+import gasRingedUrl from "../../design/assets/bodies/gas-ringed.svg?url";
+import iceRingUrl from "../../design/assets/bodies/ring-saturn.svg?url";
 import moonUrl from "../../design/assets/bodies/moon.svg?url";
 import moonIcyUrl from "../../design/assets/bodies/moon-icy.svg?url";
 import moonVolcanicUrl from "../../design/assets/bodies/moon-volcanic.svg?url";
@@ -102,6 +104,8 @@ export const theme = {
     redGiant: redGiantUrl,
     whiteDwarf: whiteDwarfUrl,
     gasGiant: gasBandedUrl,
+    gasRinged: gasRingedUrl,
+    iceRing: iceRingUrl,
     moon: moonUrl,
     moonIcy: moonIcyUrl,
     moonVolcanic: moonVolcanicUrl,
@@ -226,6 +230,16 @@ export const theme = {
      * removed in #76 and #78. The disc haze keeps 0.06.
      */
     maskRimNight: 0,
+  },
+  /**
+   * Gas giants and rings. design/shader-specs.md §4.
+   * The light elevation is `planetShader`. Per-body jets and rings are
+   * `shaders/giant-params.ts`. The quad reaches `rho1` when rings are on,
+   * otherwise the 1.08 r rim.
+   */
+  giantShader: {
+    /** Rim fragment covers to 1.08 r. A ringed quad uses rho1 instead. */
+    rimExtent: 1.08,
   },
   /**
    * Planet X target zone. design/style.md §17 and design/assets/target-zone.svg.

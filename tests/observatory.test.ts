@@ -143,7 +143,8 @@ describe("Observatory", () => {
     const height = 800;
     const camera = { x: 0, y: 0, zoom: 1 };
     frameLevel(camera, width, height, observatory);
-    expect(camera.zoom).toBeGreaterThan(0.12);
+    // Ringed giants widen the chart. The HUD clearance below is the real bound.
+    expect(camera.zoom).toBeGreaterThan(0.1);
     expect(camera.zoom).toBeLessThanOrEqual(6);
     const topHud = 88;
     const bottomHud = 168;

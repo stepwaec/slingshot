@@ -54,6 +54,8 @@ export function artForBody(body: Body, theme: Theme): ArtFit | null {
     };
   }
   if (body.look === "gas-giant") return fit(assets.gasGiant, 160, 160, 44, "light", UP_RIGHT);
+  if (body.look === "gas-ringed") return fit(assets.gasRinged, 320, 200, 44, "light", UP_RIGHT);
+  if (body.look === "ice-ring") return fit(assets.iceRing, 400, 240, 44, "light", UP_RIGHT);
   if (body.look === "moon-icy") return fit(assets.moonIcy, 48, 48, 12, "light", UP_RIGHT);
   if (body.look === "moon-volcanic") return fit(assets.moonVolcanic, 48, 48, 13, "light", UP_RIGHT);
   if (body.look === "dwarf") return fit(assets.dwarf, 40, 40, 10, "light", UP_RIGHT);

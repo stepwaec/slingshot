@@ -247,6 +247,16 @@ export const palette = {
   titanDetached0: "#8FB8FF",
   titanDetached1: "#9CC4FF",
   titanDetached2: "#7FA8F2",
+  /**
+   * Gas giants. design/shader-specs.md §4.
+   * Limb darkening, Saturn's hexagon and Uranus's cap. The ring shadow
+   * on the globe is `planetNight1`. Per-body haze and rim hexes are in
+   * `shaders/giant-params.ts`.
+   */
+  giantLimb: "#3A2440",
+  giantHex: "#7F9AD6",
+  giantHexEdge: "#B8C9F2",
+  giantPole: "#E8FFFD",
 } as const;
 
 /** Linear blend in sRGB, matching the arrow.power ramp in design/canvas-notes.md §9. */
