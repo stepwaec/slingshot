@@ -60,7 +60,7 @@ The `style.md` §9 order: **starfield → nebulae → debris dust → bodies →
 4. star (§3 / §3b) or compact object (§3c)
 5. bodies back to front: ringed planets as back ring → planet → front ring (§4d); moon systems and the double planet with their z-order swaps (§4b, §4c); planet X with its live halo under its strips
 6. rocks and wreck pieces (§4e)
-7. capture ring (dashed, pulsing, live)
+7. capture ring (v3.0: the solid target zone, `style.md` §17)
 8. predicted path (planning) **or** trail (flight)
 9. drag arrow (planning only)
 10. thrust flash (flight, `lighter`), then ship
@@ -1275,6 +1275,8 @@ Keep the strips current exactly as in v1.2: compare `zoomBucket(zoom)` (and DPR)
 Per frame, per planet: 1 clip + 2 strip blits (only the 2r window is rasterised) + 1 overlay blit ≈ **0.09 ms**. Build per planet per bucket at DPR 2 (measured): ≈ **10 ms** with the noise tiles cached, ≈ 50 ms on the first build (2–4 gradient-noise tiles at 512²); tiles are shared and kept, so later buckets cost the 10 ms. When a bucket flips, rebuild one body per frame and keep drawing the others from their old bitmaps (residual ≤ 1.25× for one frame).
 
 ### Planet X halo + capture ring (live)
+
+> **Superseded for the ring (v3.0):** the capture ring is now the solid target zone in `style.md` §17 and `threejs-notes.md` §20 (no dash, no crawl, a glow band, states). The halo below still stands; the ring code is the v1.2 history.
 Halo: live radial gradient `#3DE0C2`, radius 1.8 r (54 at r 30): 0 α 0.35 · 0.556 α 0.35 (disc edge) · 0.62 α 0.22 · 0.78 α 0.08 · 1 α 0 — v1.5's steeper falloff so the disc edge reads sharply against it — breathing ±4 % over 2.4 s. Ring: r 78, `#3DE0C2`, 1.5 px, `setLineDash([6, 6])`, dash crawl −12 px/s, pulse α 0.55 → 0.70 → 0.55 → 0.35 → 0.55 and r ±2 over 2.4 s (sine; α 0.55 at rest, as the SVG's `values`); reset the dash state afterwards.
 
 ```ts
