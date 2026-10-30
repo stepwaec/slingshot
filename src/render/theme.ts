@@ -158,22 +158,38 @@ export const theme = {
     nozzle: -28.2,
   },
   /**
-   * Exhaust plume, in the ship's local space (nose is +Y).
-   * The hull tail tips sit at local y = -9, so `nozzle` is just aft of them
-   * and the plume only extends further aft. Sizes are ship units; colours are sRGB.
+   * Chemical plume. design/assets/ship/plume-states.svg header.
+   * Length is design units: L = min(lengthMax, lengthBase + lengthPerDv * |Δv|).
+   * There is no bloom halo. The burn itself stays one sim step.
    */
-  thrust: {
-    nozzle: -9.6,
-    length: 40,
-    /** Widest half-width. The shader keeps the root narrower than the tail tips. */
-    halfWidth: 6.8,
-    /** Soft halo drawn behind the plume, scaled from the same nozzle. */
-    bloomScale: 1.45,
-    /** 0..1 raggedness of the edge and the density. */
-    turbulence: 0.42,
-    core: "#F7FBFF",
-    edge: "#A06BFF",
-    bloom: "#7A4AD8",
+  plume: {
+    lengthBase: 44,
+    lengthPerDv: 12,
+    lengthMax: 110,
+    widthBase: 6.5,
+    widthPerLength: 1 / 40,
+    /** t where the bell starts, and the bell exponent. */
+    shoulder: 0.25,
+    bell: 1.4,
+    rag: 0.12,
+    ragCycles: [5, 8, 11],
+    /** Three shapes in this many seconds. Phases are cosmetic (frame time). */
+    ragPeriod: 0.33,
+    coreLength: 0.42,
+    coreWidth: 0.38,
+    /** Tail-off soft edge, as a fraction of L. */
+    tailSoft: 0.15,
+    /** Ignition, sim seconds. The plume grows to L and the flash ring plays. */
+    ignite: 0.12,
+    flashRadius0: 4,
+    flashRadius1: 13,
+    flashWidth: 1.2,
+    /** Wind-up lick, design units. */
+    lickLength: 16,
+    lickWidth: 4.2,
+    glowRy: 1.2,
+    glowRx0: 1.5,
+    glowRx1: 4.6,
   },
   /**
    * Burn animation, in seconds of sim time (`step * dt`).
@@ -209,10 +225,37 @@ export const theme = {
     endRingAlpha: 0.5,
     orbitAlpha: 0.7,
   },
+  /**
+   * Burn node, screen pixels. design/assets/burn-node.svg header.
+   * The arrow geometry is the existing drag arrow.
+   */
   nodes: {
-    markerRadius: 4,
-    selectedRadius: 5.5,
-    strokePad: 1.4,
+    markerRadius: 5,
+    ringWidth: 2,
+    coreRadius: 1.7,
+    selectedRadius: 6.5,
+    selectedOuter: 9.5,
+    selectedOuterWidth: 1,
+    selectedOuterAlpha: 0.55,
+    handleRadius: 4,
+    ghostAlpha: 0.3,
+    ghostDash: 3,
+    ghostGap: 3,
+    windupRadius: 9,
+    windupWidth: 2,
+    /** Ignition flash, sim seconds, then the node is the fired ring. */
+    ignite: 0.4,
+    igniteRadius0: 6,
+    igniteRadius1: 18,
+    igniteWidth: 1.5,
+    firedAlpha: 0.45,
+    firedWidth: 1.5,
+    firedDash: 2,
+    firedGap: 2,
+    /** Delete button centre, screen pixels from the node. */
+    deleteX: 13,
+    deleteY: 11,
+    deleteRadius: 6,
     headLength: 16,
     headHalfWidth: 6,
     shaftWidth: 2,
@@ -231,9 +274,34 @@ export const theme = {
     flatStride: 1,
     /** Extra framed world beyond the view, so the sheet edge stays off-screen. */
     viewPad: 0.08,
-    /** Deepest well, as a fraction of the system's longer side. */
+    /** Deepest well, as a fraction of the system's longer side. H in the sheet header. */
     amplitude: 0.22,
-    sheetAlpha: 0.9,
+    /** Sheet glass alpha. design/assets/overlays/gravity-sheet.svg. */
+    sheetAlpha: 0.55,
+    /**
+     * Grid ink. design/assets/overlays/gravity-grid.svg and gravity-sheet.svg.
+     * The warp stays the sampled potential. These numbers only colour it.
+     */
+    inkGamma: 2.2,
+    inkRamp: 1.05,
+    inkAlpha: 0.16,
+    inkAlphaDepth: 0.62,
+    inkMajorAlpha: 0.1,
+    inkMajorEvery: 4,
+    inkMinorPx: 0.75,
+    inkMajorPx: 1,
+    inkEdgePx: 70,
+    inkBodyGapPx: 3,
+    sheetLineAlpha: 0.18,
+    sheetLineDepth: 0.7,
+    sheetLinePx: 0.7,
+    sheetDepthExp: 1.3,
+    sheetFadeCells: 5,
+    tidalAlpha: 0.8,
+    tidalPx: 1,
+    tidalDash: 4,
+    tidalGap: 4,
+    tidalCrawl: 8,
     /** Rest-frame dτ/dt contours drawn over the flat grid. */
     clockLevels: [0.92, 0.75, 0.5, 0.25],
   },

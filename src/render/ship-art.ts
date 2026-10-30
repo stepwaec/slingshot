@@ -72,7 +72,8 @@ export const ENGINE_PLUME_IDS: Record<EngineLook, readonly string[]> = {
  */
 export const ENGINE_PLUMES: Record<EngineLook, PlumeLook> = {
   chemical: {
-    length: 96,
+    /** Cap from plume-states.svg. The drawn length is theme.plume, not this field. */
+    length: 110,
     halfWidth: 8,
     turbulence: 0.42,
     core: "#F7FBFF",

@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { simConfigFromLevel } from "../../level/catalog";
-import { sampleBurnAnim, tailFromBurn, windupFlicker, type BurnSample } from "../burn-anim";
+import { sampleBurnAnim, tailFromBurn, windupFlicker, type BurnCue, type BurnSample } from "../burn-anim";
+import { plumeFrame, type PlumeFrame } from "../plume";
 import { projectToScreen } from "../camera";
 import { shipLook } from "../appearance";
 import { srgbVec, shader } from "./materials";
@@ -20,6 +21,7 @@ import {
 } from "../ship-art";
 import { bakedSvgUrl, rasterSvg } from "../svg-bake";
 import { tidalStressAt, type SimConfig, type Vec2 } from "../../sim/physics";
+import { palette } from "../palette";
 import type { Theme } from "../theme";
 import { disposeObject, type Visual, type VisualFactory, type VisualFrame } from "../visual";
 
@@ -54,6 +56,9 @@ class ShipVisual implements Visual {
   private readonly damageBands = new Map<"75" | "45" | "15", THREE.Mesh>();
   private readonly glow: THREE.Mesh;
   private readonly glowAlpha: THREE.IUniform<number>;
+  private readonly flash: THREE.Mesh;
+  private readonly flashRadius: THREE.IUniform<number>;
+  private readonly flashAlpha: THREE.IUniform<number>;
   private readonly pulse: THREE.Mesh;
   private readonly solarGlow: THREE.Mesh;
   private readonly hitFlash: THREE.Mesh;
@@ -100,7 +105,7 @@ class ShipVisual implements Visual {
 
     for (const look of ["chemical", "ion"] as const) {
       const plume = ENGINE_PLUMES[look];
-      const built = anchorPlume(plume);
+      const built = look === "chemical" ? anchorFlame(plume, theme) : anchorBeam(plume);
       built.mesh.visible = false;
       this.ship.add(built.mesh);
       this.plumes.set(look, built);
@@ -110,17 +115,35 @@ class ShipVisual implements Visual {
     this.glow = new THREE.Mesh(
       new THREE.CircleGeometry(1, 28),
       shader(glowFrag, {
-        uColor: { value: srgbVec("#E2D4FF") },
+        uColor: { value: srgbVec(palette.plumeGlow) },
         uAlpha: glowAlpha,
       }),
     );
     this.glow.name = "burn-windup";
     this.glow.position.set(0, theme.ship.nozzle, 0);
     this.glow.frustumCulled = false;
-    this.glow.renderOrder = 4;
+    this.glow.renderOrder = 3;
     this.glow.visible = false;
-    (this.glow.material as THREE.ShaderMaterial).blending = THREE.AdditiveBlending;
     this.ship.add(this.glow);
+    const flashRadius = { value: theme.plume.flashRadius0 };
+    const flashAlpha = { value: 0 };
+    this.flashRadius = flashRadius;
+    this.flashAlpha = flashAlpha;
+    this.flash = new THREE.Mesh(
+      new THREE.PlaneGeometry(40, 40),
+      shader(flashFrag, {
+        uColor: { value: srgbVec(palette.plumeFlash) },
+        uRadius: flashRadius,
+        uAlpha: flashAlpha,
+        uWidth: { value: theme.plume.flashWidth },
+      }),
+    );
+    this.flash.name = "burn-flash";
+    this.flash.position.set(0, theme.ship.nozzle, 0);
+    this.flash.frustumCulled = false;
+    this.flash.renderOrder = 5;
+    this.flash.visible = false;
+    this.ship.add(this.flash);
 
     this.pulse = new THREE.Mesh(
       new THREE.CircleGeometry(1, 24),
@@ -230,9 +253,14 @@ class ShipVisual implements Visual {
     const showBurn = !crashed && (game.mode === "flying" || game.mode === "paused");
     if (!showBurn) {
       this.glow.visible = false;
+      this.flash.visible = false;
       this.pulse.visible = false;
     } else {
-      this.poseThrust(sampleBurnAnim(game.ship.step, game.level.dt, game.nodes, this.theme.burn.windup, tailFromBurn(this.theme.burn)), build.engine);
+      this.poseThrust(
+        sampleBurnAnim(game.ship.step, game.level.dt, game.nodes, this.theme.burn.windup, tailFromBurn(this.theme.burn)),
+        build.engine,
+        now,
+      );
     }
 
     this.poseChevrons(game, config, width, height, now);
@@ -295,30 +323,41 @@ class ShipVisual implements Visual {
     (this.hitFlash.material as THREE.MeshBasicMaterial).opacity = flashing ? (this.hitUntil - now) / 80 : 0;
   }
 
-  private poseThrust(anim: BurnSample, look: EngineLook): void {
+  private poseThrust(anim: BurnSample, look: EngineLook, nowMs: number): void {
     const burn = this.theme.burn;
     const spec = ENGINE_PLUMES[look];
+    const plumeSpec = this.theme.plume;
     const windup = anim.windup;
-    const thrust = anim.thrust;
     const flicker = windupFlicker(anim.time, windup, burn.flickerHz);
-    this.glow.visible = windup > 0;
-    if (this.glow.visible) {
-      const span = 6 + 10 * windup * flicker;
-      this.glow.scale.set(span, span, 1);
-      this.glowAlpha.value = 0.28 + 0.55 * windup * flicker;
+    const cue = thrustCue(anim);
+    const drawn = cue
+      ? plumeFrame(plumeSpec, cue.phase, cue.offset, cue.amount, anim.thrustMag, cue.tail, flicker)
+      : plumeFrame(plumeSpec, windup > 0 ? "windup" : "idle", anim.time, windup, 0, 0, flicker);
+    if (look === "ion" && cue) {
+      drawn.length = spec.length;
+      drawn.width = spec.halfWidth;
+    }
+    this.glow.visible = drawn.glow;
+    if (drawn.glow) {
+      this.glow.position.y = -spec.root;
+      this.glow.scale.set(Math.max(0.2, drawn.glowRx), plumeSpec.glowRy, 1);
+      this.glowAlpha.value = 0.4 + 0.6 * Math.min(1, Math.max(0, flicker));
+    }
+    const flashing = drawn.flash >= 0 && spec.continuous;
+    this.flash.visible = flashing;
+    if (flashing) {
+      this.flash.position.y = -spec.root;
+      this.flashRadius.value = plumeSpec.flashRadius0 + (plumeSpec.flashRadius1 - plumeSpec.flashRadius0) * drawn.flash;
+      this.flashAlpha.value = 1 - drawn.flash;
     }
     if (spec.continuous) {
       this.pulse.visible = false;
       const plume = this.plumes.get(look);
       if (!plume) return;
-      const show = thrust > 0 || windup > 0;
+      const show = drawn.length > 0 && drawn.fade > 0.001 && drawn.grow > 0.001;
       plume.mesh.visible = show;
       if (!show) return;
-      const wobble = 0.94 + 0.06 * Math.sin(anim.time * burn.flickerHz * Math.PI * 2 * spec.timeScale);
-      const stretch = thrust > 0 ? anim.thrustStretch : 1;
-      const extent = thrust > 0 ? thrust * stretch * wobble : (0.2 + 0.32 * windup) * (0.75 + 0.25 * flicker);
-      const alpha = thrust > 0 ? 0.55 + 0.45 * thrust : windup * flicker * 0.7;
-      posePlume(plume.uniforms, anim.time * spec.timeScale, extent, alpha);
+      posePlume(plume.uniforms, nowMs / 1000, drawn);
       return;
     }
     const burning = anim.cues.some((cue) => cue.phase === "burn" || cue.phase === "tail");
@@ -490,34 +529,73 @@ function spriteMesh(geometry: THREE.PlaneGeometry, order: number): THREE.Mesh {
 }
 
 interface PlumeUniforms {
-  uCore: THREE.IUniform<THREE.Vector3>;
-  uEdge: THREE.IUniform<THREE.Vector3>;
-  uAlpha: THREE.IUniform<number>;
   uTime: THREE.IUniform<number>;
-  uExtent: THREE.IUniform<number>;
-  uHalfWidth: THREE.IUniform<number>;
   uLength: THREE.IUniform<number>;
-  uTurbulence: THREE.IUniform<number>;
+  uHalf: THREE.IUniform<number>;
+  uGrow: THREE.IUniform<number>;
+  uCutoff: THREE.IUniform<number>;
+  uFade: THREE.IUniform<number>;
+  uSpan: THREE.IUniform<number>;
 }
 
-function anchorPlume(plume: { length: number; halfWidth: number; turbulence: number; core: string; edge: string; root: number }): {
-  mesh: THREE.Mesh;
-  uniforms: PlumeUniforms;
-} {
-  const uniforms: PlumeUniforms = {
-    uCore: { value: srgbVec(plume.core) },
-    uEdge: { value: srgbVec(plume.edge) },
-    uAlpha: { value: 0 },
+function anchorFlame(plume: { root: number }, theme: Theme): { mesh: THREE.Mesh; uniforms: PlumeUniforms } {
+  const spec = theme.plume;
+  const span = spec.lengthMax + 6;
+  const half = 14;
+  const uniforms = {
     uTime: { value: 0 },
-    uExtent: { value: 1 },
-    uHalfWidth: { value: plume.halfWidth },
-    uLength: { value: plume.length },
-    uTurbulence: { value: plume.turbulence },
+    uLength: { value: spec.lengthMax },
+    uHalf: { value: plumeWidthOf(spec.lengthMax, spec.widthBase, spec.widthPerLength) },
+    uGrow: { value: 1 },
+    uCutoff: { value: 0 },
+    uFade: { value: 0 },
+    uSoft: { value: spec.tailSoft },
+    uSpan: { value: span },
+    uShoulder: { value: spec.shoulder },
+    uBell: { value: spec.bell },
+    uRag: { value: spec.rag },
+    uRagPeriod: { value: spec.ragPeriod },
+    uCyc0: { value: spec.ragCycles[0] ?? 5 },
+    uCyc1: { value: spec.ragCycles[1] ?? 8 },
+    uCyc2: { value: spec.ragCycles[2] ?? 11 },
+    uCoreLen: { value: spec.coreLength },
+    uCoreWid: { value: spec.coreWidth },
+    uC0: { value: srgbVec(palette.plumeChem0) },
+    uC1: { value: srgbVec(palette.plumeChem1) },
+    uC2: { value: srgbVec(palette.plumeChem2) },
+    uC3: { value: srgbVec(palette.plumeChem3) },
+    uK0: { value: srgbVec(palette.plumeCore0) },
+    uK1: { value: srgbVec(palette.plumeCore1) },
+    uK2: { value: srgbVec(palette.plumeCore2) },
   };
-  const material = shader(plumeFrag, uniforms as unknown as Record<string, THREE.IUniform>);
-  material.blending = THREE.AdditiveBlending;
+  const material = shader(flameFrag, uniforms);
   material.side = THREE.DoubleSide;
-  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(plume.halfWidth * 2, plume.length), material);
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(half * 2, span), material);
+  mesh.position.set(0, -plume.root - span / 2, 0);
+  mesh.frustumCulled = false;
+  mesh.renderOrder = 4;
+  mesh.name = "plume";
+  return { mesh, uniforms };
+}
+
+function anchorBeam(plume: { length: number; halfWidth: number; root: number }): { mesh: THREE.Mesh; uniforms: PlumeUniforms } {
+  const uniforms = {
+    uTime: { value: 0 },
+    uLength: { value: plume.length },
+    uHalf: { value: plume.halfWidth },
+    uGrow: { value: 1 },
+    uCutoff: { value: 0 },
+    uFade: { value: 0 },
+    uSoft: { value: 0.15 },
+    uSpan: { value: plume.length },
+    uC0: { value: srgbVec("#E6F4FF") },
+    uC1: { value: srgbVec("#8FC2FF") },
+    uC2: { value: srgbVec("#A06BFF") },
+    uK0: { value: srgbVec("#F2F9FF") },
+  };
+  const material = shader(beamFrag, uniforms);
+  material.side = THREE.DoubleSide;
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(plume.halfWidth * 2.4, plume.length), material);
   mesh.position.set(0, -plume.root - plume.length / 2, 0);
   mesh.frustumCulled = false;
   mesh.renderOrder = 4;
@@ -525,10 +603,27 @@ function anchorPlume(plume: { length: number; halfWidth: number; turbulence: num
   return { mesh, uniforms };
 }
 
-function posePlume(uniforms: PlumeUniforms, time: number, extent: number, alpha: number): void {
+function plumeWidthOf(length: number, base: number, per: number): number {
+  return base + length * per;
+}
+
+function posePlume(uniforms: PlumeUniforms, time: number, drawn: PlumeFrame): void {
   uniforms.uTime.value = time;
-  uniforms.uExtent.value = Math.min(1, Math.max(0, extent));
-  uniforms.uAlpha.value = alpha;
+  uniforms.uLength.value = Math.max(0.001, drawn.length);
+  uniforms.uHalf.value = drawn.width;
+  uniforms.uGrow.value = drawn.grow;
+  uniforms.uCutoff.value = drawn.cutoff;
+  uniforms.uFade.value = drawn.fade;
+}
+
+function thrustCue(anim: BurnSample): BurnCue | undefined {
+  let best: BurnCue | undefined;
+  for (let i = 0; i < anim.cues.length; i++) {
+    const cue = anim.cues[i];
+    if (cue.phase === "windup") continue;
+    if (!best || cue.amount > best.amount) best = cue;
+  }
+  return best;
 }
 
 const glowFrag = /* glsl */ `
@@ -537,63 +632,134 @@ uniform vec3 uColor;
 uniform float uAlpha;
 void main() {
   float d = length(vLocal);
-  float alpha = smoothstep(1.0, 0.0, d);
-  alpha *= alpha;
+  float aa = fwidth(d);
+  float alpha = (1.0 - smoothstep(1.0 - aa, 1.0 + aa, d)) * uAlpha;
   if (alpha <= 0.01) discard;
-  gl_FragColor = vec4(uColor, alpha * uAlpha);
+  gl_FragColor = vec4(uColor, alpha);
 }
 `;
 
-const plumeFrag = /* glsl */ `
+const flashFrag = /* glsl */ `
 varying vec2 vLocal;
-uniform vec3 uCore;
-uniform vec3 uEdge;
+uniform vec3 uColor;
+uniform float uRadius;
 uniform float uAlpha;
-uniform float uTime;
-uniform float uExtent;
-uniform float uHalfWidth;
-uniform float uLength;
-uniform float uTurbulence;
+uniform float uWidth;
+void main() {
+  float dist = abs(length(vLocal) - uRadius);
+  float aa = fwidth(dist);
+  float band = 1.0 - smoothstep(uWidth * 0.5, uWidth * 0.5 + aa, dist);
+  float alpha = band * uAlpha;
+  if (alpha <= 0.01) discard;
+  gl_FragColor = vec4(uColor, alpha);
+}
+`;
 
-float hash(vec2 p) {
-  p = fract(p * vec2(123.34, 345.45));
-  p += dot(p, p + 34.345);
-  return fract(p.x * p.y);
+const flameFrag = /* glsl */ `
+varying vec2 vLocal;
+uniform float uTime;
+uniform float uLength;
+uniform float uHalf;
+uniform float uGrow;
+uniform float uCutoff;
+uniform float uFade;
+uniform float uSoft;
+uniform float uSpan;
+uniform float uShoulder;
+uniform float uBell;
+uniform float uRag;
+uniform float uRagPeriod;
+uniform float uCyc0;
+uniform float uCyc1;
+uniform float uCyc2;
+uniform float uCoreLen;
+uniform float uCoreWid;
+uniform vec3 uC0;
+uniform vec3 uC1;
+uniform vec3 uC2;
+uniform vec3 uC3;
+uniform vec3 uK0;
+uniform vec3 uK1;
+uniform vec3 uK2;
+
+float rag(float t) {
+  float speed = 6.2831853 / max(uRagPeriod, 0.001);
+  float sum = sin(t * uCyc0 * 6.2831853 + 0.4 + uTime * speed);
+  sum += sin(t * uCyc1 * 6.2831853 + 2.2 + uTime * speed);
+  sum += sin(t * uCyc2 * 6.2831853 + 4.1 + uTime * speed);
+  return sum / 3.0;
 }
 
-float noise(vec2 p) {
-  vec2 i = floor(p);
-  vec2 f = fract(p);
-  vec2 u = f * f * (3.0 - 2.0 * f);
-  float a = hash(i);
-  float b = hash(i + vec2(1.0, 0.0));
-  float c = hash(i + vec2(0.0, 1.0));
-  float d = hash(i + vec2(1.0, 1.0));
-  return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+float halfWidth(float t) {
+  float rise = 0.55 + 0.45 * min(1.0, t / max(uShoulder, 0.001));
+  float tail = max(0.0, (t - uShoulder) / max(1.0 - uShoulder, 0.001));
+  float bell = pow(max(0.0, 1.0 - tail), uBell);
+  float flick = 1.0 + uRag * rag(t) * min(1.0, 6.0 * t);
+  return max(0.0, uHalf * rise * bell * flick);
+}
+
+vec4 flameAt(float t) {
+  if (t < 0.2) return vec4(mix(uC0, uC1, t / 0.2), mix(1.0, 0.92, t / 0.2));
+  if (t < 0.5) return vec4(mix(uC1, uC2, (t - 0.2) / 0.3), mix(0.92, 0.6, (t - 0.2) / 0.3));
+  if (t < 0.8) return vec4(mix(uC2, uC3, (t - 0.5) / 0.3), mix(0.6, 0.2, (t - 0.5) / 0.3));
+  return vec4(uC3, mix(0.2, 0.0, (t - 0.8) / 0.2));
+}
+
+vec4 coreAt(float t) {
+  if (t < 0.6) return vec4(mix(uK0, uK1, t / 0.6), mix(1.0, 0.85, t / 0.6));
+  return vec4(mix(uK1, uK2, (t - 0.6) / 0.4), mix(0.85, 0.0, (t - 0.6) / 0.4));
 }
 
 void main() {
-  float along = (uLength * 0.5 - vLocal.y) / uLength;
-  if (along < 0.0 || along > uExtent) discard;
-  float t = along / max(uExtent, 0.001);
-  float n = noise(vec2(vLocal.x * 0.35, along * 7.5 - uTime * 9.0));
-  float n2 = noise(vec2(vLocal.x * 0.8 + 2.7, along * 13.0 + uTime * 14.0));
-  float jag = (n - 0.5) * uTurbulence;
-  float width = mix(0.55, 1.0, smoothstep(0.0, 0.25, t));
-  width *= 1.0 - smoothstep(0.55, 1.0, t);
-  width = max(width, 0.35 * (1.0 - t));
-  width += jag * t;
-  float radial = abs(vLocal.x) / max(uHalfWidth * width, 0.001);
-  float body = 1.0 - smoothstep(0.55, 1.05, radial);
-  if (body <= 0.0) discard;
-  float core = pow(1.0 - smoothstep(0.0, 0.45, radial), 1.35);
-  float fade = pow(1.0 - t, 0.75);
-  float mottled = mix(1.0 - 0.35 * uTurbulence, 1.0, n) * mix(0.85, 1.0, n2);
-  vec3 color = mix(uEdge, uCore, core);
-  color = mix(color, uEdge, smoothstep(0.05, 0.9, t) * (1.0 - core * 0.75));
-  float alpha = body * fade * mottled * uAlpha + core * fade * uAlpha * 0.35;
-  if (alpha < 0.02) discard;
-  gl_FragColor = vec4(color, alpha);
+  float along = (uSpan * 0.5 - vLocal.y) / max(uLength, 0.001);
+  if (along < 0.0 || along > uGrow || along > 1.0) discard;
+  float gate = uCutoff <= 0.0 ? 1.0 : smoothstep(uCutoff, min(1.0, uCutoff + uSoft), along);
+  float w = halfWidth(along);
+  float aa = fwidth(vLocal.x);
+  float body = 1.0 - smoothstep(w - aa, w + aa, abs(vLocal.x));
+  float coreT = along / max(uCoreLen, 0.001);
+  float coreW = coreT <= 1.0 ? halfWidth(coreT) * uCoreWid : 0.0;
+  float core = 1.0 - smoothstep(coreW - aa, coreW + aa, abs(vLocal.x));
+  vec4 flame = flameAt(along);
+  flame.a *= body * gate * uFade;
+  vec4 coreCol = coreAt(clamp(coreT, 0.0, 1.0));
+  coreCol.a *= core * gate * uFade;
+  float a = coreCol.a + flame.a * (1.0 - coreCol.a);
+  if (a <= 0.01) discard;
+  vec3 rgb = (coreCol.rgb * coreCol.a + flame.rgb * flame.a * (1.0 - coreCol.a)) / a;
+  gl_FragColor = vec4(rgb, a);
+}
+`;
+
+const beamFrag = /* glsl */ `
+varying vec2 vLocal;
+uniform float uLength;
+uniform float uHalf;
+uniform float uGrow;
+uniform float uCutoff;
+uniform float uFade;
+uniform float uSoft;
+uniform float uSpan;
+uniform vec3 uC0;
+uniform vec3 uC1;
+uniform vec3 uC2;
+uniform vec3 uK0;
+void main() {
+  float along = (uSpan * 0.5 - vLocal.y) / max(uLength, 0.001);
+  if (along < 0.0 || along > uGrow || along > 1.0) discard;
+  float gate = uCutoff <= 0.0 ? 1.0 : smoothstep(uCutoff, min(1.0, uCutoff + uSoft), along);
+  float w = uHalf * (1.0 - smoothstep(0.9, 1.0, along));
+  float aa = fwidth(vLocal.x);
+  float body = 1.0 - smoothstep(w - aa, w + aa, abs(vLocal.x));
+  float core = along < 0.62 ? 1.0 - smoothstep(uHalf * 0.38 - aa, uHalf * 0.38 + aa, abs(vLocal.x)) : 0.0;
+  vec3 col = along < 0.3 ? mix(uC0, uC1, along / 0.3) : mix(uC1, uC2, clamp((along - 0.3) / 0.7, 0.0, 1.0));
+  float alpha = along < 0.3 ? mix(1.0, 0.75, along / 0.3) : mix(0.75, 0.0, clamp((along - 0.3) / 0.7, 0.0, 1.0));
+  alpha *= body * gate * uFade;
+  float coreA = core * 0.7 * gate * uFade;
+  float a = coreA + alpha * (1.0 - coreA);
+  if (a <= 0.01) discard;
+  vec3 rgb = (uK0 * coreA + col * alpha * (1.0 - coreA)) / a;
+  gl_FragColor = vec4(rgb, a);
 }
 `;
 
