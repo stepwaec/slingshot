@@ -132,7 +132,7 @@
     <linearGradient id="psLit" gradientUnits="userSpaceOnUse" x1="24" y1="-24" x2="-24" y2="24"><stop offset="0" stop-color="#FFFFFF"/><stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.45"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0.06"/></linearGradient>
     <mask id="psLitMask" mask-type="alpha" maskUnits="userSpaceOnUse" x="-40" y="-40" width="80" height="80"><rect x="-40" y="-40" width="80" height="80" fill="url(#psLit)"/></mask>
     <!-- planet X (v1.5): assets/planet-x.svg defs (halo, disc clip, surface / wisp / wisp-shadow strip filters, polar caps, shade, haze, rim + lit-side mask), verbatim -->
-    <clipPath id="pxClip"><circle r="30"/></clipPath>
+    <radialGradient id="pxZone" cx="0.5" cy="0.5" r="0.5"><stop offset="0.552" stop-color="#3DE0C2" stop-opacity="0"/><stop offset="0.897" stop-color="#3DE0C2" stop-opacity="1"/><stop offset="1" stop-color="#3DE0C2" stop-opacity="0"/></radialGradient><clipPath id="pxClip"><circle r="30"/></clipPath>
     <radialGradient id="pxHalo" cx="0.5" cy="0.5" r="0.5">
       <stop offset="0" stop-color="#3DE0C2" stop-opacity="0.35"/>
       <stop offset="0.556" stop-color="#3DE0C2" stop-opacity="0.35"/>
@@ -9302,11 +9302,7 @@
     <circle r="30" fill="url(#pxShade)"/>
     <circle r="30" fill="url(#pxHaze)" mask="url(#pxLitMask)"/>
     <circle r="32.3" fill="url(#pxRim)" mask="url(#pxLitMask)"/>
-    <circle r="78" fill="none" stroke="#3DE0C2" stroke-opacity="0.55" stroke-width="1.5" stroke-dasharray="6 6">
-      <animate attributeName="stroke-dashoffset" from="0" to="-12" dur="1s" repeatCount="indefinite"/>
-      <animate attributeName="stroke-opacity" values="0.55;0.70;0.55;0.35;0.55" keyTimes="0;0.25;0.5;0.75;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1" dur="2.4s" repeatCount="indefinite"/>
-      <animate attributeName="r" values="78;80;78;76;78" keyTimes="0;0.25;0.5;0.75;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1" dur="2.4s" repeatCount="indefinite"/>
-    </circle>
+    <circle r="87" fill="url(#pxZone)" fill-opacity="0.14"><animate attributeName="fill-opacity" values="0.14;0.24;0.14" dur="4s" repeatCount="indefinite" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1"/></circle><circle r="78" fill="none" stroke="#3DE0C2" stroke-opacity="0.55" stroke-width="1.5"><animate attributeName="stroke-opacity" values="0.55;0.78;0.55" dur="4s" repeatCount="indefinite" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1"/></circle>
   </g>
 
   <!-- ============ medium asteroid belt ringing the sun, R 262, w 30 (belt-medium.svg construction); rocks within 7 px of the predicted path are left out, so the path visibly threads two gaps ============ -->
