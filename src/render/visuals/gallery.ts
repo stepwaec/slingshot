@@ -26,6 +26,8 @@ import {
   stripScroll,
   stripWindow,
 } from "../art-motion";
+import { shaderFamily } from "../shaders/families";
+import { shaderRendering } from "../shaders/impostor";
 import { zoomBucket } from "../ship-art";
 import {
   SOL_PROMINENCES,
@@ -126,6 +128,10 @@ class GalleryVisual implements Visual {
     this.object.name = "design-art";
     for (const body of level.bodies) {
       if (body.supernova || body.quasar) continue;
+      if (shaderRendering() && shaderFamily(body)) {
+        if (body.look === "red-giant") this.addDragEdge(body);
+        continue;
+      }
       if (isSolLook(body.look)) {
         if (body.look === "sol-sun") this.addSolSun(body);
         else this.addSol(body);
@@ -394,6 +400,13 @@ class GalleryVisual implements Visual {
     this.add(grain, `${body.id}-grain`, body, null, "grain", 1);
     this.add(star, `${body.id}-star`, body, null, "body", 2);
     this.add(flare, `${body.id}-flare`, body, null, "flare", 3);
+    this.addDragEdge(body);
+  }
+
+  /** Dashed drag boundary. Stays its own overlay when the star is a shader. */
+  private addDragEdge(body: Body): void {
+    const base = artForBody(body, this.theme);
+    if (!base) return;
     const edge = new THREE.Mesh(
       new THREE.PlaneGeometry(2, 2),
       shader(edgeFrag, {

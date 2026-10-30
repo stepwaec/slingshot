@@ -80,6 +80,13 @@ import { palette } from "./palette";
  * `visuals/index.ts`. The sim does not import this module.
  */
 export const theme = {
+  /**
+   * Rendering v2. `false` keeps today's SVG sprites (`?sprites=1` does the
+   * same for one load). design/shader-specs.md §1.
+   */
+  rendering: {
+    shaders: true,
+  },
   assets: {
     ship: shipUrl,
     shipThrust: shipThrustUrl,
