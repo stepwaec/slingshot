@@ -14,6 +14,11 @@ import moonUrl from "../../design/assets/bodies/moon.svg?url";
 import moonIcyUrl from "../../design/assets/bodies/moon-icy.svg?url";
 import moonVolcanicUrl from "../../design/assets/bodies/moon-volcanic.svg?url";
 import dwarfUrl from "../../design/assets/bodies/dwarf.svg?url";
+import rockyUrl from "../../design/assets/bodies/rocky.svg?url";
+import iceWorldUrl from "../../design/assets/bodies/ice.svg?url";
+import lavaUrl from "../../design/assets/bodies/lava.svg?url";
+import toxicUrl from "../../design/assets/bodies/toxic.svg?url";
+import crackedUrl from "../../design/assets/bodies/cracked.svg?url";
 import moonChainUrl from "../../design/assets/bodies/moon-chain.svg?url";
 import hullBaseUrl from "../../design/assets/ship/hull-base.svg?url";
 import platingUrl from "../../design/assets/ship/module-plating.svg?url";
@@ -101,6 +106,11 @@ export const theme = {
     moonIcy: moonIcyUrl,
     moonVolcanic: moonVolcanicUrl,
     dwarf: dwarfUrl,
+    rocky: rockyUrl,
+    iceWorld: iceWorldUrl,
+    lava: lavaUrl,
+    toxic: toxicUrl,
+    cracked: crackedUrl,
     moonChain: moonChainUrl,
     neutronStar: neutronStarUrl,
     pulsar: pulsarUrl,
@@ -191,6 +201,31 @@ export const theme = {
     haloScale: 1.8,
     limbAlphaHome: 0.16,
     limbAlphaTarget: 0.18,
+  },
+  /**
+   * Rocky-planet impostors. design/shader-specs.md §3.
+   * The art light is an in-plane unit vector times `lightXY` on each 45° axis
+   * (length 0.83) plus `lightZ` toward the viewer, so the terminator sits
+   * where the SVG shade puts it. The game aims that in-plane part at the
+   * brightest star. Per-body periods and strengths are `shaders/planet-params.ts`.
+   */
+  planetShader: {
+    lightXY: 0.587,
+    lightZ: 0.556,
+    /** Rim fragment covers to 1.08 r (the SVG rim ends at 1.077 r). */
+    rimExtent: 1.08,
+    /** Titan's detached haze, radial to 1.12 r. */
+    titanExtent: 1.12,
+    /** Lit-side mask reach, in body radii. */
+    maskReach: 0.706,
+    /** 1 at the lit edge, 0.45 at the centre, 0.06 at the dark edge. */
+    maskMid: 0.45,
+    maskNight: 0.06,
+    /**
+     * The rim's night stop is 0. The 0.06 floor is the night-limb arc
+     * removed in #76 and #78. The disc haze keeps 0.06.
+     */
+    maskRimNight: 0,
   },
   /**
    * Planet X target zone. design/style.md §17 and design/assets/target-zone.svg.

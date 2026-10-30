@@ -231,6 +231,22 @@ export const palette = {
   astroClean: "#FFD27A",
   astroChamber: "#1C2348",
   astroCore: "#FFF4F7",
+  /**
+   * Rocky planets and moons. design/shader-specs.md §3.
+   * Every body shares these. Per-body highlight, haze and rim hexes stay on
+   * that table, in `shaders/planet-params.ts`.
+   */
+  planetWarm: "#FF9455",
+  planetNight0: "#08122E",
+  planetNight1: "#050B1E",
+  /** Cloud shadow. The shader writes the same channels as vec3(0.024, 0.071, 0.18). */
+  planetShadow: "#06122E",
+  /** Ocean glint. The shader writes vec3(1, 0.984, 0.933). */
+  planetGlint: "#FFFBEE",
+  /** Titan's detached haze. sol/titan.svg #titBlue, radial to 1.12 r. */
+  titanDetached0: "#8FB8FF",
+  titanDetached1: "#9CC4FF",
+  titanDetached2: "#7FA8F2",
 } as const;
 
 /** Linear blend in sRGB, matching the arrow.power ramp in design/canvas-notes.md §9. */

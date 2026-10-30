@@ -21,18 +21,29 @@ export const LOD_RADIUS_PX = 6;
 /** Ring noise bakes down when the quad covers more than this fraction of the view. */
 export const LOD_SCREEN_FRACTION = 0.25;
 
-export function shaderRendering(): boolean {
-  if (typeof location !== "undefined" && new URLSearchParams(location.search).has("sprites")) return false;
+export function shaderRendering(search?: string): boolean {
+  const query = search ?? (typeof location !== "undefined" ? location.search : "");
+  if (new URLSearchParams(query).has("sprites")) return false;
   return theme.rendering.shaders;
 }
 
 /** Frozen clock for side-by-side shots (`?t=13.9`). Otherwise `frame.now` in seconds. */
-export function cosmeticSeconds(nowMs: number): number {
-  if (typeof location !== "undefined") {
-    const raw = new URLSearchParams(location.search).get("t");
-    if (raw !== null && raw !== "" && Number.isFinite(Number(raw))) return Number(raw);
-  }
+export function cosmeticSeconds(nowMs: number, search?: string): number {
+  const query = search ?? (typeof location !== "undefined" ? location.search : "");
+  const raw = new URLSearchParams(query).get("t");
+  if (raw !== null && raw !== "" && Number.isFinite(Number(raw))) return Number(raw);
   return nowMs / 1000;
+}
+
+/** `?lit=art` holds the preview's light so a frozen shot matches the right-hand column. */
+export function artLightLocked(search?: string): boolean {
+  const query = search ?? (typeof location !== "undefined" ? location.search : "");
+  return new URLSearchParams(query).get("lit") === "art";
+}
+
+/** Planet quad. `extent` is the fragment's outer radius. The pad keeps the rim off the edge. */
+export function planetSide(radius: number, extent: number): number {
+  return 2 * extent * Math.max(radius, 0) * BREATHE_PAD;
 }
 
 export function simSeconds(step: number, dt: number): number {

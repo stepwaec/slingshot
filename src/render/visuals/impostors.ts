@@ -4,16 +4,19 @@ import { bodyPose, type Body } from "../../sim/physics";
 import { projectToScreen, syncTopDown } from "../camera";
 import { createBodyShader, shaderFamily } from "../shaders/families";
 import {
+  artLightLocked,
   impostorSide,
   lightDirection,
   LOD_RADIUS_PX,
+  planetSide,
   ringOctaves,
   screenRadius,
   shaderRendering,
   cosmeticSeconds,
   simSeconds,
 } from "../shaders/impostor";
-import type { Theme } from "../theme";
+import { planetArtLight } from "../shaders/planet-params";
+import { theme, type Theme } from "../theme";
 import { disposeObject, type Visual, type VisualFactory, type VisualFrame } from "../visual";
 
 /**
@@ -48,11 +51,16 @@ class ImpostorVisual implements Visual {
       const designR = numberUniform(material, "uDesignR", body.radius);
       const hazeR = numberUniform(material, "uHazeR", 1);
       const smooth = numberUniform(material, "uSmooth", 0);
-      const side = material ? impostorSide(body.radius, hazeR, smooth) : Math.max(body.radius, 0) * 2;
+      const extent = numberUniform(material, "uExtent", 0);
+      const side = !material
+        ? Math.max(body.radius, 0) * 2
+        : extent > 0
+          ? planetSide(body.radius, extent)
+          : impostorSide(body.radius, hazeR, smooth);
       const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), material ?? hiddenMaterial());
       mesh.name = `${body.id}-impostor`;
       mesh.frustumCulled = false;
-      mesh.renderOrder = -1;
+      mesh.renderOrder = shaderFamily(body) === "planet" ? 4 : -1;
       mesh.visible = material !== null;
       mesh.scale.set(side, side, 1);
       this.object.add(mesh);
@@ -96,10 +104,20 @@ class ImpostorVisual implements Visual {
       if (uniforms.uSimTime) uniforms.uSimTime.value = sim;
       if (uniforms.uZoom) uniforms.uZoom.value = zoom;
       if (uniforms.uDPR) uniforms.uDPR.value = dpr;
-      const light = uniforms.uLightDir?.value as THREE.Vector2 | undefined;
-      if (light) {
-        const dir = lightDirection(pose.x, pose.y, time, bodies, game.level.g);
-        light.copy(dir);
+      const light2 = uniforms.uLightDir?.value;
+      const light3 = uniforms.uLight?.value;
+      if (light2 instanceof THREE.Vector2 || light3 instanceof THREE.Vector3) {
+        const art = light3 instanceof THREE.Vector3 && artLightLocked() ? planetArtLight(slot.body) : null;
+        if (art && light3 instanceof THREE.Vector3) {
+          light3.set(art[0], art[1], art[2]);
+        } else {
+          const dir = lightDirection(pose.x, pose.y, time, bodies, game.level.g);
+          if (light2 instanceof THREE.Vector2) light2.copy(dir);
+          if (light3 instanceof THREE.Vector3) {
+            const span = Math.hypot(theme.planetShader.lightXY, theme.planetShader.lightXY);
+            light3.set(dir.x * span, dir.y * span, theme.planetShader.lightZ);
+          }
+        }
       }
       const near = radiusPx < LOD_RADIUS_PX;
       const octaves = near ? 3 : 5;
