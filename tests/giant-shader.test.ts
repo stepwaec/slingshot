@@ -1,13 +1,14 @@
 import { describe, expect, it } from "vitest";
 import * as THREE from "three";
-import { frost } from "../src/level/catalog";
 import { palette } from "../src/render/palette";
 import { shaderFamily } from "../src/render/shaders/families";
 import { GIANT_FRAGMENT } from "../src/render/shaders/giant-shader";
 import { giantTexture } from "../src/render/shaders/giant-maps";
 import { GIANTS, giantExtent, giantKey } from "../src/render/shaders/giant-params";
 import { createBodyShader } from "../src/render/shaders/families";
+import { observatory } from "../src/level/catalog";
 import type { Body } from "../src/sim/physics";
+import { stage } from "./support/stage";
 
 function body(partial: Pick<Body, "kind"> & Partial<Body>): Body {
   return { id: "b", name: "b", x: 0, y: 0, mass: 1, radius: 10, ...partial };
@@ -24,7 +25,11 @@ describe("gas giant shader", () => {
     expect(giantKey(body({ kind: "planet", look: "ice-ring" }))).toBe("ice");
     expect(giantKey(body({ kind: "planet", look: "earth" }))).toBeNull();
     expect(shaderFamily(body({ kind: "star", look: "sun" }))).toBe("star");
-    expect(frost.bodies.some((item) => giantKey(item) !== null)).toBe(false);
+    expect(stage.bodies.some((item) => giantKey(item) !== null)).toBe(false);
+    const jupiter = observatory.bodies.find((item) => item.look === "jupiter");
+    const earth = observatory.bodies.find((item) => item.look === "earth");
+    expect(giantKey(jupiter!)).toBe("jupiter");
+    expect(giantKey(earth!)).toBeNull();
   });
 
   it("matches the spec: differential jets, Saturn's roll and hex, Uranus's cap, Jupiter's limb", () => {

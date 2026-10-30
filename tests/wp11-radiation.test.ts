@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { createGame, setPlan, toggleRadiation } from "../src/game/state";
+import { createGame, toggleRadiation } from "../src/game/state";
 import { shipLoadout } from "../src/game/upgrades";
-import { passage, shade, simConfigFromLevel, wander, type Level } from "../src/level/catalog";
-import { shadePlan, slingshotPlan, wanderPlan } from "../src/level/solutions";
+import { observatory, simConfigFromLevel } from "../src/level/catalog";
+import { stage as passage } from "./support/stage";
+import { slingshotPlan } from "./support/plans";
 import {
   DOSE_COSMIC,
   DOSE_DISK,
@@ -12,7 +13,6 @@ import {
   DOSE_STAR_K,
   DOSE_STAR_R0,
   acceleration,
-  advancePlan,
   bodyPose,
   doseAt,
   flyPlan,
@@ -22,32 +22,21 @@ import {
   starLuminosity,
   step,
   type Body,
-  type BurnNode,
+  type SimConfig,
 } from "../src/sim/physics";
 
-function expectFlightMatches(level: Level, nodes: readonly BurnNode[]): void {
-  const config = simConfigFromLevel(level);
-  const state = makeState(level.ship.x, level.ship.y, level.ship.vx, level.ship.vy, config);
-  const predicted = predictPlan(state, config, nodes);
-  const flown = flyPlan(state, config, nodes, 1);
-  expect(flown.status).toBe("won");
-  expect(predicted.status).toBe("won");
-  expect(predicted.final.dose).toBeGreaterThan(0);
-  expect(predicted.final.dose).toBeLessThan(level.physics?.doseLimit ?? 0);
-  expect(flown.path.length).toBe(predicted.path.length);
-  for (let i = 0; i < flown.path.length; i++) {
-    expect(flown.path[i].x).toBe(predicted.path[i].x);
-    expect(flown.path[i].y).toBe(predicted.path[i].y);
-    expect(flown.path[i].step).toBe(predicted.path[i].step);
-  }
-  const replay = makeState(level.ship.x, level.ship.y, level.ship.vx, level.ship.vy, config);
-  const cursor = { index: 0 };
-  let guard = 0;
-  while (replay.status === "flying" && guard++ < config.maxSteps + 2) advancePlan(replay, config, nodes, cursor);
-  expect(replay.dose).toBe(predicted.final.dose);
-  expect(replay.tank).toBe(predicted.final.tank);
-  expect(replay.x).toBe(predicted.final.x);
-  expect(replay.status).toBe("won");
+function isolated(body: Body, extra: Partial<SimConfig> = {}): SimConfig {
+  return {
+    ...simConfigFromLevel(observatory),
+    bodies: [body],
+    belts: undefined,
+    beltRocks: undefined,
+    nebulae: undefined,
+    wormholes: undefined,
+    petrova: undefined,
+    knotFuel: undefined,
+    ...extra,
+  };
 }
 
 describe("WP11 radiation", () => {
@@ -136,31 +125,25 @@ describe("WP11 radiation", () => {
   });
 
   it("moves a rogue in a straight line, pulls from there, and crashes on that disc", () => {
-    const rogue = wander.bodies.find((body) => body.id === "rogue");
-    if (!rogue?.drift) throw new Error("wander rogue");
-    const time = 20;
-    const pose = bodyPose(rogue, time, wander.bodies, wander.g);
+    const rogue = observatory.bodies.find((body) => body.kind === "rogue");
+    if (!rogue?.drift) throw new Error("observatory rogue");
+    const time = 80;
+    const pose = bodyPose(rogue, time, [rogue], observatory.g);
     expect(pose.x).toBe(rogue.x + rogue.drift.vx * time);
     expect(pose.y).toBe(rogue.y + rogue.drift.vy * time);
     expect(pose.vx).toBe(rogue.drift.vx);
     expect(solarRechargeRate(pose.x, pose.y, time, [rogue], 12, 1)).toBe(0);
 
-    const config = {
-      ...simConfigFromLevel(wander),
-      bodies: [rogue],
-      dosePerD1: 0,
-      doseLimit: 0,
-      maxSteps: 4000,
-    };
+    const config = isolated(rogue, { dosePerD1: 0, doseLimit: 0, maxSteps: 6_000 });
     const early = acceleration(pose.x + rogue.radius + 8, pose.y, config, 0);
     const later = acceleration(pose.x + rogue.radius + 8, pose.y, config, time);
     expect(Math.hypot(later.ax, later.ay)).toBeGreaterThan(Math.hypot(early.ax, early.ay) * 5);
 
     const waiting = makeState(pose.x, pose.y, 0, 0, config);
     let guard = 0;
-    while (waiting.status === "flying" && guard++ < 2000) step(waiting, config);
+    while (waiting.status === "flying" && guard++ < 6_000) step(waiting, config);
     expect(waiting.status).toBe("crashed");
-    expect(waiting.crashedBodyId).toBe("rogue");
+    expect(waiting.crashedBodyId).toBe(rogue.id);
     expect(waiting.t).toBeGreaterThan(1);
     expect(waiting.t).toBeLessThan(time);
   });
@@ -168,25 +151,38 @@ describe("WP11 radiation", () => {
   it("halves dose with shielding and makes the same burn push less", () => {
     expect(shipLoadout(["shield"]).shield).toBe(0.5);
     expect(shipLoadout(["shield"]).mass).toBeCloseTo(1.3);
-    const open = { ...simConfigFromLevel(shade), maxSteps: 400 };
-    const clad = { ...simConfigFromLevel(shade, ["shield"]), maxSteps: 400 };
+    const home = observatory.bodies.find((body) => body.kind === "home");
+    if (!home) throw new Error("observatory home");
+    const open = isolated(home, { maxSteps: 400 });
+    const shielded = simConfigFromLevel(observatory, ["shield"]);
+    const clad = isolated(home, {
+      maxSteps: 400,
+      shield: shielded.shield,
+      shipMass: shielded.shipMass,
+      fuelPerDv: shielded.fuelPerDv,
+      fuelStart: shielded.fuelStart,
+      fuelMax: shielded.fuelMax,
+    });
     expect(clad.shield).toBe(0.5);
     expect(clad.shipMass).toBeCloseTo(1.3);
-    expect(clad.fuelPerDv).toBeCloseTo(shade.fuelPerDv * 1.3);
-    const start = makeState(shade.ship.x, shade.ship.y, shade.ship.vx, shade.ship.vy, open);
+    expect(clad.fuelPerDv).toBeCloseTo(observatory.fuelPerDv * 1.3);
+    const start = makeState(home.x + 120, home.y, 0, 2, open);
     const coastOpen = predictPlan(start, open, []);
     const coastClad = predictPlan(start, clad, []);
     expect(coastClad.path[200].x).toBe(coastOpen.path[200].x);
+    expect(coastOpen.final.dose).toBeGreaterThan(0);
     expect(coastClad.final.dose).toBeCloseTo(coastOpen.final.dose * 0.5, 8);
-    const launch = [shadePlan[0]];
+    const launch = [{ step: 0, dvx: 1, dvy: 0 }];
     const burnedOpen = predictPlan(start, open, launch);
     const burnedClad = predictPlan(start, clad, launch);
     expect(burnedClad.path[80].x).not.toBe(burnedOpen.path[80].x);
   });
 
   it("fails the mission when the crew dose reaches the limit", () => {
-    const config = { ...simConfigFromLevel(shade), dosePerD1: 10, doseLimit: 0.01, maxSteps: 600 };
-    const state = makeState(shade.ship.x, shade.ship.y, shade.ship.vx, shade.ship.vy, config);
+    const home = observatory.bodies.find((body) => body.kind === "home");
+    if (!home) throw new Error("observatory home");
+    const config = isolated(home, { dosePerD1: 10, doseLimit: 0.01, maxSteps: 600 });
+    const state = makeState(home.x + 500, home.y + 500, 0, 0, config);
     const flown = flyPlan(state, config, [], 1);
     expect(flown.status).toBe("lost");
     expect(flown.lostReason).toBe("dose");
@@ -206,8 +202,7 @@ describe("WP11 radiation", () => {
     expect(predicted.final.doseRate).toBe(0);
     expect(predicted.status).toBe("won");
 
-    const game = createGame(shade);
-    setPlan(game, shadePlan);
+    const game = createGame();
     const before = game.prediction;
     toggleRadiation(game);
     expect(game.radiation).toBe(true);
@@ -215,8 +210,20 @@ describe("WP11 radiation", () => {
     expect(before.final.dose).toBeGreaterThan(0);
   });
 
-  it("matches prediction to flight on Shade and Wander", () => {
-    expectFlightMatches(shade, shadePlan);
-    expectFlightMatches(wander, wanderPlan);
+  it("matches prediction to flight near the Observatory rogue", () => {
+    const rogue = observatory.bodies.find((body) => body.kind === "rogue");
+    if (!rogue) throw new Error("observatory rogue");
+    const config = isolated(rogue, { maxSteps: 80 });
+    const state = makeState(rogue.x + 180, rogue.y + 40, 1, 0, config);
+    const predicted = predictPlan(state, config, []);
+    const flown = flyPlan(state, config, [], 1);
+    expect(flown.status).toBe(predicted.status);
+    expect(predicted.final.dose).toBeGreaterThan(0);
+    expect(flown.path.length).toBe(predicted.path.length);
+    for (let i = 0; i < flown.path.length; i++) {
+      expect(flown.path[i].x).toBe(predicted.path[i].x);
+      expect(flown.path[i].y).toBe(predicted.path[i].y);
+      expect(flown.path[i].step).toBe(predicted.path[i].step);
+    }
   });
 });

@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { frost, simConfigFromLevel, weave, type Level } from "../src/level/catalog";
-import { frostPlan, weavePlan } from "../src/level/solutions";
+import { observatory, simConfigFromLevel } from "../src/level/catalog";
 import {
   BELT_TIERS,
   beltDrift,
@@ -9,38 +8,13 @@ import {
   type Belt,
 } from "../src/sim/belts";
 import {
-  advancePlan,
   flyPlan,
   makeState,
   predictPlan,
   step,
   type Body,
-  type BurnNode,
   type SimConfig,
 } from "../src/sim/physics";
-
-function expectFlightMatches(level: Level, nodes: readonly BurnNode[]): void {
-  const config = simConfigFromLevel(level);
-  const state = makeState(level.ship.x, level.ship.y, level.ship.vx, level.ship.vy, config);
-  const predicted = predictPlan(state, config, nodes);
-  const flown = flyPlan(state, config, nodes, 1);
-  expect(flown.status).toBe("won");
-  expect(predicted.status).toBe("won");
-  expect(predicted.final.hull).toBeGreaterThan(0);
-  expect(flown.path.length).toBe(predicted.path.length);
-  for (let i = 0; i < flown.path.length; i++) {
-    expect(flown.path[i].x).toBe(predicted.path[i].x);
-    expect(flown.path[i].y).toBe(predicted.path[i].y);
-    expect(flown.path[i].step).toBe(predicted.path[i].step);
-  }
-  const replay = makeState(level.ship.x, level.ship.y, level.ship.vx, level.ship.vy, config);
-  const cursor = { index: 0 };
-  let guard = 0;
-  while (replay.status === "flying" && guard++ < config.maxSteps + 2) advancePlan(replay, config, nodes, cursor);
-  expect(replay.x).toBe(predicted.final.x);
-  expect(replay.hull).toBe(predicted.final.hull);
-  expect(replay.status).toBe("won");
-}
 
 describe("WP11 belts", () => {
   it("places a seeded belt with the header counts, gaps and solidity", () => {
@@ -79,10 +53,22 @@ describe("WP11 belts", () => {
   });
 
   it("crashes on a solid rock and leaves dust as a hull rate that shielding halves", () => {
-    const config = simConfigFromLevel(weave);
-    const rock = config.beltRocks?.find((item) => item.solid);
-    const sun = weave.bodies.find((body) => body.id === "sun");
-    if (!rock || !sun) throw new Error("weave belt");
+    const belts = observatory.belts ?? [];
+    const rocks = placeBelts(belts);
+    const rock = rocks.find((item) => item.solid && item.distance > 40);
+    const sun = observatory.bodies.find((body) => body.id === rock?.centerId);
+    if (!rock || !sun) throw new Error("observatory belt");
+    const config = {
+      ...simConfigFromLevel(observatory),
+      bodies: [sun],
+      belts,
+      beltRocks: rocks,
+      nebulae: undefined,
+      wormholes: undefined,
+      petrova: undefined,
+      knotFuel: undefined,
+      maxSteps: 5,
+    };
     const hit = makeState(
       sun.x + Math.cos(rock.angle) * rock.distance,
       sun.y + Math.sin(rock.angle) * rock.distance,
@@ -92,7 +78,7 @@ describe("WP11 belts", () => {
     );
     step(hit, config);
     expect(hit.status).toBe("crashed");
-    expect(hit.crashedBodyId?.startsWith("belt:")).toBe(true);
+    expect(hit.crashedBodyId?.startsWith(`${rock.beltId}:`)).toBe(true);
 
     const star: Body = { id: "sun", name: "sun", kind: "star", x: 0, y: 0, mass: 1, radius: 8 };
     const belt: Belt = {
@@ -126,14 +112,41 @@ describe("WP11 belts", () => {
     expect(flown.path[20].x).toBe(open.path[20].x);
   });
 
-  it("matches prediction to flight on Weave and Frost", () => {
-    expectFlightMatches(weave, weavePlan);
-    expectFlightMatches(frost, frostPlan);
+  it("matches prediction to a flight through an Observatory belt", () => {
+    const belts = observatory.belts ?? [];
+    const host = observatory.bodies.find((body) => body.id === belts[0]?.centerId);
+    if (!host) throw new Error("observatory belt");
+    const config: SimConfig = {
+      g: observatory.g,
+      dt: observatory.dt,
+      c: observatory.c,
+      bodies: [host],
+      belts,
+      beltRocks: placeBelts(belts),
+      bounds: observatory.bounds,
+      maxSteps: 40,
+      targetId: host.id,
+      periapsisMargin: 1,
+      fuelStart: 20,
+      fuelMax: 20,
+      fuelPerDv: 1,
+    };
+    const state = makeState(host.x + 400, host.y + 80, 2, 0, config);
+    const predicted = predictPlan(state, config, []);
+    const flown = flyPlan(state, config, [], 1);
+    expect(flown.status).toBe(predicted.status);
+    expect(flown.path.length).toBe(predicted.path.length);
+    expect(flown.path.length).toBeGreaterThan(10);
+    for (let i = 0; i < flown.path.length; i++) {
+      expect(flown.path[i].x).toBe(predicted.path[i].x);
+      expect(flown.path[i].y).toBe(predicted.path[i].y);
+      expect(flown.path[i].step).toBe(predicted.path[i].step);
+    }
   });
 
   it("places each belt list once", () => {
-    const belts = frost.belts;
-    if (!belts) throw new Error("frost");
+    const belts = observatory.belts;
+    if (!belts) throw new Error("observatory belts");
     const first = placeBelts(belts);
     const started = performance.now();
     const second = placeBelts(belts);

@@ -26,8 +26,8 @@ import {
   tick,
   type Game,
 } from "../src/game/state";
-import { passage } from "../src/level/catalog";
-import { slingshotCapture, slingshotLaunch, slingshotPlan } from "../src/level/solutions";
+import { stage as passage } from "./support/stage";
+import { slingshotCapture, slingshotLaunch, slingshotPlan } from "./support/plans";
 import type { BurnNode } from "../src/sim/physics";
 
 const dt = 1 / 60;
@@ -252,7 +252,7 @@ function viewFor(kind: "none" | "on" | "off"): Draw {
 }
 
 function flySlingshot(kind: "none" | "on" | "off"): Trace[] {
-  const game = createGame();
+  const game = createGame(passage);
   setPlan(game, slingshotPlan);
   launch(game);
   const view = viewFor(kind);
@@ -288,7 +288,7 @@ function flyEdited(kind: "none" | "on" | "off"): Trace[] {
     { step: 0, dvx: slingshotLaunch.dvx, dvy: slingshotLaunch.dvy },
     { step: 180, dvx: 1.2, dvy: -0.4 },
   ];
-  const game = createGame();
+  const game = createGame(passage);
   setPlan(game, plan);
   launch(game);
   setSlow(game, true);

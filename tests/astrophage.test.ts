@@ -1,12 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { dim, simConfigFromLevel, tauCeti } from "../src/level/catalog";
-import { LevelError, loadLevelData } from "../src/level/schema";
+import { observatory, simConfigFromLevel } from "../src/level/catalog";
+import { LevelError, loadLevelData, type Level } from "../src/level/schema";
 import {
   DOSE_COSMIC,
   advancePlan,
   cloneState,
   doseAt,
-  keplerMeanMotion,
   makeState,
   predictPlan,
   solarRechargeRate,
@@ -160,50 +159,90 @@ describe("Astrophage map field", () => {
   });
 });
 
-describe("Tau Ceti and Dim star", () => {
-  it("loads a clean yellower star, three Kepler planets inside the disk, and an eaten line", () => {
-    expect(tauCeti.bodies.find((body) => body.id === "cetus")).toMatchObject({
-      look: "tau-ceti",
-      radius: 40,
-    });
-    expect(tauCeti.bodies.find((body) => body.id === "cetus")?.astrophage).toBeUndefined();
-    const star = tauCeti.bodies.find((body) => body.id === "cetus");
-    expect(star).toBeTruthy();
-    for (const id of ["cinder", "frost", "haven"]) {
-      const body = tauCeti.bodies.find((item) => item.id === id);
-      expect(body?.orbit?.radius).toBeLessThan(235);
-      expect(body?.orbit?.omega).toBeCloseTo(keplerMeanMotion(tauCeti.g, star!.mass, body!.orbit!.radius), 8);
+function exhibitLevel(star: Body): Level {
+  return {
+    id: "astro-check",
+    name: "Astro check",
+    g: 1,
+    dt,
+    bodies: [
+      star,
+      { id: "x", name: "Planet X", kind: "target", x: 400, y: 0, mass: 10, radius: 10, captureRadius: 30 },
+    ],
+    targetId: "x",
+    ship: { x: 80, y: 0, vx: 0, vy: 1 },
+    orbit: { bodyId: star.id, radius: 80 },
+    fuel: 10,
+    fuelPerDv: 1,
+    bounds: { minX: -2000, maxX: 2000, minY: -2000, maxY: 2000 },
+    maxSteps: 10,
+    dvPerPixel: 0.2,
+    periapsisMargin: 2,
+    c: 1_000,
+    mission: { deadline: 10, crewLimit: 10, fuelStarMin: 0, crewWeight: 1, fuelWeight: 1 },
+  };
+}
+
+describe("Observatory astrophage", () => {
+  const sun = observatory.bodies.find((body) => body.id === "look-sun");
+  const ceti = observatory.bodies.find((body) => body.look === "tau-ceti");
+  const line = observatory.petrova?.[0];
+  if (!sun || !ceti || !line) throw new Error("observatory astrophage");
+
+  it("shows an infected sun, a clean Tau Ceti, and an eaten Petrova line", () => {
+    expect(sun.astrophage).toEqual({ level: 6, dims: 0.03 });
+    expect(ceti.astrophage).toBeUndefined();
+    for (const look of ["tau-hot", "tau-cold", "tau-green"] as const) {
+      expect(observatory.bodies.some((body) => body.look === look)).toBe(true);
     }
-    expect(tauCeti.bodies.find((body) => body.id === "haven")?.radius).toBe(18);
-    expect(tauCeti.petrova?.[0]?.eaten).toBe(0.6);
-    expect(tauCeti.fit).toEqual({ engine: "spin", scoop: true });
-    const config = simConfigFromLevel(tauCeti);
-    expect(config.engine).toBe("spin");
-    expect(config.scoop).toBe(true);
-    expect(config.knotFuel).toEqual([0.4]);
+    expect(line.eaten).toBe(0.6);
+    expect(line.knots[0]).toMatchObject({ fuel: 0.4, radius: 34 });
+    expect(simConfigFromLevel(observatory).knotFuel).toEqual([0.4]);
   });
 
-  it("loads the infected star and rejects an infection level outside 1–10", () => {
-    const star = dim.bodies.find((body) => body.id === "star");
-    expect(star?.astrophage).toEqual({ level: 6, dims: 0.03 });
-    expect(dim.petrova?.[0]?.knots[0]).toMatchObject({ fuel: 0.4, radius: 34 });
-    const broken = {
-      ...structuredClone(dim),
-      bodies: dim.bodies.map((body) =>
-        body.id === "star" ? { ...body, astrophage: { level: 11, dims: 0.03 } } : body,
-      ),
-    };
-    expect(() => loadLevelData(broken, "bad")).toThrow(LevelError);
+  it("rejects an infection level outside 1–10", () => {
+    const placed = { ...sun, x: 0, y: 0 };
+    expect(() => loadLevelData(exhibitLevel(placed), "ok")).not.toThrow();
+    const broken = { ...placed, astrophage: { level: 11, dims: 0.03 } };
+    expect(() => loadLevelData(exhibitLevel(broken), "bad")).toThrow(LevelError);
   });
-});
 
-describe("dim star path ghost", () => {
   it("harvests the knot when the coast starts inside it", () => {
-    const config = simConfigFromLevel(dim);
-    const star = dim.bodies.find((body) => body.id === "star")!;
-    const planet = dim.bodies.find((body) => body.id === "world")!;
-    const curve = petrovaCurve(star.x, star.y, star.radius, planet.x, planet.y, planet.radius, 26);
-    const at = curvePoint(curve, 0.48);
+    const world = observatory.bodies.find((body) => body.id === line.to);
+    if (!world) throw new Error("petrova target");
+    const localStar = { ...sun, x: -220, y: 0 };
+    const localWorld = { ...world, x: 220, y: 0, captureRadius: 40 };
+    const curve = petrovaCurve(
+      localStar.x,
+      localStar.y,
+      localStar.radius,
+      localWorld.x,
+      localWorld.y,
+      localWorld.radius,
+      line.bulge,
+    );
+    const at = curvePoint(curve, line.knots[0].t);
+    const config: SimConfig = {
+      g: 1,
+      dt,
+      bodies: [localStar, localWorld],
+      bounds: { minX: -2000, maxX: 2000, minY: -2000, maxY: 2000 },
+      maxSteps: 200,
+      targetId: localWorld.id,
+      periapsisMargin: 4,
+      c: 1_000_000,
+      fuelStart: 10,
+      fuelMax: 40,
+      fuelPerDv: 1,
+      engine: "spin",
+      scoop: true,
+      astroCapacity: 1,
+      astroStart: 0,
+      astroRate: 0.024,
+      astroDv: 12,
+      petrova: [{ ...line, from: localStar.id, to: localWorld.id }],
+      knotFuel: [line.knots[0].fuel],
+    };
     const start = makeState(at.x, at.y, 0, 0, config);
     const predicted = predictPlan(start, config, []);
     expect(predicted.final.astroGained).toBeGreaterThan(0.05);

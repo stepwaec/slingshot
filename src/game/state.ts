@@ -1,4 +1,4 @@
-import { burnLimit, passage, pauseRuleOf, simConfigFromLevel, type Level } from "../level/catalog";
+import { burnLimit, observatory, pauseRuleOf, simConfigFromLevel, type Level } from "../level/catalog";
 import {
   advanceFrame,
   assessPlan,
@@ -101,7 +101,7 @@ export interface RailSample {
   state: SimState;
 }
 
-export function createGame(level: Level = passage, camera: Camera = { x: 0, y: 0, zoom: 1 }): Game {
+export function createGame(level: Level = observatory, camera: Camera = { x: 0, y: 0, zoom: 1 }): Game {
   const config = simConfigFromLevel(level);
   const initial = makeState(level.ship.x, level.ship.y, level.ship.vx, level.ship.vy, config);
   const started = performance.now();

@@ -1,15 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { createGame, launch, setPlan, setSlow, tick } from "../src/game/state";
-import { relay, simConfigFromLevel } from "../src/level/catalog";
-import { relayFull, relayOpening } from "../src/level/solutions";
+import { simConfigFromLevel, type Level } from "../src/level/catalog";
 import {
   SIM_SPEEDS,
   bodyPose,
   flyPlan,
   horizonSteps,
+  keplerMeanMotion,
   makeState,
   predictPlan,
   stepsPerFrame,
+  type Body,
   type BurnNode,
   type Horizon,
   type PathSample,
@@ -17,6 +18,60 @@ import {
   type SimConfig,
   type SimState,
 } from "../src/sim/physics";
+
+const g = 1;
+const starMass = 8_000;
+const planetMass = 2_200;
+const planetRadius = 400;
+const moonRadius = 50;
+const star: Body = { id: "sun", name: "Sun", kind: "star", x: 0, y: 0, mass: starMass, radius: 20 };
+const planet: Body = {
+  id: "x",
+  name: "Planet X",
+  kind: "target",
+  x: planetRadius,
+  y: 0,
+  mass: planetMass,
+  radius: 18,
+  captureRadius: 80,
+  orbit: { centerId: "sun", radius: planetRadius, phase: 0, omega: keplerMeanMotion(g, starMass, planetRadius) },
+};
+const moon: Body = {
+  id: "moon",
+  name: "Moon",
+  kind: "moon",
+  x: planetRadius + moonRadius,
+  y: 0,
+  mass: 20,
+  radius: 6,
+  orbit: { centerId: "x", radius: moonRadius, phase: 0, omega: keplerMeanMotion(g, planetMass, moonRadius) },
+};
+
+const chart: Level = {
+  id: "orbit-stage",
+  name: "Orbit stage",
+  g,
+  dt: 1 / 60,
+  bodies: [star, planet, moon],
+  targetId: "x",
+  ship: { x: -800, y: 200, vx: 3, vy: 0 },
+  orbit: { bodyId: "sun", radius: 800 },
+  fuel: 80,
+  fuelPerDv: 1,
+  bounds: { minX: -4000, maxX: 4000, minY: -4000, maxY: 4000 },
+  maxSteps: 180,
+  dvPerPixel: 0.2,
+  periapsisMargin: 4,
+  maxPlannedBurns: 4,
+  c: 1_000_000,
+  mission: { deadline: 800, crewLimit: 800, fuelStarMin: 0, crewWeight: 1, fuelWeight: 1 },
+};
+
+const burns: readonly BurnNode[] = [
+  { step: 0, dvx: 0.4, dvy: 0.1 },
+  { step: 30, dvx: -0.2, dvy: 0.15 },
+  { step: 70, dvx: 0.1, dvy: -0.2 },
+];
 
 function assertSameFlight(actual: Prediction, expected: Prediction, label: string): void {
   expect(actual.status, label).toBe(expected.status);
@@ -37,14 +92,14 @@ function assertSameFlight(actual: Prediction, expected: Prediction, label: strin
 }
 
 function play(nodes: readonly BurnNode[], speed: (typeof SIM_SPEEDS)[number], slow = false): PathSample[] {
-  const game = createGame(relay);
+  const game = createGame(chart);
   setPlan(game, nodes);
   game.speed = speed;
   setSlow(game, slow);
   launch(game);
   const samples: PathSample[] = [];
   let guard = 0;
-  while (game.mode === "flying" && guard++ < relay.maxSteps * 3) {
+  while (game.mode === "flying" && guard++ < chart.maxSteps * 3) {
     tick(game);
     for (let i = 0; i < game.frameSamples.length; i++) samples.push(game.frameSamples[i]);
   }
@@ -52,43 +107,43 @@ function play(nodes: readonly BurnNode[], speed: (typeof SIM_SPEEDS)[number], sl
 }
 
 describe("orbiting bodies", () => {
-  const config = simConfigFromLevel(relay);
+  const config = simConfigFromLevel(chart);
   const open: SimConfig = { ...config, horizon: undefined };
 
   function start(): SimState {
-    return makeState(relay.ship.x, relay.ship.y, relay.ship.vx, relay.ship.vy, open);
+    return makeState(chart.ship.x, chart.ship.y, chart.ship.vx, chart.ship.vy, open);
   }
 
   it("places the planet and its moon on the analytic orbit at t = 0", () => {
-    const bodies = relay.bodies;
+    const bodies = chart.bodies;
     for (const body of bodies) {
       const pose = bodyPose(body, 0, bodies);
       expect(pose.x).toBeCloseTo(body.x, 8);
       expect(pose.y).toBeCloseTo(body.y, 8);
     }
-    const planet = bodies.find((body) => body.id === "x");
-    const moon = bodies.find((body) => body.id === "moon");
-    if (!planet?.orbit || !moon?.orbit) throw new Error("missing orbit");
-    const later = bodyPose(planet, 10, bodies);
-    expect(later.x).not.toBeCloseTo(planet.x, 1);
-    const moonLater = bodyPose(moon, 3, bodies);
-    const planetThen = bodyPose(planet, 3, bodies);
-    const angle = moon.orbit.phase + moon.orbit.omega * 3;
-    expect(moonLater.x).toBeCloseTo(planetThen.x + moon.orbit.radius * Math.cos(angle), 8);
-    expect(moonLater.y).toBeCloseTo(planetThen.y + moon.orbit.radius * Math.sin(angle), 8);
+    const placedPlanet = bodies.find((body) => body.id === "x");
+    const placedMoon = bodies.find((body) => body.id === "moon");
+    if (!placedPlanet?.orbit || !placedMoon?.orbit) throw new Error("missing orbit");
+    const later = bodyPose(placedPlanet, 10, bodies);
+    expect(later.x).not.toBeCloseTo(placedPlanet.x, 1);
+    const moonLater = bodyPose(placedMoon, 3, bodies);
+    const planetThen = bodyPose(placedPlanet, 3, bodies);
+    const angle = placedMoon.orbit.phase + placedMoon.orbit.omega * 3;
+    expect(moonLater.x).toBeCloseTo(planetThen.x + placedMoon.orbit.radius * Math.cos(angle), 8);
+    expect(moonLater.y).toBeCloseTo(planetThen.y + placedMoon.orbit.radius * Math.sin(angle), 8);
   });
 
   it("matches the flight bit for bit with a moon, a moving planet, and three burns", () => {
     const state = start();
-    expect(relayFull.length).toBe(3);
-    const predicted = predictPlan(state, open, relayFull);
-    const flown = flyPlan(state, open, relayFull, 1);
-    expect(predicted.path.some((sample) => sample.step >= relayFull[2].step)).toBe(true);
+    expect(burns.length).toBe(3);
+    const predicted = predictPlan(state, open, burns);
+    const flown = flyPlan(state, open, burns, 1);
+    expect(predicted.path.some((sample) => sample.step >= burns[2].step)).toBe(true);
     assertSameFlight(predicted, flown, "predictPlan");
 
     for (const speed of SIM_SPEEDS) {
-      assertSameFlight(flyPlan(state, open, relayFull, stepsPerFrame(speed)), flown, `fly ${speed}x`);
-      const played = play(relayFull, speed);
+      assertSameFlight(flyPlan(state, open, burns, stepsPerFrame(speed)), flown, `fly ${speed}x`);
+      const played = play(burns, speed);
       expect(played).toHaveLength(flown.path.length);
       for (let i = 0; i < flown.path.length; i++) {
         if (played[i].x !== flown.path[i].x || played[i].y !== flown.path[i].y || played[i].step !== flown.path[i].step) {
@@ -97,7 +152,7 @@ describe("orbiting bodies", () => {
       }
     }
 
-    const slow = play(relayFull, 4, true);
+    const slow = play(burns, 4, true);
     expect(slow).toHaveLength(flown.path.length);
     for (let i = 0; i < flown.path.length; i++) {
       if (slow[i].x !== flown.path[i].x || slow[i].y !== flown.path[i].y) {
@@ -109,10 +164,11 @@ describe("orbiting bodies", () => {
   it("stops the predicted line at the horizon and still matches that prefix", () => {
     const state = start();
     const horizon: Horizon = { seconds: 2, oneOrbit: false, shorten: 0, ref: 1 };
-    const config = { ...open, horizon };
-    const limited = predictPlan(state, config, relayOpening);
-    const flown = flyPlan(state, open, relayOpening, 1);
-    const end = relayOpening[relayOpening.length - 1].step + horizonSteps(state, config);
+    const limitedConfig = { ...open, horizon };
+    const opening = burns.slice(0, 2);
+    const limited = predictPlan(state, limitedConfig, opening);
+    const flown = flyPlan(state, open, opening, 1);
+    const end = opening[opening.length - 1].step + horizonSteps(state, limitedConfig);
     expect(limited.path.length).toBeGreaterThan(10);
     expect(limited.path[limited.path.length - 1].step).toBe(end);
     expect(limited.path.length).toBeLessThan(flown.path.length);
@@ -125,7 +181,7 @@ describe("orbiting bodies", () => {
   });
 
   it("shortens the horizon near a large mass and caps it at about one orbit", () => {
-    const star = {
+    const heavy = {
       id: "star",
       name: "the star",
       kind: "star" as const,
@@ -137,10 +193,10 @@ describe("orbiting bodies", () => {
     const base: SimConfig = {
       g: 1,
       dt: 1 / 60,
-      bodies: [star],
-      bounds: relay.bounds,
+      bodies: [heavy],
+      bounds: chart.bounds,
       maxSteps: 20_000,
-      targetId: star.id,
+      targetId: heavy.id,
       periapsisMargin: 4,
       c: 1_000_000,
       horizon: { seconds: 40, oneOrbit: false, shorten: 1, ref: 2 },
@@ -149,15 +205,15 @@ describe("orbiting bodies", () => {
     const near = makeState(120, 0, 0, 1, base);
     expect(horizonSteps(near, base)).toBeLessThan(horizonSteps(far, base) / 2);
 
-    const radius = 200;
-    const mu = base.g * star.mass;
-    const speed = Math.sqrt(mu / radius);
+    const orbitRadius = 200;
+    const mu = base.g * heavy.mass;
+    const speed = Math.sqrt(mu / orbitRadius);
     const circular: SimConfig = {
       ...base,
       horizon: { seconds: 10_000, oneOrbit: true, shorten: 0, ref: 1 },
     };
-    const orbiting = makeState(radius, 0, 0, speed, circular);
-    const period = 2 * Math.PI * Math.sqrt((radius * radius * radius) / mu);
+    const orbiting = makeState(orbitRadius, 0, 0, speed, circular);
+    const period = 2 * Math.PI * Math.sqrt((orbitRadius * orbitRadius * orbitRadius) / mu);
     const steps = horizonSteps(orbiting, circular);
     expect(steps * circular.dt).toBeLessThanOrEqual(period + 1e-9);
     expect(steps * circular.dt).toBeGreaterThan(period - circular.dt);

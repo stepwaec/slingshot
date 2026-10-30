@@ -10,8 +10,9 @@ import {
   tick,
   type Game,
 } from "../src/game/state";
-import { passage, relay, simConfigFromLevel, type Level } from "../src/level/catalog";
-import { relayFull, slingshotPlan } from "../src/level/solutions";
+import { simConfigFromLevel, type Level } from "../src/level/catalog";
+import { stage as passage } from "./support/stage";
+import { slingshotPlan } from "./support/plans";
 import { flyPlan, makeState, type BurnNode, type PathSample, type SimSpeed } from "../src/sim/physics";
 
 function samplesOf(game: Game): PathSample[] {
@@ -79,11 +80,7 @@ describe("tactical pause", () => {
   it("matches an uninterrupted flight when paused at arbitrary steps, including slow motion", () => {
     const cases: Array<{ level: Level; nodes: readonly BurnNode[]; pauses: number[] }> = [
       { level: passage, nodes: slingshotPlan, pauses: [0, 1, 3, 17, 128, 400, 1000, 1800] },
-      {
-        level: { ...relay, pause: { kind: "unlimited" } },
-        nodes: relayFull,
-        pauses: [0, 2, 9, 80, 81, 400, 1200, 2000, 2500],
-      },
+      { level: passage, nodes: slingshotPlan, pauses: [2, 9, 80, 81, 400, 1200, 2000] },
     ];
     for (const item of cases) {
       const expected = reference(item.level, item.nodes);
@@ -95,7 +92,7 @@ describe("tactical pause", () => {
   });
 
   it("enforces unlimited, free, and score pause rules", () => {
-    const unlimited = createGame();
+    const unlimited = createGame(passage);
     setPlan(unlimited, slingshotPlan);
     launch(unlimited);
     for (let i = 0; i < 5; i++) {

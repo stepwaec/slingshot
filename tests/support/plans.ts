@@ -1,8 +1,7 @@
-import type { BurnNode } from "../sim/physics";
+import type { BurnNode } from "../../src/sim/physics";
 
 /**
- * Reference burns for the three shipped levels. These are solutions, not level
- * geometry — the systems themselves live in `src/levels/*.json`.
+ * Reference burns for the library stage used by tests. Not a shipped level.
  */
 
 export interface LaunchSolution {

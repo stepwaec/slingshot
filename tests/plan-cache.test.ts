@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { passage, simConfigFromLevel } from "../src/level/catalog";
-import { slingshotLaunch } from "../src/level/solutions";
+import { simConfigFromLevel } from "../src/level/catalog";
+import { stage as passage } from "./support/stage";
+import { slingshotLaunch } from "./support/plans";
 import { buildMoveRail, createGame, moveNodeAlong, setPlan } from "../src/game/state";
 import { flyPlan, makeState, predictPlan, type BurnNode } from "../src/sim/physics";
 
@@ -55,7 +56,7 @@ describe("plan cache", () => {
   });
 
   it("moving a later node keeps the cached path before it and still matches flight", () => {
-    const game = createGame();
+    const game = createGame(passage);
     setPlan(game, nodes);
     const rail = buildMoveRail(game, 2);
     const target = rail.find((sample) => sample.step === 1100);

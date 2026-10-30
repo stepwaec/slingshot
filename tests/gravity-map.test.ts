@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { bindInput, type InputElements } from "../src/game/input";
 import { applyGravityKey, createGame, cycleGravity, gravityLabel, launch, setPlan, tick } from "../src/game/state";
-import { passage, rescue, simConfigFromLevel } from "../src/level/catalog";
-import { safePlan, slingshotPlan } from "../src/level/solutions";
+import { observatory, simConfigFromLevel } from "../src/level/catalog";
+import { stage as passage } from "./support/stage";
+import { slingshotPlan } from "./support/plans";
 import {
   potentialDepth,
   properTimeRate,
@@ -34,11 +35,17 @@ const empty: SimConfig = {
 
 const patch: GridBounds = { minX: -80, maxX: 80, minY: -40, maxY: 40 };
 
+function holePatch(): GridBounds {
+  const hole = observatory.bodies.find((body) => body.kind === "blackhole");
+  if (!hole) throw new Error("observatory black hole");
+  return { minX: hole.x - 200, maxX: hole.x + 200, minY: hole.y - 160, maxY: hole.y + 160 };
+}
+
 describe("gravity grid", () => {
   it("stores the physics potential at every sample, before the display scale", () => {
     const cases: Array<{ config: SimConfig; time: number; bounds: GridBounds }> = [
       { config: simConfigFromLevel(passage), time: 0, bounds: { minX: -120, maxX: 820, minY: -80, maxY: 680 } },
-      { config: simConfigFromLevel(rescue), time: 0, bounds: { minX: -280, maxX: 420, minY: -160, maxY: 240 } },
+      { config: simConfigFromLevel(observatory), time: 0, bounds: holePatch() },
       {
         config: {
           ...empty,
@@ -221,8 +228,8 @@ describe("gravity grid", () => {
         grid: sampleGravityGrid(simConfigFromLevel(passage), 0, { minX: -200, maxX: 900, minY: -200, maxY: 800 }, 48, 36),
       },
       {
-        config: simConfigFromLevel(rescue),
-        grid: sampleGravityGrid(simConfigFromLevel(rescue), 0, { minX: -400, maxX: 500, minY: -300, maxY: 300 }, 48, 36),
+        config: simConfigFromLevel(observatory),
+        grid: sampleGravityGrid(simConfigFromLevel(observatory), 0, holePatch(), 48, 36),
       },
       {
         config: hole,
@@ -371,8 +378,8 @@ describe("gravity layer toggle", () => {
   });
 
   it("cycles the view and leaves the sim and the prediction untouched", () => {
-    const game = createGame(rescue);
-    setPlan(game, safePlan);
+    const game = createGame(passage);
+    setPlan(game, slingshotPlan);
     const prediction = game.prediction;
     const ship = game.ship;
     const initial = game.initial;

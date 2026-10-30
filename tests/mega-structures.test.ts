@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cable, fold, hoop, simConfigFromLevel, torch } from "../src/level/catalog";
-import { cablePlan, foldPlan, hoopPlan, torchPlan } from "../src/level/solutions";
+import { observatory } from "../src/level/catalog";
 import { LevelError, loadLevelJson } from "../src/level/schema";
 import {
   clockChip,
@@ -359,43 +358,19 @@ describe("megastructures", () => {
     expect(() => loadLevelJson(text, "bad.json")).toThrow(/gaps\[0\] must be an object/);
   });
 
-  it("matches Hoop, Cable and Fold prediction to the flight", () => {
-    const runs = [
-      { level: hoop, nodes: hoopPlan, outside: 4212 / 60 },
-      { level: cable, nodes: cablePlan, outside: 1209 / 60 },
-      { level: fold, nodes: foldPlan, outside: 1081 / 60 + 18 },
-    ];
-    for (const run of runs) {
-      const config = simConfigFromLevel(run.level);
-      const start = makeState(run.level.ship.x, run.level.ship.y, run.level.ship.vx, run.level.ship.vy, config);
-      const predicted = predictPlan(start, config, run.nodes);
-      const flown = flyPlan(start, config, run.nodes, 1);
-      expect(predicted.status, run.level.id).toBe("won");
-      expect(flown.status, run.level.id).toBe("won");
-      expect(flown.outsideTime, run.level.id).toBe(predicted.outsideTime);
-      expect(flown.outsideTime, run.level.id).toBeCloseTo(run.outside, 8);
-      expect(flown.path.length, run.level.id).toBe(predicted.path.length);
-      for (let i = 0; i < flown.path.length; i++) {
-        expect(flown.path[i].x, run.level.id).toBe(predicted.path[i].x);
-        expect(flown.path[i].y, run.level.id).toBe(predicted.path[i].y);
-        expect(flown.path[i].step, run.level.id).toBe(predicted.path[i].step);
-      }
-    }
-
-    const thrown = makeState(cable.ship.x, cable.ship.y, cable.ship.vx, cable.ship.vy, simConfigFromLevel(cable));
-    step(thrown, simConfigFromLevel(cable));
-    expect(thrown.vy).toBeCloseTo(0.06 * 270, 6);
-    expect(thrown.vx).toBeCloseTo(0, 6);
-  });
-
-  it("matches Torch prediction to the flight", () => {
-    const config = simConfigFromLevel(torch);
-    const start = makeState(torch.ship.x, torch.ship.y, torch.ship.vx, torch.ship.vy, config);
-    const predicted = predictPlan(start, config, torchPlan);
-    const flown = flyPlan(start, config, torchPlan, 1);
-    expect(predicted.status).toBe("won");
-    expect(flown.status).toBe("won");
+  it("matches prediction to a flight among the Observatory megastructures", () => {
+    const hosts = observatory.bodies.filter((body) => body.engine || body.ring || body.elevator || body.dyson || body.shkadov);
+    expect(hosts.length).toBeGreaterThanOrEqual(4);
+    expect(observatory.wormholes?.length).toBeGreaterThan(0);
+    const config = bare({ bodies: hosts, wormholes: observatory.wormholes, maxSteps: 90 });
+    const start = makeState(-400, 1_200, 3, 0, config);
+    const nodes = [{ step: 10, dvx: 0.2, dvy: -0.1 }];
+    const predicted = predictPlan(start, config, nodes);
+    const flown = flyPlan(start, config, nodes, 1);
+    expect(flown.status).toBe(predicted.status);
+    expect(flown.outsideTime).toBe(predicted.outsideTime);
     expect(flown.path.length).toBe(predicted.path.length);
+    expect(flown.path.length).toBeGreaterThan(10);
     for (let i = 0; i < flown.path.length; i++) {
       expect(flown.path[i].x).toBe(predicted.path[i].x);
       expect(flown.path[i].y).toBe(predicted.path[i].y);

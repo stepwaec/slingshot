@@ -732,6 +732,7 @@ function build(): Level {
         from: "look-sun",
         to: "look-tau-green",
         bulge: 26,
+        eaten: 0.6,
         knots: [{ t: 0.45, fuel: 0.4, radius: 34 }],
       },
     ],

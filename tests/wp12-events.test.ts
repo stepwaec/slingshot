@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { flash, simConfigFromLevel } from "../src/level/catalog";
-import { flashPlan } from "../src/level/solutions";
+import { observatory } from "../src/level/catalog";
 import { blastHits, jetAngle, quasarDamage, shellRadius, shockCrosses, type Supernova } from "../src/sim/events";
 import { flyPlan, makeState, predictPlan, type Body, type SimConfig } from "../src/sim/physics";
 
@@ -35,13 +34,36 @@ describe("WP12 supernovae and quasars", () => {
   });
 
   it("matches the prediction to the flight, including the remnant shock", () => {
-    const config = simConfigFromLevel(flash);
-    const state = makeState(flash.ship.x, flash.ship.y, flash.ship.vx, flash.ship.vy, config);
-    const predicted = predictPlan(state, config, flashPlan);
-    const flown = flyPlan(state, config, flashPlan, 1);
-    expect(predicted.status).toBe("won");
-    expect(flown.status).toBe("won");
-    expect(predicted.final.hull).toBe(70);
+    const exhibit = observatory.bodies.find((body) => body.supernova);
+    const rock = observatory.bodies.find((body) => body.look === "asteroid");
+    if (!exhibit?.supernova || !rock) throw new Error("observatory hazard");
+    expect(rock.mass).toBe(0);
+    expect(rock.radius).toBe(15);
+    const sun: Body = {
+      ...exhibit,
+      x: 0,
+      y: 0,
+      supernova: { ...exhibit.supernova, at: 1, blast: 40, speed: 30, damage: 20 },
+    };
+    const config: SimConfig = {
+      g: 1,
+      dt: 1 / 60,
+      bodies: [sun, { ...rock, x: 300, y: 40 }],
+      bounds: { minX: -2000, maxX: 2000, minY: -2000, maxY: 2000 },
+      maxSteps: 400,
+      targetId: sun.id,
+      periapsisMargin: 1,
+      c: 1e6,
+      fuelStart: 10,
+      fuelMax: 10,
+      fuelPerDv: 1,
+    };
+    const start = makeState(120, 0, 0, 0, config);
+    const predicted = predictPlan(start, config, []);
+    const flown = flyPlan(start, config, [], 1);
+    expect(predicted.status).toBe(flown.status);
+    expect(predicted.final.hull).toBeLessThan(100);
+    expect(predicted.final.hull).toBeGreaterThan(0);
     expect(flown.path.length).toBe(predicted.path.length);
     for (let i = 0; i < flown.path.length; i++) {
       expect(flown.path[i].x).toBe(predicted.path[i].x);

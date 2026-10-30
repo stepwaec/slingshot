@@ -11,8 +11,8 @@ import {
   tick,
   type Game,
 } from "../src/game/state";
-import { passage } from "../src/level/catalog";
-import { slingshotPlan } from "../src/level/solutions";
+import { stage as passage } from "./support/stage";
+import { slingshotPlan } from "./support/plans";
 import type { BurnNode, PlanFuel } from "../src/sim/physics";
 
 const middle: BurnNode = { step: 400, dvx: 0.4, dvy: -0.2 };
@@ -66,13 +66,13 @@ function pauseAt(game: Game, step: number): void {
 
 describe("deleting a planned burn", () => {
   it("matches a plan that was built without that node", () => {
-    const edited = createGame();
+    const edited = createGame(passage);
     setPlan(edited, withMiddle);
     const before = planFuel(edited);
     selectNode(edited, 1);
     deleteSelected(edited);
 
-    const clean = createGame();
+    const clean = createGame(passage);
     setPlan(clean, slingshotPlan);
 
     expect(edited.nodes.map((node) => node.step)).toEqual(clean.nodes.map((node) => node.step));
@@ -83,7 +83,7 @@ describe("deleting a planned burn", () => {
   });
 
   it("matches a paused flight whose plan never had the node, and refuses a fired burn", () => {
-    const edited = createGame();
+    const edited = createGame(passage);
     setPlan(edited, withMiddle);
     launch(edited);
     pauseAt(edited, 200);
@@ -99,7 +99,7 @@ describe("deleting a planned burn", () => {
     const before = planFuel(edited);
     deleteNode(edited, 1);
 
-    const clean = createGame();
+    const clean = createGame(passage);
     setPlan(clean, slingshotPlan);
     launch(clean);
     pauseAt(clean, 200);

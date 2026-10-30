@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { buyUpgrade, createGame, launch, setPlan, tick } from "../src/game/state";
-import { chain, ember, pair, passage, relay, rescue, simConfigFromLevel, type Level } from "../src/level/catalog";
-import { chainPlan, deepPlan, emberPlan, pairPlan, relayFull, safePlan, slingshotPlan } from "../src/level/solutions";
+import { simConfigFromLevel, type Level } from "../src/level/catalog";
+import { stage as passage } from "./support/stage";
+import { slingshotPlan } from "./support/plans";
 import {
   advancePlan,
   flyPlan,
@@ -25,14 +26,8 @@ function flyReference(level: Level, nodes: readonly BurnNode[]) {
 }
 
 describe("ship systems", () => {
-  it("keeps the old reference solutions winnable", () => {
+  it("keeps the library-stage slingshot winnable", () => {
     flyReference(passage, slingshotPlan);
-    flyReference(relay, relayFull);
-    flyReference(rescue, safePlan);
-    flyReference(rescue, deepPlan);
-    flyReference(pair, pairPlan);
-    flyReference(ember, emberPlan);
-    flyReference(chain, chainPlan);
   });
 
   it("matches prediction through damage, recharge and upgrade mass", () => {

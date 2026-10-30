@@ -1,22 +1,28 @@
 import { describe, expect, it } from "vitest";
-import { frost } from "../src/level/catalog";
+import { observatory } from "../src/level/catalog";
 import { shaderFamily } from "../src/render/shaders/families";
 import { artLightLocked, impostorSide, lightDirection, planetSide, ringOctaves } from "../src/render/shaders/impostor";
 import { GIANT_FRAGMENT } from "../src/render/shaders/giant-shader";
 import { PLANET_FRAGMENT } from "../src/render/shaders/planet-shader";
 import { STAR_FRAGMENT } from "../src/render/shaders/star-shader";
 import { STAR_PARAMS, starKind } from "../src/render/shaders/star-params";
+import { stage } from "./support/stage";
 
 describe("shader impostors", () => {
-  it("draws Frost's sun as variant J and its rocky bodies with the planet shader", () => {
+  it("draws the stage sun as variant J and rocky bodies with the planet shader", () => {
     expect(artLightLocked("?lit=art")).toBe(true);
     expect(artLightLocked("")).toBe(false);
-    const sun = frost.bodies.find((body) => body.id === "sun");
-    const home = frost.bodies.find((body) => body.id === "home");
-    if (!sun || !home) throw new Error("frost");
+    const sun = stage.bodies.find((body) => body.look === "sun");
+    const home = stage.bodies.find((body) => body.kind === "home");
+    const target = stage.bodies.find((body) => body.kind === "target");
+    const sol = observatory.bodies.find((body) => body.look === "sol-sun");
+    if (!sun || !home || !target || !sol) throw new Error("missing exhibit");
     expect(starKind(sun)).toBe("sun");
     expect(shaderFamily(sun)).toBe("star");
     expect(shaderFamily(home)).toBe("planet");
+    expect(shaderFamily(target)).toBe("planet");
+    expect(starKind(sol)).toBe("sol-sun");
+    expect(shaderFamily(sol)).toBe("star");
     expect(STAR_PARAMS.sun.core).toBe("#FFB43A");
     expect(STAR_PARAMS.sun.limbDark).toBe(0.18);
     expect(STAR_PARAMS.sun.hazeR).toBe(4.35);
@@ -29,8 +35,6 @@ describe("shader impostors", () => {
     expect(STAR_PARAMS["white-dwarf"].smooth).toBe(1);
     expect(STAR_PARAMS["red-giant"].R).toBe(120);
     expect(STAR_PARAMS["binary-cool"].proW).toBe(1.5);
-    const family = Object.fromEntries(frost.bodies.map((body) => [body.id, shaderFamily(body)]));
-    expect(family).toEqual({ home: "planet", sun: "star", dwarf: "planet", x: "planet" });
   });
 
   it("composites layers with straight alpha and premultiplies only the final pixel", () => {
@@ -48,10 +52,10 @@ describe("shader impostors", () => {
   });
 
   it("aims the light uniform at the brightest star", () => {
-    const home = frost.bodies.find((body) => body.id === "home");
-    const sun = frost.bodies.find((body) => body.id === "sun");
-    if (!home || !sun) throw new Error("frost");
-    const dir = lightDirection(home.x, home.y, 0, frost.bodies, frost.g);
+    const home = stage.bodies.find((body) => body.kind === "home");
+    const sun = stage.bodies.find((body) => body.look === "sun");
+    if (!home || !sun) throw new Error("stage");
+    const dir = lightDirection(home.x, home.y, 0, stage.bodies, stage.g);
     expect(Math.atan2(dir.y, dir.x)).toBeCloseTo(Math.atan2(sun.y - home.y, sun.x - home.x));
     expect(Math.hypot(dir.x, dir.y)).toBeCloseTo(1);
   });
