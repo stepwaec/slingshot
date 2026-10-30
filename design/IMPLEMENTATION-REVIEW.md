@@ -55,9 +55,19 @@ PRs #33 and #35 brought back the sun's turning rings and breathing haze, rebaked
 - **The scripted events draw only an orange ring** (`src/render/visuals/fates.ts`): a growing ring on a falling body, and a ring at an impact point for 3 s.
 - **Fix:** replace it with the LU3 pack: `style.md` §14, `threejs-notes.md` §17 and `assets/events/`.
   - The impact gets its flash, shock, ejecta and afterglow, then the debris field.
-  - `consume` gets the dayside glow and ablation tail growing with `u`, the plunge flash, the ripple and the star brightening.
+  - `consume` gets the dayside glow and ablation tail growing with heat, the plunge flash, the ripple and the star brightening.
   - Planning gets the telegraphs.
   - The Ash level should match `mockups/showcase-burning-planet.svg`.
+
+Landed with the event art (design [PR #50](https://github.com/stepwaec/slingshot/pull/50)):
+
+- ✔ Impact draws the flash, shock, rim, ejecta and crater glow, then the debris field.
+- ✔ `consume` draws the dayside glow and the ablation tail. Heat is `1 − (r − R_star) / (r0 − R_star)` from `burn-up.svg`. At `end`: plunge flash, ripple, star brightening.
+- ✔ Planning draws the dashed course, the reticle and the countdown chips.
+- ✔ Ash is compared with `mockups/showcase-burning-planet.svg`.
+- Debris with r ≥ 4 is drawn and labelled. It is not a crash body, so the sim stays as PR #47 left it.
+- `disrupt` and `accrete` are still proposed scripts. No level has them. Adding them would change gravity, so this pass does not.
+- The star brightening is masked to the photosphere. The sample disc is `#FFE7A0` at α 0.22 and would turn olive on the navy sky.
 
 ## Priority fixes
 

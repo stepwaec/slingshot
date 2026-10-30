@@ -199,7 +199,7 @@ export interface Body {
 
 /**
  * `consume` falls from the body's orbit into `centerId` and is gone at `end`.
- * `impact` removes the body at `at`. `into` names what it hits, for the placeholder.
+ * `impact` removes the body at `at`. `into` names what it hits, for the impact drawing.
  */
 export type BodyScript =
   | { kind: "consume"; centerId: string; start: number; end: number; radius: number }

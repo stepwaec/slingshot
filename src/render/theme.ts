@@ -268,6 +268,119 @@ export const theme = {
     strutCount: 9,
     strutLength: 6,
   },
+  /**
+   * Scripted collisions. Numbers are the headers in design/assets/events/.
+   * Distances are world units (SVG units at zoom 1). Strokes are CSS pixels.
+   */
+  event: {
+    /** impact.svg: flash r 4 → 34 over 0.6 s, gone by 0.9 s. */
+    flashR0: 4,
+    flashR1: 34,
+    flashGrow: 0.6,
+    flashFade: 0.9,
+    /** Shock ring r 6 → 80 over 1.3 s, 1.6 px. */
+    shockR0: 6,
+    shockR1: 80,
+    shockDur: 1.3,
+    shockWidth: 1.6,
+    /** Rim flash 2 px, α 0.7, decaying over 1.8 s. */
+    rimWidth: 2,
+    rimAlpha: 0.7,
+    rimDur: 1.8,
+    /** 20 grains, ±35°, 40–120 px, 2.7 s, radii 1–2.2. */
+    ejectaCount: 20,
+    ejectaCone: 35,
+    ejectaDist0: 40,
+    ejectaDist1: 120,
+    ejectaDur: 2.7,
+    ejectaR0: 1,
+    ejectaR1: 2.2,
+    /** Crater r 9. α 1 → 0.6 at 2 s → 0 at 3.6 s. */
+    craterR: 9,
+    craterDur: 3.6,
+    craterMid: 2,
+    craterMidAlpha: 0.6,
+    /** burn-up.svg: glow circle r 9.5 on a planet of r 8. Tail 90, flicker 0.4 s. */
+    glowScale: 9.5 / 8,
+    /** Hotspot sits 0.35 of the bbox below centre; gradient radius is 0.6 of the bbox. */
+    glowHot: (0.85 - 0.5) * 2 * (8 / 9.5),
+    glowGrad: 1.2,
+    tailLength: 90,
+    tailFlicker: 0.4,
+    /** Plunge flash r 5 → 26 over 0.55 s. The sample fades it by 0.8 s. */
+    plungeR0: 5,
+    plungeR1: 26,
+    plungeGrow: 0.55,
+    plungeFade: 0.8,
+    /** Ripple r 4 → 70 over 1.8 s, 1.4 px, α 0.9, clipped to the star. */
+    rippleR0: 4,
+    rippleR1: 70,
+    rippleDur: 1.8,
+    rippleWidth: 1.4,
+    rippleAlpha: 0.9,
+    /** Star brightening #FFE7A0 α 0.22, up in 0.24 s, gone at 1.6 s. */
+    brightAlpha: 0.22,
+    brightRise: 0.24,
+    brightDur: 1.6,
+    /** Decaying spiral, dash 4 5, α 0.55, 1 px. */
+    spiralAlpha: 0.55,
+    spiralDash: 4,
+    spiralGap: 5,
+    spiralWidth: 1,
+    /** event-telegraphs.svg. */
+    courseWidth: 1.4,
+    courseDash: 5,
+    courseGap: 5,
+    courseCrawl: 13,
+    reticleR0: 9,
+    reticleR1: 12,
+    reticlePeriod: 1.2,
+    reticleWidth: 1.4,
+    reticleTick0: 6,
+    reticleTick1: 14,
+    /** Chip: 16 px, radius 5, 10.5 px mono, pad 6, fill α 0.88, stroke α 0.7. */
+    chipHeight: 16,
+    chipPad: 6,
+    chipFont: 10.5,
+    chipRadius: 5,
+    chipFill: 0.88,
+    chipStroke: 0.7,
+    /** debris-field.svg. */
+    chunkCount: 22,
+    chunkR0: 2.5,
+    chunkR1: 7.5,
+    dustCount: 48,
+    dustHot: 0.15,
+    bandAlpha: 0.05,
+    bandWidth: 70,
+    hazardAlpha: 0.75,
+    hazardDash: 5,
+    hazardGap: 5,
+    hazardCrawl: 10,
+    hazardWidth: 1,
+    solidRadius: 4,
+    driftPx0: 4,
+    driftPx1: 10,
+    driftPeriod0: 14,
+    driftPeriod1: 22,
+    /** Longest chunk drift. The "gap narrows" chip counts down to this. */
+    gapClose: 22,
+    /** event-telegraphs.svg sample: "debris from 0:42 for 1:30". */
+    debrisForecast: 90,
+    nextAlpha: 0.7,
+    nextDash: 3,
+    nextGap: 5,
+    nextWidth: 1,
+    /** showcase mockup arrival ring: body 1.2 px dash 4 4 α 0.75; capture 1 px dash 6 6 α 0.35. */
+    arrivalWidth: 1.2,
+    arrivalDash: 4,
+    arrivalGap: 4,
+    arrivalAlpha: 0.75,
+    captureWidth: 1,
+    captureDash: 6,
+    captureGap: 6,
+    captureAlpha: 0.35,
+  },
 } as const;
 
 export type Theme = typeof theme;

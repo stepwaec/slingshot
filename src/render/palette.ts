@@ -59,6 +59,32 @@ export const palette = {
   driftArrow: "#8B95B5",
   strut: "#5A6E9E",
   reflectedGlow: "#FFE7A0",
+  /** design/style.md §14. Collisions and consumption. */
+  eventFlash: "#FFFFFF",
+  eventFlashMid: "#FFF6D6",
+  eventFlashEdge: "#FFE7A0",
+  eventShock: "#FFE7A0",
+  eventGlow: "#FFE7A0",
+  eventGlowMid: "#FF8A3A",
+  eventGlowEdge: "#FF6A2A",
+  eventEjectaHot: "#FFB45A",
+  eventEjectaRock: "#C8A684",
+  eventEjectaRockMid: "#9A7A5E",
+  eventEjectaRockDark: "#8E8478",
+  eventAblation: "#FFF6D6",
+  eventAblationHot: "#FFB45A",
+  eventAblationPink: "#FF5A8A",
+  eventAblationTail: "#E0408A",
+  eventRipple: "#FFF1C2",
+  eventWarn: "#FF9F43",
+  eventNext: "#FFC857",
+  eventBand: "#C9B79E",
+  eventPanel: "#0A0D1A",
+  /** debris-field.svg S and C lit faces. */
+  debrisLightS: "#C8A684",
+  debrisDarkS: "#5A4636",
+  debrisLightC: "#8E8478",
+  debrisDarkC: "#3A332D",
 } as const;
 
 /** Linear blend in sRGB, matching the arrow.power ramp in design/canvas-notes.md §9. */
