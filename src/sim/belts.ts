@@ -151,9 +151,19 @@ export function pointInBelt(x: number, y: number, cx: number, cy: number, belt: 
   return angle <= span + 1e-9;
 }
 
+const placedRocks = new WeakMap<object, readonly BeltRock[]>();
+
+/**
+ * Rocks are a pure function of the belt list. `simConfigFromLevel` rebuilds
+ * a config many times a frame, and placing Frost's Kuiper belt is the slow
+ * part of that. The same array is returned for the same list.
+ */
 export function placeBelts(belts: readonly Belt[]): BeltRock[] {
+  const cached = placedRocks.get(belts);
+  if (cached) return cached as BeltRock[];
   const rocks: BeltRock[] = [];
   for (let i = 0; i < belts.length; i++) rocks.push(...placeBelt(belts[i]));
+  placedRocks.set(belts, rocks);
   return rocks;
 }
 
