@@ -146,6 +146,24 @@ Landed in [PR #64](https://github.com/stepwaec/slingshot/pull/64), from the ghos
 
   The planning view should match `mockups/planning-layers.svg`.
 
+## Gravity and time heat map (v3.4): replace the interim ramp and the saturating pinch
+
+- **Now:**
+  - The clock-rate field is a smooth per-vertex blend of existing tokens (`palette.ts` `CLOCK_HEAT_*`, `theme.gravity.heatAlpha`). Its gold at α 0.74 goes olive.
+  - The grid pull saturates at 55 % of the distance and is clamped to 0.45 of a cell (`gravityField.ts` `pinchTowardMasses`, `PINCH_CELL`). Near a black hole that becomes a uniform zoom with equal squares up to the shadow.
+- **Fix:** follow `style.md` §21 and `threejs-notes.md` §24:
+  - six crisp bands in the fragment shader, with contours and labels
+  - the rate sampled at the display position
+  - the cased grid, with dark ink inside the warm bands
+  - the compactness-weighted funnel, without the clamp where it applies
+
+  The planning view should match `mockups/planning-gravity-time.svg`.
+
+## Rendering v2 (v3.5): the specs start
+
+- **New work.** `shader-specs.md` §1 sets the R2.0 conventions, §2 the R2.1 stars (`shaders/star.frag`), and §3 the R2.2 rocky planets and moons (`shaders/planet.frag` plus baked maps). Gas giants, compact objects and effects follow.
+- **Acceptance.** Each sub-package PR shows the game next to `preview/shaders.html` at the same zoom and frozen time, plus an fps check in Safari and Chrome.
+
 ## Priority fixes
 
 Do these first. They are the biggest visible or gameplay gaps after #32.

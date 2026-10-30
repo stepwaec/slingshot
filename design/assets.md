@@ -130,6 +130,7 @@ Each structure is drawn around the level's real star or planet; these samples sh
 | `magnetism-heatmap.svg` | **Magnetism danger map**, one body's overlay: four stepped |B| zones (Fuzzy, Scrambled, Damaging, Lethal) as dipole contours, R1 100, axis 20°; outer edge dashed and crawling, Lethal edge breathing 2.4 s | `0 0 240 240` | `#magField` (120, 120); no defs | `magmap.*` #7C5CFF / #B14DFF / #E541C9 / #FF3D7F (`style.md` §8 WP9) | one shader quad summing all dipoles, toggled by M, planning and pause only (`threejs-notes.md` §11); never changes the sim |
 | `radiation-map.svg` (v2.4, WP11) | **Radiation map** sample: halftone dose field on a 12 px grid around a star with a flare and a gas giant with a radiation belt; the planet's shadow is the safe strip | `0 0 720 400` | `#radiationMap` (0, 0); `rad*` | `rad.*` #9BE15D / #D4F03C / #FFE83A / #FFF4B8 (`style.md` §11) | one screen-space shader sampling the sim's dose field, toggled by R (`threejs-notes.md` §14); never changes the sim |
 | `astrophage-map.svg` (v3.2) | **Astrophage map** sample (key A): flow ticks on a 14 px grid round an infected system and a clean star with an eaten line; infection gauge, clean ring, knot and eaten labels; the legend | `0 0 1100 470` | `#astrophageMap` (0, 0); `am*` | `astro.*` (`style.md` §19) | planning and pause only; px-space ticks; the sim owns the field |
+| `gravity-time.svg` (v3.4) | **Gravity and time heat map**: crisp clock-rate bands (blue, amber, orange, red, white-hot) with labelled contours, the cased grid with dark ink inside the warm bands, and the funnel round the sun, a neutron star and a black hole; the band legend | `0 0 1380 444` | `#gravityTime` (0, 0); `gt*` | `time.*` (`style.md` §21) | bands in the fragment shader with fwidth edges; rate sampled at the display position; funnel replaces the saturating pinch |
 | `gravity-grid.svg` (v2.5) | **Gravity grid** restyled: depth-tinted thin lines, major every 4th, edge fade, lines stop at bodies, dashed tidal ring | `0 0 720 420` | `#gravityGrid` (0, 0); `gd*` | `grid.depth` ramp, `grid.tidal` #FF5A5F (`style.md` §12) | same warp as WP6b; new ink only (`threejs-notes.md` §15) |
 | `gravity-sheet.svg` (v2.5) | **Gravity sheet** restyled: dark glass cells, glowing depth lines, soft edges, real funnel depth | `0 0 900 340` | `#gravitySheet` (0, 0); `gs*` | `sheet.glass` #0B1430 α 0.55 + `grid.depth` | replaces the opaque blue panel |
 
@@ -185,6 +186,16 @@ The Project Hail Mary nod, in hints only. One colour, crimson, for everything As
 | `hud-astrophage.svg` | **Astrophage fuel row**: no row, harvesting, planning ghost, full | `#hudAstrophage`; `ha*` | the fuel block's second row, only with a spin drive |
 | `tau-ceti.svg` | **Tau Ceti**: the clean star (r 40, yellower), the tilted dust disk, three planets, the eaten Petrova line ending before the sea-green world | `#tauCeti`; `tc*`, `tcs*`, `tca*`, `tce*`, `tcf*`, `tpv*` | the mission's question, shown not told |
 
+## Shaders (`design/shaders/`, v3.5, Rendering v2)
+
+Reference shaders: GLSL ES 1.00, one impostor quad per body, with uniforms named as in `shader-specs.md`.
+
+| File | What | Spec |
+|---|---|---|
+| `planet.frag` | **Rocky planets and moons (R2.2)**: a baked surface map on a rotating sphere (or a locked face map), lit by `uLight` with the planet reference construction: bloom, warm terminator, navy night, lit-side haze and rim; clouds and cloud shadows, ocean glint, night lights or day glow | `shader-specs.md` §3 |
+| `maps/*.png` | **Baked maps** for R2.2: 1024 × 256 surface, cloud and light/glow strips (one period of each SVG strip) and 512 × 512 locked faces, for 20 bodies (3.2 MB) | `shader-specs.md` §3 |
+| `star.frag` | **Stars (R2.1)**: haze, counter-rotating wisp and flame rings, a sphere photosphere (two plasma flows, boiling granulation, faculae, spots, gentle limb darkening under the bright rim), ragged rim, prominences, flare; plus a white-dwarf mode | `shader-specs.md` §2 |
+
 ## Previews (`design/preview/`)
 
 All self-contained pages (inline CSS, no scripts) on `bg.base`, inlining the assets **verbatim** (only the group translate changes); open from `file://` to see the SMIL animation. Because all inlined `<defs>` share one document, the id prefixes must stay unique (they are).
@@ -201,10 +212,11 @@ All self-contained pages (inline CSS, no scripts) on `bg.base`, inlining the ass
 | `space.html` WP12 row (v2.9) | The supernova progenitor, detonation and remnant, the quasar and its sweep, and the stray asteroid, each at 1× |
 | `sol.html` (v3.1) | The Sol bodies inlined at 1× in three rows (inner system, outer system, Kuiper belt and Voyager), plus a 3× detail row that shows the same files as images |
 | `space.html` Astrophage row (v3.2) | The infected star, Petrova line, knot, harvest, fuel row, Tau Ceti and the Astrophage map at 1×; `ship.html` gains the spin drive in the engines row and an "Astrophage runner" build |
+| `shaders.html` (v3.5) | Rendering v2 reference: each approved SVG star and rocky body next to its reference shader running live in WebGL (stars 1.5×, planets 3×); `?t=` freezes the clock, `&only=planets` or `&only=stars` shows one family. Needs WebGL; the only preview page with a script (one shared WebGL context) |
 
 ## Mockups (`design/mockups/`, all `0 0 1440 900`; **PNG = 2× render**)
 
-Every PNG is a 2× render of its SVG (2880 × 1800, `--force-device-scale-factor=2`, same filename). All twenty-three share the v1.1 background (the upgrade screen dims it) (a `bg.edge` rect, the vignette centred (720, 450) r 900, then the `#starfield` group verbatim) and splice every body group **verbatim** from the v1.5 assets with only its translate changed; where a library body's upper-right light does not face the scene's star, its lighting layers sit in a scene-local `rotate(angle(L_scene) − angle(L_library))` wrapper (strips and the asset files untouched). v3.0 swapped the dashed capture ring for the idle target zone in every mockup (stable on the win screen, dimmed on the lost screen) and re-rendered all PNGs.
+Every PNG is a 2× render of its SVG (2880 × 1800, `--force-device-scale-factor=2`, same filename). All twenty-four share the v1.1 background (the upgrade screen dims it) (a `bg.edge` rect, the vignette centred (720, 450) r 900, then the `#starfield` group verbatim) and splice every body group **verbatim** from the v1.5 assets with only its translate changed; where a library body's upper-right light does not face the scene's star, its lighting layers sit in a scene-local `rotate(angle(L_scene) − angle(L_library))` wrapper (strips and the asset files untouched). v3.0 swapped the dashed capture ring for the idle target zone in every mockup (stable on the win screen, dimmed on the lost screen) and re-rendered all PNGs.
 
 | File | Mode | What it demonstrates |
 |---|---|---|
@@ -231,6 +243,7 @@ Every PNG is a 2× render of its SVG (2880 × 1800, `--force-device-scale-factor
 | `sol-moon.svg` / `.png` (v3.1) | Planning, Sol mission 1 (Moon orbit) | Earth (330, 650) r 34 with the ship on its upper-right limb and the drag arrow at 62 %; the Sun off-screen to the upper-right; a transfer path to the Moon (1110, 250) r 18 in its target zone (r 72, idle); entry tick, capture burn 1 at periapsis, the lunar orbit dashed mint ("lunar orbit · peri 30 · apo 54"); a mission chip |
 | `planning-astrophage.svg` / `.png` (v3.2) | Planning, an infected system | The planning scene with the sun infected (overlay, 6/10 gauge, chip); a living Petrova line to Venus (the breeding world, `assets/sol/venus.svg`); the unchanged predicted path crosses a knot ("path crosses a knot · +40 % Astrophage"); the Astrophage map on (toggle pressed, legend); the fuel block's Astrophage row at 22 % with the planning ghost "+40 % on this path" |
 | `planning-layers.svg` / `.png` (v3.3) | Planning, the Layers menu open | `belts-radiation.svg` with the separate map buttons and the radiation legend replaced by the Layers button (one layer on, badge 1) and its open panel: gravity off, magnetism off, radiation on with its legend, Astrophage unavailable ("no infected star here"), tidal stress off |
+| `planning-gravity-time.svg` / `.png` (v3.4) | Planning, the Gravity layer round a black hole | `scene-blackhole.svg` with the clock-rate bands and labelled contours round the black hole, the grid funnelling into the shadow across the whole view, and the Layers menu open with Gravity on (its new band legend) |
 
 ## Usage rules
 

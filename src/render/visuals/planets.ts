@@ -246,7 +246,7 @@ class PlanetsVisual implements Visual {
     const star = brightestStar(level.bodies);
     let order = 1;
     for (const body of level.bodies) {
-      if (body.kind === "star" || body.kind === "rogue" || body.look === "comet") continue;
+      if (body.kind === "star" || body.kind === "rogue" || body.look === "comet" || body.look === "asteroid") continue;
       if (body.kind === "blackhole") {
         if (artForBody(body, theme)) continue;
         const diskUniforms = {

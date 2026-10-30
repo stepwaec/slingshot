@@ -7,6 +7,7 @@ Companion files:
 - `style.md`: tokens and rules.
 - `threejs-notes.md`: how each design maps onto the Three.js renderer.
 - `assets.md`: an index of every file.
+- `shader-specs.md`, `shaders/*.frag` and `preview/shaders.html`: the numbers and reference shaders for Rendering v2.
 
 ## 1. What is canon
 
@@ -16,6 +17,8 @@ When sources disagree, the higher one wins:
 2. **`style.md`**: tokens and the rules in §4.1 (realism, vibrancy, crispness) and the pack's own section.
 3. **`threejs-notes.md`**: how to build it in this renderer.
 4. **The mockup PNG** (2× render): how it should look in context.
+For **Rendering v2** (GPU shader bodies), the reference shader in `design/shaders/` and its parameters in `shader-specs.md` rank with the asset header: match the live preview (`preview/shaders.html`) side by side at a frozen time. The SVG stays the visual target; the reference shader is how to hit it.
+
 5. Your own judgment, only for what none of the above covers. Write down what you decided in the pull request.
 
 Never edit anything in `design/` to make an implementation match. If a design is wrong, impossible or too expensive, say so in your pull request and leave the design file alone. Stephan asks Claude for a fix.

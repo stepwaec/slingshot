@@ -31,6 +31,16 @@ export function toggleLook(module: LookModule): void {
   shipLook[module] = !shipLook[module];
 }
 
+/** Level fit wins over the shipyard picture, so a spin-drive level stays a spin drive. */
+export function lookForLevel(level: { fit?: { engine: EngineLook; scoop?: boolean } }): ShipLook {
+  if (!level.fit) return shipLook;
+  return {
+    ...shipLook,
+    engine: level.fit.engine,
+    scoop: level.fit.scoop ?? shipLook.scoop,
+  };
+}
+
 export function resetShipLook(): void {
   shipLook.engine = "chemical";
   shipLook.shield = false;

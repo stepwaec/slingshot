@@ -38,6 +38,21 @@
             <kbd>L</kbd>
           </div>
         </div>
+        <button type="button" id="astrophage" hidden aria-pressed="false" title="Astrophage map (A)">Astrophage</button>
+        <aside id="astro-legend" hidden>
+          <div class="mag-head">
+            <span class="hud-label">Astrophage</span>
+            <span class="mag-key">A</span>
+          </div>
+          <ul class="astro-key">
+            <li><i data-tick="trace"></i>Trace</li>
+            <li><i data-tick="present"></i>Present</li>
+            <li><i data-tick="dense"></i>Dense</li>
+            <li><i data-tick="harvest"></i>Harvest</li>
+            <li><i data-tick="eaten"></i>Eaten</li>
+          </ul>
+        </aside>
+        <div id="astro-chips"></div>
         <section id="clocks" aria-label="Clocks">
           <div class="clock-head">
             <span class="hud-label" id="clock-title">Clocks</span>
@@ -88,6 +103,18 @@
             <div id="fuel-sliver"></div>
           </div>
           <p id="recharge" hidden></p>
+          <div id="astro-row" hidden>
+            <div class="fuel-head astro-head">
+              <span class="hud-label astro-label">Astrophage</span>
+              <span id="astro-value">0 %</span>
+            </div>
+            <div class="fuel-track astro-track" aria-hidden="true">
+              <div id="astro-fill"></div>
+              <div id="astro-ghost"></div>
+              <div id="astro-spark" hidden></div>
+            </div>
+            <p id="astro-chip" hidden></p>
+          </div>
         </div>
         <p id="path-gain" hidden></p>
         <section id="dose" hidden aria-label="Dose">

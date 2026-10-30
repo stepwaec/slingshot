@@ -26,6 +26,9 @@ import { observatory } from "./observatory";
 import { loadLevelData, type Level, type LevelPhysics } from "./schema";
 import { shipLoadout } from "../game/upgrades";
 import { placeBelts } from "../sim/belts";
+import { ASTRO_CAPACITY, ASTRO_DV, ASTRO_HARVEST_RATE, flattenKnots } from "../sim/astrophage";
+import dimData from "../levels/dim.json";
+import tauCetiData from "../levels/tau-ceti.json";
 
 /**
  * Shipped levels, loaded from `src/levels/*.json`.
@@ -55,8 +58,10 @@ export const torch: Level = loadLevelData(torchData, "src/levels/torch.json");
 export const hoop: Level = loadLevelData(hoopData, "src/levels/hoop.json");
 export const cable: Level = loadLevelData(cableData, "src/levels/cable.json");
 export const fold: Level = loadLevelData(foldData, "src/levels/fold.json");
+export const dim: Level = loadLevelData(dimData, "src/levels/dim.json");
+export const tauCeti: Level = loadLevelData(tauCetiData, "src/levels/tau-ceti.json");
 
-export const LEVELS: readonly Level[] = [passage, relay, rescue, pair, ember, chain, pulse, quake, needle, ice, veil, drift, shade, wander, weave, frost, lead, flash, ash, torch, hoop, cable, fold];
+export const LEVELS: readonly Level[] = [passage, relay, rescue, pair, ember, chain, pulse, quake, needle, ice, veil, drift, shade, wander, weave, frost, lead, flash, ash, torch, hoop, cable, fold, dim, tauCeti];
 
 /** Showcase chart. Not part of the campaign list above. */
 export { observatory };
@@ -122,6 +127,20 @@ export function simConfigFromLevel(level: Level, upgrades: readonly string[] = [
     config.beltRocks = placeBelts(level.belts);
   }
   if (level.wormholes && level.wormholes.length > 0) config.wormholes = level.wormholes;
+  if (level.fit?.engine) config.engine = level.fit.engine;
+  if (level.fit?.scoop) config.scoop = true;
+  if (level.fit?.engine === "spin") {
+    const capacity = level.astro?.capacity ?? ASTRO_CAPACITY;
+    const start = level.astro?.start ?? 0;
+    config.astroCapacity = capacity;
+    config.astroStart = start > capacity ? capacity : start;
+    config.astroRate = level.astro?.rate ?? ASTRO_HARVEST_RATE;
+    config.astroDv = level.astro?.dv ?? ASTRO_DV;
+  }
+  if (level.petrova && level.petrova.length > 0) {
+    config.petrova = level.petrova;
+    config.knotFuel = flattenKnots(level.petrova).map((knot) => knot.fuel);
+  }
   return config;
 }
 

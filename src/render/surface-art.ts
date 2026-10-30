@@ -241,7 +241,8 @@ export function keepLight(doc: Document, rootId: string): void {
 
 const URL_ID = /url\(\s*#([^)]+?)\s*\)/;
 
-function silenceNightRim(doc: Document, root: Element): void {
+/** Outer rim circles lose the night-limb pad. The haze mask and the shade stay. */
+export function silenceNightRim(doc: Document, root: Element): void {
   const circles = [...root.querySelectorAll("circle")];
   const radii = circles.map((circle) => Number.parseFloat(circle.getAttribute("r") ?? "")).filter((radius) => radius > 0);
   if (radii.length === 0) return;

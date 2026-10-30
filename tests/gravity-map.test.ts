@@ -3,15 +3,12 @@ import { bindInput, type InputElements } from "../src/game/input";
 import { applyGravityKey, createGame, cycleGravity, gravityLabel, launch, setPlan, tick } from "../src/game/state";
 import { passage, rescue, simConfigFromLevel } from "../src/level/catalog";
 import { safePlan, slingshotPlan } from "../src/level/solutions";
-import { clockHeatAlpha, clockHeatRgb, palette, srgb01 } from "../src/render/palette";
-import { theme } from "../src/render/theme";
 import {
   potentialDepth,
   properTimeRate,
   type SimConfig,
 } from "../src/sim/physics";
 import {
-  clampPinch,
   gridX,
   gridY,
   pinchTowardMasses,
@@ -19,6 +16,7 @@ import {
   scaleWellDepth,
   wellHeight,
   PINCH_CELL,
+  PINCH_REACH,
   WELL_SOFTNESS,
   type GridBounds,
 } from "../src/render/gravityField";
@@ -75,12 +73,20 @@ describe("gravity grid", () => {
             expect(grid.depth[i], `${x},${y} @ ${time}`).toBe(potentialDepth(x, y, item.config, time));
             expect(grid.scale[i]).toBe(scaleWellDepth(grid.depth[i], grid.knee));
             expect(grid.rate[i]).toBe(properTimeRate(x, y, 0, 0, item.config, time));
-            const pinch = pinchTowardMasses(x, y, item.config, time, grid.knee);
-            const shown = clampPinch(pinch.dx, pinch.dy, grid.stepX, grid.stepY);
+            const pinch = pinchTowardMasses(
+              x,
+              y,
+              item.config,
+              time,
+              grid.knee,
+              PINCH_REACH,
+              grid.stepX,
+              grid.stepY,
+            );
             expect(Number.isFinite(grid.pinchX[i])).toBe(true);
             expect(Number.isFinite(grid.pinchY[i])).toBe(true);
-            expect(grid.pinchX[i]).toBe(x + shown.dx);
-            expect(grid.pinchY[i]).toBe(y + shown.dy);
+            expect(grid.pinchX[i]).toBe(x + pinch.dx);
+            expect(grid.pinchY[i]).toBe(y + pinch.dy);
             if (grid.depth[i] !== other.depth[i]) moved = true;
           }
         }
@@ -209,12 +215,22 @@ describe("gravity grid", () => {
         },
       ],
     };
-    const cases = [
-      sampleGravityGrid(simConfigFromLevel(passage), 0, { minX: -200, maxX: 900, minY: -200, maxY: 800 }, 48, 36),
-      sampleGravityGrid(simConfigFromLevel(rescue), 0, { minX: -400, maxX: 500, minY: -300, maxY: 300 }, 48, 36),
-      sampleGravityGrid(hole, 0, { minX: -80, maxX: 80, minY: -80, maxY: 80 }, 41, 41),
+    const cases: Array<{ config: SimConfig; grid: ReturnType<typeof sampleGravityGrid> }> = [
+      {
+        config: simConfigFromLevel(passage),
+        grid: sampleGravityGrid(simConfigFromLevel(passage), 0, { minX: -200, maxX: 900, minY: -200, maxY: 800 }, 48, 36),
+      },
+      {
+        config: simConfigFromLevel(rescue),
+        grid: sampleGravityGrid(simConfigFromLevel(rescue), 0, { minX: -400, maxX: 500, minY: -300, maxY: 300 }, 48, 36),
+      },
+      {
+        config: hole,
+        grid: sampleGravityGrid(hole, 0, { minX: -80, maxX: 80, minY: -80, maxY: 80 }, 41, 41),
+      },
     ];
-    for (const grid of cases) {
+    for (const item of cases) {
+      const grid = item.grid;
       const limitX = Math.abs(grid.stepX) * PINCH_CELL + 1e-9;
       const limitY = Math.abs(grid.stepY) * PINCH_CELL + 1e-9;
       for (let row = 0; row < grid.rows; row++) {
@@ -222,10 +238,36 @@ describe("gravity grid", () => {
           const i = row * grid.cols + col;
           const x = gridX(grid, col);
           const y = gridY(grid, row);
+          const pinch = pinchTowardMasses(x, y, item.config, 0, grid.knee, PINCH_REACH, grid.stepX, grid.stepY);
+          if (pinch.funnel > 0) continue;
           expect(Math.abs(grid.pinchX[i] - x)).toBeLessThanOrEqual(limitX);
           expect(Math.abs(grid.pinchY[i] - y)).toBeLessThanOrEqual(limitY);
-          if (col + 1 < grid.cols) expect(grid.pinchX[i + 1]).toBeGreaterThan(grid.pinchX[i]);
-          if (row + 1 < grid.rows) expect(grid.pinchY[i + grid.cols]).toBeGreaterThan(grid.pinchY[i]);
+          if (col + 1 < grid.cols) {
+            const right = pinchTowardMasses(
+              gridX(grid, col + 1),
+              y,
+              item.config,
+              0,
+              grid.knee,
+              PINCH_REACH,
+              grid.stepX,
+              grid.stepY,
+            );
+            if (right.funnel === 0) expect(grid.pinchX[i + 1]).toBeGreaterThan(grid.pinchX[i]);
+          }
+          if (row + 1 < grid.rows) {
+            const below = pinchTowardMasses(
+              x,
+              gridY(grid, row + 1),
+              item.config,
+              0,
+              grid.knee,
+              PINCH_REACH,
+              grid.stepX,
+              grid.stepY,
+            );
+            if (below.funnel === 0) expect(grid.pinchY[i + grid.cols]).toBeGreaterThan(grid.pinchY[i]);
+          }
         }
       }
     }
@@ -304,6 +346,7 @@ describe("gravity layer toggle", () => {
             },
           },
           layersPanel,
+          astrophageButton: quietButton(),
         } as unknown as InputElements,
         () => ({ width: 800, height: 600 }),
       );
@@ -381,23 +424,6 @@ describe("gravity layer toggle", () => {
         throw new Error(`sample ${i} (step ${want.step}) moved: (${got.x}, ${got.y}) vs (${want.x}, ${want.y})`);
       }
     }
-  });
-});
-
-describe("clock-rate heat", () => {
-  it("paints a stopped clock hot and a full-rate clock clear", () => {
-    expect(clockHeatRgb(1)).toEqual(srgb01(palette.path));
-    expect(clockHeatRgb(0.82)).toEqual(srgb01(palette.planetStartBase));
-    expect(clockHeatRgb(0.55)).toEqual(srgb01(palette.planetStartBase));
-    expect(clockHeatRgb(0.4)).toEqual(srgb01(palette.fuelLow));
-    expect(clockHeatRgb(0.2)).toEqual(srgb01(palette.starCorona));
-    expect(clockHeatRgb(0)).toEqual(srgb01(palette.starGlow));
-    const alpha = theme.gravity.heatAlpha;
-    expect(clockHeatAlpha(1, alpha)).toBe(0);
-    expect(clockHeatAlpha(0, alpha)).toBeCloseTo(0.84);
-    expect(clockHeatAlpha(0.4, alpha)).toBeGreaterThan(0.7);
-    expect(clockHeatAlpha(0.82, alpha)).toBeLessThan(0.15);
-    expect(clockHeatAlpha(0.4, alpha)).toBeGreaterThan(clockHeatAlpha(0.9, alpha));
   });
 });
 

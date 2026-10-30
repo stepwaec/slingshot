@@ -26,6 +26,14 @@ import shieldUrl from "../../design/assets/ship/module-shield.svg?url";
 import engineChemicalUrl from "../../design/assets/ship/engine-chemical.svg?url";
 import engineIonUrl from "../../design/assets/ship/engine-ion.svg?url";
 import enginePulseUrl from "../../design/assets/ship/engine-pulse.svg?url";
+import engineSpinUrl from "../../design/assets/ship/engine-spin.svg?url";
+import infectedStarUrl from "../../design/assets/astro/infected-star.svg?url";
+import petrovaLineUrl from "../../design/assets/astro/petrova-line.svg?url";
+import astroKnotUrl from "../../design/assets/astro/astrophage-knot.svg?url";
+import astroHarvestUrl from "../../design/assets/astro/astrophage-harvest.svg?url";
+import hudAstroUrl from "../../design/assets/astro/hud-astrophage.svg?url";
+import tauCetiUrl from "../../design/assets/astro/tau-ceti.svg?url";
+import astroMapUrl from "../../design/assets/overlays/astrophage-map.svg?url";
 import damage75Url from "../../design/assets/ship/damage-75.svg?url";
 import damage45Url from "../../design/assets/ship/damage-45.svg?url";
 import damage15Url from "../../design/assets/ship/damage-15.svg?url";
@@ -33,6 +41,8 @@ import neutronStarUrl from "../../design/assets/bodies/neutron-star.svg?url";
 import pulsarUrl from "../../design/assets/bodies/pulsar.svg?url";
 import magnetarUrl from "../../design/assets/bodies/magnetar.svg?url";
 import blackHoleUrl from "../../design/assets/bodies/black-hole.svg?url";
+import quasarUrl from "../../design/assets/bodies/quasar.svg?url";
+import strayAsteroidUrl from "../../design/assets/bodies/stray-asteroid.svg?url";
 import magnetismUrl from "../../design/assets/overlays/magnetism-heatmap.svg?url";
 import cometUrl from "../../design/assets/bodies/comet.svg?url";
 import solarRechargeUrl from "../../design/assets/solar-recharge.svg?url";
@@ -70,6 +80,13 @@ import { palette } from "./palette";
  * `visuals/index.ts`. The sim does not import this module.
  */
 export const theme = {
+  /**
+   * Rendering v2. `false` keeps today's SVG sprites (`?sprites=1` does the
+   * same for one load). design/shader-specs.md §1.
+   */
+  rendering: {
+    shaders: true,
+  },
   assets: {
     ship: shipUrl,
     shipThrust: shipThrustUrl,
@@ -89,6 +106,8 @@ export const theme = {
     pulsar: pulsarUrl,
     magnetar: magnetarUrl,
     blackHole: blackHoleUrl,
+    quasar: quasarUrl,
+    strayAsteroid: strayAsteroidUrl,
     magnetism: magnetismUrl,
     comet: cometUrl,
     solarRecharge: solarRechargeUrl,
@@ -131,6 +150,14 @@ export const theme = {
     engineChemical: engineChemicalUrl,
     engineIon: engineIonUrl,
     enginePulse: enginePulseUrl,
+    engineSpin: engineSpinUrl,
+    infectedStar: infectedStarUrl,
+    petrovaLine: petrovaLineUrl,
+    astroKnot: astroKnotUrl,
+    astroHarvest: astroHarvestUrl,
+    hudAstro: hudAstroUrl,
+    tauCeti: tauCetiUrl,
+    astroMap: astroMapUrl,
     damage75: damage75Url,
     damage45: damage45Url,
     damage15: damage15Url,
@@ -413,18 +440,38 @@ export const theme = {
     tidalGap: 4,
     tidalCrawl: 8,
     /**
-     * Opacity of the clock-rate field at `CLOCK_HEAT_RATES`
-     * (dτ/dt = 0, 0.2, 0.4, 0.55, 0.82, 1). Interim until Claude designs it
-     * (docs/ROADMAP.md). Full rate is clear. Gold (0.4) is already opaque
-     * so it does not turn olive over the navy.
-     */
-    heatAlpha: [0.84, 0.8, 0.74, 0.5, 0.1, 0],
-    /**
-     * Display curve. The ramp is sampled at rate^heatGamma, so a mild
-     * slowdown moves toward the warm stops and the well reads at game scale.
-     * The stored rate is unchanged.
+     * Display curve. Colour is rate^heatGamma. The stored rate is unchanged.
+     * design/assets/overlays/gravity-time.svg header.
      */
     heatGamma: 2.4,
+    /** time.casing: 1.9 px under the ink, alpha 0.22 + 0.28·depth. */
+    casingPx: 1.9,
+    casingAlpha: 0.22,
+    casingDepth: 0.28,
+    /** Inside the warm bands the ink is only this dark stroke. */
+    warmPx: 0.9,
+    warmAlpha: 0.55,
+    /**
+     * Funnel. r0 = r_b (1 + funnelR0·c), a = r_b (1 + funnelA·c).
+     * w = smoothstep(0, funnelBlend, c). Below funnelFloor the pull is today's
+     * clamped pinch, so a sun's tiny compactness does not drop the cell clamp.
+     */
+    funnelR0: 3,
+    funnelA: 2.2,
+    funnelBlend: 0.6,
+    funnelFloor: 1e-4,
+    /** Contour chips. gravity-time.svg: −58° and 22 px of clearance. */
+    labelAngle: -58,
+    labelGapPx: 22,
+    labelWidth: 34,
+    labelHeight: 13,
+    labelAlpha: 0.85,
+    /** layers-menu.svg Gravity row: swatch stroke opacity, not the field contour alpha. */
+    legendStrokeAlpha: 0.8,
+    legendSwatchW: 16,
+    legendSwatchH: 10,
+    legendSwatchRx: 2,
+    legendSwatchGap: 4,
   },
   /**
    * Cosmetic timings from the megastructure headers.
@@ -582,6 +629,112 @@ export const theme = {
     captureAlpha: 0.35,
   },
   /**
+   * design/assets/bodies/supernova-progenitor.svg and events/supernova-*.svg.
+   * style.md §16. The sample star is drawn at scale 0.38 of photosphere r 120,
+   * so shell radii are measured against 45.6 px.
+   */
+  nova: {
+    /** Header keyTimes 0 .2 .45 .8 1 over 5.5 s. Scales are the sample's, divided by 0.38 in code. */
+    breathePeriod: 5.5,
+    /** Last 0.5 s: sample scale 0.38 → 0.30, then the star is gone. */
+    shrinkLead: 0.5,
+    shrinkTo: 0.3 / 0.38,
+    /** Sample shell radii 120, 150, 182 and +14 px / 12 s, against the drawn star. */
+    sampleStar: 0.38 * 120,
+    shellRadii: [120, 150, 182],
+    shellAlphas: [0.32, 0.22, 0.14],
+    shellDrift: 14,
+    shellPeriod: 12,
+    shellWidth: 1.2,
+    /** Lethal ring: #FF5A5F α 0.85, 1.2 px, dash 5 5, crawl 10 px/s. */
+    blastAlpha: 0.85,
+    blastDash: 5,
+    blastGap: 5,
+    blastCrawl: 10,
+    blastWidth: 1.2,
+    /** Countdown arc r 62 in the sample, 3 px, track #FFFFFF α 0.12. */
+    arcSample: 62,
+    arcWidth: 3,
+    arcTrack: 0.12,
+    /** Flash peaks at 1.2 × blast by +0.85 s. Sample radii 10 → 260 → 300. Alpha 1 → 0.6 → 0 by +2.6 s. */
+    flashPeak: 1.2,
+    flashGrow: 0.85,
+    flashEnd: 2.6,
+    flashR0: 10,
+    flashRPeak: 260,
+    flashREnd: 300,
+    flashRise: 0.16,
+    flashMid: 1,
+    flashMidAlpha: 0.6,
+    /** Shock ring 2 px while the flash plays, then 1.4 px. Sits on shellRadius. */
+    shockWidthDet: 2,
+    shockWidthRem: 1.4,
+    filamentDet: 46,
+    filamentRem: 240,
+    filamentJitter: 0.12,
+    filamentFade: 40,
+    filamentLenDet0: 6,
+    filamentLenDet1: 16,
+    filamentLenRem0: 4,
+    filamentLenRem1: 12,
+    filamentWidthDet: 1.4,
+    filamentWidthRem0: 0.7,
+    filamentWidthRem1: 1.6,
+    remnantAlpha0: 0.35,
+    remnantAlpha1: 0.85,
+    /** threejs-notes.md §19: haze at 0.8 × the shock. */
+    hazeScale: 0.8,
+    /** Neutron-star dot r 3. Beams to r 30, one turn per 2 s. */
+    pulsarR: 3,
+    pulsarBeam: 30,
+    pulsarPeriod: 2,
+    /** Forecast rings +20 s and +40 s, dash 4 6, α 0.7 and 0.5. */
+    forecastA: 20,
+    forecastB: 40,
+    forecastDash: 4,
+    forecastGap: 6,
+    forecastAlphaA: 0.7,
+    forecastAlphaB: 0.5,
+    forecastWidth: 1,
+  },
+  /**
+   * design/assets/bodies/quasar.svg. Shadow r 9 in the sample.
+   * Glow r 90 (10×). Disk rx 44, ry 13. Jets from 1.5× the shadow.
+   */
+  quasar: {
+    glowScale: 90 / 9,
+    diskRx: 44 / 9,
+    diskRy: 13 / 9,
+    jetStart: 1.5,
+    /** Blue body is 0.45 of the lethal half-width. Core is 2.5 px out to 0.6 reach. */
+    bodyFraction: 0.45,
+    coreWidth: 2.5,
+    coreReach: 0.6,
+    knotPeriod: 2.4,
+    knotCount: 3,
+    knotRx: 6,
+    knotRy: 2.6,
+    knotAlpha: 0.85,
+    rimWidth: 1.2,
+    /** Planning sweep: event.warn α 0.7, dash 5 5. */
+    sweepAlpha: 0.7,
+    sweepDash: 5,
+    sweepGap: 5,
+    sweepWidth: 1,
+  },
+  /** design/assets/bodies/stray-asteroid.svg. Rock r 15, trail 140 px, tumble 55–90 s. */
+  stray: {
+    sampleRadius: 15,
+    trail: 140,
+    specks: 40,
+    tumbleMin: 55,
+    tumbleMax: 90,
+    arrowDash: 4,
+    arrowGap: 5,
+    arrowWidth: 1.2,
+    arrowAlpha: 0.85,
+  },
+  /**
    * Where a moving body will be. design/assets/ghost-markers.svg header,
    * style.md §15, threejs-notes.md §18.
    * The ring radius is world units. Strokes, the badge, the chip and the
@@ -672,6 +825,67 @@ export const theme = {
     cityNight1: 0.66,
     /** The gradient runs from 0.706 r on the lit side to the opposite limb. */
     cityLitReach: 0.706,
+  },
+  /**
+   * Astrophage. design/style.md §19 and the asset headers.
+   * Cosmetic periods run on frame.now. Harvest radius comes from the level.
+   */
+  astro: {
+    /** infected-star.svg: cells turn once per 240 s. */
+    cellPeriod: 240,
+    cellAlpha: 0.85,
+    /** Clip radius in the cell bake is 45 inside a 120 view. */
+    cellClip: 45,
+    cellView: 120,
+    /** IR shimmer: 220 motes at r+7, sd 3.2, ring −360° / 90 s. */
+    moteCount: 220,
+    moteRadius: 7,
+    moteSpread: 3.2,
+    motePeriod: 90,
+    moteMin: 0.45,
+    moteMax: 1.05,
+    /** petrova-line.svg layer counts. Header sums to 324; the budget note says 300. The header wins. */
+    ribbonMotes: 140,
+    glints: 22,
+    sparkles: 52,
+    breeding: 110,
+    /** tau-ceti.svg: 60 motes on the sea-green world. */
+    eatenShimmer: 60,
+    /** Knot motes, thinned by the remaining share. */
+    knotMotes: 110,
+    knotSpreadAlong: 18,
+    knotSpreadAcross: 10,
+    /** Harvest streams. */
+    harvestMotes: 46,
+    harvestTripMin: 1.4,
+    harvestTripMax: 2.6,
+    scoopMouthX: 7.5,
+    scoopMouthY: -13.5,
+    /** engine-spin.svg: L = 44 + 30·Δv, cap 160. Throat at local y 25.6. */
+    beamBase: 44,
+    beamPerDv: 30,
+    beamCap: 160,
+    beamRoot: 25.6,
+    beamWidth0: 7.2,
+    beamWidth1: 8.4,
+    ringRx: 4.4,
+    ringRy: 1.4,
+    ringY: 24.2,
+    /** astrophage-map.svg: 14 px grid, gauge at r+24. */
+    mapCell: 14,
+    starPad: 14,
+    planetPad: 6,
+    gaugeRadius: 24,
+    gaugeWidth: 3,
+    cleanWidth: 1.6,
+    /** tau-ceti.svg disk. */
+    diskInner: 235,
+    diskOuter: 380,
+    diskSquash: 0.42,
+    diskCount: 2300,
+    diskSeed: 19,
+    /** Star the disk radii were drawn against. */
+    diskStar: 40,
   },
 } as const;
 

@@ -58,6 +58,9 @@ export function artForBody(body: Body, theme: Theme): ArtFit | null {
   if (body.look === "moon-volcanic") return fit(assets.moonVolcanic, 48, 48, 13, "light", UP_RIGHT);
   if (body.look === "dwarf") return fit(assets.dwarf, 40, 40, 10, "light", UP_RIGHT);
   if (body.look === "moon" || body.kind === "moon") return fit(assets.moon, 60, 60, 14, "light", UP_RIGHT);
+  if (body.look === "tau-hot") return tauPlanet(assets.tauCeti, "tce", 12);
+  if (body.look === "tau-cold") return tauPlanet(assets.tauCeti, "tcf", 15);
+  if (body.look === "tau-green") return tauPlanet(assets.tauCeti, "tca", 18);
   if (body.kind === "target") return fit(assets.planetX, 240, 240, 30, "light", DOWN_LEFT);
   if (body.kind === "home") return fit(assets.planetStart, 120, 120, 34, "light", UP_RIGHT);
   if (body.look === "binary-hot") {
@@ -79,6 +82,63 @@ export function artForBody(body: Body, theme: Theme): ArtFit | null {
   if (body.look === "neutron") return fit(assets.neutronStar, 120, 120, 8, "neutron", null);
   if (body.kind === "star") return fit(assets.star, 400, 400, 46, "none", null);
   return null;
+}
+
+/** One Tau Ceti world, centred, with its strip frozen at the rest frame. `tau-ceti.svg`. */
+function tauPlanet(url: string, prefix: "tce" | "tca" | "tcf", radius: number): ArtFit {
+  const span = radius * 8;
+  return {
+    url,
+    viewW: span,
+    viewH: span,
+    svgRadius: radius,
+    ox: 0,
+    oy: 0,
+    light: null,
+    spin: "none",
+    bake: { tag: prefix, prep: isolateTauPlanet(prefix, radius) },
+  };
+}
+
+function isolateTauPlanet(prefix: string, radius: number): (doc: Document) => void {
+  return (doc) => {
+    const root = doc.getElementById("tauCeti");
+    if (!root) return;
+    const keep = [...root.children].find((child) => child.innerHTML.includes(`#${prefix}Clip`));
+    for (const child of [...root.children]) {
+      if (child !== keep) child.remove();
+    }
+    keep?.removeAttribute("transform");
+    root.querySelectorAll("animate, animateTransform").forEach((node) => node.remove());
+    const span = radius * 8;
+    const svg = doc.documentElement;
+    svg.setAttribute("viewBox", `${-span / 2} ${-span / 2} ${span} ${span}`);
+    svg.setAttribute("width", String(span));
+    svg.setAttribute("height", String(span));
+  };
+}
+
+/** `tau-ceti.svg` #tcTint: hue +9, then R ×1.02, G ×1.06, B ×0.98. */
+export function applyTauTint(doc: Document): void {
+  const svg = doc.documentElement;
+  const id = "tcRuntimeTint";
+  if (!doc.getElementById(id)) {
+    const ns = "http://www.w3.org/2000/svg";
+    let defs = svg.querySelector("defs");
+    if (!defs) {
+      defs = doc.createElementNS(ns, "defs");
+      svg.insertBefore(defs, svg.firstChild);
+    }
+    const filter = doc.createElementNS(ns, "filter");
+    filter.setAttribute("id", id);
+    filter.setAttribute("color-interpolation-filters", "sRGB");
+    filter.innerHTML =
+      '<feColorMatrix type="hueRotate" values="9"/><feComponentTransfer><feFuncR type="linear" slope="1.02"/><feFuncG type="linear" slope="1.06"/><feFuncB type="linear" slope="0.98"/></feComponentTransfer>';
+    defs.appendChild(filter);
+  }
+  const star = doc.getElementById("star") ?? svg;
+  const prior = star.getAttribute("filter");
+  star.setAttribute("filter", prior ? `${prior} url(#${id})` : `url(#${id})`);
 }
 
 export function artForNebula(cloud: Nebula, theme: Theme): ArtFit {

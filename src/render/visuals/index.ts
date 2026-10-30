@@ -1,7 +1,10 @@
 import type { VisualFactory } from "../visual";
+import { createAstroMap } from "./astro-map";
+import { createAstrophage } from "./astrophage";
 import { createBelts } from "./belts";
 import { createFates } from "./fates";
 import { createGallery } from "./gallery";
+import { createImpostors } from "./impostors";
 import { createMega } from "./mega";
 import { createHazards } from "./hazards";
 import { createGhosts } from "./ghosts";
@@ -17,6 +20,7 @@ import { createPlanets } from "./planets";
 import { createRadiation } from "./radiation";
 import { createRecharge } from "./recharge";
 import { createRogue } from "./rogue";
+import { createStray } from "./stray";
 import { createRelativity } from "./relativity";
 import { createShip } from "./ship";
 import { createStar } from "./star";
@@ -36,14 +40,18 @@ export const visualFactories = {
   gravity: createGravity,
   magnetism: createMagnetism,
   radiation: createRadiation,
+  astroMap: createAstroMap,
   star: createStar,
   scenery: createScenery,
   belts: createBelts,
+  impostors: createImpostors,
   gallery: createGallery,
+  astrophage: createAstrophage,
   mega: createMega,
   fates: createFates,
   planets: createPlanets,
   rogue: createRogue,
+  stray: createStray,
   compact: createCompact,
   comet: createComet,
   clouds: createClouds,

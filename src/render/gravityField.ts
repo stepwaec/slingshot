@@ -1,4 +1,16 @@
-import { bodyPose, potentialDepth, rateFrom, type SimConfig } from "../sim/physics";
+import { TIME_BANDS, rateAtDisplayS, type TimeBand } from "./palette";
+import { theme } from "./theme";
+import {
+  bodyPose,
+  bodyPresent,
+  gravityConstant,
+  horizonRadius,
+  potentialDepth,
+  properTimeRate,
+  rateFrom,
+  type Body,
+  type SimConfig,
+} from "../sim/physics";
 
 /**
  * Planning gravity field. Depth is `potentialDepth` from the sim — this
@@ -11,10 +23,11 @@ import { bodyPose, potentialDepth, rateFrom, type SimConfig } from "../sim/physi
  *
  * scale(0) = 0, scale is strictly increasing, and scale(∞) = 1.
  *
- * The flat view also pinches the grid in the plane. Each vertex moves toward
- * the masses along ∇Φ (samples of `potentialDepth`) by
- * `distance * PINCH_REACH * scale`, then `clampPinch` keeps that slide inside
- * the cell so neighbours cannot cross or fold into a spike.
+ * The flat view also pinches the grid in the plane. Mild wells (planets, the
+ * sun) still slide along ∇Φ by `distance * PINCH_REACH * scale`, then
+ * `clampPinch` keeps that slide inside the cell. A compact body replaces that
+ * saturating pull with the funnel in design/assets/overlays/gravity-time.svg:
+ * r′ = r_b + (r − r₀)·u/(1+u). The cell clamp stays off where that funnel applies.
  */
 
 export const WELL_SOFTNESS = 1.5;
@@ -135,12 +148,18 @@ export interface Pinch {
   /** World-unit slide from the rest point. Finite. */
   dx: number;
   dy: number;
+  /**
+   * Compactness weight of the funnel, 0 on a mild well.
+   * The cell clamp applies only when this is 0.
+   */
+  funnel: number;
 }
 
 /**
- * Slide `(x, y)` toward the masses. Direction is the gradient of
- * `potentialDepth`. Length is `nearest * reach * scale(Φ, knee)`, so a
- * deeper well pulls harder and a point sitting on a body does not move.
+ * Slide `(x, y)` toward the masses. Mild wells keep today's pull: direction is
+ * the gradient of `potentialDepth`, length is `nearest * reach * scale`.
+ * A compact body blends that with the funnel. Pass the cell steps to clamp the
+ * mild part first; the funnel itself is not clamped.
  */
 export function pinchTowardMasses(
   x: number,
@@ -149,6 +168,72 @@ export function pinchTowardMasses(
   time: number,
   knee: number,
   reach = PINCH_REACH,
+  stepX?: number,
+  stepY?: number,
+): Pinch {
+  const mild = mildPinch(x, y, config, time, knee, reach);
+  const clamped =
+    stepX !== undefined && stepY !== undefined ? clampPinch(mild.dx, mild.dy, stepX, stepY) : mild;
+  return applyFunnel(x, y, config, time, clamped.dx, clamped.dy);
+}
+
+/** c = r_s / r_b, clamped to 1. A black hole is 1. */
+export function bodyCompactness(body: Body, g: number, c: number): number {
+  if (body.kind === "blackhole") return 1;
+  if (!(body.radius > 0)) return 0;
+  const rs = horizonRadius(body.mass, g, c);
+  if (!(rs > 0)) return 0;
+  if (!Number.isFinite(rs)) return 1;
+  return Math.min(1, rs / body.radius);
+}
+
+/** smoothstep(0, funnelBlend, c), snapped to 0 below funnelFloor. */
+export function funnelWeight(compactness: number): number {
+  const blend = theme.gravity.funnelBlend;
+  const w = smoothstep01(0, blend > 0 ? blend : 0.6, compactness);
+  return w < theme.gravity.funnelFloor ? 0 : w;
+}
+
+/**
+ * r′ = r_b + (r − r₀)·u/(1+u), u = ((r − r₀)/a)².
+ * Null when r ≤ r₀: that sample sits under the disc.
+ */
+export function funnelRadius(r: number, radius: number, compactness: number): number | null {
+  if (!(radius > 0) || !(r > 0)) return null;
+  const c = compactness > 0 ? Math.min(1, compactness) : 0;
+  const r0 = radius * (1 + theme.gravity.funnelR0 * c);
+  const a = radius * (1 + theme.gravity.funnelA * c);
+  if (!(r > r0) || !(a > 0)) return null;
+  const u = ((r - r0) / a) * ((r - r0) / a);
+  return radius + (r - r0) * (u / (1 + u));
+}
+
+export function smoothstep01(edge0: number, edge1: number, x: number): number {
+  const span = edge1 - edge0;
+  if (!(span > 0)) return x >= edge1 ? 1 : 0;
+  const t = Math.max(0, Math.min(1, (x - edge0) / span));
+  return t * t * (3 - 2 * t);
+}
+
+interface BodyPull {
+  body: Body;
+  poseX: number;
+  poseY: number;
+  dx: number;
+  dy: number;
+  r: number;
+  phi: number;
+  c: number;
+  w: number;
+}
+
+function mildPinch(
+  x: number,
+  y: number,
+  config: SimConfig,
+  time: number,
+  knee: number,
+  reach: number,
 ): Pinch {
   const bodies = config.bodies;
   let nearest = Infinity;
@@ -167,12 +252,12 @@ export function pinchTowardMasses(
       ny = oy;
     }
   }
-  if (!(nearest > 1e-6) || !Number.isFinite(nearest)) return { dx: 0, dy: 0 };
+  if (!(nearest > 1e-6) || !Number.isFinite(nearest)) return { dx: 0, dy: 0, funnel: 0 };
 
   const depth = potentialDepth(x, y, config, time);
   const scale = scaleWellDepth(depth, knee);
   const step = nearest * (reach > 0 ? reach : 0) * scale;
-  if (!(step > 0) || !Number.isFinite(step)) return { dx: 0, dy: 0 };
+  if (!(step > 0) || !Number.isFinite(step)) return { dx: 0, dy: 0, funnel: 0 };
 
   const eps = Math.min(nearest * 0.2, Math.max(nearest * 0.05, 1e-3));
   const gx = depthSlope(x, y, eps, 0, config, time);
@@ -189,8 +274,190 @@ export function pinchTowardMasses(
   }
   const dx = dirX * step;
   const dy = dirY * step;
-  if (!Number.isFinite(dx) || !Number.isFinite(dy)) return { dx: 0, dy: 0 };
-  return { dx, dy };
+  if (!Number.isFinite(dx) || !Number.isFinite(dy)) return { dx: 0, dy: 0, funnel: 0 };
+  return { dx, dy, funnel: 0 };
+}
+
+function rankedPulls(x: number, y: number, config: SimConfig, time: number): BodyPull[] {
+  const g = gravityConstant(config);
+  const bodies = config.bodies;
+  const pulls: BodyPull[] = [];
+  for (let i = 0; i < bodies.length; i++) {
+    const body = bodies[i];
+    if (!bodyPresent(body, time) || !(body.mass > 0)) continue;
+    const pose = bodyPose(body, time, bodies, g);
+    const dx = x - pose.x;
+    const dy = y - pose.y;
+    const r = Math.hypot(dx, dy);
+    const phi = r < 1e-8 ? Number.POSITIVE_INFINITY : (g * body.mass) / r;
+    const c = bodyCompactness(body, g, config.c);
+    pulls.push({ body, poseX: pose.x, poseY: pose.y, dx, dy, r, phi, c, w: funnelWeight(c) });
+  }
+  pulls.sort((a, b) => comparePhi(a.phi, b.phi));
+  return pulls;
+}
+
+function comparePhi(a: number, b: number): number {
+  const aInf = !Number.isFinite(a);
+  const bInf = !Number.isFinite(b);
+  if (aInf && bInf) return 0;
+  if (aInf) return -1;
+  if (bInf) return 1;
+  return b - a;
+}
+
+function phiShare(a: number, b: number): number {
+  const aInf = !Number.isFinite(a);
+  const bInf = !Number.isFinite(b);
+  if (aInf && bInf) return 0.5;
+  if (aInf) return 1;
+  if (bInf) return 0;
+  const sum = a + b;
+  if (!(sum > 0)) return 0.5;
+  return a / sum;
+}
+
+/** Display position of one body: mild pinch, or the funnel blended by w. */
+function mappedPoint(p: BodyPull, mildX: number, mildY: number): { x: number; y: number } {
+  const rb = p.body.radius;
+  if (!(p.w > 0) || !(rb > 0) || !(p.r > 1e-8)) return { x: mildX, y: mildY };
+  const r0 = rb * (1 + theme.gravity.funnelR0 * p.c);
+  const a = rb * (1 + theme.gravity.funnelA * p.c);
+  let fx: number;
+  let fy: number;
+  if (!(p.r > r0) || !(a > 0)) {
+    const s = rb / p.r;
+    fx = p.poseX + p.dx * s;
+    fy = p.poseY + p.dy * s;
+  } else {
+    const prime = funnelRadius(p.r, rb, p.c);
+    const rPrime = prime === null ? rb : prime;
+    const s = rPrime / p.r;
+    fx = p.poseX + p.dx * s;
+    fy = p.poseY + p.dy * s;
+  }
+  const w = p.w;
+  return { x: mildX * (1 - w) + fx * w, y: mildY * (1 - w) + fy * w };
+}
+
+function applyFunnel(x: number, y: number, config: SimConfig, time: number, mildDx: number, mildDy: number): Pinch {
+  const pulls = rankedPulls(x, y, config, time);
+  if (pulls.length === 0) return { dx: mildDx, dy: mildDy, funnel: 0 };
+  const mildX = x + mildDx;
+  const mildY = y + mildDy;
+  const top = pulls[0];
+  const second = pulls[1];
+  if (!(top.w > 0)) return { dx: mildDx, dy: mildDy, funnel: 0 };
+  if (second && top.w > 0 && second.w > 0) {
+    const a = mappedPoint(top, mildX, mildY);
+    const b = mappedPoint(second, mildX, mildY);
+    const share = phiShare(top.phi, second.phi);
+    const shownX = a.x * share + b.x * (1 - share);
+    const shownY = a.y * share + b.y * (1 - share);
+    const w = top.w * share + second.w * (1 - share);
+    return { dx: shownX - x, dy: shownY - y, funnel: w };
+  }
+  const shown = mappedPoint(top, mildX, mildY);
+  return { dx: shown.x - x, dy: shown.y - y, funnel: top.w };
+}
+
+export interface ContourChip {
+  text: string;
+  color: string;
+  /** World position on the contour. */
+  x: number;
+  y: number;
+  r: number;
+  band: TimeBand;
+}
+
+/**
+ * One chip per visible contour of each mass, at `angleDeg` on the screen
+ * (y down). Outer to inner. A chip closer than `gapPx` to the previous one
+ * on that body is dropped. `project` maps world to screen pixels.
+ */
+export function placeContourLabels(
+  config: SimConfig,
+  time: number,
+  project: (x: number, y: number) => { x: number; y: number },
+  width: number,
+  height: number,
+  gamma: number,
+  angleDeg: number,
+  gapPx: number,
+): ContourChip[] {
+  const aim = contourAim(angleDeg);
+  const g = gravityConstant(config);
+  const bodies = config.bodies;
+  const order: Body[] = [];
+  for (let i = 0; i < bodies.length; i++) {
+    const body = bodies[i];
+    if (!bodyPresent(body, time) || !(body.mass > 0) || !(body.radius > 0)) continue;
+    order.push(body);
+  }
+  order.sort((a, b) => b.mass * g - a.mass * g);
+  const chips: ContourChip[] = [];
+  for (let i = 0; i < order.length; i++) {
+    const body = order[i];
+    const pose = bodyPose(body, time, bodies, g);
+    let previous: { x: number; y: number } | null = null;
+    for (let b = 0; b < TIME_BANDS.length; b++) {
+      const band = TIME_BANDS[b];
+      const target = rateAtDisplayS(band.sHigh, gamma);
+      const rMax = Math.max(body.radius * 80, 1);
+      const r = contourRadius(config, time, pose.x, pose.y, aim.x, aim.y, target, body.radius, rMax);
+      if (r === null) continue;
+      const x = pose.x + aim.x * r;
+      const y = pose.y + aim.y * r;
+      const screen = project(x, y);
+      if (screen.x < 0 || screen.y < 0 || screen.x > width || screen.y > height) continue;
+      if (previous) {
+        const dist = Math.hypot(screen.x - previous.x, screen.y - previous.y);
+        if (dist < gapPx) continue;
+      }
+      previous = screen;
+      chips.push({ text: band.label, color: band.contour, x, y, r, band });
+    }
+  }
+  return chips;
+}
+
+/** Screen angle (y down) as a world direction (y up). */
+export function contourAim(angleDeg: number): { x: number; y: number } {
+  const rad = (angleDeg * Math.PI) / 180;
+  return { x: Math.cos(rad), y: -Math.sin(rad) };
+}
+
+/**
+ * Distance from a body along `dir` where the rest-frame rate crosses `target`.
+ * Null when the ray never crosses it between `rMin` and `rMax`.
+ */
+export function contourRadius(
+  config: SimConfig,
+  time: number,
+  originX: number,
+  originY: number,
+  dirX: number,
+  dirY: number,
+  targetRate: number,
+  rMin: number,
+  rMax: number,
+): number | null {
+  const len = Math.hypot(dirX, dirY);
+  if (!(len > 0) || !(rMax > rMin)) return null;
+  const ux = dirX / len;
+  const uy = dirY / len;
+  const at = (r: number) => properTimeRate(originX + ux * r, originY + uy * r, 0, 0, config, time);
+  if (!(at(rMin) < targetRate)) return null;
+  if (!(at(rMax) > targetRate)) return null;
+  let lo = rMin;
+  let hi = rMax;
+  for (let i = 0; i < 28; i++) {
+    const mid = (lo + hi) * 0.5;
+    if (at(mid) < targetRate) lo = mid;
+    else hi = mid;
+  }
+  return (lo + hi) * 0.5;
 }
 
 /**
@@ -205,7 +472,7 @@ export function clampPinch(dx: number, dy: number, stepX: number, stepY: number)
   let y = Number.isFinite(dy) ? dy : 0;
   if (limitX > 0) x = Math.max(-limitX, Math.min(limitX, x));
   if (limitY > 0) y = Math.max(-limitY, Math.min(limitY, y));
-  return { dx: x, dy: y };
+  return { dx: x, dy: y, funnel: 0 };
 }
 
 function depthSlope(
@@ -289,10 +556,9 @@ export function sampleGravityGrid(
         config.dilationStrength ?? 1,
         config.dilationCap ?? Number.POSITIVE_INFINITY,
       );
-      const pinch = pinchTowardMasses(x, y, config, time, knee);
-      const shown = clampPinch(pinch.dx, pinch.dy, grid.stepX, grid.stepY);
-      grid.pinchX[i] = x + shown.dx;
-      grid.pinchY[i] = y + shown.dy;
+      const pinch = pinchTowardMasses(x, y, config, time, knee, PINCH_REACH, grid.stepX, grid.stepY);
+      grid.pinchX[i] = x + pinch.dx;
+      grid.pinchY[i] = y + pinch.dy;
     }
   }
   return grid;
