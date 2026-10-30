@@ -116,12 +116,12 @@ Landed in [PR #64](https://github.com/stepwaec/slingshot/pull/64), from the ghos
 
 ## Sol campaign: the art is ready (v3.1)
 
-- **New, no code yet.** `design/assets/sol/` has the Sun, the eight planets, the Moon, Titan, Pluto, Charon, Eris, Arrokoth and Voyager. Follow `style.md` §18 and `threejs-notes.md` §21.
-  - Add one `look` per body.
-  - Use the size ladder for radii.
-  - Keep Earth's city lights, Saturn's and Uranus's front and back rings, and the Sun's spots as separate layers.
-  - Keep the locked faces fixed.
-- **Mission 1** should match `mockups/sol-moon.svg`: the Moon in its target zone (§17), with a capture into lunar orbit.
+- **Bodies are in the game.** `design/assets/sol/` has the Sun, the eight planets, the Moon, Titan, Pluto, Charon, Eris, Arrokoth and Voyager. Follow `style.md` §18 and `threejs-notes.md` §21.
+  - ✔ One `look` per body, drawn from the SVG pipeline.
+  - ✔ The size ladder is the crash radius (the Sun stays r 46; Voyager is not solid).
+  - ✔ Earth's city lights, Saturn's and Uranus's front and back rings, and the Sun's spots are separate layers.
+  - ✔ The Moon, Pluto and Charon keep fixed faces. Lighting still follows the star.
+- **Mission 1** should match `mockups/sol-moon.svg`: the Moon in its target zone (§17), with a capture into lunar orbit. That level comes after Orbit capture. It is not part of the bodies pass.
 
 ## Astrophage: the art is ready (v3.2)
 
@@ -135,6 +135,29 @@ Landed in [PR #64](https://github.com/stepwaec/slingshot/pull/64), from the ghos
   - Tau Ceti with its eaten line
 - **Mockup:** the planning view should match `mockups/planning-astrophage.svg`.
 - **Data:** the level fields in §22 are suggestions. Keep the knots deterministic, so the prediction knows the fuel on a path.
+
+## Layers menu (v3.3): replaces the map buttons
+
+- **Now:** `index.html` has `#gravity-controls`, with the Gravity button plus hidden Magnetism and Radiation buttons, and a floating `#mag-legend`. `input.ts` handles G and M; radiation has no key.
+- **Fix:** follow `style.md` §20 and `threejs-notes.md` §23:
+  - one Layers button with a count badge and a panel of rows, each with an icon, switch, key and legend, or a reason when unavailable
+  - keys L, G, M and D, with A and T for later layers
+  - availability per level
+
+  The planning view should match `mockups/planning-layers.svg`.
+
+## Gravity and time heat map (v3.4): replace the interim ramp and the saturating pinch
+
+- **Now:**
+  - The clock-rate field is a smooth per-vertex blend of existing tokens (`palette.ts` `CLOCK_HEAT_*`, `theme.gravity.heatAlpha`). Its gold at α 0.74 goes olive.
+  - The grid pull saturates at 55 % of the distance and is clamped to 0.45 of a cell (`gravityField.ts` `pinchTowardMasses`, `PINCH_CELL`). Near a black hole that becomes a uniform zoom with equal squares up to the shadow.
+- **Fix:** follow `style.md` §21 and `threejs-notes.md` §24:
+  - six crisp bands in the fragment shader, with contours and labels
+  - the rate sampled at the display position
+  - the cased grid, with dark ink inside the warm bands
+  - the compactness-weighted funnel, without the clamp where it applies
+
+  The planning view should match `mockups/planning-gravity-time.svg`.
 
 ## Priority fixes
 

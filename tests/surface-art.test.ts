@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Body } from "../src/sim/physics";
-import { stripsFor, surfaceKind } from "../src/render/surface-art";
+import { clearedNightOpacity, isOuterRim, stripsFor, surfaceKind } from "../src/render/surface-art";
 
 function body(kind: Body["kind"], look?: Body["look"]): Body {
   return { id: "b", kind, look, x: 0, y: 0, mass: 1, radius: 10 } as Body;
@@ -31,5 +31,20 @@ describe("lively surfaces", () => {
     expect(stripsFor("dwarf")[0]).toMatchObject({ dur: 160, distance: 63 });
     expect(stripsFor("planetx")[2]?.id).toBe("px-wisps");
     expect(stripsFor("planetx")[2]?.dur).toBeLessThan(stripsFor("planetx")[0]?.dur ?? 0);
+  });
+
+  it("treats only the outer rim as the night arc, and clears that mask's night stop", () => {
+    expect(isOuterRim(36.6, 34)).toBe(true);
+    expect(isOuterRim(32.3, 30)).toBe(true);
+    expect(isOuterRim(47.37, 44)).toBe(true);
+    expect(isOuterRim(12.92, 12)).toBe(true);
+    expect(isOuterRim(34, 34)).toBe(false);
+    expect(isOuterRim(44, 44)).toBe(false);
+    const lit = [
+      { offset: 0, opacity: 1 },
+      { offset: 0.5, opacity: 0.45 },
+      { offset: 1, opacity: 0.06 },
+    ];
+    expect(clearedNightOpacity(lit)).toEqual([1, 0.45, 0]);
   });
 });

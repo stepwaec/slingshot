@@ -16,7 +16,8 @@ import {
   type MegaSlot,
 } from "../src/sim/mega";
 import { movingBodies } from "../src/game/ghosts";
-import { BODY_LOOKS, makeState, step, type BodyLook } from "../src/sim/physics";
+import { SOL_LOOKS, solArt } from "../src/render/sol-art";
+import { BODY_LOOKS, bodySolid, makeState, step, type BodyLook } from "../src/sim/physics";
 
 describe("Observatory", () => {
   it("stays off the campaign list and is its own chart", () => {
@@ -29,6 +30,13 @@ describe("Observatory", () => {
     for (const look of BODY_LOOKS) {
       expect(hasLook(look), `missing look ${look}`).toBe(true);
     }
+    for (const look of SOL_LOOKS) {
+      const placed = observatory.bodies.find((body) => body.look === look);
+      expect(placed, `missing Sol look ${look}`).toBeTruthy();
+      expect(placed?.radius, look).toBe(solArt(look).radius);
+    }
+    const voyager = observatory.bodies.find((body) => body.look === "voyager");
+    expect(bodySolid(voyager!)).toBe(false);
     for (const kind of BODY_KINDS) {
       expect(observatory.bodies.some((body) => body.kind === kind), `missing kind ${kind}`).toBe(true);
     }

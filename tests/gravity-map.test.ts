@@ -235,23 +235,27 @@ describe("gravity grid", () => {
 describe("gravity layer toggle", () => {
   it("toggles off and on from the button and the G key", () => {
     const game = createGame(passage);
-    expect(gravityLabel(game.gravity)).toBe("Gravity off");
+    expect(game.gravity).toBe("off");
+    expect(gravityLabel(game.gravity)).toBe("Gravity");
 
     expect(cycleGravity(game)).toBe("on");
-    expect(gravityLabel(game.gravity)).toBe("Gravity on");
+    expect(gravityLabel(game.gravity)).toBe("Gravity");
     expect(cycleGravity(game)).toBe("off");
-    expect(gravityLabel(game.gravity)).toBe("Gravity off");
+    expect(gravityLabel(game.gravity)).toBe("Gravity");
 
     const press = { repeat: false, metaKey: false, ctrlKey: false, altKey: false };
     expect(applyGravityKey(game, { key: "g", ...press })).toBe(true);
-    expect(gravityLabel(game.gravity)).toBe("Gravity on");
+    expect(game.gravity).toBe("on");
+    expect(gravityLabel(game.gravity)).toBe("Gravity");
     expect(applyGravityKey(game, { key: "G", ...press })).toBe(true);
-    expect(gravityLabel(game.gravity)).toBe("Gravity off");
+    expect(game.gravity).toBe("off");
+    expect(gravityLabel(game.gravity)).toBe("Gravity");
     expect(applyGravityKey(game, { key: "g", repeat: true, metaKey: false, ctrlKey: false, altKey: false })).toBe(false);
     expect(game.gravity).toBe("off");
     expect(applyGravityKey(game, { key: "g", repeat: false, metaKey: true, ctrlKey: false, altKey: false })).toBe(false);
     expect(applyGravityKey(game, { key: "g", ...press })).toBe(true);
-    expect(gravityLabel(game.gravity)).toBe("Gravity on");
+    expect(game.gravity).toBe("on");
+    expect(gravityLabel(game.gravity)).toBe("Gravity");
     expect(applyGravityKey(game, { key: "c", ...press })).toBe(false);
     expect(game.gravity).toBe("on");
   });
@@ -305,13 +309,15 @@ describe("gravity layer toggle", () => {
         () => ({ width: 800, height: 600 }),
       );
       const quiet = { repeat: false, metaKey: false, ctrlKey: false, altKey: false, preventDefault() {} };
-      for (const label of ["Gravity on", "Gravity off"]) {
+      for (const view of ["on", "off"] as const) {
         gravityClicks[0]();
-        expect(gravityLabel(game.gravity)).toBe(label);
+        expect(game.gravity).toBe(view);
+        expect(gravityLabel(game.gravity)).toBe("Gravity");
       }
-      for (const label of ["Gravity on", "Gravity off"]) {
+      for (const view of ["on", "off"] as const) {
         keys[0]({ key: "g", ...quiet });
-        expect(gravityLabel(game.gravity)).toBe(label);
+        expect(game.gravity).toBe(view);
+        expect(gravityLabel(game.gravity)).toBe("Gravity");
       }
       keys[0]({ key: "c", ...quiet });
       expect(game.gravity).toBe("off");

@@ -53,6 +53,22 @@ import beltSparseUrl from "../../design/assets/space/belt-sparse.svg?url";
 import beltMediumUrl from "../../design/assets/space/belt-medium.svg?url";
 import beltDenseUrl from "../../design/assets/space/belt-dense.svg?url";
 import kuiperUrl from "../../design/assets/space/kuiper-belt.svg?url";
+import solSunUrl from "../../design/assets/sol/sun.svg?url";
+import solMercuryUrl from "../../design/assets/sol/mercury.svg?url";
+import solVenusUrl from "../../design/assets/sol/venus.svg?url";
+import solEarthUrl from "../../design/assets/sol/earth.svg?url";
+import solLunaUrl from "../../design/assets/sol/moon.svg?url";
+import solMarsUrl from "../../design/assets/sol/mars.svg?url";
+import solJupiterUrl from "../../design/assets/sol/jupiter.svg?url";
+import solSaturnUrl from "../../design/assets/sol/saturn.svg?url";
+import solTitanUrl from "../../design/assets/sol/titan.svg?url";
+import solUranusUrl from "../../design/assets/sol/uranus.svg?url";
+import solNeptuneUrl from "../../design/assets/sol/neptune.svg?url";
+import solPlutoUrl from "../../design/assets/sol/pluto.svg?url";
+import solCharonUrl from "../../design/assets/sol/charon.svg?url";
+import solErisUrl from "../../design/assets/sol/eris.svg?url";
+import solArrokothUrl from "../../design/assets/sol/arrokoth.svg?url";
+import solVoyagerUrl from "../../design/assets/sol/voyager.svg?url";
 import { palette } from "./palette";
 
 /**
@@ -93,6 +109,22 @@ export const theme = {
     beltMedium: beltMediumUrl,
     beltDense: beltDenseUrl,
     kuiper: kuiperUrl,
+    solSun: solSunUrl,
+    solMercury: solMercuryUrl,
+    solVenus: solVenusUrl,
+    solEarth: solEarthUrl,
+    solLuna: solLunaUrl,
+    solMars: solMarsUrl,
+    solJupiter: solJupiterUrl,
+    solSaturn: solSaturnUrl,
+    solTitan: solTitanUrl,
+    solUranus: solUranusUrl,
+    solNeptune: solNeptuneUrl,
+    solPluto: solPlutoUrl,
+    solCharon: solCharonUrl,
+    solEris: solErisUrl,
+    solArrokoth: solArrokothUrl,
+    solVoyager: solVoyagerUrl,
     starfield: starfieldUrl,
     predictedPath: predictedPathUrl,
     dragArrow: dragArrowUrl,
@@ -644,6 +676,18 @@ export const theme = {
     maxDots: 800,
     maxTicks: 48,
     maxSamples: 480,
+  },
+  /**
+   * Sol campaign. Radii are design/style.md §18. Periods and rolls are the
+   * asset headers. Voyager's radius scales the 22 px dish; it is not solid.
+   */
+  sol: {
+    saturnShadowAlpha: 0.82,
+    /** earth.svg #ethNight: opaque from 0.52 to 0.66 along the lit→night gradient. */
+    cityNight0: 0.52,
+    cityNight1: 0.66,
+    /** The gradient runs from 0.706 r on the lit side to the opposite limb. */
+    cityLitReach: 0.706,
   },
   /**
    * Astrophage. design/style.md §19 and the asset headers.

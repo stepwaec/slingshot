@@ -218,6 +218,7 @@ const BODY_KEYS = [
   "ring",
   "elevator",
   "astrophage",
+  "solid",
 ] as const;
 const ENGINE_KEYS = ["angle", "burn", "scoop", "push"] as const;
 const DYSON_KEYS = ["coverage", "nick"] as const;
@@ -566,6 +567,12 @@ function readBody(value: unknown, path: string, issues: string[]): Body | undefi
   if (Object.prototype.hasOwnProperty.call(value, "astrophage")) {
     astrophage = readAstrophage(value.astrophage, `${path}.astrophage`, issues);
   }
+  let solid: boolean | undefined;
+  if (Object.prototype.hasOwnProperty.call(value, "solid")) {
+    const raw = value.solid;
+    if (typeof raw !== "boolean") issues.push(`${path}.solid must be a boolean`);
+    else solid = raw;
+  }
   let look: BodyLook | undefined;
   if (Object.prototype.hasOwnProperty.call(value, "look")) {
     const raw = value.look;
@@ -590,6 +597,7 @@ function readBody(value: unknown, path: string, issues: string[]): Body | undefi
   if (captureRadius !== undefined) body.captureRadius = captureRadius;
   if (atmosphereRadius !== undefined) body.atmosphereRadius = atmosphereRadius;
   if (look) body.look = look;
+  if (solid === false) body.solid = false;
   if (orbit) body.orbit = orbit;
   if (magnet) body.magnet = magnet;
   if (beam) body.beam = beam;
