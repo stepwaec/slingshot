@@ -2,7 +2,7 @@
 
 Repository: [stepwaec/slingshot](https://github.com/stepwaec/slingshot). Game design, physics rules and architecture are in [DESIGN.md](DESIGN.md).
 
-Last updated: 2026-10-29 (Europe/Zurich).
+Last updated: 2026-10-30 (Europe/Zurich).
 
 Status values: **Done** (merged, with PR link), **In progress**, **On hold**, **Planned**. Every planned package is scoped with Stephan before it is built.
 
@@ -37,7 +37,7 @@ Note on numbering: Brainstormer's first draft called the flight loop "WP2" and r
 | WP13: three-body chaos | Planned | Multi-sun systems (Trisolaran style) where three-body chaos means planning uses widening probability cones instead of exact lines. |
 | WP14: world builder | Planned | Build and share levels, using the JSON level format from WP7c. |
 | WP15: galaxy map | Planned | A galaxy-scale mission map where galaxies move relative to each other; each level stays one solar system. |
-| Late game: easter eggs and megastructures (after WP13) | In progress, opened 2026-10-29 in [PR #48](https://github.com/stepwaec/slingshot/pull/48) | Stellar engine, Dyson swarm and Shkadov thruster from the PR #40 designs. Torch is the stellar-engine level: the jet core burns hull, the margins refill fuel, and the stream pushes the ship. A Dyson swarm multiplies that star's solar recharge by 1 − coverage and nicks hull on a collector shell. A Shkadov mirror is solid, and every body drifts toward it. Ringworld, the space elevator and the wormhole pair are still open. Easter eggs are still undecided. |
+| Late game: easter eggs and megastructures (after WP13) | In progress, opened 2026-10-29 in [PR #48](https://github.com/stepwaec/slingshot/pull/48) | Stellar engine, Dyson swarm and Shkadov thruster from the PR #40 designs, in the game in [PR #48](https://github.com/stepwaec/slingshot/pull/48). Torch is the stellar-engine level: the jet core burns hull, the margins refill fuel, and the stream pushes the ship. A Dyson swarm multiplies that star's solar recharge by 1 − coverage and nicks hull on a collector shell. A Shkadov mirror is solid, and every body drifts toward it. Ringworld, the space elevator and the wormhole pair share one geometry module with the drawing. Hoop crosses two gaps in a solid ring (the ring's own pull cancels at the centre and points outward inside). Cable starts on the counterweight and leaves at ω × r; the tether itself crashes. Fold enters a wormhole mouth and comes out of the other with its speed kept and its heading turned; the exit adds its clock offset to outside time, and the trip back subtracts it. Easter eggs are still undecided. |
 
 ## Living universe
 
@@ -70,6 +70,10 @@ Physics stays game-like but true to its real shape, and prediction always matche
 - Planet X on a Kepler orbit around its sun (Lead). A plain ring, a placeholder until Claude designs the marker, shows where a moving body will be at each burn and under the cursor.
 - A supernova with a lethal blast and a remnant shock, and a quasar jet (Flash). The drawings are placeholders.
 - Planet X spiralling into its sun (Ash). The ship has to be in orbit before the planet is consumed. The burn ring is a placeholder.
+- A stellar engine (Torch), a Dyson swarm and a Shkadov thruster. The jet core burns, the margins refill, a collector nicks hull, and the mirror is solid.
+- A ringworld (Hoop): a solid band with transit gaps. Inside, the ring's pull cancels at the centre.
+- A space elevator (Cable): a solid tether, and a counterweight that throws the ship off at ω × r.
+- A wormhole pair (Fold): entering a mouth moves the ship to the other one and shifts outside time by the exit's clock offset.
 
 **Planned, by package**
 - Asteroid belts in sparse, medium and dense tiers, and a Kuiper belt (Weave, Frost). Rocks are seeded. Large ones crash the ship. Dense dust can drain hull, and shielding halves that.
@@ -103,7 +107,7 @@ Every upgrade is visible on the modular ship: hull plating or structural strengt
 
 ## Megastructures and exotic objects
 
-Confirmed by Stephan on 2026-10-29 for the late game (no build yet, scope later):
+Confirmed by Stephan on 2026-10-29 for the late game. The six structures below are in the game. Easter eggs are still undecided:
 
 - **Stellar engine:** a star turned into a rocket, with a fuel-rich jet to scoop from.
 - **Dyson swarm:** a cloud of solar collectors to weave through; dims the star, so solar recharge drops.
@@ -166,7 +170,7 @@ Other gameplay ideas raised by Brainstormer and not yet scheduled: realistic vis
 - **Gravity map performance:** 60 fps on a real GPU not yet confirmed (the no-GPU test machine showed 23 to 16 fps with the map on).
 - **Realistic visuals:** when to do the realism pass, and whether Claude's next update covers it.
 - **Gravity map cost in flight:** Brainstormer suggested it could be free in planning but cost energy in flight, or be unlocked by a tutorial; not decided.
-- **Easter eggs and megastructures:** the stellar engine, Dyson swarm and Shkadov thruster are in progress in [PR #48](https://github.com/stepwaec/slingshot/pull/48). Ringworld, the space elevator and the wormhole pair are still open. Easter eggs are still undecided.
+- **Easter eggs and megastructures:** the stellar engine, Dyson swarm and Shkadov thruster are in the game in [PR #48](https://github.com/stepwaec/slingshot/pull/48). Ringworld (Hoop), the space elevator (Cable) and the wormhole pair (Fold) are in the game too. Easter eggs are still undecided.
 
 ## Design requests for Claude
 
@@ -186,7 +190,9 @@ Stephan points Claude at this section for the next visual pack.
 
 **Late game, wormholes and living surfaces:** done in [PR #40](https://github.com/stepwaec/slingshot/pull/40). That pack is the stellar engine, Dyson swarm, ringworld, Shkadov thruster, space elevator and wormhole (`design/assets/mega/`, `design/mockups/late-game.svg`), plus living surfaces: `design/assets/star-surface-motion.svg` and `style.md` §13, which gives granulation, flares, band drift, clouds and rotation per body type.
 
-The stellar engine, Dyson swarm and Shkadov thruster from that pack are in the game in [PR #48](https://github.com/stepwaec/slingshot/pull/48). Ringworld, the space elevator and the wormhole pair are not built yet. The Dyson header draws the star at opacity 0.72 and also says recharge ×0.4. The game uses one level `coverage` for both, so the drawn star and the recharge factor are both `1 − coverage`. Burn rate, scoop rate, jet push, collector nick and drift acceleration are level knobs; the headers describe the roles and do not number them.
+The stellar engine, Dyson swarm and Shkadov thruster from that pack are in the game in [PR #48](https://github.com/stepwaec/slingshot/pull/48). Ringworld, the space elevator and the wormhole pair are in the game as Hoop, Cable and Fold. The Dyson header draws the star at opacity 0.72 and also says recharge ×0.4. The game uses one level `coverage` for both, so the drawn star and the recharge factor are both `1 − coverage`. Burn rate, scoop rate, jet push, collector nick and drift acceleration are level knobs; the headers describe the roles and do not number them.
+
+The ring's transit gaps are holes in the solid band. Its gravity stays that of a uniform ring, so the pull still cancels at the centre; the gap does not remove mass. The field is softened by the band's half-width so a ship can cross a gap without a singularity. The elevator's angle is `phase + ωt` on sim time, because the tether is a hazard. The planet's painted surface still scrolls on `frame.now`. Cable's planning chip prints `|ω × r|` (16.2 for that level). The sample SVG's "free Δv 2.4" is the header's placeholder, not a second number. A wormhole puts the ship at the other mouth's centre, keeps the speed, and turns the heading by the pair's angle (the opposite turn on the way back). Arriving at the exit adds `clockOffset` to outside time; arriving at the entrance subtracts it. Orbits keep using `step × dt`. Fold's chip prints "exit clock +18 s". The sample "+3.2 h" is the same chip for an offset of 3.2 hours. Ring city lights are a stable pattern along the arc, not the SVG's painted dots, because the band is a continuous strip scaled from the sample.
 
 **Open requests**, in priority order:
 

@@ -1,0 +1,59 @@
+{
+  "id": "fold",
+  "name": "Fold",
+  "g": 1,
+  "dt": 0.016666666666666666,
+  "bodies": [
+    {
+      "id": "home",
+      "name": "Home",
+      "kind": "home",
+      "x": 0,
+      "y": 0,
+      "mass": 8000,
+      "radius": 16
+    },
+    {
+      "id": "x",
+      "name": "Planet X",
+      "kind": "target",
+      "x": 560,
+      "y": 180,
+      "mass": 6400,
+      "radius": 15,
+      "captureRadius": 100
+    }
+  ],
+  "wormholes": [
+    {
+      "id": "fold",
+      "a": { "x": 20, "y": 200, "radius": 34 },
+      "b": { "x": 400, "y": 180, "radius": 26 },
+      "angle": -1.5707963267948966,
+      "clockOffset": 18
+    }
+  ],
+  "targetId": "x",
+  "ship": {
+    "x": 46,
+    "y": 0,
+    "vx": 0,
+    "vy": 13.18760946791574
+  },
+  "orbit": { "bodyId": "home", "radius": 46 },
+  "fuel": 40,
+  "fuelPerDv": 1,
+  "bounds": { "minX": -8000, "maxX": 8000, "minY": -8000, "maxY": 8000 },
+  "maxSteps": 4000,
+  "dvPerPixel": 0.25,
+  "periapsisMargin": 6,
+  "maxPlannedBurns": 4,
+  "c": 1000000,
+  "mission": {
+    "deadline": 70,
+    "crewLimit": 30,
+    "fuelStarMin": 8,
+    "crewWeight": 1,
+    "fuelWeight": 1
+  }
+}

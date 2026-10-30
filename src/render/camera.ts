@@ -152,6 +152,15 @@ export function frameLevel(camera: Camera, width: number, height: number, level:
     minY = Math.min(minY, cover.y - cover.reach - pad);
     maxY = Math.max(maxY, cover.y + cover.reach + pad);
   }
+  for (const hole of level.wormholes ?? []) {
+    for (const mouth of [hole.a, hole.b]) {
+      const reach = mouth.radius * 1.35 + 40;
+      minX = Math.min(minX, mouth.x - reach);
+      maxX = Math.max(maxX, mouth.x + reach);
+      minY = Math.min(minY, mouth.y - reach);
+      maxY = Math.max(maxY, mouth.y + reach);
+    }
+  }
   for (const belt of level.belts ?? []) {
     const center = level.bodies.find((body) => body.id === belt.centerId);
     if (!center) continue;
