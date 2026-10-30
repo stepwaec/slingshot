@@ -481,7 +481,7 @@ Designs: `overlays/gravity-time.svg`, `mockups/planning-gravity-time.svg`. Value
 
 ## 25. Rendering v2: shader bodies
 
-Specs: `shader-specs.md`. Reference shaders: `shaders/*.frag`. Live comparison: `preview/shaders.html`. So far: R2.0 conventions (§1 there) and R2.1 stars (§2, `shaders/star.frag`).
+Specs: `shader-specs.md`. Reference shaders: `shaders/*.frag`. Live comparison: `preview/shaders.html`. So far: R2.0 conventions (§1 there), R2.1 stars (§2, `shaders/star.frag`) and R2.2 rocky planets and moons (§3, `shaders/planet.frag` with the baked maps in `shaders/maps/`).
 
 - **Port as written.** Port each reference shader into a `THREE.ShaderMaterial` on an impostor quad per body. Keep the uniform names, so the parameter tables apply one to one.
 - **Body radius.** `uR` is the body radius in device pixels (r · zoom · DPR).
@@ -489,4 +489,4 @@ Specs: `shader-specs.md`. Reference shaders: `shaders/*.frag`. Live comparison: 
 - **Blending.** Premultiplied output: `blending: THREE.CustomBlending`, `blendSrc: THREE.OneFactor`, `blendDst: THREE.OneMinusSrcAlphaFactor`, `transparent: true`, `depthWrite: false`.
 - **Fallback.** Behind `rendering.shaders`: when it is off, draw today's sprites. The sprite path stays until every family passes its side-by-side.
 - **Budget.** As §9: bake the star rings into frames when a star covers more than a quarter of the screen. Drop to 3 octaves below 6 px.
-
+- **Planets.** Load the maps once as power-of-two textures with `wrapS = RepeatWrapping` and `flipY = true`. `uLight` comes from the brightest star each frame; the art's default only stands in for the preview. Bake new bodies with the procedure in `shader-specs.md` §3.
