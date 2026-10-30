@@ -2,7 +2,7 @@
 
 The numbers for the GPU-drawn bodies in Rendering v2 (`docs/ROADMAP.md`, R2.0–R2.5). Each family has a **reference shader** in `design/shaders/` and a live comparison in `design/preview/shaders.html`: the approved SVG on the left, the reference shader on the right, at 1.5×. The game's shaders must match the right-hand column. The values in this file and in the preview come from one table, so they cannot drift apart. Physics, gameplay and the prediction stay untouched.
 
-Status: **R2.0 conventions, R2.1 stars, R2.2 rocky planets and R2.3 gas giants** are specified. Compact objects (R2.4) and effects (R2.5) follow as their own sections.
+Status: **R2.0 conventions, R2.1 stars, R2.2 rocky planets, R2.3 gas giants and R2.4 compact objects** are specified. Effects (R2.5) follow as their own section.
 
 ## 1. Conventions (R2.0)
 
@@ -21,7 +21,10 @@ Status: **R2.0 conventions, R2.1 stars, R2.2 rocky planets and R2.3 gas giants**
   - `fbm`: 5 octaves, lacunarity 2.02, gain 0.5, mapped to 0–1 with mean 0.5 (the SVG `fractalNoise`).
   - `turb`: the sum of |noise| over 5 octaves (the SVG `turbulence`).
   - A sphere surface samples the noise at the 3D point on the unit sphere, so features foreshorten toward the limb and a flow reads as rotation.
-- **Colour:** write the sRGB hex values straight out (`srgb01`), with no tone mapping. Output is **premultiplied** alpha; blend `ONE, ONE_MINUS_SRC_ALPHA`. Ramps use the SVG stop offsets exactly.
+- **Colour:** write the sRGB hex values straight out (`srgb01`), with no tone mapping. Ramps use the SVG stop offsets exactly.
+- **Compositing:** compose layers inside the shader with a **straight-alpha over**: o = a + d.a(1 − a), rgb = (c·a + d.rgb·d.a·(1 − a)) / o. Only the final output is **premultiplied** (rgb × a, blend `ONE, ONE_MINUS_SRC_ALPHA`).
+  - Do not use `mix(d.rgb, c, a)` on a transparent destination: that premultiplies early, and the final multiply then squares the alpha of every glow, haze and ring.
+  - The first drafts of these shaders made that mistake, which is why their glows and rings read weak.
 - **Crisp edges:** one-pixel `smoothstep` widths from the pixel size (1 / (r · zoom · DPR)), never wider. The rules in `IMPLEMENTING.md` hold: no blur, no grey, no brown from low-alpha warm colours.
 - **Level of detail:**
   - Below a body radius of 6 px: 3 octaves, and no prominences or faculae.
@@ -98,7 +101,7 @@ White-dwarf mode (`smooth` = 1) replaces layers 1–7 with:
 | `haze1` | `uHaze1` | haze, middle | `#E8461A` | `#E8461A` | `#C8301C` | `#3A6AF0` | `#FF8C3A` | `#E8501A` | `#B8CCFF` | `#C83C1E` |
 | `haze2` | `uHaze2` | haze, outer | `#6A1408` | `#6A1408` | `#4E0C16` | `#15287A` | `#6A2A10` | `#5A1608` | `#6A1408` | `#4A0E08` |
 | `hazeR` | `uHazeR` | haze radius, radii | 4.35 | 4.35 | 4.5 | 4.44 | 4 | 4 | 4.35 | 2.43 |
-| `hazeA` | `uHazeA` | haze strength | 1.2 | 1.2 | 1.2 | 0.92 | 0.8 | 0.7 | 0.55 | 0.9 |
+| `hazeA` | `uHazeA` | haze strength | 1 | 1 | 1 | 0.92 | 0.8 | 0.7 | 0.55 | 0.9 |
 | `fl0` | `uFl0` | flame ring, inner | `#FFE7A0` | `#FFE7A0` | `#FFB27A` | `#F4F8FF` | `#FFF6D6` | `#FFC890` | `#FFE7A0` | `#FFB27A` |
 | `fl1` | `uFl1` | flame ring, 0.82 | `#FFB347` | `#FFB347` | `#FF6A3A` | `#A9C8FF` | `#FFD27A` | `#FF9A4A` | `#FFB347` | `#FF8A4A` |
 | `fl2` | `uFl2` | flame ring, outer | `#FF6A1A` | `#FF6A1A` | `#E0432F` | `#4F8DFF` | `#FFA040` | `#E8501A` | `#FF6A1A` | `#D8461E` |
@@ -281,3 +284,22 @@ The day and night lighting, the haze and the rim are as §3.
 - **Banded gas giant:** `uJet` = [0.00000, 0.00000, 0.00000, 0.00000, -0.01465, -0.01465, -0.01465, -0.01465, 0.00111, 0.00111, 0.00111, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000]
 - **Ringed gas giant:** `uJet` = [0.00000, 0.00000, 0.00000, 0.00000, -0.01458, -0.01458, -0.01458, 0.00000, 0.00000, 0.00000, -0.01458, -0.01458, -0.01458, 0.00000, 0.00000, 0.00000, 0.00000]
 - **Saturn-like ice ring:** `uJet` = [0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000]
+
+## 5. Compact objects (R2.4)
+
+Reference shader: `design/shaders/compact.frag`, one quad per object, with `uKind` 0 quiet neutron star, 1 pulsar, 2 magnetar, 3 black hole. The **white dwarf** is `star.frag`'s smooth mode (§2). There are no maps: everything is analytic, so it stays crisp at any zoom.
+
+- **Units.** The SVG stroke widths are local units, so they scale with zoom: a width w in the SVG is w / r_local body radii (r_local 8, 8, 9 and 22). Never use raw screen pixels.
+- **Time.** The pulsar's beams are a **hazard**, so they turn on **`uSimTime`** at the level's period (`uPeriod`, + clockwise as the SVG) from `uPhase`, and reach `uReach` radii, matching the damage model (`IMPLEMENTATION-REVIEW.md` gap C). Everything else is cosmetic, on `uTime`.
+
+| Object | Layers (values from the asset headers) |
+|---|---|
+| Neutron star (r 8) | Glow `#B48CFF` to 5 r (0 α 0.65, 0.2 α 0.48, 0.35 α 0.22, 0.6 α 0.07). A magnetosphere turning clockwise once per 6 s from 30°: an equatorial haze ellipse 2.5 × 0.6 r at α 0.14, and two cones from 0.875 r to 4.5 r, half-width 0.4 → 0.875 r, `#DCE4FF` α 0.38 → `#B48CFF` α 0, each with a white core spike (α 0.55 → 0). Body ramp `#FFFFFF` (0.5), `#DCE4FF` (0.8), `#C9A8FF` (0.93), `#B48CFF`. Limb `#DCE4FF` 1 local unit at 0.9375 r, plus a `#B48CFF` hairline 0.6 at 1.0375 r. |
+| Pulsar (r 8) | Glow `#4FC3F7` to 5.5 r (0.7, 0.45, 0.18, 0.05). Two beams on **sim time**, half-width 0.25 → 1.125 r over `uReach` (28.5 r), white α 0.85 → `#7FDBFF` α 0.4 at 30 %, α 0.1 at 75 %, α 0 at the tip; a white core line 1 unit wide, fading by 70 %. Eight 5° afterglow sectors trailing each beam, α 0.22 × 0.79ⁿ. Body `#FFFFFF` (0.55), `#DCF6FF` (0.85), `#7FDBFF`; limb `#A8ECFF`. |
+| Magnetar (r 9) | Glow `#D946EF` to 6.67 r. Six dipole field lines r = L sin²θ, L = 2.22, 3.33, 4.89, 6.89, 9.56 and 12.89 r, axis 20° clockwise from up (`uTilt`). The three inner lines are `#FF7AE6` and the outer three `#C77DFF`: width 1.5 → 0.8 units, α 0.75 → 0.25, each flickering on its own period (1.7, 2.3, 3.1, 2.7, 1.9 and 3.4 s). White dashes flow pole to pole along each line (about a 12-unit period, 0.9–2.15 s). The line test uses L(p) = r³/x²: distance ≈ \|L(p) − L\| / \|∇L\|, only where \|L(p) − L\| < 0.35 L and r ≤ L, which keeps it off the axis, where L(p) blows up. Interference grain: sparse `#FF9BEF` specks (cells of 2.6 units, 3 % cover) from 2.67 to 13.3 r, two seeds cross-fading over 5 s, layer α 0.26. **Starquake** every 18 s: a ring from 1 r to 16.7 r in 1.2 s, white → `#FF7AE6`, and the body flashes white for 0.6 s. |
+| Black hole (r 22) | Glow `#FF8C2E` to 3 r. **Lensed arcs**, the far side of the disk bent round the shadow: the annulus 1.15–1.3 r, ramp `#FFE7A0` → `#FFC857` → `#FF8C2E` → `#E8461A`, the top arc α 0.8 and the bottom α 0.55, fading to 0 at the horizontal axis (full at \|y\| ≥ 0.91 r). **Disk** in its own circular frame (X = x, Y = y / 0.2115) from 1.4 to 2.6 r: the colour ramp from the header (white-hot inner edge to a soft violet outer edge), dark plasma `#802105` (fbm × 1.21 per radius, 3.4 n − 1.7, × 0.42), filaments `#FFE7A0` (turbulence × 1.54), and stream streaks. The far half is drawn behind the shadow and the near half over it. **Doppler:** brightness ×1.0 on the left falling to ×0.55 on the right. The texture turns **counter-clockwise** once per `uDiskSpin` (24 s), so the bright left side is the approaching one; this fixes the SVG's recorded clockwise-versus-bright-left conflict. Shadow r 1, `#000000`. Photon ring at 1.09 r, `#FFC857` 2 units α 0.6 and white 1 unit α 0.95, plus `#FFF1C2` 0.6 at 1.041 r, wobbling about ±0.7 units. Einstein ring at 2.114 r, `#7FB8FF` 1 unit α 0.14. |
+
+**Budget:**
+- the black hole, about 10 noise octaves over the disk ellipse only: under 0.2 ms
+- the magnetar, six analytic lines: under 0.1 ms
+- the neutron star and the pulsar: trivial
