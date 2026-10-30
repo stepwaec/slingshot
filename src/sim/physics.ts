@@ -73,6 +73,7 @@ export type BodyKind = "home" | "star" | "target" | "moon" | "blackhole" | "plan
  * Stars: `sun`, `binary-hot`, `binary-cool`, `white-dwarf`, `red-giant`.
  * Compact objects: `neutron`, `pulsar`, `magnetar`.
  * Planets and moons: `gas-giant`, `moon`, `moon-icy`, `moon-volcanic`, `dwarf`.
+ * A lone rock: `asteroid`. The look is visual; mass and radius still collide.
  */
 export const BODY_LOOKS = [
   "sun",
@@ -89,6 +90,7 @@ export const BODY_LOOKS = [
   "pulsar",
   "magnetar",
   "comet",
+  "asteroid",
 ] as const;
 
 export type BodyLook = (typeof BODY_LOOKS)[number];

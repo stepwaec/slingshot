@@ -1,6 +1,7 @@
 /**
- * Supernovae and quasars. No asset in `design/` describes these, so the
- * numbers live on the level. Both are functions of sim time only.
+ * Supernovae and quasars. The numbers live on the level.
+ * Drawings are `design/assets` and `src/render/visuals/hazards.ts`.
+ * Both are functions of sim time only.
  *
  * A supernova detonates at `at`. Inside `blast` at that instant the ship is
  * lost. Afterwards a shell expands at `speed` and removes `damage` hull when

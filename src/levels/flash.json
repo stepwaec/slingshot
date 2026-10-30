@@ -35,6 +35,17 @@
       "quasar": { "angle": 0.4, "cone": 0.16, "reach": 280, "damage": 24, "period": 36, "sweep": 0.35 }
     },
     {
+      "id": "stray",
+      "name": "the stray",
+      "kind": "planet",
+      "look": "asteroid",
+      "x": 760,
+      "y": -220,
+      "mass": 0,
+      "radius": 15,
+      "drift": { "vx": 6, "vy": -4 }
+    },
+    {
       "id": "x",
       "name": "Planet X",
       "kind": "target",

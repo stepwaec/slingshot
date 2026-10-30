@@ -35,7 +35,7 @@ Note on numbering: Brainstormer's first draft called the flight loop "WP2" and r
 | Lighter prediction line | In progress | Visual tweak: a lighter prediction line. |
 | Remaining visual review | In progress, opened 2026-10-29 in [PR #38](https://github.com/stepwaec/slingshot/pull/38) | Home, Planet X and gas giants scroll their strips under a separate light layer. The comet's ion wind, knot and coma move. The magnetar's dashes, grain and starquake run. The red giant's drag edge crawls. The recharge HUD and the shipyard follow their SVG headers. The recharge cutoff, Kepler speeds and every other physics note stay unchanged. |
 | WP11: hazards plus radiation | Done, merged 2026-10-29 in [PR #42](https://github.com/stepwaec/slingshot/pull/42) and [PR #43](https://github.com/stepwaec/slingshot/pull/43). | Radiation: stars, flares, magnetic belts, pulsar beams, black-hole disks and cosmic background feed one dose field. Crew dose integrates in the sim step (the limit fails the mission), shielding halves it and adds mass, a planet's disc shadows a star and its flare, and a Radiation button draws the halftone map. Levels Shade and Wander. Rogue planets drift in a straight line. This pass adds seeded asteroid belts (sparse, medium, dense) and the Kuiper belt: rocks with r ≥ 7 crash (Kuiper r ≥ 5), dense dust can drain hull, shielding halves that, and the edges show in planning. Levels Weave and Frost. |
-| WP12: dramatic events | Done, 2026-10-29 in [PR #46](https://github.com/stepwaec/slingshot/pull/46) | Supernova countdowns (get out before the star explodes), shockwaves from supernova remnants, quasars. Flash: the sun detonates at a sim time, the blast is lethal, and the remnant shell crosses the ship once. A quasar jet burns hull on sim time. There is no art for either in `design/`, so the rings and the jet bar are placeholders. |
+| WP12: dramatic events | Done, 2026-10-29 in [PR #46](https://github.com/stepwaec/slingshot/pull/46). Art designed in [PR #60](https://github.com/stepwaec/slingshot/pull/60) and drawn in this pull request. | Supernova countdowns (get out before the star explodes), shockwaves from supernova remnants, quasars. Flash: the sun detonates at a sim time, the blast is lethal, and the remnant shell crosses the ship once. A quasar jet burns hull on sim time. The rings and the jet bar are replaced by Claude's progenitor, blue-white blast, remnant filaments and quasar disk and jets. A lone stray asteroid rides in Flash. Physics, timing and prediction are unchanged. |
 | WP13: three-body chaos | Planned | Multi-sun systems (Trisolaran style) where three-body chaos means planning uses widening probability cones instead of exact lines. |
 | WP14: world builder | Planned | Build and share levels, using the JSON level format from WP7c. |
 | WP15: galaxy map | Planned | A galaxy-scale mission map where galaxies move relative to each other; each level stays one solar system. |
@@ -74,8 +74,9 @@ Physics stays game-like but true to its real shape, and prediction always matche
 - Radiation (Shade, Wander): starlight, solar flares, gas-giant and magnetar belts, pulsar beams, black-hole disks and a cosmic background. The dose meter names the dominant source. A planet disc blocks a star and its flare. Shielding halves crew dose and adds mass. The Radiation button toggles a halftone map.
 - A rogue planet (Wander) that drifts in a straight line, has gravity, and gives no recharge.
 - Asteroid belts (Weave) and a Kuiper belt (Frost). Seeded rocks. The large ones are solid. Dense dust can drain the hull, and shielding halves that.
+- A lone stray asteroid, outside a belt (Flash). It is solid, lit toward the brightest mass, and leaves a dust trail. Its mass is 0, so it does not change Flash's gravity or the published plan.
 - Planet X on a Kepler orbit around its sun (Lead). A plain ring, a placeholder until Claude designs the marker, shows where a moving body will be at each burn and under the cursor.
-- A supernova with a lethal blast and a remnant shock, and a quasar jet (Flash). The drawings are placeholders.
+- A supernova with a lethal blast and a remnant shock, and a quasar jet (Flash). The progenitor, the blast, the remnant and the jet are Claude's drawings from [PR #60](https://github.com/stepwaec/slingshot/pull/60).
 - Planet X spiralling into its sun (Ash). The ship has to be in orbit before the planet is consumed. The fall shows a dayside glow and an ablation tail, then a plunge flash on the sun.
 - A stellar engine (Torch), a Dyson swarm and a Shkadov thruster. The jet core burns, the margins refill, a collector nicks hull, and the mirror is solid.
 - A ringworld (Hoop): a solid band with transit gaps. Inside, the ring's pull cancels at the centre.
@@ -84,7 +85,7 @@ Physics stays game-like but true to its real shape, and prediction always matche
 
 **Planned, by package**
 - Asteroid belts in sparse, medium and dense tiers, and a Kuiper belt (Weave, Frost). Rocks are seeded. Large ones crash the ship. Dense dust can drain hull, and shielding halves that.
-- Stray asteroids that are not part of a belt are still open.
+- Done: stray asteroids that are not part of a belt. The lone rock requested with WP11 is in Flash, from the art in [PR #60](https://github.com/stepwaec/slingshot/pull/60).
 - WP13: multi-sun (three-body) systems.
 - WP15: star clusters, galaxies and galaxy clusters as the zooming mission map; supermassive black holes as the anchor of a galaxy-level map.
 - Other ideas mentioned, not assigned: gas clouds to scoop (original design doc), pickups such as fuel caches and derelict probes, in-flight surprises such as a sensor glitch.
@@ -191,7 +192,7 @@ Stephan points Claude at this section for the next visual pack.
 
 **Ship systems:** fully designed in [PR #26](https://github.com/stepwaec/slingshot/pull/26). That pack includes the hull bar, the tidal-stress warning, and the upgrade screen, and the modular spacecraft redesign: a base hull with visible hull plating, shielding, chemical, ion and pulse engines, larger fuel tanks, solar panels, a gas scoop, sensors, a cryosleep module, and damage states that match the hull bar.
 
-**WP11:** designed in [PR #34](https://github.com/stepwaec/slingshot/pull/34) (sparse, medium and dense asteroid belts, Kuiper belt, rogue planet, radiation heatmap, dose meter). The radiation slice is in the game in [PR #42](https://github.com/stepwaec/slingshot/pull/42). The belt fields (seeded rocks, crash radii, Kuiper belt, dust damage) are in [PR #43](https://github.com/stepwaec/slingshot/pull/43). A lone stray asteroid, outside a belt, is still open.
+**WP11:** designed in [PR #34](https://github.com/stepwaec/slingshot/pull/34) (sparse, medium and dense asteroid belts, Kuiper belt, rogue planet, radiation heatmap, dose meter). The radiation slice is in the game in [PR #42](https://github.com/stepwaec/slingshot/pull/42). The belt fields (seeded rocks, crash radii, Kuiper belt, dust damage) are in [PR #43](https://github.com/stepwaec/slingshot/pull/43). A lone stray asteroid, outside a belt, is designed in [PR #60](https://github.com/stepwaec/slingshot/pull/60) and drawn with the WP12 hazards.
 
 **Burn plume, burn node and gravity grid styling:** done in [PR #36](https://github.com/stepwaec/slingshot/pull/36). The plume is blue-to-violet, with no trailing halo. The game draws that pack in [PR #49](https://github.com/stepwaec/slingshot/pull/49): plume length follows burn size, nodes are the blue-violet rings, and the gravity grid uses the depth ink. Physics and the body sprites are unchanged.
 
@@ -203,15 +204,15 @@ The ring's transit gaps are holes in the solid band. Its gravity stays that of a
 
 **Collisions and consumption** (LU3): designed in [PR #50](https://github.com/stepwaec/slingshot/pull/50) and drawn in [PR #57](https://github.com/stepwaec/slingshot/pull/57). Ash's burn-up, the impact flash, the shock, the ejecta, the crater glow and the debris field replace the orange ring. Planning shows the telegraphs. Tidal disruption and a star falling into an accretion disk stay proposed scripts (`disrupt`, `accrete`). PR #47 did not add them, and this pass does not change gravity.
 
+**Supernova, quasar and stray asteroid** (WP12): designed in [PR #60](https://github.com/stepwaec/slingshot/pull/60) and drawn in this pull request. The countdown, the blue-white blast, the remnant shock and the quasar jet replace the placeholder rings and jet bar. The Flash sun keeps `look: sun`, so its luminance stays 1; the drawing uses the red-giant sprite. The stray asteroid is the lone rock from the WP11 request. Its mass is 0, so gravity and the published plan stay the same, and it is still solid. The review's remnant-mass idea is not in this pass, because it would change the flight.
+
 **Open requests**, in priority order:
 
 1. **Ghost markers** (LU2) for where a moving body will be. The path ghosts, the recharge planning ghost and the dose ghost are already specified. A marker on a body's future position is not.
-2. **A lone stray asteroid**, outside a belt. The WP11 note above still stands: `design/` has the belt fields and the rogue planet, not a stray rock.
-3. **Supernova and quasar art.** The countdown, the remnant shock, and the quasar jet are in the game as placeholders. `design/` has no asset for them.
-4. **Target zone.** Replace the dotted ring with a solid ring that glows and pulses slowly. It gets brighter or steady when the ship enters the zone. It changes colour or flashes once when a stable orbit is achieved (tied to the Orbit capture work package). Keep it subtle so it doesn't compete with the planet.
-5. **Sol bodies.** Real Sol bodies for the Sol campaign: Sun, Mercury, Venus, Earth with the Moon, Mars, Jupiter, Saturn with rings, Titan, Uranus, Neptune, Kuiper objects, plus Voyager.
-6. **Astrophage.** Infected stars, the Petrova line, Astrophage fuel pickups, the spin drive engine and its plume, the Tau Ceti system.
-7. **Cryosleep.** A lifespan HUD meter, the sleep segment on the trajectory line, and cryo-pod states.
+2. **Target zone.** Replace the dotted ring with a solid ring that glows and pulses slowly. It gets brighter or steady when the ship enters the zone. It changes colour or flashes once when a stable orbit is achieved (tied to the Orbit capture work package). Keep it subtle so it doesn't compete with the planet.
+3. **Sol bodies.** Real Sol bodies for the Sol campaign: Sun, Mercury, Venus, Earth with the Moon, Mars, Jupiter, Saturn with rings, Titan, Uranus, Neptune, Kuiper objects, plus Voyager.
+4. **Astrophage.** Infected stars, the Petrova line, Astrophage fuel pickups, the spin drive engine and its plume, the Tau Ceti system.
+5. **Cryosleep.** A lifespan HUD meter, the sleep segment on the trajectory line, and cryo-pod states.
 
 **Guidelines:** a realistic and vibrant style matching v1.5 and v2; SVG files under `design/assets/`; easter eggs only as hints, never logos or characters.
 
