@@ -1,7 +1,7 @@
 import * as THREE from "three";
-import { isEditing, type Game } from "../game/state";
+import type { Game } from "../game/state";
 import type { Level } from "../level/catalog";
-import { bindSpaceTimeCamera, setSheetProjection, syncSpaceTime, syncTopDown, topDownCamera } from "./camera";
+import { bindSpaceTimeCamera, syncTopDown, topDownCamera } from "./camera";
 import { theme } from "./theme";
 import type { Visual, VisualSpace } from "./visual";
 import { visualFactories } from "./visuals/index";
@@ -10,10 +10,9 @@ import { visualFactories } from "./visuals/index";
  * WebGL view.
  *
  * `world` holds world-space visuals on the sim's XY plane. `topDown` looks
- * straight down that plane. `rig` carries the perspective camera
- * (`spaceTime`). The gravity sheet renders that camera, tilted over the
- * chart, without moving the bodies. Screen-pixel visuals stay in their own
- * scene so stroke widths do not zoom.
+ * straight down that plane. `rig` carries a parked perspective camera
+ * (`spaceTime`). The chart stays orthographic. Screen-pixel visuals stay in
+ * their own scene so stroke widths do not zoom.
  *
  * Visuals are created only through `visualFactories`.
  */
@@ -107,17 +106,14 @@ export class SpaceView {
   render(game: Game, now: number): void {
     const width = this.width;
     const height = this.height;
-    const sheet = game.gravity === "sheet" && isEditing(game);
-    setSheetProjection(sheet);
     syncTopDown(game.camera, width, height);
-    if (sheet) syncSpaceTime(game.camera, width, height, this.spaceTime);
     const frame = { game, width, height, now, dpr: this.dpr };
     for (const visual of this.visuals) visual.update(frame);
 
     this.renderer.clear(true, true, true);
     this.renderer.render(this.bgScene, this.screenCamera);
     this.renderer.clearDepth();
-    this.renderer.render(this.worldScene, sheet ? this.spaceTime : topDownCamera);
+    this.renderer.render(this.worldScene, topDownCamera);
     this.renderer.clearDepth();
     this.renderer.render(this.screenScene, this.screenCamera);
   }

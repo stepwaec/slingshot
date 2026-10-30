@@ -340,8 +340,19 @@ export const theme = {
     tidalDash: 4,
     tidalGap: 4,
     tidalCrawl: 8,
-    /** Rest-frame dτ/dt contours drawn over the flat grid. */
-    clockLevels: [0.92, 0.75, 0.5, 0.25],
+    /**
+     * Opacity of the clock-rate field at `CLOCK_HEAT_RATES`
+     * (dτ/dt = 0, 0.2, 0.4, 0.55, 0.82, 1). Interim until Claude designs it
+     * (docs/ROADMAP.md). Full rate is clear. Gold (0.4) is already opaque
+     * so it does not turn olive over the navy.
+     */
+    heatAlpha: [0.84, 0.8, 0.74, 0.5, 0.1, 0],
+    /**
+     * Display curve. The ramp is sampled at rate^heatGamma, so a mild
+     * slowdown moves toward the warm stops and the well reads at game scale.
+     * The stored rate is unchanged.
+     */
+    heatGamma: 2.4,
   },
   /**
    * Cosmetic timings from the megastructure headers.

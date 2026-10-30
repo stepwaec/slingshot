@@ -546,7 +546,7 @@ class FatesVisual implements Visual {
     const game = frame.game;
     const time = shownTime(game);
     const zoom = game.camera.zoom > 0 ? game.camera.zoom : 1;
-    const overlay = isEditing(game) && game.gravity !== "sheet";
+    const overlay = isEditing(game);
     let chip = 0;
     for (const view of this.consumes) chip = this.updateConsume(view, frame, time, zoom, overlay, chip);
     for (const view of this.impacts) chip = this.updateImpact(view, frame, time, zoom, overlay, chip);
