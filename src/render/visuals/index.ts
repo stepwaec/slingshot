@@ -4,6 +4,7 @@ import { createAstrophage } from "./astrophage";
 import { createBelts } from "./belts";
 import { createFates } from "./fates";
 import { createGallery } from "./gallery";
+import { createImpostors } from "./impostors";
 import { createMega } from "./mega";
 import { createHazards } from "./hazards";
 import { createGhosts } from "./ghosts";
@@ -43,6 +44,7 @@ export const visualFactories = {
   star: createStar,
   scenery: createScenery,
   belts: createBelts,
+  impostors: createImpostors,
   gallery: createGallery,
   astrophage: createAstrophage,
   mega: createMega,
