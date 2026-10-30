@@ -1263,3 +1263,67 @@ button:disabled:active { background: var(--panel); }
 }
 
 .card[data-result="late"] .stars span[data-on="true"] { background: #ff5a5f; }
+
+#gravity-contours {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+#gravity-contours[hidden] { display: none; }
+
+.time-chip {
+  position: absolute;
+  width: 34px;
+  height: 13px;
+  margin: 0;
+  padding: 0;
+  border-radius: 4px;
+  background: rgba(10, 13, 26, 0.85);
+  font: 400 9px/13px var(--mono);
+  text-align: center;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+}
+
+.time-chip[hidden] { display: none; }
+
+/* Layers menu Gravity row. design/assets/layers-menu.svg. */
+.gravity-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 136px;
+  pointer-events: none;
+}
+
+.gravity-legend-swatches {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.gravity-band-swatch {
+  display: block;
+  width: 16px;
+  height: 10px;
+  border: 1px solid;
+  border-radius: 2px;
+  box-sizing: border-box;
+}
+
+.gravity-legend-grid {
+  margin-left: 8px;
+  font: 400 10px/1 var(--ui);
+  color: var(--muted);
+}
+
+.gravity-legend-scale {
+  display: flex;
+  justify-content: space-between;
+  width: 116px;
+  font: 400 10px/1 var(--ui);
+  color: var(--text);
+}

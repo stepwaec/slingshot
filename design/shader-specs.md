@@ -2,7 +2,7 @@
 
 The numbers for the GPU-drawn bodies in Rendering v2 (`docs/ROADMAP.md`, R2.0–R2.5). Each family has a **reference shader** in `design/shaders/` and a live comparison in `design/preview/shaders.html`: the approved SVG on the left, the reference shader on the right, at 1.5×. The game's shaders must match the right-hand column. The values in this file and in the preview come from one table, so they cannot drift apart. Physics, gameplay and the prediction stay untouched.
 
-Status: **R2.0 conventions and R2.1 stars** are specified. Rocky planets (R2.2), gas giants (R2.3), compact objects (R2.4) and effects (R2.5) follow as their own sections.
+Status: **R2.0 conventions, R2.1 stars and R2.2 rocky planets** are specified. Gas giants (R2.3), compact objects (R2.4) and effects (R2.5) follow as their own sections.
 
 ## 1. Conventions (R2.0)
 
@@ -124,4 +124,80 @@ White-dwarf mode (`smooth` = 1) replaces layers 1–7 with:
 | `proW` | `uProW` | outer stroke, px at zoom 1 | 2.8 | 2.8 | 2.4 | 3.2 | 2 | 1.5 | 2.8 | 3 |
 | `flare` | `uFlare` | flare on | 1 | 0 | 1 | 1 | 1 | 0 | 0 | 0 |
 | `smooth` | `uSmooth` | white-dwarf mode | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 0 |
+
+## 3. Rocky planets and moons (R2.2)
+
+Reference shader: `design/shaders/planet.frag`. Maps: `design/shaders/maps/`. Covers Earth, the Moon, Mars, Mercury, Venus, Titan, Pluto, Charon and Eris, and the library worlds and moons: the home ocean world, Planet X, rocky, ice, lava, toxic, cracked, dwarf, and the barren, icy and volcanic moons. The double planet and the captured moon are not covered yet (two bodies, and a non-spherical rock); they keep their sprites. Gas giants are R2.3.
+
+**Baked maps, not procedural noise.** The approved art already lives in each body's SVG surface strip, and real geography (Earth's continents) cannot come from noise. So each map is baked once from the SVG. The bots can bake any new body the same way:
+
+1. **Take one period of the scrolling strip.**
+   - In the SVG, find the strip group: `<g><animateTransform type="translate" from to dur/><g transform="translate(−X −r)">…</g></g>`.
+   - The period is P = |to − from| (round(2πr)); the strip is P × 2r.
+   - Features are drawn at x and x + P, so the window [0, P] is seamless.
+2. **Render it to 1024 × 256 PNG** (stretched; power-of-two, so the spin can wrap with `REPEAT`), with a transparent background for clouds and lights.
+3. **Separate the layers:**
+   - one map for the surface (every non-cloud strip, composited)
+   - one for the clouds (strips whose filter is a cloud or wisp; skip the cloud *shadow*, which the shader draws)
+   - one for lights or glow (city lights, lava veins, glowing cracks)
+4. **Read the parameters from the SVG:**
+   - `start` = (X mod P) / P
+   - `spin` = `dur`, negative when the strip runs right to left (Venus)
+   - the lighting colours from the body's own `…Shade`, `…Haze` and `…Rim` gradients: the shade's first stop is the bloom, and the haze's 0.96 and 1.0 stops are the haze
+   - no haze gradient means airless
+5. **Locked bodies** (the Moon, Pluto, Charon, Eris): render the body group without its shade, haze and rim circles to a 512 × 512 face map.
+
+**Mapping.**
+- **Spinning bodies:** sphere normal n; longitude = atan(n.x, n.z); u = start + longitude / 2π − t / spin; v = (1 + n.y) / 2 (the maps are uploaded with `UNPACK_FLIP_Y`).
+- **Locked bodies:** uv × 0.5 + 0.5 on the face map.
+- **The result:** features foreshorten and turn round the limb, which the flat-scrolling SVG cannot do.
+
+**Lighting** (the planet reference construction, `bodies/ocean.svg`):
+- **The light direction.** `uLight` is the direction toward the star, in screen space with y up and z toward the viewer. The art's default is (0.587, 0.587, 0.556): the in-plane L at 0.83 plus z 0.56, fitted so the terminator falls where the SVG shade puts it.
+- **Day side:**
+  - a highlight bloom `hi` × `hiA` × max(d, 0)^10, where d = n · L
+  - a warm band `warm` × `warmA` around d ≈ 0.06 (airless: 0.03 and narrower)
+- **Night side:** `night0` at α 0.74 just past the terminator, then `night1` at α 0.97, then 1.
+- **Lit-side mask:** the limb haze (0.78 α 0 → 0.96 `hazeA0` → 1.0 `hazeA1`) and the rim (outside the disc to 1.077 r, its peak overlapping the edge) are masked to the lit side by the SVG's linear mask (1 at the lit edge, 0.45 in the middle, 0.06 at the dark edge).
+- **Extras:**
+  - **Clouds:** they turn on `cloudSpin` and cast a `#06122E` shadow offset away from the light.
+  - **Ocean glint:** Blinn-Phong (exponent 48), only on clear ocean blue.
+  - **Lights:** they show at night only, except glows with `glowDay` = 1.
+
+**Titan's detached haze:** one extra ring outside the disc, radial to 1.12 r: 0.88 `#8FB8FF` α 0 → 0.915 `#9CC4FF` α 0.75 → 0.95 `#7FA8F2` α 0.25 → 1 α 0, on the lit side only (`sol/titan.svg`).
+
+**Budget:** 2–4 texture samples plus lighting per pixel, under 0.05 ms per body (`threejs-notes.md` §9). The maps total under 2 MB.
+
+**Parameters** (defaults: `warm` `#FF9455` α 0.24, `night0` `#08122E`, `night1` `#050B1E`, `shadowA` 0.42, `shadowOff` 0.026):
+
+| Parameter | Uniform | Meaning | Earth | The home ocean world | Mars | The Moon (locked) | Planet X | Rocky world | Ice world | Lava world (glow by day) | Toxic world | Cracked world (cracks glow at night) | Dwarf planet | Barren moon | Icy moon | Volcanic moon | Mercury | Venus (retrograde) | Titan | Pluto (locked) | Charon (locked) | Eris |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| `R` | `uR (× zoom)` | body radius, px at zoom 1 = crash radius | 34 | 34 | 24.8 | 18 | 30 | 30 | 28 | 26 | 32 | 27 | 10 | 14 | 12 | 13 | 21 | 33.1 | 21.6 | 14.7 | 10.5 | 14.5 |
+| `maps` | `uAlbedo / uClouds / uLights / uFace` | baked maps in `shaders/maps/` | `earth-albedo` `earth-clouds` `earth-lights` | `ocean-albedo` `ocean-clouds` | `mars-albedo` | `moon-face` | `planet-x-albedo` `planet-x-clouds` | `rocky-albedo` | `ice-albedo` | `lava-albedo` `lava-glow` | `toxic-albedo` `toxic-clouds` | `cracked-albedo` `cracked-glow` | `dwarf-albedo` | `moon-barren-albedo` | `moon-icy-albedo` | `moon-volcanic-albedo` | `mercury-albedo` | `venus-albedo` | `titan-albedo` | `pluto-face` | `charon-face` | `eris-face` |
+| `light` | `uLight` | toward the star (the art's default; the game uses the real star) | (0.587, 0.587, 0.556) | (0.587, 0.587, 0.556) | (0.587, 0.587, 0.556) | (0.587, 0.587, 0.556) | (-0.587, -0.587, 0.556) | (0.587, 0.587, 0.556) | (0.587, 0.587, 0.556) | (0.587, 0.587, 0.556) | (0.587, 0.587, 0.556) | (0.587, 0.587, 0.556) | (0.587, 0.587, 0.556) | (0.587, 0.587, 0.556) | (0.587, 0.587, 0.556) | (0.587, 0.587, 0.556) | (0.587, 0.587, 0.556) | (0.587, 0.587, 0.556) | (0.587, 0.587, 0.556) | (0.587, 0.587, 0.556) | (0.587, 0.587, 0.556) | (0.587, 0.587, 0.556) |
+| `locked` | `uLocked` | fixed face (no spin) | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 1 | 1 |
+| `start` | `uStart` | longitude fraction at the centre at t 0 | 0.542 | 0.364 | 0.611 | 0.5 | 0.3723 | 0.3723 | 0.2955 | 0.2822 | 0.4577 | 0.3353 | 0.4762 | 0.5 | 0.4267 | 0.4512 | 0.5 | 0.5 | 0.5 | 0.5 | 0.5 | 0.5 |
+| `spin` | `uSpin` | seconds per turn (− = retrograde) | 90 | 90 | 92 | 90 | 120 | 110 | 140 | 95 | 120 | 100 | 160 | 180 | 150 | 120 | 300 | -96 | 160 | 90 | 90 | 90 |
+| `hasClouds` | `uHasClouds` | cloud map on | 1 | 1 | 0 | 0 | 1 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| `cloudSpin` | `uCloudSpin` | cloud seconds per turn | 64 | 64 | 64 | 64 | 80 | 64 | 64 | 64 | 75 | 64 | 64 | 64 | 64 | 64 | 64 | 64 | 64 | 64 | 64 | 64 |
+| `cloudA` | `uCloudA` | cloud opacity | 0.85 | 0.78 | 0.85 | 0.85 | 0.7 | 0.85 | 0.85 | 0.85 | 0.92 | 0.85 | 0.85 | 0.85 | 0.85 | 0.85 | 0.85 | 0.85 | 0.85 | 0.85 | 0.85 | 0.85 |
+| `shadowA` | `uShadowA` | cloud shadow opacity (#06122E) | 0.42 | 0.45 | 0.42 | 0.42 | 0.42 | 0.42 | 0.42 | 0.42 | 0.42 | 0.42 | 0.42 | 0.42 | 0.42 | 0.42 | 0.42 | 0.42 | 0.42 | 0.42 | 0.42 | 0.42 |
+| `shadowOff` | `uShadowOff` | cloud shadow offset away from the light, radii | 0.026 | 0.026 | 0.026 | 0.026 | 0.026 | 0.026 | 0.026 | 0.026 | 0.026 | 0.026 | 0.026 | 0.026 | 0.026 | 0.026 | 0.026 | 0.026 | 0.026 | 0.026 | 0.026 | 0.026 |
+| `glint` | `uGlint` | ocean glint strength | 0.6 | 0.6 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| `hasLights` | `uHasLights` | lights / glow map on | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| `lightsA` | `uLightsA` | lights strength | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| `glowDay` | `uGlowDay` | 1: glows by day too | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| `hi` | `uHi` | highlight bloom colour | `#E6F2FF` | `#E6F2FF` | `#FFE9D6` | `#F4F2FC` | `#B5FFF0` | `#FFF0DC` | `#FFFFFF` | `#FFD9B0` | `#F4FFD6` | `#D2DEF6` | `#FFF6E6` | `#F4F2FC` | `#FFFFFF` | `#FFF6D8` | `#FFF4E6` | `#FFF8E6` | `#FFE0B0` | `#FFF4E6` | `#F4F2FC` | `#FFFFFF` |
+| `hiA` | `uHiA` | its strength | 0.34 | 0.38 | 0.24 | 0.22 | 0.28 | 0.2 | 0.22 | 0.26 | 0.22 | 0.3 | 0.18 | 0.24 | 0.28 | 0.3 | 0.24 | 0.3 | 0.22 | 0.22 | 0.22 | 0.3 |
+| `warm` | `uWarm` | terminator band colour | `#FF9455` | `#FF9455` | `#FF9455` | `#FF9455` | `#FF9455` | `#FF9455` | `#FF9455` | `#FF9455` | `#FF9455` | `#FF9455` | `#FF9455` | `#FF9455` | `#FF9455` | `#FF9455` | `#FF9455` | `#FF9455` | `#FF9455` | `#FF9455` | `#FF9455` | `#FF9455` |
+| `warmA` | `uWarmA` | its strength | 0.24 | 0.24 | 0.24 | 0.18 | 0.24 | 0.24 | 0.24 | 0.24 | 0.24 | 0.24 | 0.24 | 0.24 | 0.24 | 0.24 | 0.24 | 0.24 | 0.24 | 0.24 | 0.24 | 0.24 |
+| `night0` | `uNight0` | night at the terminator (α 0.74) | `#08122E` | `#08122E` | `#08122E` | `#08122E` | `#08122E` | `#08122E` | `#08122E` | `#08122E` | `#08122E` | `#08122E` | `#08122E` | `#08122E` | `#08122E` | `#08122E` | `#08122E` | `#08122E` | `#08122E` | `#08122E` | `#08122E` | `#08122E` |
+| `night1` | `uNight1` | deep night (α 0.97 → 1) | `#050B1E` | `#050B1E` | `#050B1E` | `#050B1E` | `#050B1E` | `#050B1E` | `#050B1E` | `#050B1E` | `#050B1E` | `#050B1E` | `#050B1E` | `#050B1E` | `#050B1E` | `#050B1E` | `#050B1E` | `#050B1E` | `#050B1E` | `#050B1E` | `#050B1E` | `#050B1E` |
+| `airless` | `uAirless` | hard terminator, no haze or rim | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 1 | 1 | 1 | 1 | 0 | 0 | 0 | 1 | 1 |
+| `haze0` | `uHaze0` | limb haze at 0.96 | `#8FD0FF` | `#8FD0FF` | `#F5B996` | `#8FD0FF` | `#8FFFE6` | `#E8B07A` | `#8FD0FF` | `#FF8C2E` | `#C7E97A` | `#8FA3C9` | `#8FD0FF` | `#8FD0FF` | `#8FD0FF` | `#8FD0FF` | `#8FD0FF` | `#FFF0C8` | `#F2B868` | `#C9D8FF` | `#8FD0FF` | `#8FD0FF` |
+| `hazeA0` | `uHazeA0` | its alpha | 0.45 | 0.42 | 0.28 | 0.45 | 0.42 | 0.3 | 0.4 | 0.26 | 0.4 | 0.3 | 0.45 | 0.45 | 0.45 | 0.45 | 0.45 | 0.5 | 0.45 | 0.18 | 0.45 | 0.45 |
+| `haze1` | `uHaze1` | limb haze at 1.0 | `#BFE6FF` | `#BFE6FF` | `#FFD9C2` | `#BFE6FF` | `#E6FFF9` | `#FFD9B0` | `#E6F6FF` | `#FFB347` | `#E4F7B0` | `#B8CAEE` | `#BFE6FF` | `#BFE6FF` | `#BFE6FF` | `#BFE6FF` | `#BFE6FF` | `#FFF8E6` | `#FFD58E` | `#E6EEFF` | `#BFE6FF` | `#BFE6FF` |
+| `hazeA1` | `uHazeA1` | its alpha | 0.7 | 0.65 | 0.45 | 0.7 | 0.65 | 0.48 | 0.62 | 0.42 | 0.62 | 0.5 | 0.7 | 0.7 | 0.7 | 0.7 | 0.7 | 0.75 | 0.7 | 0.3 | 0.7 | 0.7 |
+| `rim0` | `uRim0` | rim peak (α 0.95 at r 1.0) | `#A8DBFF` | `#A8DBFF` | `#FFD2B8` | `#A8DBFF` | `#B5FFF0` | `#FFD9B0` | `#BFE3FF` | `#FFB347` | `#DDF59A` | `#B8CAEE` | `#A8DBFF` | `#A8DBFF` | `#BFE3FF` | `#FFE08A` | `#A8DBFF` | `#FFF0CC` | `#FFD08A` | `#C9D8FF` | `#A8DBFF` | `#A8DBFF` |
+| `rim1` | `uRim1` | rim tail (α 0.4 at 1.028) | `#7FC4FF` | `#7FC4FF` | `#F29C7A` | `#7FC4FF` | `#8FFFE6` | `#E8B07A` | `#8FD0FF` | `#FF8C2E` | `#A8D850` | `#8FA3C9` | `#7FC4FF` | `#7FC4FF` | `#BFE3FF` | `#FFE08A` | `#7FC4FF` | `#F5D9A0` | `#E9A050` | `#9FB8F2` | `#7FC4FF` | `#7FC4FF` |
 
