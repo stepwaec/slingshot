@@ -80,7 +80,7 @@ Landed in [PR #57](https://github.com/stepwaec/slingshot/pull/57), from the even
 
   The planning view should match `mockups/planning-ghosts.svg`.
 
-Landed in this pull request, from the ghost-marker art in design [PR #51](https://github.com/stepwaec/slingshot/pull/51):
+Landed in [PR #64](https://github.com/stepwaec/slingshot/pull/64), from the ghost-marker art in design [PR #51](https://github.com/stepwaec/slingshot/pull/51):
 
 - ✔ Ring and inner ring, with the burn badge, cursor, arrival capture radius, collision cross and gone slash.
 - ✔ Dotted tie lines to the path sample at the same step, and the time chips.
