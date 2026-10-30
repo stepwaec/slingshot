@@ -2,7 +2,7 @@
 
 The numbers for the GPU-drawn bodies in Rendering v2 (`docs/ROADMAP.md`, R2.0–R2.5). Each family has a **reference shader** in `design/shaders/` and a live comparison in `design/preview/shaders.html`: the approved SVG on the left, the reference shader on the right, at 1.5×. The game's shaders must match the right-hand column. The values in this file and in the preview come from one table, so they cannot drift apart. Physics, gameplay and the prediction stay untouched.
 
-Status: **R2.0 conventions, R2.1 stars, R2.2 rocky planets, R2.3 gas giants and R2.4 compact objects** are specified. Effects (R2.5) follow as their own section.
+Status: **complete**: R2.0 conventions, R2.1 stars, R2.2 rocky planets, R2.3 gas giants, R2.4 compact objects and R2.5 effects.
 
 ## 1. Conventions (R2.0)
 
@@ -303,3 +303,78 @@ Reference shader: `design/shaders/compact.frag`, one quad per object, with `uKin
 - the black hole, about 10 noise octaves over the disk ellipse only: under 0.2 ms
 - the magnetar, six analytic lines: under 0.1 ms
 - the neutron star and the pulsar: trivial
+
+## 6. Effects (R2.5)
+
+Reference shaders: `design/shaders/rock.vert` and `rock.frag` (instanced rocks), `points.vert` and `points.frag` (point particles), and `bloom.frag` (selective bloom). Live in `preview/shaders.html` (`&only=effects`).
+
+### 6.1 Instanced rocks
+
+**One draw per field:** one quad per rock, through `InstancedMesh` (`ANGLE_instanced_arrays` in WebGL 1). It covers the belts and the Kuiper belt (WP11), the asteroid field, debris fields (LU3), the rocks in debris rings, and the stray asteroid.
+
+**Per-instance attributes:**
+- `aPos`: world px. For solid rocks (r ≥ 7, Kuiper r ≥ 5) use the sim's own seeded position, posed by `bodyPose` on sim time.
+- `aSize`: mean radius, which is the crash radius for solid rocks.
+- `aSeed`: shape, spots and craters.
+- `aType`: 0 S stony, 1 C carbonaceous, 2 M metallic.
+- `aSpin`: tumble period in s; the sign gives the direction. Cosmetic, on `uTime`.
+
+**Construction** (the WP11 rule, `style.md` §11), procedural per instance:
+- **Silhouette:** a lumpy potato. r(θ) = 0.86 + Σₖ₌₂…₅ (hₖ − 0.5) · 0.6/k · cos(kθ + φₖ), aspect 1.0–1.35. It **tumbles**.
+- **Rim:** the silhouette filled with the type's rim colour.
+- **Face:** the silhouette shifted 0.09 r **away from the light**, so a crisp sunward rim shows. Shaded along the light: light colour → base → dark.
+- **Accents:** 2–4 spots in the type's accent colour, tumbling with the rock.
+- **Craters:** 1–2, each a rim-coloured lit wall (α 0.7) plus a dark bowl offset toward the light.
+- **Terminator band:** across the rock, s = (1 − u)/2 with u along the light: 0.5 α 0, 0.6 `#FF9455` α 0.18, 0.64 night α 0.6, the far side night α 0.88.
+- **Outline:** night α 0.55, 0.5 px.
+
+**The light** is fixed toward the rock's star (`uStar`), so every rock is lit correctly at every tumble angle. That is the WP11 rule, now exact per pixel instead of per silhouette.
+
+**Palettes** (`belt.rockS`, `belt.rockC` and `belt.rockM`), as rim / light / base / dark / night, accent:
+- **S:** `#F0DCC0` / `#C8A684` / `#9A7A5E` / `#5A4636` / `#120E14`, accent `#C0562A` α 0.45.
+- **C:** `#D8CCBE` / `#8E8478` / `#62584E` / `#3A332D` / `#0C0B12`, accent `#2A2420` α 0.5.
+- **M:** `#EEF2FA` / `#B6BFD2` / `#8690A8` / `#4E566C` / `#0A0D18`, accent `#DCE4F6` α 0.35.
+
+**Not instanced:** the belt's dust **haze** (two arcs w × 1.6 and w × 0.8, `#C9B79E` α 0.035 each) is one thin arc quad under the rocks. The planning **edges** (dashed arcs at R ± 0.9 w, `#C9BBA8` α 0.4, 1 px, dash 5 6, in planning and pause only) are a px-space line overlay.
+
+**The belt's drift** (0 → −0.5° → 0 about the star over 60 s) is one rotation uniform on the instance positions. It is cosmetic, so it applies to non-solid rocks only: solid rocks keep their sim positions.
+
+**Debris ring** (`bodies/ring-debris.svg`):
+- the planet is `planet.frag`
+- the dust band is a `giant.frag` ring profile (#C9BBA8 at 1.45–2.05 r)
+- the 108 rocks are instances placed in the ring plane, mean radius 0.8–2.2 px, clumped 1–8, drawn as two instance sets (far half before the planet, near half after)
+
+**Shepherd ring** (`bodies/ring-shepherd.svg`):
+- `giant.frag` with two hairline rings (`#ECF0FA` α 0.7, 1 px at 1.75 r and 2.2 r). Draw them as screen-space ellipses so they stay 1 px, as the asset says.
+- The shepherd moons are airless `planet.frag` bodies on their periods.
+
+### 6.2 Point particles
+
+**One draw per set**, as GL points:
+- **Sets:** belt and Kuiper dust, debris dust, Astrophage motes, Petrova glints and sparkles, ring sparkle, comet-tail specks.
+- **Attributes:** `aPos`, `aSize` (radius), `aColor` (straight rgb plus alpha), `aPhase` and `aShape` (0 disc, 1 four-point sparkle: arms 3.2 × the core).
+- **Size:** `gl_PointSize` = 2 r (× 3.2 for a sparkle) + 2.
+- **Edges:** a crisp disc edge from `gl_PointCoord` (one-pixel `smoothstep`).
+- **Twinkle:** α × (1 − `uTwinkle` · ½(1 + sin(2π(t / `uTwinkleT` + phase)))). Belt dust uses 0.25 and 3 s; Astrophage motes 0.5–0.7 and 1.2–3.4 s, as their headers say.
+- **`uMinPx`** (0.7): a speck is never drawn smaller. Below it, its alpha scales down instead, so zooming out fades dust rather than aliasing it.
+- **Motion:** the vertex shader moves positions where the asset animates them: Keplerian orbits (ω ∝ ρ^−1.5), drift along a line, motes streaming along a curve. All on `uTime`, because dust is cosmetic.
+
+### 6.3 Selective bloom
+
+**Prefer none.** The authored hazes already carry the glow (`threejs-notes.md` §4). If bloom is added, it is **selective**: render the emissive bodies a second time into an emissive layer and bloom only that layer.
+- **Emissive bodies:** stars, compact objects, engine plumes, the target-ring flash, Astrophage glints.
+- **Never in the layer:** planets, moons, rings, belts, paths and the HUD.
+
+A luminance threshold on the whole scene would bloom Earth's ice caps, cloud tops and every cream band (see the third panel of the preview). That breaks the crisp rule.
+
+**Passes** (`bloom.frag`), with `IMPLEMENTING.md`'s limits (world scene only, threshold ≈ 0.85, strength ≤ 0.6):
+1. **Bright pass** on the emissive layer: threshold **0.85** on luma, soft knee **0.15**, 4-tap downsample to ½ resolution.
+2. **Blur:** a 9-tap gaussian (offsets 0, 1.385, 3.231 texels; weights 0.227, 0.316, 0.070), horizontal then vertical, at ½ and again at ¼ resolution.
+3. **Composite:** scene + **0.45** × (blur at ½ + blur at ¼), additive.
+
+The plume gets **no halo shape**: the bloom only lifts its white-hot throat a little, and never adds a trail behind it. HUD and DOM stay outside the composer.
+
+**Budget:**
+- Rocks: one instanced draw per field, about 0.1 ms for 120 rocks.
+- Points: one draw per set.
+- Bloom: 1–2 ms at DPR 2 (`threejs-notes.md` §9). Skip it on low-power devices, since the hazes already read without it.
