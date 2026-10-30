@@ -26,8 +26,11 @@ describe("rocky planet shader", () => {
     expect(planetKey(body({ kind: "planet", look: "pluto" }))).toBe("pluto");
     expect(planetKey(body({ kind: "planet", look: "eris" }))).toBe("eris");
     expect(planetKey(body({ kind: "planet", look: "lava" }))).toBe("lava");
-    for (const look of ["jupiter", "saturn", "uranus", "neptune", "gas-giant", "arrokoth", "voyager"] as const) {
+    for (const look of ["arrokoth", "voyager"] as const) {
       expect(shaderFamily(body({ kind: "planet", look })), look).toBeNull();
+    }
+    for (const look of ["jupiter", "saturn", "uranus", "neptune", "gas-giant"] as const) {
+      expect(shaderFamily(body({ kind: "planet", look })), look).toBe("giant");
     }
     expect(shaderFamily(body({ kind: "star", look: "sun" }))).toBe("star");
     expect(shaderFamily(body({ kind: "star", look: "sol-sun" }))).toBe("star");

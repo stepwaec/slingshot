@@ -15,6 +15,7 @@ import {
   cosmeticSeconds,
   simSeconds,
 } from "../shaders/impostor";
+import { giantArtLight } from "../shaders/giant-params";
 import { planetArtLight } from "../shaders/planet-params";
 import { theme, type Theme } from "../theme";
 import { disposeObject, type Visual, type VisualFactory, type VisualFrame } from "../visual";
@@ -60,7 +61,8 @@ class ImpostorVisual implements Visual {
       const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), material ?? hiddenMaterial());
       mesh.name = `${body.id}-impostor`;
       mesh.frustumCulled = false;
-      mesh.renderOrder = shaderFamily(body) === "planet" ? 4 : -1;
+      const family = shaderFamily(body);
+      mesh.renderOrder = family === "planet" || family === "giant" ? 4 : -1;
       mesh.visible = material !== null;
       mesh.scale.set(side, side, 1);
       this.object.add(mesh);
@@ -107,7 +109,10 @@ class ImpostorVisual implements Visual {
       const light2 = uniforms.uLightDir?.value;
       const light3 = uniforms.uLight?.value;
       if (light2 instanceof THREE.Vector2 || light3 instanceof THREE.Vector3) {
-        const art = light3 instanceof THREE.Vector3 && artLightLocked() ? planetArtLight(slot.body) : null;
+        const art =
+          light3 instanceof THREE.Vector3 && artLightLocked()
+            ? (planetArtLight(slot.body) ?? giantArtLight(slot.body))
+            : null;
         if (art && light3 instanceof THREE.Vector3) {
           light3.set(art[0], art[1], art[2]);
         } else {

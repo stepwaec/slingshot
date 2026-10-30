@@ -58,6 +58,8 @@ const clearance = new Map<string, number>();
 
 const LOOK_KIND: Partial<Record<BodyLook, BodyKind>> = {
   "gas-giant": "planet",
+  "gas-ringed": "planet",
+  "ice-ring": "planet",
   moon: "moon",
   "moon-icy": "moon",
   "moon-volcanic": "moon",
@@ -81,6 +83,8 @@ const LOOK_NAME: Partial<Record<BodyLook, string>> = {
   "white-dwarf": "White dwarf",
   "red-giant": "Red giant",
   "gas-giant": "Gas giant",
+  "gas-ringed": "Ringed giant",
+  "ice-ring": "Ice ring",
   moon: "Moon",
   "moon-icy": "Icy",
   "moon-volcanic": "Volcanic",
@@ -161,6 +165,8 @@ const LOOK_SPEC: Partial<Record<BodyLook, ExhibitSpec>> = {
   "white-dwarf": { radius: 12, mass: 1600, reach: 110 },
   "red-giant": { radius: 48, mass: 1100, reach: 170, extra: { atmosphereRadius: 78 } },
   "gas-giant": { radius: 36, mass: 800, reach: 110, extra: { magnet: { b1Reach: 90, tilt: 0.3 } } },
+  "gas-ringed": { radius: 44, mass: 800, reach: 150 },
+  "ice-ring": { radius: 44, mass: 800, reach: 150 },
   moon: { radius: 14, mass: 250, reach: 70 },
   "moon-icy": { radius: 12, mass: 200, reach: 60 },
   "moon-volcanic": { radius: 13, mass: 220, reach: 60 },
