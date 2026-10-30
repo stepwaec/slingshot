@@ -235,7 +235,7 @@ class GalleryVisual implements Visual {
         ...base,
         spin,
         light: spin === "light" ? solLight() : null,
-        bake: { tag: `${art.look}-${part}`, prep: (doc) => prepSol(doc, art.root, part) },
+        bake: { tag: `${art.look}-${part}${part === "air" ? "-dayrim" : ""}`, prep: (doc) => prepSol(doc, art.root, part) },
       };
       this.add(fit, `${body.id}-${part}`, body, null, role, order);
     };

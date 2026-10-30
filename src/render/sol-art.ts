@@ -1,5 +1,5 @@
 import type { BodyLook } from "../sim/physics";
-import type { StripSpec } from "./surface-art";
+import { silenceNightRim, type StripSpec } from "./surface-art";
 import type { Theme } from "./theme";
 
 /**
@@ -399,6 +399,7 @@ export function prepSol(doc: Document, rootId: string, part: SolPart): void {
     }
   }
   root.querySelectorAll("animate, animateTransform").forEach((node) => node.remove());
+  if (part === "air") silenceNightRim(doc, root);
 }
 
 /** Lift one scrolling strip out of its disc so a UV window can move it. */
