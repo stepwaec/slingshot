@@ -1542,3 +1542,33 @@ Files: `assets/overlays/tidal-stress.svg` (a white dwarf, two compact bodies, a 
 | `tidal.warn` | `#FF9F43` | Level 2 rings (W/2 ≤ S < W) (= `stress.warn`) |
 | `tidal.critical` | `#FF5A5F` | Level 3 rings (S ≥ W), filled α 0.22; the danger ring and chips (= `stress.critical`, `grid.tidal`) |
 
+## 23. Cryosleep (v3.7)
+
+Files: `assets/hud-crew.svg` (the lifespan meter), `assets/cryo-segment.svg` (the sleep stretch on the predicted path), `assets/ship/cryo-pods.svg` (pod states and the ship's asleep cue), mockup `mockups/planning-cryosleep.svg`. Renderer notes: `threejs-notes.md` §27. Cryosleep is the late upgrade that uses the cryo module (`ship/module-cryo.svg`).
+
+**Two colours tell the story: warm for life, ice for sleep.** The crew's remaining life is a warm peach (`crew.life`), distinct from fuel mint, hull blue and the dose greens. Everything that belongs to sleep is ice cyan: the frozen bar, the stretch on the path, the pods, the ring round a sleeping ship. Waking always brings a touch of peach back (the wake handle's core, the pods' flash).
+
+- **Lifespan meter** (`hud-crew.svg`). The last block of the status stack: FUEL 48 · HULL 96 · (DOSE 144) · CREW at the next 48 px step, so 144 without the dose meter and 192 with it. Chips move below it.
+  - "CREW" label, a heartbeat glyph in the bar colour (asleep: a snowflake), the remaining lifespan in ship time ("2:10", 12 px mono), and a continuous 220 × 8 bar filled from the left. 0:00 loses the mission.
+  - `crew.life` from 25 %, `crew.low` below 25 %, `crew.crit` below 10 % (pulsing α 1 → 0.45, 1 s).
+  - The crew ages in **ship** time, so time dilation slows it too. The rate line says "ageing 1.00× · ship time"; when the clock rate drops below 0.995 it shows the factor ("ageing 0.62× · deep well").
+  - **Asleep:** the fill turns to ice (gradient `cryo.ice` → `cryo.glow`, a `cryo.frost` rim, frost needles, a shimmer every 4 s), its edge is frozen by a tick, and the value stops. "cryosleep · ageing 0× · wake 0:12".
+  - **Planning ghost:** the life this plan uses is hatched at the end of the fill, with a tick where the plan ends; the life the planned sleep keeps is an ice slice just left of the tick. "−0:46 on this path · cryo keeps 0:24".
+  - **Groggy** (optional penalty): for a few seconds after waking, the chip "groggy 0:05 · burns 70 %" and burns are capped.
+- **Sleep stretch** (`cryo-segment.svg`), px-space:
+  - a soft `cryo.glow` band (14 px α 0.10 + 5 px α 0.22), a crawling frost dash, ice dots, and four-point glints twinkling beside the line
+  - **handles:** capsules (9 × 16) across the path, not circles, so they never read as burn nodes. SLEEP has an ice core, WAKE a peach core. Labels "sleep" / "wake" on the convex side. Both drag along the path.
+  - **chip** at the middle: "cryosleep 0:31 · ageing 0×"
+  - **rules:** the crew must be awake to burn, so WAKE snaps to 0:01 before the next burn node. **Wake on danger** (optional): where the path enters a hazard, an `event.warn` diamond with "!" rings, the chip "auto-wake 0:22 · belt" appears, and the rest of the planned stretch is only a dashed promise.
+  - **Placing:** right-click a path dot, or press Z with the cursor on the path, to drop a 0:20 sleep centred there. Z is free in `src/game/input.ts`; C stays free.
+- **Pods** (`cryo-pods.svg`): awake (dark `cryo.deep` glass, no glow), entering (ice climbs in 2 s), asleep (ice glass, a 6 s breath, frosted rim), waking (ice melts from the top, a peach flash), auto-wake (fast melt, red rims). At 22 px the pods can't be read, so a sleeping ship gets a breathing `cryo.glow` ring (r 15 → 19, 6 s) and a small turning snowflake.
+
+| Token | Hex | Used for |
+|---|---|---|
+| `crew.life` | `#FFC09A` | Lifespan fill from 25 %; the heartbeat glyph; the planning hatch; the wake handle's core; the waking flash; the groggy chip |
+| `crew.low` | `#FF9F43` | Lifespan fill and value below 25 % (= `event.warn`) |
+| `crew.crit` | `#FF5A5F` | Lifespan fill and value below 10 %, pulsing; the auto-wake pod rims |
+| `cryo.ice` | `#BFF4FF` | Frozen bar top, ice dots on the stretch, the sleep handle's core, ice glass, the asleep value |
+| `cryo.glow` | `#7CF5FF` | Frozen bar base, the stretch band, handle strokes, the snowflake glyph, the pods' breath, the ship's asleep ring |
+| `cryo.deep` | `#1E6E8A` | Empty pod glass and pod rims (= the module's rim) |
+| `cryo.frost` | `#E6FAFF` | Frost rim on the bar, the crawling frost dash, glints |
