@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import type { Level } from "../level/catalog";
+import { OBSERVATORY_ID, observatoryFramePoints } from "../level/observatory";
 import { structureReach } from "../sim/mega";
 import type { Vec2 } from "../sim/physics";
 
@@ -171,11 +172,27 @@ export function frameLevel(camera: Camera, width: number, height: number, level:
     minY = Math.min(minY, center.y - reach);
     maxY = Math.max(maxY, center.y + reach);
   }
+  if (level.id === OBSERVATORY_ID) {
+    for (const point of observatoryFramePoints()) {
+      minX = Math.min(minX, point.x - point.reach);
+      maxX = Math.max(maxX, point.x + point.reach);
+      minY = Math.min(minY, point.y - point.reach);
+      maxY = Math.max(maxY, point.y + point.reach);
+    }
+  }
   const worldW = Math.max(1, maxX - minX);
   const worldH = Math.max(1, maxY - minY);
-  camera.zoom = Math.min(width / worldW, height / worldH) * 0.9;
   camera.x = (minX + maxX) / 2;
   camera.y = (minY + maxY) / 2;
+  if (level.id === OBSERVATORY_ID) {
+    // Keep the lowest labels above the launch button and the telemetry.
+    const topHud = 88;
+    const bottomHud = 168;
+    camera.zoom = Math.min(width / worldW, (height - topHud - bottomHud) / worldH) * 0.96;
+    camera.y -= (bottomHud - topHud) / (2 * camera.zoom);
+    return;
+  }
+  camera.zoom = Math.min(width / worldW, height / worldH) * 0.9;
 }
 
 /** Center and extra radius swept by an analytic orbit. Fixed bodies have reach 0. */

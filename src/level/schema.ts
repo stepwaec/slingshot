@@ -7,10 +7,12 @@ import {
   type BodyLook,
   type BodyOrbit,
   type Bounds,
+  SIM_SPEEDS,
   type Horizon,
   type Magnet,
   type Nebula,
   type PauseRule,
+  type SimSpeed,
   keplerMeanMotion,
 } from "../sim/physics";
 import type { DysonSwarm, Ringworld, ShkadovThruster, SpaceElevator, StellarEngine, WormholePair } from "../sim/mega";
@@ -101,6 +103,11 @@ export interface Level {
   horizon?: Horizon;
   /** How pausing works. Omitted levels pause for free, without a limit. */
   pause?: PauseRule;
+  /**
+   * Fastest sim speed the flight buttons offer. Omitted levels allow 32×.
+   * Higher speeds are more fixed steps per frame. `dt` does not change.
+   */
+  maxSpeed?: SimSpeed;
   /** Knobs. Omitted, or with fields omitted, this is today's physics. */
   physics?: LevelPhysics;
   /** Fuel clouds. Omitted means the level has none. */
@@ -145,6 +152,7 @@ const LEVEL_KEYS = [
   "maxPlannedBurns",
   "horizon",
   "pause",
+  "maxSpeed",
   "physics",
   "nebulae",
   "belts",
@@ -177,6 +185,7 @@ const BODY_KEYS = [
   "shkadov",
   "ring",
   "elevator",
+  "solid",
 ] as const;
 const ENGINE_KEYS = ["angle", "burn", "scoop", "push"] as const;
 const DYSON_KEYS = ["coverage", "nick"] as const;
@@ -196,7 +205,7 @@ const MAGNET_KEYS = ["b1Reach", "tilt", "averaged"] as const;
 const BEAM_KEYS = ["reach", "period", "base", "tip", "damage"] as const;
 const BODY_ORBIT_KEYS = ["centerId", "cx", "cy", "radius", "phase", "omega", "kind", "a", "e", "periapsisAngle"] as const;
 const NEBULA_KEYS = ["id", "x", "y", "rx", "ry", "angle", "scoop", "look"] as const;
-const NEBULA_LOOKS = ["emission", "reflection", "dark"] as const;
+export const NEBULA_LOOKS = ["emission", "reflection", "dark"] as const;
 const BELT_KEYS = ["id", "centerId", "radius", "width", "tier", "seed", "arcStart", "arcSpan", "dustDamage"] as const;
 const BELT_TIERS: readonly BeltTier[] = ["sparse", "medium", "dense", "kuiper"];
 const SHIP_KEYS = ["x", "y", "vx", "vy"] as const;
@@ -217,7 +226,7 @@ const PHYSICS_KEYS = [
   "doseLimit",
 ] as const;
 
-const BODY_KINDS: readonly BodyKind[] = ["home", "star", "target", "moon", "blackhole", "planet", "rogue"];
+export const BODY_KINDS: readonly BodyKind[] = ["home", "star", "target", "moon", "blackhole", "planet", "rogue"];
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -516,6 +525,12 @@ function readBody(value: unknown, path: string, issues: string[]): Body | undefi
   if (Object.prototype.hasOwnProperty.call(value, "ring")) ring = readRing(value.ring, `${path}.ring`, issues);
   let elevator: SpaceElevator | undefined;
   if (Object.prototype.hasOwnProperty.call(value, "elevator")) elevator = readElevator(value.elevator, `${path}.elevator`, issues);
+  let solid: boolean | undefined;
+  if (Object.prototype.hasOwnProperty.call(value, "solid")) {
+    const raw = value.solid;
+    if (typeof raw !== "boolean") issues.push(`${path}.solid must be a boolean`);
+    else solid = raw;
+  }
   let look: BodyLook | undefined;
   if (Object.prototype.hasOwnProperty.call(value, "look")) {
     const raw = value.look;
@@ -540,6 +555,7 @@ function readBody(value: unknown, path: string, issues: string[]): Body | undefi
   if (captureRadius !== undefined) body.captureRadius = captureRadius;
   if (atmosphereRadius !== undefined) body.atmosphereRadius = atmosphereRadius;
   if (look) body.look = look;
+  if (solid === false) body.solid = false;
   if (orbit) body.orbit = orbit;
   if (magnet) body.magnet = magnet;
   if (beam) body.beam = beam;
@@ -908,6 +924,11 @@ export function loadLevelData(data: unknown, source = "level"): Level {
   let pause: PauseRule | undefined;
   if (Object.prototype.hasOwnProperty.call(data, "pause")) pause = readPause(data.pause, "level.pause", issues);
 
+  const maxSpeed = readOptionalFinite(data, "maxSpeed", "level", issues, { min: 1, integer: true });
+  if (maxSpeed !== undefined && !(SIM_SPEEDS as readonly number[]).includes(maxSpeed)) {
+    issues.push(`level.maxSpeed must be one of ${SIM_SPEEDS.join(", ")}`);
+  }
+
   let physics: LevelPhysics | undefined;
   if (Object.prototype.hasOwnProperty.call(data, "physics")) physics = readPhysics(data.physics, "level.physics", issues);
 
@@ -1012,6 +1033,9 @@ export function loadLevelData(data: unknown, source = "level"): Level {
   if (maxPlannedBurns !== undefined) level.maxPlannedBurns = maxPlannedBurns;
   if (horizon) level.horizon = horizon;
   if (pause) level.pause = pause;
+  if (maxSpeed !== undefined && (SIM_SPEEDS as readonly number[]).includes(maxSpeed)) {
+    level.maxSpeed = maxSpeed as SimSpeed;
+  }
   if (physics) level.physics = physics;
   if (nebulae.length > 0) level.nebulae = nebulae;
   if (belts.length > 0) level.belts = belts;

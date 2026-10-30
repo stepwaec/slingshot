@@ -23,6 +23,7 @@ import {
   type FilamentSpec,
 } from "../hazard-look";
 import { formatClock, hashId } from "../event-look";
+import { silenceNightRim } from "../surface-art";
 import { zoomBucket } from "../ship-art";
 import type { Theme } from "../theme";
 import { disposeObject, type Visual, type VisualFactory, type VisualFrame } from "../visual";
@@ -151,80 +152,6 @@ void main() {
   float a = (1.0 - smoothstep(0.5, 0.5 + fw, d)) * mix(1.0, vRest, uFade);
   if (a < 0.02) discard;
   gl_FragColor = vec4(vColor, a);
-}
-`;
-
-const glowFrag = /* glsl */ `
-varying vec2 vLocal;
-uniform vec3 uInner;
-uniform vec3 uMid;
-void main() {
-  float t = length(vLocal);
-  if (t > 1.0) discard;
-  vec3 c = t < 0.4 ? mix(uInner, uMid, t / 0.4) : uMid;
-  float a = t < 0.4 ? mix(0.5, 0.15, t / 0.4) : mix(0.15, 0.0, (t - 0.4) / 0.6);
-  if (a < 0.01) discard;
-  gl_FragColor = vec4(c, a);
-}
-`;
-
-const diskFrag = /* glsl */ `
-varying vec2 vLocal;
-uniform float uSide;
-uniform vec3 uWhite;
-uniform vec3 uIce;
-uniform vec3 uHot;
-uniform vec3 uWarm;
-uniform vec3 uEdge;
-void main() {
-  if (uSide > 0.5 && vLocal.y < 0.0) discard;
-  if (uSide < -0.5 && vLocal.y > 0.0) discard;
-  float t = length(vLocal);
-  if (t > 1.0 || t < 0.28) discard;
-  vec3 c = uWhite;
-  float a = 1.0;
-  if (t < 0.33) {
-    a = (t - 0.28) / 0.05;
-    c = uWhite;
-  } else if (t < 0.45) {
-    c = mix(uWhite, uIce, (t - 0.33) / 0.12);
-  } else if (t < 0.62) {
-    float u = (t - 0.45) / 0.17;
-    c = mix(uIce, uHot, u);
-    a = mix(1.0, 0.95, u);
-  } else if (t < 0.8) {
-    float u = (t - 0.62) / 0.18;
-    c = mix(uHot, uWarm, u);
-    a = mix(0.95, 0.7, u);
-  } else {
-    float u = (t - 0.8) / 0.2;
-    c = mix(uWarm, uEdge, u);
-    a = mix(0.7, 0.0, u);
-  }
-  float fw = max(fwidth(t), 0.004);
-  a *= smoothstep(0.28, 0.28 + fw, t);
-  if (a < 0.02) discard;
-  gl_FragColor = vec4(c, a);
-}
-`;
-
-const shadowFrag = /* glsl */ `
-varying vec2 vLocal;
-uniform vec3 uFill;
-uniform vec3 uRim;
-uniform float uRimPx;
-uniform float uZoom;
-uniform float uRadius;
-void main() {
-  float r = length(vLocal);
-  float fw = max(fwidth(r), 0.002);
-  float disc = 1.0 - smoothstep(1.0 - fw, 1.0 + fw, r);
-  float rimW = (uRimPx / max(uZoom, 0.05)) / max(uRadius, 0.5);
-  float rim = 1.0 - smoothstep(rimW, rimW + fw, abs(r - 1.0));
-  if (disc < 0.02 && rim < 0.02) discard;
-  vec3 c = mix(uFill, uRim, rim);
-  float a = max(disc, rim);
-  gl_FragColor = vec4(c, a);
 }
 `;
 
@@ -416,15 +343,14 @@ interface QuasarView {
   body: Body;
   jet: QuasarJet;
   glow: THREE.Mesh;
+  glowFit: ArtFit;
+  core: THREE.Mesh;
+  coreFit: ArtFit;
   jets: THREE.Mesh[];
   jetTan: { value: number }[];
   jetHalf: { value: number }[];
   jetZoom: { value: number }[];
   jetNow: { value: number }[];
-  diskBack: THREE.Mesh;
-  diskFront: THREE.Mesh;
-  shadow: THREE.Mesh;
-  shadowZoom: { value: number };
   edges: LineMesh[];
   arcs: RingMesh[];
 }
@@ -593,17 +519,10 @@ class HazardsVisual implements Visual {
     const pose = bodyPose(body, time, this.bodies, this.g);
     const shadow = body.radius;
     const angle = jetAngle(jet, time);
-    view.glow.position.set(pose.x, pose.y, 0);
-    view.glow.scale.set(shadow * spec.glowScale, shadow * spec.glowScale, 1);
     const rx = shadow * spec.diskRx;
     const ry = shadow * spec.diskRy;
-    for (const disk of [view.diskBack, view.diskFront]) {
-      disk.position.set(pose.x, pose.y, 0);
-      disk.scale.set(rx, ry, 1);
-    }
-    view.shadow.position.set(pose.x, pose.y, 0);
-    view.shadow.scale.set(shadow, shadow, 1);
-    view.shadowZoom.value = zoom;
+    poseArt(view.glow, view.glowFit, pose.x, pose.y, shadow, 0);
+    poseArt(view.core, view.coreFit, pose.x, pose.y, shadow, 0);
     const start = shadow * spec.jetStart;
     const reach = jet.reach;
     const length = Math.max(1, reach - start);
@@ -702,6 +621,7 @@ class HazardsVisual implements Visual {
     const spec = this.theme.nova;
     const fit = artForBody({ ...body, look: "red-giant" }, this.theme);
     if (!fit) throw new Error("red giant art missing");
+    fit.bake = { tag: "nova-progenitor", prep: prepProgenitor };
     const star = artMesh(fit, `${body.id}-progenitor`);
     star.renderOrder = 1;
     this.object.add(star);
@@ -828,16 +748,12 @@ class HazardsVisual implements Visual {
   private buildQuasar(body: Body, jet: QuasarJet): QuasarView {
     const colors = this.theme.colors;
     const spec = this.theme.quasar;
-    const glow = new THREE.Mesh(
-      new THREE.PlaneGeometry(2, 2),
-      shader(glowFrag, {
-        uInner: { value: srgbVec(colors.quasarGlow) },
-        uMid: { value: srgbVec(colors.quasarGlowMid) },
-      }),
-    );
-    glow.frustumCulled = false;
+    const glowFit = quasarFit(this.theme, "quasar-glow", prepQuasarGlow);
+    const glow = artMesh(glowFit, `${body.id}-glow`);
     glow.renderOrder = 0;
-    glow.name = `${body.id}-glow`;
+    const coreFit = quasarFit(this.theme, "quasar-core", prepQuasarCore);
+    const core = artMesh(coreFit, `${body.id}-core`);
+    core.renderOrder = 4;
     this.object.add(glow);
     const jetTan: { value: number }[] = [];
     const jetHalf: { value: number }[] = [];
@@ -878,37 +794,7 @@ class HazardsVisual implements Visual {
       this.object.add(mesh);
       return mesh;
     });
-    const diskUniforms = {
-      uWhite: { value: srgbVec(colors.quasarDiskWhite) },
-      uIce: { value: srgbVec(colors.quasarDiskIce) },
-      uHot: { value: srgbVec(colors.quasarDiskHot) },
-      uWarm: { value: srgbVec(colors.quasarDiskWarm) },
-      uEdge: { value: srgbVec(colors.quasarDiskEdge) },
-    };
-    const diskBack = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), shader(diskFrag, { ...diskUniforms, uSide: { value: 1 } }));
-    const diskFront = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), shader(diskFrag, { ...diskUniforms, uSide: { value: -1 } }));
-    diskBack.renderOrder = 2;
-    diskFront.renderOrder = 4;
-    diskBack.frustumCulled = false;
-    diskFront.frustumCulled = false;
-    diskBack.name = `${body.id}-disk-back`;
-    diskFront.name = `${body.id}-disk-front`;
-    this.object.add(diskBack);
-    const shadowZoom = { value: 1 };
-    const shadow = new THREE.Mesh(
-      new THREE.PlaneGeometry(2, 2),
-      shader(shadowFrag, {
-        uFill: { value: srgbVec(colors.quasarShadow) },
-        uRim: { value: srgbVec(colors.quasarRim) },
-        uRimPx: { value: spec.rimWidth },
-        uZoom: shadowZoom,
-        uRadius: { value: body.radius },
-      }),
-    );
-    shadow.frustumCulled = false;
-    shadow.renderOrder = 3;
-    shadow.name = `${body.id}-shadow`;
-    this.object.add(shadow, diskFront);
+    this.object.add(core);
     const edges = [0, 1, 2, 3].map((i) => {
       const line = makeLine(colors.eventWarn, 6, spec.sweepAlpha, spec.sweepDash, spec.sweepGap);
       line.mesh.name = `${body.id}-sweep-${i}`;
@@ -923,21 +809,26 @@ class HazardsVisual implements Visual {
       this.object.add(ring.mesh);
       return ring;
     });
-    return { body, jet, glow, jets, jetTan, jetHalf, jetZoom, jetNow, diskBack, diskFront, shadow, shadowZoom, edges, arcs };
+    return { body, jet, glow, glowFit, core, coreFit, jets, jetTan, jetHalf, jetZoom, jetNow, edges, arcs };
   }
 
   private ensureBake(frame: VisualFrame): void {
-    const bucket = zoomBucket(frame.game.camera.zoom);
+    const zoom = frame.game.camera.zoom;
+    const bucket = zoomBucket(zoom);
     const dpr = Math.min(Math.max(frame.dpr, 1), 2);
     const key = `${bucket}|${dpr}`;
     if (key === this.bakeKey) return;
     this.bakeKey = key;
     const gen = ++this.bakeGen;
-    for (const view of this.novas) void this.paint(view.star, view.fit, dpr, bucket, gen);
+    for (const view of this.novas) void this.paint(view.star, view.fit, dpr, zoom, gen);
+    for (const view of this.quasars) {
+      void this.paint(view.glow, view.glowFit, dpr, zoom, gen);
+      void this.paint(view.core, view.coreFit, dpr, zoom, gen);
+    }
   }
 
   private async paint(mesh: THREE.Mesh, fit: ArtFit, dpr: number, zoom: number, gen: number): Promise<void> {
-    const texture = await loadArtTexture(fit, rasterPixels(fit.viewW, fit.viewH, dpr, zoom));
+    const texture = await loadArtTexture(fit, rasterPixels(fit.viewW, fit.viewH, dpr, zoom), zoom);
     if (gen !== this.bakeGen) {
       texture.dispose();
       return;
@@ -949,6 +840,48 @@ class HazardsVisual implements Visual {
     material.needsUpdate = true;
     previous?.dispose();
   }
+}
+
+/** Shadow r 9 sits at the sample's core (230, 165), which is the view centre. */
+function quasarFit(theme: Theme, tag: string, prep: (doc: Document) => void): ArtFit {
+  return {
+    url: theme.assets.quasar,
+    viewW: 460,
+    viewH: 330,
+    svgRadius: 9,
+    ox: 0,
+    oy: 0,
+    light: null,
+    spin: "none",
+    bake: { tag, prep },
+  };
+}
+
+function prepProgenitor(doc: Document): void {
+  const root = doc.getElementById("redGiant");
+  if (root) silenceNightRim(doc, root);
+}
+
+/** Glow only. Jets stay a shader so the sheath matches `quasarDamage`. */
+function prepQuasarGlow(doc: Document): void {
+  const root = doc.getElementById("quasar");
+  if (!root) return;
+  for (const child of [...root.children]) {
+    const glow = child.localName === "circle" && child.getAttribute("r") === "90";
+    if (!glow) child.remove();
+  }
+  silenceNightRim(doc, root);
+}
+
+/** Disk, shadow and rim. The lethal chip and the sample jets are not part of the body. */
+function prepQuasarCore(doc: Document): void {
+  const root = doc.getElementById("quasar");
+  if (!root) return;
+  for (const child of [...root.children]) {
+    if (child.localName === "circle" && child.getAttribute("r") === "90") child.remove();
+    else if (child.querySelector("path, text")) child.remove();
+  }
+  silenceNightRim(doc, root);
 }
 
 function shownTime(game: VisualFrame["game"]): number {

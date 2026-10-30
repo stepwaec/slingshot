@@ -22,6 +22,7 @@ import torchData from "../levels/torch.json";
 import hoopData from "../levels/hoop.json";
 import cableData from "../levels/cable.json";
 import foldData from "../levels/fold.json";
+import { observatory } from "./observatory";
 import { loadLevelData, type Level, type LevelPhysics } from "./schema";
 import { shipLoadout } from "../game/upgrades";
 import { placeBelts } from "../sim/belts";
@@ -56,6 +57,9 @@ export const cable: Level = loadLevelData(cableData, "src/levels/cable.json");
 export const fold: Level = loadLevelData(foldData, "src/levels/fold.json");
 
 export const LEVELS: readonly Level[] = [passage, relay, rescue, pair, ember, chain, pulse, quake, needle, ice, veil, drift, shade, wander, weave, frost, lead, flash, ash, torch, hoop, cable, fold];
+
+/** Showcase chart. Not part of the campaign list above. */
+export { observatory };
 
 function bodyById(level: Level, id: string): Body {
   const body = level.bodies.find((item) => item.id === id);

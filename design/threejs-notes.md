@@ -384,3 +384,98 @@ Designs: `target-zone.svg`, `planet-x.svg` part 8, `mockups/planning-capture.svg
 
 Moving targets (LU2): every quad and point is posed by `bodyPose` at the sim time, like the ring today.
 
+## 21. Sol bodies (Sol campaign)
+
+Designs: `assets/sol/*.svg`, `mockups/sol-moon.svg`, `preview/sol.html`. Values in `style.md` §18. There is no Sol code yet, so this is new work.
+
+1. **Looks.** Add one `look` per body: `sol-sun`, `mercury`, `venus`, `earth`, `luna`, `mars`, `jupiter`, `saturn`, `titan`, `uranus`, `neptune`, `pluto`, `charon`, `eris`, `arrokoth`, `voyager`. Draw them with the SVG pipeline the library bodies use (`art-sprite.ts`, `gallery.ts`). Bake per layer so the strips and the living surfaces move as their headers say (§4.6). Never freeze a body at t = 0.
+2. **Sizes.** Level authors use the ladder for `radius` (= crash radius): r = 34 √(R / R⊕). The Sun is r 46. Distances and periods are compressed per the Sol campaign plan, but orbits stay Kepler (`centerId`, `radius`, `omega` with ω = √(GM/r³)). Moons orbit their planets, and the Moon's orbit is about Earth.
+3. **Layers that must stay separate:**
+   - Earth's city lights: a night-side layer masked by the live light direction, not baked into the day texture.
+   - Saturn's rings: a back-half quad under the planet and a front-half quad over it, sharing one ring texture. The planet's shadow on the rings follows −L.
+   - Uranus: the strip is rolled −62°, and the rings split front and back the same way.
+   - The Sun's spots scroll inside the photosphere, under the flame ring.
+4. **Fixed faces.** The Moon, Pluto and Charon don't scroll. Their lighting follows the star as usual, so their phases change while their features stay put.
+5. **Light.** Each body's shade, haze and rim face the system's star, like every planet. Uranus's and Saturn's ring tilts are art, not physics.
+6. **Voyager** is a small non-solid prop with a slow drift. It needs no collision.
+
+**Budget:** the same as the library planets: one strip bake per layer and bucket, and two quads for each ring system.
+
+## 22. Astrophage
+
+Designs: `assets/astro/*.svg`, `assets/ship/engine-spin.svg`, `assets/overlays/astrophage-map.svg`, `mockups/planning-astrophage.svg`. Values in `style.md` §19. There is no Astrophage code yet.
+
+1. **Level data (suggested):**
+   - `astrophage { level, dims }` on a star; `level` is 1–10 and `dims` is the fraction its luminosity drops.
+   - `petrova { from, to, bulge, eaten?, knots: [{ t, fuel, radius }] }`.
+   - A `spin` engine type with its own Astrophage tank.
+
+   Dimming multiplies the star's solar recharge and its radiation term. Knots are fixed points on the line: deterministic, seeded, and known to the prediction.
+2. **Infected star.** One extra layer over the star sprite: a cells texture (black specks, baked once, rotated by `frame.now`) clipped to the disc, plus about 220 shimmer points on a ring at r + 7. Don't darken the star.
+3. **Petrova line.**
+   - Build the curve once per level (a quadratic from limb to limb).
+   - Draw the glow band and the four strands as triangle strips along it; widths follow w(t), and the dash offsets scroll on `frame.now`.
+   - Draw the motes, glints and sparkles as one instanced point set, with glints moving along t and sparkles scaling in and out.
+   - Apply the fade mask along t, and the eaten variant's colour change, in the shader.
+   - Budget: a few strips and at most 300 points per line.
+4. **Knots and harvesting.**
+   - A knot is a point cloud plus the planning ring.
+   - While the ship is inside a knot's radius with the scoop fitted, the sim adds Astrophage at the knot's rate and drains the knot.
+   - The visual streams points from the knot to the two scoop mouths (module-scoop local ±7.5, −13.5) and pulses a ring at each mouth.
+5. **Spin drive.** The engine part is a normal ship part. The beam is its own quad from the throat, length L = 44 + 30 · Δv units, capped at 160. Use the beam gradient and a white core, with a cheap UV-noise shimmer instead of the SVG displacement. Idle: ring only.
+6. **Fuel row.** DOM, under the fuel bar, shown only with a spin drive. The bar fill is CSS (a gradient plus a repeating speckle), the sparkle is an animated element, and the ghost segment works like the solar-recharge ghost.
+7. **Astrophage map (A).**
+   - Sample the density on a 14 px screen grid each time the view changes (planning and pause only).
+   - Draw the ticks as one instanced line set with head dots, px-space.
+   - The gauges, the clean ring and the labels are DOM or px quads.
+   - The field formula in the asset header is the design default; the sim owns the numbers.
+8. **Tau Ceti.**
+   - The star look with a hue tint, or a dedicated `tau-ceti` look.
+   - The disk as a belt-like seeded point set, with the back half drawn before the star and the front half after.
+   - Three planets on Kepler orbits inside the disk's inner edge.
+   - The eaten Petrova line.
+
+## 23. Layers menu
+
+Designs: `assets/layers-menu.svg`, `mockups/planning-layers.svg`. Values in `style.md` §20. This replaces `#gravity-controls` (three buttons) and `#mag-legend` in `index.html`, their styles in `src/style.css`, and the key handling in `src/game/input.ts`.
+
+1. **DOM.**
+   - One `<button id="layers">` at the old controls' spot, with the glyph, the label, a badge and a chevron, using `aria-expanded`.
+   - One `<div id="layers-panel" role="menu">` with one `<button role="menuitemcheckbox" aria-checked>` per layer. Each holds an inline SVG icon, the name, a `<kbd>`, a CSS switch, and a slot for the legend and the reason.
+   - Build the rows from one table (`id`, name, key, `available(level)`, `reason`, legend), so a new layer is one table entry.
+2. **State.**
+   - Keep the existing view flags (`game.gravity`, `game.magnetism`, and the radiation and Astrophage flags).
+   - The panel's open state is UI only. The badge is the number of flags that are on.
+   - Unavailable layers are forced off when a level loads.
+3. **Keys** in `input.ts`:
+   - Add L (toggle the panel) and D (radiation); radiation has no key today. A and T come with their layers.
+   - Esc closes the panel before it clears the selection.
+   - Ignore repeats and modifier chords, as `applyGravityKey` does.
+4. **Flight.** The rows stay readable but their switches are disabled. On pause they come back.
+5. **Legends.** Move the magnetism zones and the radiation dots into their rows. Delete the floating legend boxes.
+
+## 24. Gravity and time heat map
+
+Designs: `overlays/gravity-time.svg`, `mockups/planning-gravity-time.svg`. Values in `style.md` §21. This replaces `CLOCK_HEAT_RATES`, `CLOCK_HEAT_COLORS`, `clockHeatRgb` and `clockHeatAlpha` in `src/render/palette.ts`, and `theme.gravity.heatAlpha`, in `src/render/visuals/gravity.ts`. Keep `heatGamma` (2.4).
+
+1. **Bands in the fragment shader.**
+   - Pass the rate per vertex (`grid.rate`), not a colour.
+   - In the fragment, compute s = rate^2.4 and look up the band.
+   - Make each band edge crisp with `fwidth(s)`: a one-pixel `smoothstep` across the edge, not across the band.
+   - Draw the contour lines in the same shader, as a px-wide line where s crosses an edge.
+   - Alpha is the band's own; full rate is clear. Keep the edge fade and the body cut-outs.
+2. **Sample the rate at the display position.** The funnel moves vertices a long way, so evaluate the rate at the pinched (display) position. That way the bands stay at their true radii, independent of the grid warp.
+3. **Labels.** One DOM chip per visible contour, at −58° on the ring around the dominant body, skipped when closer than 22 px to the previous label.
+4. **Grid ink.**
+   - Draw a casing pass (1.9 px, `#050710` α 0.22 + 0.28·depth) under the existing ink.
+   - Where s < 0.60 (warm), draw only `#050710` α 0.55 at 0.9 px.
+5. **The funnel** (replaces the saturating pull in `pinchTowardMasses`):
+   - For each vertex, take the dominant body (the largest Φ contribution).
+   - Compute c = r_s / r_b, where r_s = 2GM/c² (`horizonRadius`), clamped to 1. Then r₀ = r_b (1 + 3c) and a = r_b (1 + 2.2c).
+   - Map the distance with r′ = r_b + (r − r₀) u / (1 + u), where u = ((r − r₀)/a)².
+   - Blend with today's pinch by w = smoothstep(0, 0.6, c).
+   - Where w > 0, skip the `PINCH_CELL` clamp: the radial map is monotonic and cannot fold.
+   - Vertices with r ≤ r₀ go under the disc: hide them, as today's lines already stop at discs.
+   - Between two compact bodies, blend the two maps by their Φ shares.
+6. **The Layers legend** (§20) shows the six band swatches.
+

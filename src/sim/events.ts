@@ -10,6 +10,10 @@
  * it. Hull damage is per second inside the jet and does not push the ship.
  */
 
+/** Drawings in the hazard view. Observatory places one body for each. */
+export const HAZARD_KINDS = ["supernova", "quasar"] as const;
+export type HazardKind = (typeof HAZARD_KINDS)[number];
+
 export interface Supernova {
   /** Sim seconds when the star detonates. */
   at: number;

@@ -15,16 +15,28 @@ import {
   planFuel,
   queuedBurns,
   setPlan,
+  setPreviewSeconds,
+  speedAllowed,
   tick,
   type Game,
 } from "./game/state";
-import { burnLimit, LEVELS, passage, pauseRuleOf, rescue, simConfigFromLevel, type Level } from "./level/catalog";
+import { burnLimit, LEVELS, observatory, passage, pauseRuleOf, rescue, simConfigFromLevel, type Level } from "./level/catalog";
 import { deepPlan, safePlan } from "./level/solutions";
 import { createClockLatches, readClocks, type ClockLatches } from "./hud/readout";
 import type { MissionScore } from "./sim/score";
 import { frameLevel, worldToScreen } from "./render/camera";
 import { SpaceView } from "./render/view";
-import { doseAt, hasMagneticBody, horizonSteps, iceHarvestRate, nebulaScoopRate, solarRechargeRate, spreadAlong } from "./sim/physics";
+import {
+  doseAt,
+  hasMagneticBody,
+  iceHarvestRate,
+  nebulaScoopRate,
+  previewRange,
+  SIM_SPEEDS,
+  solarRechargeRate,
+  spreadAlong,
+  type SimSpeed,
+} from "./sim/physics";
 import { shipLoadout } from "./game/upgrades";
 import { mountShipyard, syncShipyard } from "./hud/shipyard";
 import { resetShipLook } from "./render/appearance";
@@ -32,7 +44,19 @@ import { hullRatio, hullSegmentsLit, hullTone, stressLevel } from "./render/ship
 import { burnChipText } from "./render/node-style";
 import { theme } from "./render/theme";
 
-const levels: readonly Level[] = LEVELS;
+const levels: readonly Level[] = [...LEVELS, observatory];
+
+function addLevelGroup(select: HTMLSelectElement, label: string, groupLevels: readonly Level[]): void {
+  const group = document.createElement("optgroup");
+  group.label = label;
+  for (const level of groupLevels) {
+    const option = document.createElement("option");
+    option.value = level.id;
+    option.textContent = level.name;
+    group.append(option);
+  }
+  select.append(group);
+}
 
 function required<T extends Element>(selector: string): T {
   const element = document.querySelector<T>(selector);
@@ -68,6 +92,8 @@ const planningActions = required<HTMLElement>("#planning-actions");
 const flightActions = required<HTMLElement>("#flight-actions");
 const fpsValue = required<HTMLElement>("#fps");
 const planNote = required<HTMLElement>("#plan-note");
+const previewRangeInput = required<HTMLInputElement>("#preview-range");
+const previewReadout = required<HTMLElement>("#preview-readout");
 const levelSelect = required<HTMLSelectElement>("#level");
 const pauseButton = required<HTMLButtonElement>("#pause");
 const resumeButton = required<HTMLButtonElement>("#resume");
@@ -91,7 +117,6 @@ const routeActions = required<HTMLElement>("#route-actions");
 const routeSafe = required<HTMLButtonElement>("#route-safe");
 const routeDeep = required<HTMLButtonElement>("#route-deep");
 const gravityButton = required<HTMLButtonElement>("#gravity");
-const gravityClockButton = required<HTMLButtonElement>("#gravity-clock");
 const magnetismButton = required<HTMLButtonElement>("#magnetism");
 const radiationButton = required<HTMLButtonElement>("#radiation");
 const doseBlock = required<HTMLElement>("#dose");
@@ -118,12 +143,8 @@ let overlayOpen = false;
 let spreadFor: Game["prediction"] | null = null;
 let spreadSigma = 0;
 
-for (const level of levels) {
-  const option = document.createElement("option");
-  option.value = level.id;
-  option.textContent = level.name;
-  levelSelect.append(option);
-}
+addLevelGroup(levelSelect, "Campaign", LEVELS);
+addLevelGroup(levelSelect, "Showcase", [observatory]);
 routeSafe.addEventListener("click", () => setPlan(game, safePlan));
 routeDeep.addEventListener("click", () => setPlan(game, deepPlan));
 upgradeToggle.addEventListener("click", () => {
@@ -160,13 +181,16 @@ bindInput(
     resumeButton,
     slowButton,
     gravityButton,
-    gravityClockButton,
     magnetismButton,
     radiationButton,
   },
   () => ({ width: canvas.clientWidth, height: canvas.clientHeight }),
   () => frameLevel(game.camera, canvas.clientWidth, canvas.clientHeight, game.level),
 );
+
+previewRangeInput.addEventListener("input", () => {
+  setPreviewSeconds(game, Number(previewRangeInput.value));
+});
 
 window.addEventListener("resize", resize);
 resize();
@@ -284,11 +308,6 @@ function syncGravity(current: Game): void {
   if (gravityButton.textContent !== label) gravityButton.textContent = label;
   const pressed = current.gravity === "off" ? "false" : "true";
   if (gravityButton.getAttribute("aria-pressed") !== pressed) gravityButton.setAttribute("aria-pressed", pressed);
-  gravityClockButton.hidden = current.gravity !== "grid";
-  const clockPressed = current.gravityClock ? "true" : "false";
-  if (gravityClockButton.getAttribute("aria-pressed") !== clockPressed) {
-    gravityClockButton.setAttribute("aria-pressed", clockPressed);
-  }
 }
 
 function syncHud(current: Game): void {
@@ -345,7 +364,12 @@ function syncHud(current: Game): void {
   deleteButton.disabled = !editing || current.selected === null;
   for (const button of clearButtons) button.disabled = current.mode === "flying";
   syncPlanNote(current);
+  syncPreview(current);
   for (const button of speedButtons) {
+    const speed = Number(button.dataset.speed);
+    const allowed = isListedSpeed(speed) && speedAllowed(current.level, speed);
+    button.hidden = !allowed;
+    button.disabled = !allowed;
     button.setAttribute("aria-pressed", button.dataset.speed === String(current.speed) ? "true" : "false");
   }
 
@@ -586,11 +610,26 @@ function syncOverlay(current: Game, budget: number): void {
   }
 }
 
+function isListedSpeed(value: number): value is SimSpeed {
+  return (SIM_SPEEDS as readonly number[]).includes(value);
+}
+
+function syncPreview(current: Game): void {
+  const origin = current.mode === "paused" ? current.ship : current.initial;
+  const range = previewRange(origin, simConfigFromLevel(current.level, current.upgrades));
+  const seconds = current.previewSeconds ?? range.defaultSeconds;
+  previewRangeInput.min = String(range.minSeconds);
+  previewRangeInput.max = String(range.maxSeconds);
+  if (document.activeElement !== previewRangeInput) previewRangeInput.value = String(seconds);
+  previewReadout.textContent = `${seconds.toFixed(1)}s`;
+}
+
 function syncPlanNote(current: Game): void {
   const parts: string[] = [];
   if (current.level.horizon) {
     const origin = current.mode === "paused" ? current.ship : current.initial;
-    const seconds = horizonSteps(origin, simConfigFromLevel(current.level)) * current.level.dt;
+    const range = previewRange(origin, simConfigFromLevel(current.level, current.upgrades));
+    const seconds = current.previewSeconds ?? range.defaultSeconds;
     parts.push(`horizon ${seconds.toFixed(1)}s`);
   }
   if (current.level.maxPlannedBurns !== undefined && current.level.maxPlannedBurns <= 4) {

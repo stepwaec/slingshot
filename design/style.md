@@ -1,6 +1,6 @@
 # Slingshot — visual style v1.5
 
-Calm, cinematic space for Slingshot. This file is the look; `canvas-notes.md` is the pixel-exact drawing reference (how each SVG recipe looks and what it costs, written for Canvas 2D); `threejs-notes.md` maps it onto the game's Three.js renderer (WP3); `assets.md` indexes every file. Sections: §1 mood · §2 palette (background, sky, the sun, the two original planets, the shared lighting tokens, UI) · §3 typography · §4 glow and blur rules, with **§4.1 Realism, vibrancy and crispness rules** · §5 motion · §6 layout · §7 asset index · §8 the **body library** (31 bodies: 12 planets, 6 stars and compact objects, 4 moons, 3 ringed planets, the 3 WP8 objects: binary star, red giant, moon chain, the 2 WP9 compact objects: pulsar, magnetar, and the WP10 comet) plus the WP9 **magnetism map** and the WP10 **solar recharge indicator** · §9 the **space environment** (nebulae, asteroid field, wreck debris) · §10 **ship systems** (modular ship, damage states, hull HUD, tidal-stress warning, upgrade screen) · §11 **WP11** (asteroid belts, Kuiper belt, rogue planet, radiation map, dose meter) · §12 **ship and planning view** (burn plume, burn node, gravity grid and sheet) · §13 **late game** (stellar engine, Dyson swarm, ringworld, Shkadov thruster, space elevator, wormhole pair) and **living surfaces** · §14 **collisions and consumption** (impact, debris field, tidal disruption, burning up in a star, accretion, event telegraphs) · §15 **ghost markers** (where a moving body will be) · §16 **supernova, quasar and stray asteroid** (WP12) · §17 **target zone** (orbit capture). Coding agents: read `IMPLEMENTING.md` first. Assets live in `design/assets` (bodies in `design/assets/bodies`, the environment in `design/assets/space`, map overlays in `design/assets/overlays`, the modular ship in `design/assets/ship`, late-game structures in `design/assets/mega`, scripted events in `design/assets/events`), mockups (1440×900, PNG = 2× render) in `design/mockups`, animated previews in `design/preview/planets.html`, `bodies.html` and `space.html`.
+Calm, cinematic space for Slingshot. This file is the look; `canvas-notes.md` is the pixel-exact drawing reference (how each SVG recipe looks and what it costs, written for Canvas 2D); `threejs-notes.md` maps it onto the game's Three.js renderer (WP3); `assets.md` indexes every file. Sections: §1 mood · §2 palette (background, sky, the sun, the two original planets, the shared lighting tokens, UI) · §3 typography · §4 glow and blur rules, with **§4.1 Realism, vibrancy and crispness rules** · §5 motion · §6 layout · §7 asset index · §8 the **body library** (31 bodies: 12 planets, 6 stars and compact objects, 4 moons, 3 ringed planets, the 3 WP8 objects: binary star, red giant, moon chain, the 2 WP9 compact objects: pulsar, magnetar, and the WP10 comet) plus the WP9 **magnetism map** and the WP10 **solar recharge indicator** · §9 the **space environment** (nebulae, asteroid field, wreck debris) · §10 **ship systems** (modular ship, damage states, hull HUD, tidal-stress warning, upgrade screen) · §11 **WP11** (asteroid belts, Kuiper belt, rogue planet, radiation map, dose meter) · §12 **ship and planning view** (burn plume, burn node, gravity grid and sheet) · §13 **late game** (stellar engine, Dyson swarm, ringworld, Shkadov thruster, space elevator, wormhole pair) and **living surfaces** · §14 **collisions and consumption** (impact, debris field, tidal disruption, burning up in a star, accretion, event telegraphs) · §15 **ghost markers** (where a moving body will be) · §16 **supernova, quasar and stray asteroid** (WP12) · §17 **target zone** (orbit capture) · §18 **Sol bodies** (the Sol campaign) · §19 **Astrophage** (infected stars, the Petrova line, the spin drive, Tau Ceti, the Astrophage map) · §20 **Layers menu** (one panel for every map layer) · §21 **gravity and time heat map** (clock-rate bands and the grid funnel). Coding agents: read `IMPLEMENTING.md` first. Assets live in `design/assets` (bodies in `design/assets/bodies`, the environment in `design/assets/space`, map overlays in `design/assets/overlays`, the modular ship in `design/assets/ship`, late-game structures in `design/assets/mega`, scripted events in `design/assets/events`), mockups (1440×900, PNG = 2× render) in `design/mockups`, animated previews in `design/preview/planets.html`, `bodies.html` and `space.html`.
 
 **History in one paragraph.** v1 set the layout, UI and the two-glow rule. v1.1 was the first realism pass (limb-darkened star, planets with a terminator and a rim, a tinted starfield with a Milky Way). v1.2 made the planets rotate: a seamless texture strip slides under a lighting overlay that never moves. v1.3 built the body library (12 planets, 6 stars and compact objects) and gave the stars prominences and a flare. v1.4 adds moons, ringed planets, nebulae and debris fields (§8, §9). **v1.5 (revised) is the realism, vibrancy and crispness pass**, agreed with the client on two approved reference assets — the ocean world "variant F" and the sun "variant J" — and applied to every body: vivid multi-zone surfaces with crisp edges, elongated clouds with cast shadows, a warm terminator band, a lit-side haze and rim, a fiery plasma sun with ragged flame rings and an irregular rim, and no untinted grey anywhere. The earlier v1.5 "crispness pass" numbers (halve blurs, ±12 % lightness, limb line at α 0.30) were rejected as indistinguishable from v1.2 and are **not** used; §4.1 holds the rules that replaced them.
 
@@ -1354,4 +1354,167 @@ Files: `assets/target-zone.svg` (six states), `assets/planet-x.svg` part 8 (the 
 | `zone.flash` | `#FFFFFF` | The ring's peak at the moment of capture |
 | `zone.exit` | `#FFC857` | Exit arc and the too-fast hint (= `event.next`) |
 | `zone.lost` | `#B48CFF` | The flyby cross and chip (= `result.lost`) |
+
+## 18. Sol bodies (v3.1, the Sol campaign)
+
+Files: `assets/sol/*.svg` (16 assets), mockup `mockups/sol-moon.svg` (mission 1, Moon orbit), gallery `preview/sol.html`. Renderer notes: `threejs-notes.md` §21. These are our own Sun, planets, moons and Kuiper objects. They must read as the real bodies at a glance, in the same realistic, vibrant and crisp style as the library.
+
+- **Size ladder.** r = 34 √(R / R⊕): Earth keeps the home planet's r 34, and the order and proportions stay true while Jupiter still fits on screen. The crash radius is r. The Sun is off the ladder (109 R⊕) and stays a game-scale star, r 46. Arrokoth is drawn at a minimum readable size.
+- **Real geography.** Features are placed from longitude and latitude, never random noise: Earth's continents and deserts, the Moon's maria, Mars's albedo features, Jupiter's belts and spots, Saturn's ring radii. Noise only roughens edges and adds texture inside them.
+- **Strips.** Rotating bodies use the planet strip construction: x = (lon + 180)/360 · P and y = r − r sin(lat), with every feature drawn at x and x + P. They scroll west → east, except Venus's clouds, which run retrograde. The visual periods are slow game periods, not real ones.
+- **Fixed faces.** The Moon, Pluto and Charon are tidally locked and keep fixed faces: the Moon's near side, and the sides New Horizons saw.
+- **Lighting.** Everything is lit from the upper-right with the planet reference construction (§4.1). Airless bodies get a hard terminator and no haze. Earth's city lights show on the night side only.
+- **Easter-egg hints only:** Voyager's golden record, and the sunspots as a nod to an active, living Sun. No logos, no characters.
+
+| Body | File · group · ids | r | Motion | What makes it read as itself |
+|---|---|---|---|---|
+| The Sun | `sun.svg` · `#solSun` · `solSun*`, `sol*` | 46 | star.svg motion; spots 180 s | the approved sun J plus five sunspot groups in the ±10–18° activity belts (penumbra `#B8401E`, umbra `#4A1006`) |
+| Mercury | `mercury.svg` · `#mercury` · `mer*` | 21 | 300 s | warm tan-grey regolith, craters, Caloris, ray craters; airless |
+| Venus | `venus.svg` · `#venus` · `ven*` | 33 | 96 s retrograde | unbroken pale-gold cloud deck, soft bands, faint Y chevrons, bright haze |
+| Earth | `earth.svg` · `#earth` · `eth*` | 34 | 90 s, clouds 64 s | real continents with biome colour by latitude, real deserts, shallow shelves, sea ice, clouds weighted to the ITCZ and storm tracks, night-side city lights |
+| The Moon | `moon.svg` · `#luna` · `lun*` | 18 | locked | near-side maria, Tycho, Copernicus and Kepler rays; airless |
+| Mars | `mars.svg` · `#mars` · `mar*` | 24.8 | 92 s | rust plains, Syrtis Major, Meridiani, Acidalium, Hellas, Argyre, Tharsis, Valles Marineris, caps, thin pink haze |
+| Jupiter | `jupiter.svg` · `#jupiter` · `jup*` | 114 | 240 s | the real belts and zones (LUT on latitude), Great Red Spot in its hollow, Oval BA, white ovals, NEB hot spots and festoons, barges, lavender poles |
+| Saturn | `saturn.svg` · `#saturn` · `sat*` | 104.6 | 260 s | pale-gold bands, blue polar hexagon; rings at real radii (C, B, Cassini Division, A, Encke Gap, F), back half behind and front half over the planet, the planet's shadow on the rings, the rings' shadow on the globe |
+| Titan | `titan.svg` · `#titan` · `tit*` | 21.6 | 160 s | orange haze with no surface, a darker north hood, the detached blue outer haze |
+| Uranus | `uranus.svg` · `#uranus` · `ura*` | 68.1 | 140 s | pale cyan; axis tipped 98°, so the bands run pole to pole on screen; faint, nearly face-on rings |
+| Neptune | `neptune.svg` · `#neptune` · `nep*` | 67 | 120 s | deep blue, Great Dark Spot with its white companion, the Scooter, D2, white cirrus |
+| Pluto | `pluto.svg` · `#pluto` · `plu*` | 14.7 | locked | Tombaugh Regio (the heart), Cthulhu, a thin blue haze |
+| Charon | `charon.svg` · `#charon` · `cha*` | 10.5 | locked | grey with the red Mordor Macula at the north pole |
+| Eris | `eris.svg` · `#eris` · `eri*` | 14.5 | — | bright ice |
+| Arrokoth | `arrokoth.svg` · `#arrokoth` · `arr*` | 6 (min) | — | red two-lobed contact binary |
+| Voyager | `voyager.svg` · `#voyager` · `voy*` | — | — | high-gain dish, bus, golden record, RTG and science booms, antennas; not solid |
+
+| Token | Hex | Used for |
+|---|---|---|
+| `earth.ocean` | `#1D56CF` | Earth's oceans (shelf `#36B9D8` = `ocean.shallow`) |
+| `earth.desert` | `#E2B66A` | Real deserts (dunes `#F0CC84`, rock `#B5763E`) |
+| `earth.city` | `#FFD27A` | City lights, core `#FFF1C2`, fringe `#FF9A3C`, night side only |
+| `mars.rust` / `mars.dark` | `#C8643A` / `#7E3E2A` | Mars plains and albedo features |
+| `jupiter.zone` / `jupiter.belt` / `jupiter.grs` | `#F5E3C6` / `#A3502D` / `#DC5C34` | Jupiter's zones, belts and the Great Red Spot |
+| `saturn.ringB` / `saturn.ringA` / `saturn.ringC` | `#F2E6D2` / `#DCC398` / `#B49A76` | Saturn's rings (ivory, never grey) |
+| `uranus.body` | `#99DDE6` | Uranus |
+| `neptune.body` / `neptune.spot` | `#4B7DF2` / `#1C2F86` | Neptune and its dark spot |
+| `titan.haze` | `#E2A04A` | Titan (outer haze `#9CC4FF`) |
+| `pluto.heart` / `pluto.cthulhu` | `#F6EBDD` / `#6B3322` | Pluto |
+
+Every other hex value is listed in its asset's header, which is canon.
+
+## 19. Astrophage (v3.2)
+
+Files:
+- `assets/astro/`: `infected-star.svg`, `petrova-line.svg`, `astrophage-knot.svg`, `astrophage-harvest.svg`, `hud-astrophage.svg`, `tau-ceti.svg`
+- `assets/ship/engine-spin.svg`
+- `assets/overlays/astrophage-map.svg`
+- mockup `mockups/planning-astrophage.svg`
+
+Renderer notes: `threejs-notes.md` §22. This is a Project Hail Mary nod, shown in hints only: nothing is named after the book on screen, and the Taumoeba world is never labelled.
+
+**One colour for Astrophage.** Its real glow is infrared and invisible. The game shows it as crimson (`astro.crimson`, with pale highlights) so it can't be confused with the blue-white to violet engines, the magenta magnetar or the mint target. Astrophage is drawn as crisp motes, strands and sparkles, never as a wide low-alpha wash, so it never turns muddy on navy.
+
+- **Infected star.** Any star look plus the `#aiOverlay` group, scaled to the star's radius:
+  - black cells (`astro.cell`) crossing the disc, the field turning once per 240 s
+  - a ring of about 220 crimson motes twinkling just outside the limb
+
+  The star keeps its full colour, because the real dimming is a few percent. A dark veil turns it brown, so never add one. The planning chip ("infected N/10 · dims N % · recharge ×N") and the Astrophage map carry the numbers.
+- **The Petrova line.** A living river from the star to its breeding planet, built from six layers (canon in the asset header):
+  - a glow band that widens toward the planet
+  - four braided strands shimmering outward
+  - drifting motes
+  - racing white-hot glints with pink tails
+  - four-point sparkles popping in and out
+  - a breeding cloud round the planet
+
+  In the "eaten" variant (Tau Ceti), the line turns `astro.taumoeba` green past its eaten point and fades out before the planet. It is the player's trail to fuel.
+- **Knot.** A dense cluster on a line is a fuel pickup. Planning shows the harvest ring and "Astrophage · scoop to harvest · +N %". The motes thin out as the knot is drained.
+- **Harvest.** With the gas scoop fitted and the ship inside a knot, motes stream on curves into both intakes, shrinking as they go, and crimson rings pulse at the mouths.
+- **Spin drive.** A spin chamber with a crimson ring. Its beam is a photon drive: perfectly straight, white-hot at the throat, fading through pale pink to crimson and magenta, with a heat shimmer. In the game it is longer than any chemical plume. When idle, the ring breathes and there is no beam.
+- **Fuel row.** A second row in the fuel block, shown only with a spin drive. It has a crimson bar with an Astrophage speckle, a sparkle on the leading edge while harvesting, a planning ghost "+N % on this path", "spin drive ready · Δv ×N" when full, and "spin drive · burning N %/s".
+- **Tau Ceti.** The approved star at r 40, tinted slightly yellower, and clean. It has a dust disk ten times the Kuiper belt's, tilted 35° (back half behind the star), and three planets inside the disk's inner edge. Its Petrova line is eaten before it reaches the sea-green world: the mission's question, shown not told.
+- **Astrophage map (key A).** The fourth map overlay, in planning and pause only:
+  - **Ticks:** flow ticks on a 14 px screen grid; length and colour give the density (Trace, Present, Dense, Harvest, Eaten), and a head dot points along the migration.
+  - **Gauges:** infected stars get a 10-segment infection gauge; clean stars get a gold ring.
+  - **Labels:** each knot gets a fuel label; an eaten line gets "Astrophage eaten here".
+  - **Controls:** it is the Astrophage row of the Layers menu (§20), where its legend unfolds.
+
+  Later, on the galaxy map (WP15), infected stars get a gauge badge and clean stars a gold ring.
+
+| Token | Hex | Used for |
+|---|---|---|
+| `astro.crimson` | `#FF3D6E` | Astrophage: motes, strands, glow band, beam fringe, chips, map ticks, gauge |
+| `astro.pink` | `#FF7A9C` | Strands, glint tails, Trace ticks, fuel bar end |
+| `astro.pale` | `#FFC2D2` | Highlights, Harvest ticks, knot ring and labels |
+| `astro.spark` | `#FFF2F6` | Sparkles and glint heads (cores `#FFFFFF`) |
+| `astro.cell` | `#1A0610` | Black Astrophage cells on the disc and in the fuel bar's speckle |
+| `astro.beam` | `#FFD6E0` → `#FF3D6E` → `#C0287A` | Spin drive beam (core `#FFFFFF` → `#FFF4F7`; chamber `#1C2348`) |
+| `astro.bar` | `#C8285A` → `#FF3D6E` → `#FF7A9C` | Astrophage fuel bar |
+| `astro.taumoeba` | `#6EF0A0` (pale `#C8FFD9`) | An eaten line, the Eaten ticks, the shimmer round the Taumoeba world |
+| `astro.clean` | `#FFD27A` | A clean star's ring and chip (= `solar.glyph`) |
+
+## 20. Layers menu (v3.3)
+
+Files: `assets/layers-menu.svg` (the button's states and the panel in three situations), mockup `mockups/planning-layers.svg`. Renderer notes: `threejs-notes.md` §23. One button and one panel replace the separate Gravity, Magnetism and Radiation buttons and the floating legends. New layers become rows, never new top-bar buttons.
+
+- **Button.** It sits at (40, 124) under the level picker, 124 × 32, rx 10, with a stacked-sheets glyph, "Layers" and a chevron.
+  - With nothing on it is a plain panel button.
+  - With any layer on it turns `layers.on` and shows a count badge, so a closed menu still says layers are on.
+- **Panel.** It drops 8 px below the button: 300 wide, rx 12, `#0A0D1A` α 0.9, with the header "LAYERS" and the L key chip. One row per layer, in a fixed order.
+- **Row.** Each row has:
+  - an 18 px icon drawn in the layer's own grammar
+  - the name and the key chip
+  - a switch
+
+  A row that is **on** tints (`layers.rowOn`) and unfolds the layer's legend under the name. A row that is **unavailable** dims (`layers.dim`), greys its switch and shows the reason. In **flight** every row reads "available in planning and pause".
+- **Keys.** L opens and closes the panel; Esc closes it. Each row's key toggles that layer whether the panel is open or not.
+  - Gravity G, Magnetism M, Radiation D, Astrophage A, Tidal stress T.
+  - R stays reset. C stays free; never give it to radiation.
+- **Availability.**
+  - Gravity: always.
+  - Magnetism: a magnetic body is in the level.
+  - Radiation: the level has a radiation source (a star with a dose term, a flare, a radiation belt, a pulsar or an accretion disk).
+  - Astrophage: an infected star or a Petrova line.
+  - Tidal stress: a body with a tidal term (white dwarf, neutron star, black hole).
+
+  Unavailable rows say why: "no magnetic body in this level", "this level has no radiation", "no infected star here", "no tidal body here".
+- **Legends move into the panel.** The magnetism `#mag-legend` aside and the radiation legend box become row legends. A layer that is on keeps its legend visible while the panel is open. When the panel closes, the badge carries the state.
+- **Older mockups.** Those made before v3.3 (belts-radiation, magnetism-map, planning-astrophage) show the separate buttons. The Layers menu supersedes them.
+
+| Token | Hex | Used for |
+|---|---|---|
+| `layers.on` | `#5EA0FF` | The button with a layer on, a switch's track when on (= the HUD accent) |
+| `layers.rowOn` | `#5EA0FF` α 0.08 | An on row's tint |
+| `layers.badge` | `#050710` α 0.22 | The count badge on the accent button |
+| `layers.dim` | `#5E6788` | Unavailable rows and their reasons |
+| `layers.switchOff` | `#FFFFFF` α 0.12 track, `#8B95B5` knob | A switch that is off |
+
+## 21. Gravity and time heat map (v3.4)
+
+Files: `assets/overlays/gravity-time.svg` (the sun, a neutron star and a black hole), mockup `mockups/planning-gravity-time.svg`. Renderer notes: `threejs-notes.md` §24. It replaces the interim clock-heat ramp (`CLOCK_HEAT_*` in `palette.ts`, `theme.gravity.heatAlpha`). It is the Gravity layer (G) in the Layers menu (§20): the bending grid over a field coloured by the rest-frame clock rate, in planning and pause.
+
+- **Field.** Colour = dτ/dt at velocity zero (the sim's rate), shown as s = rate^2.4 (the existing display curve; the stored rate is unchanged). It is drawn in **six crisp bands**, never a smooth blend: blue into gold passes through grey, and a soft wash is never crisp.
+  - Cool, clear blue for mild slowdowns.
+  - Near-opaque amber, orange and red deep in compact wells.
+  - White-hot where the clock stops.
+
+  Mild wells (the sun) only ever show blue; warm colour means a compact object. The warm bands are near-opaque on purpose: at low alpha they turn olive or brown on the navy.
+- **Contours.** A 1 px line at each band edge, with a small label ("×0.90"). Labels are skipped where they would crowd each other.
+- **Grid ink.** The existing depth ink (§12), now with a dark casing so it reads over the bands. Inside the warm bands the ink flips to dark navy.
+- **Grid funnel.** The in-plane pull about each body (r_b its radius, c = r_s / r_b its compactness, 1 for a black hole):
+  - r′ = r_b + (r − r₀) · u / (1 + u), with u = ((r − r₀) / a)², r₀ = r_b (1 + 3c) and a = r_b (1 + 2.2c).
+  - The rings crush together at the disc edge and shrink to r_b / r₀ around it, so a black hole reads as the singularity it is. Far out the grid is nearly flat.
+  - It blends with today's mild pinch by w = smoothstep(0, 0.6, c): planets and the sun keep the mild pull; neutron stars and black holes get the full funnel.
+  - It is monotonic, so it cannot fold.
+  - The bands keep their true radii, so the contours stay honest while the grid exaggerates.
+
+| Token | Value | Used for |
+|---|---|---|
+| `time.slow1` | `#3D8BFF` α 0.16, contour `#8FC2FF` α 0.6 | s 0.90–0.78 (dτ/dt ×0.96–×0.90) |
+| `time.slow2` | `#3D8BFF` α 0.32, contour `#A8D0FF` α 0.8 | s 0.78–0.60 (×0.90–×0.81) |
+| `time.amber` | `#FFB43A` α 0.92, contour `#FFE2A8` α 0.9 | s 0.60–0.42 (×0.81–×0.70) |
+| `time.orange` | `#FF7A2E` α 0.94, contour `#FFC08A` α 0.9 | s 0.42–0.24 (×0.70–×0.55) |
+| `time.red` | `#FF4A3A` α 0.95, contour `#FF9A8A` α 0.9 | s 0.24–0.10 (×0.55–×0.38) |
+| `time.stop` | `#FFF3D6` α 0.97, contour `#FFFFFF` α 0.95 | s < 0.10 (below ×0.38: the clock stops) |
+| `time.casing` | `#050710` α 0.22–0.50, 1.9 px | Under each grid line; the dark ink inside the warm bands (α 0.55, 0.9 px) |
+
+The tidal stress map (a later request) must use a palette distinct from this one.
 

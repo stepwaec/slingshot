@@ -26,6 +26,7 @@ One row per file in `design/assets/` (15 top-level files, 30 bodies in `bodies/`
 | `star-surface-motion.svg` (v2.6) | **Living sun surface** reference: the sun J disc with two counter-flowing plasma layers, three boiling cell layers, twinkling faculae, limb shimmer and the ragged rim | `0 0 240 240` | `#starSurfaceMotion` (120, 120) ×2; `sm*` | the `star.svg` tokens (`sun.*`) | motion values in the header and `style.md` §13 "Living surfaces"; cosmetic, `frame.now` |
 | `ghost-markers.svg` (v2.8) | **Ghost markers**: six states (at a burn with its badge, cursor, target at arrival with capture radius, collision, gone, other bodies) at 2×, plus a tie line and a ticked future track | `0 0 1400 420` | `#ghostMarkers` (0, 0) | `ghost.*` #DCE4FF / #FFFFFF / #3DE0C2 / #FF5A5F / #FF9F43 / #8B95B5 (`style.md` §15) | planning and pause only; px-space strokes; positions from `bodyPose` at the ghost's sim time |
 | `target-zone.svg` (v3.0) | **Target zone**: six states of the capture ring (idle, planning with entry tick and capture orbit, inside and too fast with exit arc and hint, the one capture flash, stable orbit in ice, flyby) at 1.15× around a placeholder planet | `0 0 1400 720` | `#targetZone` (0, 0); `tz*` | `zone.*` #3DE0C2 / #B5FFF0 / #FFFFFF / #FFC857 / #B48CFF (`style.md` §17) | ring and band are px-space; state from the sim (`isCapturedOrbit`, `enteredCapture`, `lostReason`); the flash plays once on the win |
+| `layers-menu.svg` (v3.3) | **Layers menu**: the button (none on, two on with a count badge, open) and the panel in three situations (an ordinary level with gravity and radiation on and magnetism unavailable; nothing on with two layers unavailable; in flight) | `0 0 1340 406` | `#layersMenu` (0, 0); `lm*` | `layers.*` (`style.md` §20) | replaces `#gravity-controls` and `#mag-legend`; keys L, G, M, D, A, T |
 
 ## Body library (`design/assets/bodies/`)
 
@@ -79,6 +80,7 @@ Every part uses one frame — viewBox `0 0 96 160`, ship centre at (48, 64), nos
 | `engine-chemical.svg` | **Chemical engine**, firing: bell nozzle, flickering teardrop plume `#sxEcPlume`, throat glow | `#shipEngineChem`; `sxEc*` | layered with the others; tokens `ship.*` (`style.md` §10) |
 | `engine-ion.svg` | **Ion engine**, firing: gridded plate, long thin steady beam `#sxEiPlume` | `#shipEngineIon`; `sxEi*` | layered with the others; tokens `ship.*` (`style.md` §10) |
 | `engine-pulse.svg` | **Pulse engine**, firing: pusher plate on struts, a flash every 0.6 s `#sxEpPlume` | `#shipEnginePulse`; `sxEp*` | layered with the others; tokens `ship.*` (`style.md` §10) |
+| `engine-spin.svg` (v3.2, Astrophage) | **Spin drive**, firing: spin chamber with a crimson ring, a straight white-hot beam with a crimson fringe and heat shimmer `#sxEsBeamG` | `#shipEngineSpin`; `sxEs*` | the beam is its own quad in the game, L = 44 + 30 Δv (cap 160); idle: ring only (`style.md` §19) |
 | `module-plating.svg` | **Hull plating**: armour shell (`…Back`) and seams (`…Front`) | `#shipModPlating`; `sxMp*` | layered with the others; tokens `ship.*` (`style.md` §10) |
 | `module-shield.svg` | **Shielding**: deflector arc ahead of the nose, emitters (front) | `#shipModShield`; `sxMs*` | layered with the others; tokens `ship.*` (`style.md` §10) |
 | `module-tanks.svg` | **Fuel tanks**: side pods with fuel-mint bands (back) | `#shipModTanks`; `sxMt*` | layered with the others; tokens `ship.*` (`style.md` §10) |
@@ -127,6 +129,8 @@ Each structure is drawn around the level's real star or planet; these samples sh
 |---|---|---|---|---|---|
 | `magnetism-heatmap.svg` | **Magnetism danger map**, one body's overlay: four stepped |B| zones (Fuzzy, Scrambled, Damaging, Lethal) as dipole contours, R1 100, axis 20°; outer edge dashed and crawling, Lethal edge breathing 2.4 s | `0 0 240 240` | `#magField` (120, 120); no defs | `magmap.*` #7C5CFF / #B14DFF / #E541C9 / #FF3D7F (`style.md` §8 WP9) | one shader quad summing all dipoles, toggled by M, planning and pause only (`threejs-notes.md` §11); never changes the sim |
 | `radiation-map.svg` (v2.4, WP11) | **Radiation map** sample: halftone dose field on a 12 px grid around a star with a flare and a gas giant with a radiation belt; the planet's shadow is the safe strip | `0 0 720 400` | `#radiationMap` (0, 0); `rad*` | `rad.*` #9BE15D / #D4F03C / #FFE83A / #FFF4B8 (`style.md` §11) | one screen-space shader sampling the sim's dose field, toggled by R (`threejs-notes.md` §14); never changes the sim |
+| `astrophage-map.svg` (v3.2) | **Astrophage map** sample (key A): flow ticks on a 14 px grid round an infected system and a clean star with an eaten line; infection gauge, clean ring, knot and eaten labels; the legend | `0 0 1100 470` | `#astrophageMap` (0, 0); `am*` | `astro.*` (`style.md` §19) | planning and pause only; px-space ticks; the sim owns the field |
+| `gravity-time.svg` (v3.4) | **Gravity and time heat map**: crisp clock-rate bands (blue, amber, orange, red, white-hot) with labelled contours, the cased grid with dark ink inside the warm bands, and the funnel round the sun, a neutron star and a black hole; the band legend | `0 0 1380 444` | `#gravityTime` (0, 0); `gt*` | `time.*` (`style.md` §21) | bands in the fragment shader with fwidth edges; rate sampled at the display position; funnel replaces the saturating pinch |
 | `gravity-grid.svg` (v2.5) | **Gravity grid** restyled: depth-tinted thin lines, major every 4th, edge fade, lines stop at bodies, dashed tidal ring | `0 0 720 420` | `#gravityGrid` (0, 0); `gd*` | `grid.depth` ramp, `grid.tidal` #FF5A5F (`style.md` §12) | same warp as WP6b; new ink only (`threejs-notes.md` §15) |
 | `gravity-sheet.svg` (v2.5) | **Gravity sheet** restyled: dark glass cells, glowing depth lines, soft edges, real funnel depth | `0 0 900 340` | `#gravitySheet` (0, 0); `gs*` | `sheet.glass` #0B1430 α 0.55 + `grid.depth` | replaces the opaque blue panel |
 
@@ -146,6 +150,42 @@ Background-pass art (`style.md` §9): drawn after the starfield, before the bodi
 | `asteroid-field.svg` | **Asteroid field**: a −18° belt of 88 rocks (62 dust, 20 small, 6 large) — irregular polygons with crisp sunward lit rims, tinted S / mixed / C-type textures, craters, a static hard terminator with a warm band — tumbling 20–90 s; belt drift ±6 px / 60 s; dust haze | `0 0 720 360`; 68.1 KB | `#asteroidField` (360, 180); `af*` | `rock.base` #7E7468 · `.dark` #3E3833 · `.highlight` #C9BBA8 · rust #B04A22 · ochre #D8B26E · light #FFF0DC / #FF9455 / #050B1E · haze #AAB8DD α ≤ 0.05 | §4e: dust + haze as one drifting layer; small rocks 16 lit frames, large 24 (blended); crash-body hook (6 large rocks) not in scope |
 | `wreck-debris.svg` | **Wreck debris**: 20 tumbling metal pieces (hull panel with hazard stripe and scorched puncture, solar panel, truss, bent pipe, shards, flakes) with crisp bevels, tinted brushed metal, a broad fixed light and 7 twinkling glints | `0 0 400 260`; 28.4 KB | `#wreckDebris` (200, 130); `wr*` | `metal.base` #8B95B5 · `.dark` #4B5470 · `.highlight` #ECF0FA · `.edge` #2A3245 · hazard #FFC857 · scorch #3A2A2A · solar #5EA0FF → #142B5E → #0A0D1A · glints #FFFFFF | §4e: 36 lit frames for R ≥ 10 (blended), 12 for flakes; glint sprites with their own alpha |
 
+## Sol system (`design/assets/sol/`, v3.1, the Sol campaign)
+
+Real bodies at game scale on the size ladder r = 34 √(R / R⊕) (the Sun stays r 46). Each file is ONE group with a canon header; lit from the upper-right (`style.md` §18, `threejs-notes.md` §21).
+
+| File | What | Group; ids | Size |
+|---|---|---|---|
+| `sun.svg` | **The Sun**: the approved sun J (ids re-prefixed `solSun*`) plus five sunspot groups | `#solSun`; `solSun* sol*` | r 46 |
+| `mercury.svg` | **Mercury**: cratered regolith, Caloris, ray craters; airless | `#mercury`; `mer*` | r 21 |
+| `venus.svg` | **Venus**: cloud deck, Y chevrons, retrograde, bright haze | `#venus`; `ven*` | r 33 |
+| `earth.svg` | **Earth**: real continents and biomes, deserts, shelves, sea ice, weighted clouds, night-side city lights | `#earth`; `eth*` | r 34 |
+| `moon.svg` | **The Moon**: locked near side, maria, ray craters | `#luna`; `lun*` | r 18 |
+| `mars.svg` | **Mars**: albedo features, Hellas, Tharsis, Valles Marineris, caps, pink haze | `#mars`; `mar*` | r 24.8 |
+| `jupiter.svg` | **Jupiter**: real belts and zones, Great Red Spot, Oval BA, hot spots, barges | `#jupiter`; `jup*` | r 114 |
+| `saturn.svg` | **Saturn**: bands, hexagon, rings at real radii with the Cassini Division and Encke Gap, shadows | `#saturn`; `sat*` | r 104.6 |
+| `titan.svg` | **Titan**: orange haze, blue outer layer | `#titan`; `tit*` | r 21.6 |
+| `uranus.svg` | **Uranus**: tipped 98°, pole-to-pole bands, faint rings | `#uranus`; `ura*` | r 68.1 |
+| `neptune.svg` | **Neptune**: deep blue, Great Dark Spot, Scooter, cirrus | `#neptune`; `nep*` | r 67 |
+| `pluto.svg` | **Pluto**: Tombaugh heart, Cthulhu, blue haze; locked | `#pluto`; `plu*` | r 14.7 |
+| `charon.svg` | **Charon**: Mordor Macula; locked | `#charon`; `cha*` | r 10.5 |
+| `eris.svg` | **Eris**: bright ice | `#eris`; `eri*` | r 14.5 |
+| `arrokoth.svg` | **Arrokoth**: red contact binary at a minimum size | `#arrokoth`; `arr*` | r 6 |
+| `voyager.svg` | **Voyager**: dish, bus, golden record, booms, antennas; not solid | `#voyager`; `voy*` | r — |
+
+## Astrophage (`design/assets/astro/`, v3.2)
+
+The Project Hail Mary nod, in hints only. One colour, crimson, for everything Astrophage (`style.md` §19, `threejs-notes.md` §22). The spin drive is in `ship/`, and the map is in `overlays/`.
+
+| File | What | Group; ids | Notes for the game |
+|---|---|---|---|
+| `infected-star.svg` | **Infected star**: the approved sun with `#aiOverlay` (black cells crossing the disc, a crimson IR shimmer ring); no dimming veil | `#infectedStar`; `ai*`, `ais*` | the overlay goes over any star look, scaled to its radius |
+| `petrova-line.svg` | **Petrova line**: a living ribbon from an infected star to its breeding planet (glow band, braided strands, motes, racing glints, sparkles, breeding cloud); placeholder discs | `#petrovaLine`; `pv*` | the trail to fuel; the "eaten" variant is in `tau-ceti.svg` |
+| `astrophage-knot.svg` | **Knot**: a dense cluster on a line, the fuel pickup, with its harvest ring and chip | `#astrophageKnot`; `ak*` | deterministic points on the line; thins as it drains |
+| `astrophage-harvest.svg` | **Harvesting**: motes streaming into the scoop's two intakes, pulse rings at the mouths (placeholder ship silhouette) | `#astrophageHarvest` | scoop fitted and inside a knot |
+| `hud-astrophage.svg` | **Astrophage fuel row**: no row, harvesting, planning ghost, full | `#hudAstrophage`; `ha*` | the fuel block's second row, only with a spin drive |
+| `tau-ceti.svg` | **Tau Ceti**: the clean star (r 40, yellower), the tilted dust disk, three planets, the eaten Petrova line ending before the sea-green world | `#tauCeti`; `tc*`, `tcs*`, `tca*`, `tce*`, `tcf*`, `tpv*` | the mission's question, shown not told |
+
 ## Previews (`design/preview/`)
 
 All self-contained pages (inline CSS, no scripts) on `bg.base`, inlining the assets **verbatim** (only the group translate changes); open from `file://` to see the SMIL animation. Because all inlined `<defs>` share one document, the id prefixes must stay unique (they are).
@@ -160,10 +200,12 @@ All self-contained pages (inline CSS, no scripts) on `bg.base`, inlining the ass
 | `space.html` late-game row (v2.6) | The six late-game structures at 1×, plus the living-sun reference |
 | `space.html` events row (v2.7) | The six scripted-event samples at 1× |
 | `space.html` WP12 row (v2.9) | The supernova progenitor, detonation and remnant, the quasar and its sweep, and the stray asteroid, each at 1× |
+| `sol.html` (v3.1) | The Sol bodies inlined at 1× in three rows (inner system, outer system, Kuiper belt and Voyager), plus a 3× detail row that shows the same files as images |
+| `space.html` Astrophage row (v3.2) | The infected star, Petrova line, knot, harvest, fuel row, Tau Ceti and the Astrophage map at 1×; `ship.html` gains the spin drive in the engines row and an "Astrophage runner" build |
 
 ## Mockups (`design/mockups/`, all `0 0 1440 900`; **PNG = 2× render**)
 
-Every PNG is a 2× render of its SVG (2880 × 1800, `--force-device-scale-factor=2`, same filename). All twenty share the v1.1 background (the upgrade screen dims it) (a `bg.edge` rect, the vignette centred (720, 450) r 900, then the `#starfield` group verbatim) and splice every body group **verbatim** from the v1.5 assets with only its translate changed; where a library body's upper-right light does not face the scene's star, its lighting layers sit in a scene-local `rotate(angle(L_scene) − angle(L_library))` wrapper (strips and the asset files untouched). v3.0 swapped the dashed capture ring for the idle target zone in every mockup (stable on the win screen, dimmed on the lost screen) and re-rendered all PNGs.
+Every PNG is a 2× render of its SVG (2880 × 1800, `--force-device-scale-factor=2`, same filename). All twenty-four share the v1.1 background (the upgrade screen dims it) (a `bg.edge` rect, the vignette centred (720, 450) r 900, then the `#starfield` group verbatim) and splice every body group **verbatim** from the v1.5 assets with only its translate changed; where a library body's upper-right light does not face the scene's star, its lighting layers sit in a scene-local `rotate(angle(L_scene) − angle(L_library))` wrapper (strips and the asset files untouched). v3.0 swapped the dashed capture ring for the idle target zone in every mockup (stable on the win screen, dimmed on the lost screen) and re-rendered all PNGs.
 
 | File | Mode | What it demonstrates |
 |---|---|---|
@@ -187,6 +229,10 @@ Every PNG is a 2× render of its SVG (2880 × 1800, `--force-device-scale-factor
 | `planning-ghosts.svg` / `.png` (v2.8) | Planning, ghost markers | Planet X on a circular orbit around the sun; its future track with a tick every 10 s; a ghost at burn 2 and under the cursor, each tied to its path sample; the path ends in the arrival ghost's capture radius |
 | `supernova-level.svg` / `.png` (v2.9, WP12) | Planning, a supernova level | The sun replaced by the red-giant asset (at 0.5, breathing unevenly) as the progenitor, with old shells, the countdown arc and the dashed lethal blast radius r 150; a quasar upper left with its swept cone dashed across the top; a stray asteroid drifting across the lower right; the planning path with "path leaves the blast zone at 0:41 · 0:07 to spare" |
 | `planning-capture.svg` / `.png` (v3.0) | Planning, a capture | The planning scene with planet X's solid glowing zone; the predicted path runs on into the zone (entry tick, "enters zone 0:52"), bends round X to periapsis where capture burn 1 sits ("burn 1 · Δv 0.9 retrograde"), and the orbit it makes is dashed mint inside the ring ("capture orbit · peri 43 · apo 68") |
+| `sol-moon.svg` / `.png` (v3.1) | Planning, Sol mission 1 (Moon orbit) | Earth (330, 650) r 34 with the ship on its upper-right limb and the drag arrow at 62 %; the Sun off-screen to the upper-right; a transfer path to the Moon (1110, 250) r 18 in its target zone (r 72, idle); entry tick, capture burn 1 at periapsis, the lunar orbit dashed mint ("lunar orbit · peri 30 · apo 54"); a mission chip |
+| `planning-astrophage.svg` / `.png` (v3.2) | Planning, an infected system | The planning scene with the sun infected (overlay, 6/10 gauge, chip); a living Petrova line to Venus (the breeding world, `assets/sol/venus.svg`); the unchanged predicted path crosses a knot ("path crosses a knot · +40 % Astrophage"); the Astrophage map on (toggle pressed, legend); the fuel block's Astrophage row at 22 % with the planning ghost "+40 % on this path" |
+| `planning-layers.svg` / `.png` (v3.3) | Planning, the Layers menu open | `belts-radiation.svg` with the separate map buttons and the radiation legend replaced by the Layers button (one layer on, badge 1) and its open panel: gravity off, magnetism off, radiation on with its legend, Astrophage unavailable ("no infected star here"), tidal stress off |
+| `planning-gravity-time.svg` / `.png` (v3.4) | Planning, the Gravity layer round a black hole | `scene-blackhole.svg` with the clock-rate bands and labelled contours round the black hole, the grid funnelling into the shadow across the whole view, and the Layers menu open with Gravity on (its new band legend) |
 
 ## Usage rules
 

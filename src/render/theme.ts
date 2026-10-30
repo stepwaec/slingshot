@@ -33,6 +33,8 @@ import neutronStarUrl from "../../design/assets/bodies/neutron-star.svg?url";
 import pulsarUrl from "../../design/assets/bodies/pulsar.svg?url";
 import magnetarUrl from "../../design/assets/bodies/magnetar.svg?url";
 import blackHoleUrl from "../../design/assets/bodies/black-hole.svg?url";
+import quasarUrl from "../../design/assets/bodies/quasar.svg?url";
+import strayAsteroidUrl from "../../design/assets/bodies/stray-asteroid.svg?url";
 import magnetismUrl from "../../design/assets/overlays/magnetism-heatmap.svg?url";
 import cometUrl from "../../design/assets/bodies/comet.svg?url";
 import solarRechargeUrl from "../../design/assets/solar-recharge.svg?url";
@@ -45,6 +47,22 @@ import beltSparseUrl from "../../design/assets/space/belt-sparse.svg?url";
 import beltMediumUrl from "../../design/assets/space/belt-medium.svg?url";
 import beltDenseUrl from "../../design/assets/space/belt-dense.svg?url";
 import kuiperUrl from "../../design/assets/space/kuiper-belt.svg?url";
+import solSunUrl from "../../design/assets/sol/sun.svg?url";
+import solMercuryUrl from "../../design/assets/sol/mercury.svg?url";
+import solVenusUrl from "../../design/assets/sol/venus.svg?url";
+import solEarthUrl from "../../design/assets/sol/earth.svg?url";
+import solLunaUrl from "../../design/assets/sol/moon.svg?url";
+import solMarsUrl from "../../design/assets/sol/mars.svg?url";
+import solJupiterUrl from "../../design/assets/sol/jupiter.svg?url";
+import solSaturnUrl from "../../design/assets/sol/saturn.svg?url";
+import solTitanUrl from "../../design/assets/sol/titan.svg?url";
+import solUranusUrl from "../../design/assets/sol/uranus.svg?url";
+import solNeptuneUrl from "../../design/assets/sol/neptune.svg?url";
+import solPlutoUrl from "../../design/assets/sol/pluto.svg?url";
+import solCharonUrl from "../../design/assets/sol/charon.svg?url";
+import solErisUrl from "../../design/assets/sol/eris.svg?url";
+import solArrokothUrl from "../../design/assets/sol/arrokoth.svg?url";
+import solVoyagerUrl from "../../design/assets/sol/voyager.svg?url";
 import { palette } from "./palette";
 
 /**
@@ -73,6 +91,8 @@ export const theme = {
     pulsar: pulsarUrl,
     magnetar: magnetarUrl,
     blackHole: blackHoleUrl,
+    quasar: quasarUrl,
+    strayAsteroid: strayAsteroidUrl,
     magnetism: magnetismUrl,
     comet: cometUrl,
     solarRecharge: solarRechargeUrl,
@@ -85,6 +105,22 @@ export const theme = {
     beltMedium: beltMediumUrl,
     beltDense: beltDenseUrl,
     kuiper: kuiperUrl,
+    solSun: solSunUrl,
+    solMercury: solMercuryUrl,
+    solVenus: solVenusUrl,
+    solEarth: solEarthUrl,
+    solLuna: solLunaUrl,
+    solMars: solMarsUrl,
+    solJupiter: solJupiterUrl,
+    solSaturn: solSaturnUrl,
+    solTitan: solTitanUrl,
+    solUranus: solUranusUrl,
+    solNeptune: solNeptuneUrl,
+    solPluto: solPlutoUrl,
+    solCharon: solCharonUrl,
+    solEris: solErisUrl,
+    solArrokoth: solArrokothUrl,
+    solVoyager: solVoyagerUrl,
     starfield: starfieldUrl,
     predictedPath: predictedPathUrl,
     dragArrow: dragArrowUrl,
@@ -132,13 +168,49 @@ export const theme = {
     haloScale: 1.8,
     limbAlphaHome: 0.16,
     limbAlphaTarget: 0.18,
-    ringPulseMs: 2400,
-    ringAlphaMin: 0.35,
-    ringAlphaMax: 0.7,
-    ringPulsePx: 2,
-    ringDashPeriodPx: 12,
-    ringCrawlPxPerSec: 12,
-    ringLockedAlpha: 1,
+  },
+  /**
+   * Planet X target zone. design/style.md §17 and design/assets/target-zone.svg.
+   * Widths are screen pixels. The ring does not dash, crawl, or pulse its radius.
+   */
+  zone: {
+    widthPx: 1.5,
+    stableWidthPx: 1.6,
+    flashWidthPx: 3.5,
+    bandInPx: 30,
+    bandOutPx: 9,
+    /** Idle ring and band, in phase. α 0.55 → 0.78 and 0.14 → 0.24 over 4 s. */
+    pulseSec: 4,
+    idleAlpha0: 0.55,
+    idleAlpha1: 0.78,
+    idleBand0: 0.14,
+    idleBand1: 0.24,
+    /** Inside the zone, not yet captured. Steady. */
+    insideAlpha: 0.95,
+    insideBand: 0.32,
+    /** Capture flash, once, on frame time. Ring mint → white at 0.15 s → ice at 1.1 s. */
+    flashWhiteSec: 0.15,
+    flashSettleSec: 1.1,
+    flashEndSec: 1.5,
+    flashBandPeak: 0.7,
+    flashBandPeakSec: 0.2,
+    /** Wave ring, ease-out, R → R + 34 px over 1.4 s, α 0.9 → 0. */
+    waveSec: 1.4,
+    wavePx: 34,
+    waveWidthPx: 2,
+    waveAlpha: 0.9,
+    /** Stable ice ring. α 0.88 → 1 over 6 s. Under the result scrim the ring holds 0.95. */
+    stablePulseSec: 6,
+    stableAlpha0: 0.88,
+    stableAlpha1: 1,
+    stableBand0: 0.3,
+    stableBand1: 0.4,
+    scrimAlpha: 0.95,
+    /** Flyby: the ship left the zone unbound. */
+    flybyAlpha: 0.3,
+    flybyBand: 0.06,
+    /** Quad padding so the wave (34 px) and the stroke stay inside the mesh. */
+    padPx: 40,
   },
   ship: {
     lengthAtZoom1: 22,
@@ -256,7 +328,11 @@ export const theme = {
     tickHalfWidth: 0.5,
     tickSoftPx: 0.35,
     tickAlpha: 0.72,
-    /** Room for every predicted sample. Current levels stay under 9000 steps. */
+    /**
+     * Points stored for the stroke. Current levels stay under 9000 steps, so
+     * they draw every sample. A preview past this length is strided; the
+     * samples themselves stay on the flight `dt`.
+     */
     maxSamples: 12000,
     endRingInner: 5.25,
     endRingOuter: 6.75,
@@ -340,8 +416,19 @@ export const theme = {
     tidalDash: 4,
     tidalGap: 4,
     tidalCrawl: 8,
-    /** Rest-frame dτ/dt contours drawn over the flat grid. */
-    clockLevels: [0.92, 0.75, 0.5, 0.25],
+    /**
+     * Opacity of the clock-rate field at `CLOCK_HEAT_RATES`
+     * (dτ/dt = 0, 0.2, 0.4, 0.55, 0.82, 1). Interim until Claude designs it
+     * (docs/ROADMAP.md). Full rate is clear. Gold (0.4) is already opaque
+     * so it does not turn olive over the navy.
+     */
+    heatAlpha: [0.84, 0.8, 0.74, 0.5, 0.1, 0],
+    /**
+     * Display curve. The ramp is sampled at rate^heatGamma, so a mild
+     * slowdown moves toward the warm stops and the well reads at game scale.
+     * The stored rate is unchanged.
+     */
+    heatGamma: 2.4,
   },
   /**
    * Cosmetic timings from the megastructure headers.
@@ -603,6 +690,98 @@ export const theme = {
     arrowGap: 5,
     arrowWidth: 1.2,
     arrowAlpha: 0.85,
+  },
+  /**
+   * Where a moving body will be. design/assets/ghost-markers.svg header,
+   * style.md §15, threejs-notes.md §18.
+   * The ring radius is world units. Strokes, the badge, the chip and the
+   * tie line are CSS pixels and do not grow with zoom.
+   */
+  ghost: {
+    /** Header minimum 8 px, applied as world units so the ring stays on the body. */
+    minRadius: 8,
+    ringWidth: 1.2,
+    innerRatio: 0.62,
+    innerWidth: 0.7,
+    /** Half the outer ring's alpha. */
+    innerAlpha: 0.5,
+    alphaBurn: 0.85,
+    alphaOther: 0.6,
+    alphaCursor: 1,
+    alphaArrival: 1,
+    alphaCollision: 1,
+    alphaGone: 1,
+    widthCursor: 1.6,
+    widthArrival: 1.4,
+    widthCollision: 1.6,
+    fillBurn: 0.07,
+    fillOther: 0.07,
+    fillCursor: 0.12,
+    fillArrival: 0.1,
+    fillCollision: 0.14,
+    goneDash: 2,
+    goneGap: 3,
+    /** Sample cross ends 6.8 px from the centre on an r 15 ring: 0.64 r along the diagonal. */
+    crossReach: 0.64,
+    /** Sample slash runs to the ring. */
+    slashReach: 1,
+    collisionPeriod: 0.8,
+    collisionHigh: 1,
+    collisionLow: 0.45,
+    badgeRadius: 6.5,
+    badgeWidth: 1.4,
+    badgeFont: 9,
+    /** Up and to the right. The SVG's −0.72 r is screen-up. */
+    badgeOffset: 0.72,
+    chipHeight: 16,
+    chipPad: 6,
+    chipFont: 10.5,
+    chipRadius: 5,
+    chipFill: 0.88,
+    chipStroke: 0.7,
+    chipOffsetX: 8,
+    chipOffsetY: 4,
+    tieWidth: 1,
+    tieAlpha: 0.75,
+    tieCursorAlpha: 0.85,
+    tieDash: 1.5,
+    tieGap: 3.5,
+    pathRing: 2.6,
+    pathRingWidth: 1,
+    pathDot: 4,
+    trackWidth: 1.4,
+    trackAlpha: 0.55,
+    trackDash: 1,
+    trackGap: 5,
+    tickSeconds: 10,
+    /** Sample ticks measure about 8 px. The header sets the width at 1 px and the sample alpha at 0.5. */
+    tickLength: 8,
+    tickWidth: 1,
+    tickAlpha: 0.5,
+    captureWidth: 1,
+    captureDash: 6,
+    captureGap: 6,
+    captureAlpha: 0.45,
+    /** px per second. Cosmetic, so it runs on frame.now. */
+    captureCrawl: 12,
+    farBurns: 3,
+    farAlpha: 0.3,
+    /** Room for a long orbit sampled every 6 px. */
+    maxDots: 800,
+    maxTicks: 48,
+    maxSamples: 480,
+  },
+  /**
+   * Sol campaign. Radii are design/style.md §18. Periods and rolls are the
+   * asset headers. Voyager's radius scales the 22 px dish; it is not solid.
+   */
+  sol: {
+    saturnShadowAlpha: 0.82,
+    /** earth.svg #ethNight: opaque from 0.52 to 0.66 along the lit→night gradient. */
+    cityNight0: 0.52,
+    cityNight1: 0.66,
+    /** The gradient runs from 0.706 r on the lit side to the opposite limb. */
+    cityLitReach: 0.706,
   },
 } as const;
 

@@ -17,15 +17,15 @@ import {
   reset,
   resume,
   selectNode,
-  setGravityClock,
   setNodeBurn,
   setSlow,
   setSpeed,
+  speedAllowed,
   type Game,
   type RailSample,
 } from "./state";
 import { panBy, worldToScreen, zoomAt } from "../render/camera";
-import { hasMagneticBody, SIM_SPEEDS, type SimSpeed } from "../sim/physics";
+import { hasMagneticBody, SIM_SPEEDS, SPEED_KEY, type SimSpeed } from "../sim/physics";
 
 export interface InputElements {
   canvas: HTMLCanvasElement;
@@ -40,7 +40,6 @@ export interface InputElements {
   resumeButton: HTMLButtonElement;
   slowButton: HTMLButtonElement;
   gravityButton: HTMLButtonElement;
-  gravityClockButton: HTMLButtonElement;
   magnetismButton: HTMLButtonElement;
   radiationButton: HTMLButtonElement;
 }
@@ -163,7 +162,6 @@ export function bindInput(
   elements.resumeButton.addEventListener("click", () => resume(game));
   elements.slowButton.addEventListener("click", () => setSlow(game, !game.slow));
   elements.gravityButton.addEventListener("click", () => cycleGravity(game));
-  elements.gravityClockButton.addEventListener("click", () => setGravityClock(game, !game.gravityClock));
   elements.magnetismButton.addEventListener("click", () => {
     if (!hasMagneticBody(game.level.bodies)) return;
     toggleMagnetism(game);
@@ -179,7 +177,7 @@ export function bindInput(
   for (const button of elements.speedButtons) {
     button.addEventListener("click", () => {
       const speed = Number(button.dataset.speed);
-      if (isSimSpeed(speed)) setSpeed(game, speed);
+      if (isSimSpeed(speed) && speedAllowed(game.level, speed)) setSpeed(game, speed);
     });
   }
 
@@ -207,16 +205,12 @@ export function bindInput(
       selectNode(game, null);
     } else if (applyGravityKey(game, event)) {
       event.preventDefault();
-    } else if (event.key === "c" || event.key === "C") {
-      if (event.repeat || event.metaKey || event.ctrlKey || event.altKey) return;
-      if (game.gravity !== "grid") return;
-      setGravityClock(game, !game.gravityClock);
     } else if (event.key === "m" || event.key === "M") {
       if (event.repeat || event.metaKey || event.ctrlKey || event.altKey) return;
       if (!hasMagneticBody(game.level.bodies)) return;
       toggleMagnetism(game);
-    } else if (event.key === "1" || event.key === "2" || event.key === "4") {
-      setSpeed(game, Number(event.key) as SimSpeed);
+    } else if (applySpeedKey(game, event)) {
+      event.preventDefault();
     }
   });
 }
@@ -343,4 +337,16 @@ function handlePoint(game: Game, width: number, height: number, index: number): 
 
 function isSimSpeed(value: number): value is SimSpeed {
   return (SIM_SPEEDS as readonly number[]).includes(value);
+}
+
+/** 1, 2, 4, 8, comma and period. A speed above the level cap is ignored. */
+function applySpeedKey(
+  game: Game,
+  event: { key: string; metaKey?: boolean; ctrlKey?: boolean; altKey?: boolean },
+): boolean {
+  if (event.metaKey || event.ctrlKey || event.altKey) return false;
+  const speed = SPEED_KEY[event.key];
+  if (speed === undefined) return false;
+  if (speedAllowed(game.level, speed)) setSpeed(game, speed);
+  return true;
 }

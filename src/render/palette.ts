@@ -16,6 +16,12 @@ export const palette = {
   planetXHighlight: "#B5FFF0",
   planetXBase: "#3DE0C2",
   planetXShadow: "#0E4A40",
+  /** design/style.md §17 zone.*. The live capture ring reads these. */
+  zoneRing: "#3DE0C2",
+  zoneStable: "#B5FFF0",
+  zoneFlash: "#FFFFFF",
+  zoneExit: "#FFC857",
+  zoneLost: "#B48CFF",
   shipHull: "#F2F5FF",
   shipOutline: "#0A0D1A",
   shipCockpit: "#5EA0FF",
@@ -174,6 +180,31 @@ export const palette = {
   quasarRim: "#FFF6D6",
   quasarShadow: "#000000",
   rockDust: "#C8A684",
+  /** design/style.md §15. Ghost markers. Hexes match earlier tokens; the names are the ghost ones. */
+  ghostBody: "#DCE4FF",
+  ghostCursor: "#FFFFFF",
+  ghostTarget: "#3DE0C2",
+  ghostCollision: "#FF5A5F",
+  ghostGone: "#FF9F43",
+  ghostTie: "#8B95B5",
+  /** design/style.md §18 Sol bodies. */
+  earthOcean: "#1D56CF",
+  earthDesert: "#E2B66A",
+  earthCity: "#FFD27A",
+  marsRust: "#C8643A",
+  marsDark: "#7E3E2A",
+  jupiterZone: "#F5E3C6",
+  jupiterBelt: "#A3502D",
+  jupiterGrs: "#DC5C34",
+  saturnRingB: "#F2E6D2",
+  saturnRingA: "#DCC398",
+  saturnRingC: "#B49A76",
+  uranusBody: "#99DDE6",
+  neptuneBody: "#4B7DF2",
+  neptuneSpot: "#1C2F86",
+  titanHaze: "#E2A04A",
+  plutoHeart: "#F6EBDD",
+  plutoCthulhu: "#6B3322",
 } as const;
 
 /** Linear blend in sRGB, matching the arrow.power ramp in design/canvas-notes.md §9. */
@@ -212,6 +243,57 @@ export function gridRamp01(u: number): [number, number, number] {
   const a = srgb01(c0);
   const b = srgb01(c1);
   return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
+}
+
+/**
+ * Interim clock-rate field. Rates are rest-frame dτ/dt: 1 is a full-rate
+ * clock, 0 is stopped. Colours are existing tokens. There is no design
+ * header yet; docs/ROADMAP.md asks Claude for the palette.
+ *
+ * The colour stays blue until dτ/dt is well below 1, then turns gold and
+ * orange. Alphas for the same rates live in `theme.gravity.heatAlpha`, and
+ * they are already high at the gold stop so the warm colour does not turn
+ * olive over the navy.
+ */
+export const CLOCK_HEAT_RATES: readonly number[] = [0, 0.2, 0.4, 0.55, 0.82, 1];
+
+export const CLOCK_HEAT_COLORS: readonly string[] = [
+  palette.starGlow,
+  palette.starCorona,
+  palette.fuelLow,
+  palette.planetStartBase,
+  palette.planetStartBase,
+  palette.path,
+];
+
+function heatBlend(rate: number): { i0: number; i1: number; k: number } {
+  const t = rate > 0 ? (rate < 1 ? rate : 1) : 0;
+  const rates = CLOCK_HEAT_RATES;
+  for (let s = 0; s < rates.length; s++) {
+    if (Math.abs(rates[s] - t) < 1e-6) return { i0: s, i1: s, k: 0 };
+  }
+  let i = 1;
+  while (i < rates.length - 1 && rates[i] < t) i += 1;
+  const t0 = rates[i - 1];
+  const t1 = rates[i];
+  const k = (t - t0) / (t1 - t0 || 1);
+  return { i0: i - 1, i1: i, k };
+}
+
+/** sRGB channels of the clock-rate ramp. `rate` is dτ/dt. A named stop is that colour exactly. */
+export function clockHeatRgb(rate: number): [number, number, number] {
+  const { i0, i1, k } = heatBlend(rate);
+  const a = srgb01(CLOCK_HEAT_COLORS[i0]);
+  const b = srgb01(CLOCK_HEAT_COLORS[i1]);
+  return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
+}
+
+/** Opacity at `rate`, from the alphas paired with `CLOCK_HEAT_RATES`. */
+export function clockHeatAlpha(rate: number, alphas: readonly number[]): number {
+  const { i0, i1, k } = heatBlend(rate);
+  const a = alphas[i0] ?? 0;
+  const b = alphas[i1] ?? a;
+  return a + (b - a) * k;
 }
 
 /** sRGB hex as 0–1 channels. Custom shaders write these straight out (no extra encode). */

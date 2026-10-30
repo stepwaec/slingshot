@@ -80,6 +80,17 @@ Landed in [PR #57](https://github.com/stepwaec/slingshot/pull/57), from the even
 
   The planning view should match `mockups/planning-ghosts.svg`.
 
+Landed in [PR #64](https://github.com/stepwaec/slingshot/pull/64), from the ghost-marker art in design [PR #51](https://github.com/stepwaec/slingshot/pull/51):
+
+- ✔ Ring and inner ring, with the burn badge, cursor, arrival capture radius, collision cross and gone slash.
+- ✔ Dotted tie lines to the path sample at the same step, and the time chips.
+- ✔ The target's future track, ticked every 10 s.
+- `ghostSteps` and `movingBodies` are unchanged. The drawing reads `bodyPose` and does not write the sim.
+- The mockup's faint full-orbit circle (α 0.12) is not in the header, so it is not drawn.
+- "Other bodies" keep the body's radius (minimum 8 world units). The sample's quieter look is α 0.6.
+- The cross ends at 0.64 r and the ticks are 8 px long, measured from `ghost-markers.svg`. The header does not number those two.
+- Arrival wins over a burn when they share a step (§18). Lead's capture is the burn at step 230, so that ghost is the arrival marker. A burn that is not the capture keeps the badge.
+
 ## Update after PR #46: supernova and quasar are placeholders
 
 - **The hazards are drawn as plain shapes** (`src/render/visuals/hazards.ts`): a red ring at `blast`, an orange ring at the shock radius, and a magenta bar along the jet. The star keeps its normal `look` until and after `at`, and the bar's width is `2 · reach · sin(cone)`, a box rather than the cone that `quasarDamage` tests.
@@ -102,6 +113,51 @@ Landed in [PR #57](https://github.com/stepwaec/slingshot/pull/57), from the even
   - in planning, the entry tick and the predicted capture orbit dashed in mint
 
   The planning view should match `mockups/planning-capture.svg`, and the result screens `result-win.svg` and `result-lost.svg`.
+
+## Sol campaign: the art is ready (v3.1)
+
+- **Bodies are in the game.** `design/assets/sol/` has the Sun, the eight planets, the Moon, Titan, Pluto, Charon, Eris, Arrokoth and Voyager. Follow `style.md` §18 and `threejs-notes.md` §21.
+  - ✔ One `look` per body, drawn from the SVG pipeline.
+  - ✔ The size ladder is the crash radius (the Sun stays r 46; Voyager is not solid).
+  - ✔ Earth's city lights, Saturn's and Uranus's front and back rings, and the Sun's spots are separate layers.
+  - ✔ The Moon, Pluto and Charon keep fixed faces. Lighting still follows the star.
+- **Mission 1** should match `mockups/sol-moon.svg`: the Moon in its target zone (§17), with a capture into lunar orbit. That level comes after Orbit capture. It is not part of the bodies pass.
+
+## Astrophage: the art is ready (v3.2)
+
+- **New, no code yet.** Follow `style.md` §19 and `threejs-notes.md` §22:
+  - the infection overlay on stars (no dimming veil)
+  - the living Petrova line and its knots
+  - harvesting with the scoop
+  - the spin drive part and its long straight beam
+  - the Astrophage fuel row
+  - the Astrophage map on key A
+  - Tau Ceti with its eaten line
+- **Mockup:** the planning view should match `mockups/planning-astrophage.svg`.
+- **Data:** the level fields in §22 are suggestions. Keep the knots deterministic, so the prediction knows the fuel on a path.
+
+## Layers menu (v3.3): replaces the map buttons
+
+- **Now:** `index.html` has `#gravity-controls`, with the Gravity button plus hidden Magnetism and Radiation buttons, and a floating `#mag-legend`. `input.ts` handles G and M; radiation has no key.
+- **Fix:** follow `style.md` §20 and `threejs-notes.md` §23:
+  - one Layers button with a count badge and a panel of rows, each with an icon, switch, key and legend, or a reason when unavailable
+  - keys L, G, M and D, with A and T for later layers
+  - availability per level
+
+  The planning view should match `mockups/planning-layers.svg`.
+
+## Gravity and time heat map (v3.4): replace the interim ramp and the saturating pinch
+
+- **Now:**
+  - The clock-rate field is a smooth per-vertex blend of existing tokens (`palette.ts` `CLOCK_HEAT_*`, `theme.gravity.heatAlpha`). Its gold at α 0.74 goes olive.
+  - The grid pull saturates at 55 % of the distance and is clamped to 0.45 of a cell (`gravityField.ts` `pinchTowardMasses`, `PINCH_CELL`). Near a black hole that becomes a uniform zoom with equal squares up to the shadow.
+- **Fix:** follow `style.md` §21 and `threejs-notes.md` §24:
+  - six crisp bands in the fragment shader, with contours and labels
+  - the rate sampled at the display position
+  - the cased grid, with dark ink inside the warm bands
+  - the compactness-weighted funnel, without the clamp where it applies
+
+  The planning view should match `mockups/planning-gravity-time.svg`.
 
 ## Priority fixes
 

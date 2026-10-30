@@ -2,6 +2,7 @@ import * as THREE from "three";
 import type { Body, Nebula } from "../sim/physics";
 import { zoomBucket } from "./ship-art";
 import type { Theme } from "./theme";
+import { isSolLook, solArt, solLight } from "./sol-art";
 import { bakedSvgUrl, rasterSvg, type SvgBakeOptions } from "./svg-bake";
 
 /**
@@ -34,6 +35,11 @@ const UP_RIGHT = { x: 1, y: 1 };
 const DOWN_LEFT = { x: -1, y: -1 };
 
 export function artForBody(body: Body, theme: Theme): ArtFit | null {
+  if (isSolLook(body.look)) {
+    const art = solArt(body.look);
+    const spin = art.mode === "locked" ? "light" : "none";
+    return fit(theme.assets[art.asset], art.viewW, art.viewH, art.svgRadius, spin, art.mode === "prop" || art.mode === "sun" ? null : solLight());
+  }
   const assets = theme.assets;
   if (body.kind === "rogue") {
     return { ...fit(assets.rogue, 260, 200, 36, "none", null), ox: 100 - 130, oy: 0, hide: ["rpDrift"] };
@@ -113,7 +119,9 @@ const RASTER_CAP = 2048;
 /**
  * viewBox × DPR × zoom bucket (`IMPLEMENTING.md` §3). The 2048 cap is the
  * only departure: past that, a 2× display at high zoom would bake multi-
- * megapixel copies of every sun layer.
+ * megapixel copies of every sun layer. Both axes share that scale, so a
+ * wide surface strip is not stretched when the short side would have been
+ * clamped on its own.
  */
 export function rasterPixels(viewW: number, viewH: number, dpr = 1, zoom = 1): { width: number; height: number } {
   const bucket = zoomBucket(zoom);
@@ -121,15 +129,16 @@ export function rasterPixels(viewW: number, viewH: number, dpr = 1, zoom = 1): {
   const longest = Math.max(viewW, viewH) * raw;
   const scale = longest > RASTER_CAP ? raw * (RASTER_CAP / longest) : raw;
   return {
-    width: Math.max(32, Math.round(viewW * scale)),
-    height: Math.max(32, Math.round(viewH * scale)),
+    width: Math.max(1, Math.round(viewW * scale)),
+    height: Math.max(1, Math.round(viewH * scale)),
   };
 }
 
-/** sRGB, clamped, with mipmaps. The browser's SVG raster is the picture. */
+/** sRGB, clamped. Mipmaps only when the zoom bucket is below 1. */
 export async function loadArtTexture(
   fit: ArtFit,
   pixels = rasterPixels(fit.viewW, fit.viewH),
+  zoom = 1,
 ): Promise<THREE.CanvasTexture> {
   const blob = await bakedSvgUrl(fit.url, fit.hide ?? [], fit.bake);
   const canvas = await rasterSvg(blob, pixels.width, pixels.height);
@@ -138,8 +147,12 @@ export async function loadArtTexture(
   texture.wrapS = THREE.ClampToEdgeWrapping;
   texture.wrapT = THREE.ClampToEdgeWrapping;
   texture.magFilter = THREE.LinearFilter;
-  texture.minFilter = THREE.LinearMipmapLinearFilter;
-  texture.generateMipmaps = true;
+  // The bake is already viewBox × DPR × zoom bucket. A mip chain on top of
+  // that smears the terminator and the 1px rim. Zoomed-out buckets still
+  // mip, so a body smaller than its bucket does not shimmer.
+  const zoomedOut = zoom < 1;
+  texture.generateMipmaps = zoomedOut;
+  texture.minFilter = zoomedOut ? THREE.LinearMipmapLinearFilter : THREE.LinearFilter;
   texture.needsUpdate = true;
   return texture;
 }

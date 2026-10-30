@@ -4,9 +4,12 @@ import {
   assessPlan,
   cloneState,
   frameStepCount,
-  horizonSteps,
+  extensionSteps,
   makeState,
+  planHorizonEnd,
   predictPlan,
+  previewRange,
+  SIM_SPEEDS,
   spendPause,
   step,
   type BurnNode,
@@ -25,10 +28,8 @@ import { UPGRADE_POINTS, UPGRADES, isUpgradeId, type UpgradeId } from "./upgrade
 
 export type GameMode = "planning" | "flying" | "paused" | "finished";
 
-/** Gravity map. View only — cycling it must not touch the ship or the plan. */
-export type GravityView = "off" | "grid" | "sheet";
-
-const GRAVITY_VIEWS: readonly GravityView[] = ["off", "grid", "sheet"];
+/** Gravity layer. View only — toggling it must not touch the ship or the plan. */
+export type GravityView = "off" | "on";
 
 export interface Game {
   level: Level;
@@ -61,10 +62,11 @@ export interface Game {
   cursor: { index: number };
   /** How many nodes have already spent fuel during this flight. */
   spentNodes: number;
-  /** Planning gravity map. Does not affect prediction or flight. */
+  /**
+   * Planning gravity layer. On draws the bent grid over the clock-rate field.
+   * Does not affect prediction or flight.
+   */
   gravity: GravityView;
-  /** Rest-frame clock-rate contours drawn over the flat grid. */
-  gravityClock: boolean;
   /** Planning magnetism map. Does not affect prediction or flight. */
   magnetism: boolean;
   /** Planning radiation map. Does not affect prediction or flight. */
@@ -74,6 +76,11 @@ export interface Game {
    * Ghosts read it. Prediction and flight do not.
    */
   cursorStep: number | null;
+  /**
+   * Preview length in seconds, chosen on the planning slider.
+   * `null` keeps today's look-ahead and still follows the ship.
+   */
+  previewSeconds: number | null;
 }
 
 /** Planning, or a tactical pause mid-flight. Burns can be edited in both. */
@@ -90,9 +97,10 @@ export interface RailSample {
 }
 
 export function createGame(level: Level = passage, camera: Camera = { x: 0, y: 0, zoom: 1 }): Game {
-  const initial = makeState(level.ship.x, level.ship.y, level.ship.vx, level.ship.vy, simConfigFromLevel(level));
+  const config = simConfigFromLevel(level);
+  const initial = makeState(level.ship.x, level.ship.y, level.ship.vx, level.ship.vy, config);
   const started = performance.now();
-  const prediction = predictPlan(initial, simConfigFromLevel(level), []);
+  const prediction = predictPlan(initial, config, [], undefined, extensionSteps(initial, config, null));
   return {
     level,
     mode: "planning",
@@ -115,31 +123,34 @@ export function createGame(level: Level = passage, camera: Camera = { x: 0, y: 0
     cursor: { index: 0 },
     spentNodes: 0,
     gravity: "off",
-    gravityClock: false,
     magnetism: false,
     radiation: false,
     cursorStep: null,
+    previewSeconds: null,
   };
 }
 
-/** Off → pinched grid → tilted sheet → off. View state only. */
+/** Off → on → off. View state only. */
 export function cycleGravity(game: Game): GravityView {
-  const index = GRAVITY_VIEWS.indexOf(game.gravity);
-  const next = GRAVITY_VIEWS[(index + 1) % GRAVITY_VIEWS.length];
-  game.gravity = next;
-  return next;
-}
-
-/** Button copy for the gravity cycle. Matches `cycleGravity` one to one. */
-export function gravityLabel(view: GravityView): string {
-  if (view === "grid") return "Gravity grid";
-  if (view === "sheet") return "Gravity sheet";
-  return "Gravity off";
+  game.gravity = game.gravity === "on" ? "off" : "on";
+  return game.gravity;
 }
 
 /**
- * G cycles the map. Repeat and modifier chords do not, so a held key
- * cannot skip a mode. Returns whether the key was consumed.
+ * Button copy for the gravity layer. On and off share this word.
+ * The pressed state shows which, the same way Magnetism and Radiation do.
+ */
+export function gravityLabel(view: GravityView): string {
+  switch (view) {
+    case "on":
+    case "off":
+      return "Gravity";
+  }
+}
+
+/**
+ * G toggles the layer. Repeat and modifier chords do not, so a held key
+ * cannot flip it twice. Returns whether the key was consumed.
  */
 export function applyGravityKey(
   game: Game,
@@ -149,11 +160,6 @@ export function applyGravityKey(
   if (event.key !== "g" && event.key !== "G") return false;
   cycleGravity(game);
   return true;
-}
-
-/** Clock-rate overlay for the flat grid. Ignored by the sim. */
-export function setGravityClock(game: Game, on: boolean): void {
-  game.gravityClock = on;
 }
 
 /** Magnetism heatmap. Ignored by the sim and by prediction. */
@@ -182,6 +188,7 @@ export function loadLevel(game: Game, level: Level): void {
   game.nodes = [];
   game.selected = null;
   game.cursorStep = null;
+  game.previewSeconds = null;
   game.mode = "planning";
   game.points = UPGRADE_POINTS;
   game.upgrades = [];
@@ -271,13 +278,16 @@ export function queuedBurns(game: Game): number {
 }
 
 /**
- * True when `step` is still ahead of the ship and inside the current horizon.
+ * True when `step` is still ahead of the ship and inside the current preview.
  * Planning measures from the pad. A pause measures from the frozen ship.
+ * The end is `planHorizonEnd`: the slider's extension past the latest burn,
+ * or past the ship when there is no later burn.
  */
 export function stepInHorizon(game: Game, step: number): boolean {
   const origin = planOrigin(game);
   if (!Number.isInteger(step) || step < origin.step) return false;
-  return step <= origin.step + horizonSteps(origin, simConfigFromLevel(game.level, game.upgrades));
+  const config = simConfigFromLevel(game.level, game.upgrades);
+  return step <= planHorizonEnd(origin, config, game.nodes, extensionSteps(origin, config, game.previewSeconds));
 }
 
 /** Click on the predicted path. An existing node at that step is selected instead. */
@@ -362,7 +372,8 @@ export function buildMoveRail(game: Game, index: number): RailSample[] {
     else return [];
   }
   const nextStep = index + 1 < game.nodes.length ? game.nodes[index + 1].step : config.maxSteps;
-  const horizonEnd = config.horizon ? planOrigin(game).step + horizonSteps(planOrigin(game), config) : Infinity;
+  const origin = planOrigin(game);
+  const horizonEnd = planHorizonEnd(origin, config, game.nodes, extensionSteps(origin, config, game.previewSeconds));
   const blocked = index === 0 ? -1 : prev.step;
   const state = cloneState(prev);
   const samples: RailSample[] = [];
@@ -463,8 +474,27 @@ export function tick(game: Game): void {
   if (game.ship.status !== "flying") game.mode = "finished";
 }
 
+/** True when `speed` is at or under the level's optional cap. Omitted cap is 32×. */
+export function speedAllowed(level: Level, speed: SimSpeed): boolean {
+  const cap = level.maxSpeed ?? SIM_SPEEDS[SIM_SPEEDS.length - 1];
+  return speed <= cap;
+}
+
 export function setSpeed(game: Game, speed: SimSpeed): void {
+  if (!speedAllowed(game.level, speed)) return;
   game.speed = speed;
+}
+
+/** Fix the planning preview at `seconds`. The coast after the latest burn uses this length. */
+export function setPreviewSeconds(game: Game, seconds: number): void {
+  if (!isEditing(game) || !Number.isFinite(seconds)) return;
+  const origin = planOrigin(game);
+  const config = simConfigFromLevel(game.level, game.upgrades);
+  const range = previewRange(origin, config);
+  const clamped = Math.min(range.maxSeconds, Math.max(range.minSeconds, seconds));
+  if (game.previewSeconds !== null && game.previewSeconds === clamped) return;
+  game.previewSeconds = clamped;
+  recompute(game, game.nodes.length, "coast");
 }
 
 export function setSlow(game: Game, slow: boolean): void {
@@ -583,6 +613,8 @@ function recompute(
     if (kind === "coast" && from > 0 && !prior?.[from - 1]?.reached) reuse = undefined;
     if (kind === "burn" && !prior?.[from]?.reached) reuse = undefined;
   }
-  game.prediction = predictPlan(planOrigin(game), simConfigFromLevel(game.level, game.upgrades), game.nodes, reuse);
+  const origin = planOrigin(game);
+  const config = simConfigFromLevel(game.level, game.upgrades);
+  game.prediction = predictPlan(origin, config, game.nodes, reuse, extensionSteps(origin, config, game.previewSeconds));
   game.predictMs = performance.now() - started;
 }

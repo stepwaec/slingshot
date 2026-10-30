@@ -2,6 +2,9 @@ import * as THREE from "three";
 import { bodyPose, type Body } from "../../sim/physics";
 import { isEditing } from "../../game/state";
 import { hashId } from "../event-look";
+import { artMesh, loadArtTexture, poseArt, rasterPixels, type ArtFit } from "../art-sprite";
+import { zoomBucket } from "../ship-art";
+import { silenceNightRim } from "../surface-art";
 import type { Theme } from "../theme";
 import { disposeObject, type Visual, type VisualFactory, type VisualFrame } from "../visual";
 import { shader, srgbVec } from "./materials";
@@ -14,7 +17,8 @@ import { shader, srgbVec } from "./materials";
 export const createStray: VisualFactory = (theme, level) => new StrayVisual(theme, level);
 
 const TAU = Math.PI * 2;
-const SILHOUETTE = "M-1.42 8.23 L-10.97 2.90 L-10.83 -2.89 L-1.27 -8.16 L6.09 -7.15 L8.12 -0.81 L4.77 9.54 Z";
+/** saS2's farthest vertex is 11.35; the sample draws it at scale 1.5. */
+const ROCK_RADIUS = 11.35 * 1.5;
 
 const dustVert = /* glsl */ `
 attribute float aAlpha;
@@ -79,6 +83,7 @@ interface Speck {
 interface StrayView {
   body: Body;
   rock: THREE.Mesh;
+  fit: ArtFit;
   dust: THREE.InstancedMesh;
   specks: Speck[];
   arrow: THREE.Mesh;
@@ -98,16 +103,17 @@ class StrayVisual implements Visual {
   private readonly g: number;
   private readonly views: StrayView[] = [];
   private readonly dummy = new THREE.Object3D();
+  private bakeKey = "";
+  private bakeGen = 0;
 
   constructor(theme: Theme, level: Parameters<VisualFactory>[1]) {
     this.theme = theme;
     this.object.name = "stray";
     this.bodies = level.bodies;
     this.g = level.g;
-    const texture = rockTexture();
     for (const body of level.bodies) {
       if (body.look !== "asteroid") continue;
-      this.views.push(this.build(body, texture));
+      this.views.push(this.build(body));
     }
   }
 
@@ -118,14 +124,13 @@ class StrayVisual implements Visual {
     const zoom = Math.max(0.05, game.camera.zoom);
     const editing = isEditing(game);
     const spec = this.theme.stray;
+    this.ensureBake(frame);
     for (const view of this.views) {
       const pose = bodyPose(view.body, time, this.bodies, this.g);
       const star = brightest(pose.x, pose.y, time, this.bodies, this.g);
       const face = star ? Math.atan2(star.y - pose.y, star.x - pose.x) - Math.PI : 0;
       const tumble = view.period > 0 ? (seconds / view.period) * TAU : 0;
-      view.rock.position.set(pose.x, pose.y, 0);
-      view.rock.rotation.z = face + tumble;
-      view.rock.scale.set(view.body.radius * 2, view.body.radius * 2, 1);
+      poseArt(view.rock, view.fit, pose.x, pose.y, view.body.radius, face + tumble);
       const speed = Math.hypot(pose.vx, pose.vy);
       const dx = speed > 1e-4 ? pose.vx / speed : 1;
       const dy = speed > 1e-4 ? pose.vy / speed : 0;
@@ -178,19 +183,11 @@ class StrayVisual implements Visual {
     disposeObject(this.object);
   }
 
-  private build(body: Body, texture: THREE.CanvasTexture): StrayView {
+  private build(body: Body): StrayView {
     const spec = this.theme.stray;
-    const material = new THREE.MeshBasicMaterial({
-      map: texture,
-      transparent: true,
-      depthTest: false,
-      depthWrite: false,
-      toneMapped: false,
-    });
-    const rock = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), material);
-    rock.frustumCulled = false;
+    const fit = strayFit(this.theme);
+    const rock = artMesh(fit, `${body.id}-rock`);
     rock.renderOrder = 2;
-    rock.name = `${body.id}-rock`;
     const seed = hashId(body.id);
     const rnd = mulberry(seed);
     const specks: Speck[] = [];
@@ -252,7 +249,32 @@ class StrayVisual implements Visual {
     const span = spec.tumbleMax - spec.tumbleMin;
     const period = spec.tumbleMin + (seed % 1000) / 1000 * span;
     this.object.add(dust, rock, arrow, head, chip.mesh);
-    return { body, rock, dust, specks, arrow, head, arrowLength, arrowZoom, arrowOffset, period, chip };
+    return { body, rock, fit, dust, specks, arrow, head, arrowLength, arrowZoom, arrowOffset, period, chip };
+  }
+
+  private ensureBake(frame: VisualFrame): void {
+    const zoom = frame.game.camera.zoom;
+    const bucket = zoomBucket(zoom);
+    const dpr = Math.min(Math.max(frame.dpr, 1), 2);
+    const key = `${bucket}|${dpr}`;
+    if (key === this.bakeKey) return;
+    this.bakeKey = key;
+    const gen = ++this.bakeGen;
+    for (const view of this.views) void this.paint(view.rock, view.fit, dpr, zoom, gen);
+  }
+
+  private async paint(mesh: THREE.Mesh, fit: ArtFit, dpr: number, zoom: number, gen: number): Promise<void> {
+    const texture = await loadArtTexture(fit, rasterPixels(fit.viewW, fit.viewH, dpr, zoom), zoom);
+    if (gen !== this.bakeGen) {
+      texture.dispose();
+      return;
+    }
+    const material = mesh.material as THREE.MeshBasicMaterial;
+    const previous = material.map;
+    material.map = texture;
+    material.opacity = 1;
+    material.needsUpdate = true;
+    previous?.dispose();
   }
 }
 
@@ -293,69 +315,35 @@ function brightest(
   return found;
 }
 
-let textureCache: THREE.CanvasTexture | null = null;
+function strayFit(theme: Theme): ArtFit {
+  return {
+    url: theme.assets.strayAsteroid,
+    viewW: 48,
+    viewH: 48,
+    svgRadius: ROCK_RADIUS,
+    ox: 0,
+    oy: 0,
+    light: { x: -1, y: 0 },
+    spin: "light",
+    bake: { tag: "stray-rock", prep: prepStrayRock },
+  };
+}
 
-function rockTexture(): THREE.CanvasTexture {
-  if (textureCache) return textureCache;
-  const canvas = document.createElement("canvas");
-  canvas.width = 128;
-  canvas.height = 128;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) {
-    textureCache = new THREE.CanvasTexture(canvas);
-    return textureCache;
+/** Keep the S-type rock. Drop the sample dust, arrow and chip. Clear a night-limb rim if one is masked. */
+function prepStrayRock(doc: Document): void {
+  const svg = doc.documentElement;
+  svg.setAttribute("viewBox", "0 0 48 48");
+  svg.setAttribute("width", "48");
+  svg.setAttribute("height", "48");
+  const root = doc.getElementById("strayAsteroid");
+  if (!root) return;
+  for (const child of [...root.children]) {
+    if (!child.querySelector("use")) child.remove();
   }
-  const path = new Path2D(SILHOUETTE);
-  ctx.save();
-  ctx.translate(64, 64);
-  ctx.scale(50 / 12, 50 / 12);
-  ctx.fillStyle = "#F0DCC0";
-  ctx.fill(path);
-  ctx.save();
-  ctx.clip(path);
-  const face = ctx.createLinearGradient(-14, 0, 14, 0);
-  face.addColorStop(0, "#C8A684");
-  face.addColorStop(0.45, "#9A7A5E");
-  face.addColorStop(1, "#5A4636");
-  ctx.fillStyle = face;
-  ctx.fillRect(-20, -20, 40, 40);
-  ctx.fillStyle = "rgba(192, 86, 42, 0.45)";
-  ctx.beginPath();
-  ctx.ellipse(0.4, 5.1, 2, 1.2, 0, 0, TAU);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(-0.2, -2.3, 2.8, 2.5, 0, 0, TAU);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(-5.4, -4.6, 2.4, 1.8, 0, 0, TAU);
-  ctx.fill();
-  ctx.fillStyle = "rgba(240, 220, 192, 0.7)";
-  ctx.beginPath();
-  ctx.arc(2.5, -0.4, 1.7, 0, TAU);
-  ctx.fill();
-  ctx.fillStyle = "#5A4636";
-  ctx.beginPath();
-  ctx.arc(1.9, -0.4, 1.4, 0, TAU);
-  ctx.fill();
-  const night = ctx.createLinearGradient(-14, 0, 14, 0);
-  night.addColorStop(0.5, "rgba(18, 14, 20, 0)");
-  night.addColorStop(0.6, "rgba(255, 148, 85, 0.18)");
-  night.addColorStop(0.64, "rgba(18, 14, 20, 0.6)");
-  night.addColorStop(1, "rgba(18, 14, 20, 0.88)");
-  ctx.fillStyle = night;
-  ctx.fillRect(-20, -20, 40, 40);
-  ctx.restore();
-  ctx.strokeStyle = "rgba(18, 14, 20, 0.55)";
-  ctx.lineWidth = 0.5;
-  ctx.stroke(path);
-  ctx.restore();
-  textureCache = new THREE.CanvasTexture(canvas);
-  textureCache.colorSpace = THREE.SRGBColorSpace;
-  textureCache.magFilter = THREE.LinearFilter;
-  textureCache.minFilter = THREE.LinearMipmapLinearFilter;
-  textureCache.generateMipmaps = true;
-  textureCache.needsUpdate = true;
-  return textureCache;
+  const use = root.querySelector("use");
+  use?.setAttribute("transform", "translate(24 24) scale(1.5)");
+  root.querySelectorAll("animate, animateTransform").forEach((node) => node.remove());
+  silenceNightRim(doc, root);
 }
 
 class Chip {

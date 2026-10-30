@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { bindInput, type InputElements } from "../src/game/input";
-import { applyGravityKey, createGame, cycleGravity, gravityLabel, launch, setGravityClock, setPlan, tick } from "../src/game/state";
+import { applyGravityKey, createGame, cycleGravity, gravityLabel, launch, setPlan, tick } from "../src/game/state";
 import { passage, rescue, simConfigFromLevel } from "../src/level/catalog";
 import { safePlan, slingshotPlan } from "../src/level/solutions";
+import { clockHeatAlpha, clockHeatRgb, palette, srgb01 } from "../src/render/palette";
+import { theme } from "../src/render/theme";
 import {
   potentialDepth,
   properTimeRate,
@@ -230,30 +232,32 @@ describe("gravity grid", () => {
   });
 });
 
-describe("gravity map toggle", () => {
-  it("cycles off, grid, sheet, and back to off from the button and the G key", () => {
+describe("gravity layer toggle", () => {
+  it("toggles off and on from the button and the G key", () => {
     const game = createGame(passage);
-    expect(gravityLabel(game.gravity)).toBe("Gravity off");
+    expect(game.gravity).toBe("off");
+    expect(gravityLabel(game.gravity)).toBe("Gravity");
 
-    expect(cycleGravity(game)).toBe("grid");
-    expect(gravityLabel(game.gravity)).toBe("Gravity grid");
-    expect(cycleGravity(game)).toBe("sheet");
-    expect(gravityLabel(game.gravity)).toBe("Gravity sheet");
+    expect(cycleGravity(game)).toBe("on");
+    expect(gravityLabel(game.gravity)).toBe("Gravity");
     expect(cycleGravity(game)).toBe("off");
-    expect(gravityLabel(game.gravity)).toBe("Gravity off");
+    expect(gravityLabel(game.gravity)).toBe("Gravity");
 
     const press = { repeat: false, metaKey: false, ctrlKey: false, altKey: false };
     expect(applyGravityKey(game, { key: "g", ...press })).toBe(true);
-    expect(gravityLabel(game.gravity)).toBe("Gravity grid");
+    expect(game.gravity).toBe("on");
+    expect(gravityLabel(game.gravity)).toBe("Gravity");
     expect(applyGravityKey(game, { key: "G", ...press })).toBe(true);
-    expect(gravityLabel(game.gravity)).toBe("Gravity sheet");
+    expect(game.gravity).toBe("off");
+    expect(gravityLabel(game.gravity)).toBe("Gravity");
     expect(applyGravityKey(game, { key: "g", repeat: true, metaKey: false, ctrlKey: false, altKey: false })).toBe(false);
-    expect(game.gravity).toBe("sheet");
+    expect(game.gravity).toBe("off");
     expect(applyGravityKey(game, { key: "g", repeat: false, metaKey: true, ctrlKey: false, altKey: false })).toBe(false);
     expect(applyGravityKey(game, { key: "g", ...press })).toBe(true);
-    expect(gravityLabel(game.gravity)).toBe("Gravity off");
+    expect(game.gravity).toBe("on");
+    expect(gravityLabel(game.gravity)).toBe("Gravity");
     expect(applyGravityKey(game, { key: "c", ...press })).toBe(false);
-    expect(game.gravity).toBe("off");
+    expect(game.gravity).toBe("on");
   });
 
   it("wires the gravity button and the G key to that same cycle", () => {
@@ -298,21 +302,24 @@ describe("gravity map toggle", () => {
               if (type === "click") gravityClicks.push(fn);
             },
           },
-          gravityClockButton: quietButton(),
           magnetismButton: quietButton(),
           radiationButton: quietButton(),
         } as unknown as InputElements,
         () => ({ width: 800, height: 600 }),
       );
       const quiet = { repeat: false, metaKey: false, ctrlKey: false, altKey: false, preventDefault() {} };
-      for (const label of ["Gravity grid", "Gravity sheet", "Gravity off"]) {
+      for (const view of ["on", "off"] as const) {
         gravityClicks[0]();
-        expect(gravityLabel(game.gravity)).toBe(label);
+        expect(game.gravity).toBe(view);
+        expect(gravityLabel(game.gravity)).toBe("Gravity");
       }
-      for (const label of ["Gravity grid", "Gravity sheet", "Gravity off"]) {
+      for (const view of ["on", "off"] as const) {
         keys[0]({ key: "g", ...quiet });
-        expect(gravityLabel(game.gravity)).toBe(label);
+        expect(game.gravity).toBe(view);
+        expect(gravityLabel(game.gravity)).toBe("Gravity");
       }
+      keys[0]({ key: "c", ...quiet });
+      expect(game.gravity).toBe("off");
     } finally {
       globalThis.window = previous.window;
       globalThis.HTMLInputElement = previous.HTMLInputElement;
@@ -333,11 +340,9 @@ describe("gravity map toggle", () => {
     const tau = ship.tau;
     const fuel = game.fuel;
 
-    expect(cycleGravity(game)).toBe("grid");
-    setGravityClock(game, true);
-    expect(cycleGravity(game)).toBe("sheet");
+    expect(cycleGravity(game)).toBe("on");
     expect(cycleGravity(game)).toBe("off");
-    expect(game.gravityClock).toBe(true);
+    expect(game.gravity).toBe("off");
 
     expect(game.prediction).toBe(prediction);
     expect(game.ship).toBe(ship);
@@ -363,7 +368,62 @@ describe("gravity map toggle", () => {
     expect(cycling.rate).toBe(quiet.rate);
     expect(cycling.status).toBe(quiet.status);
   });
+
+  it("flies the Passage slingshot reference to the same points with the layer on", () => {
+    const quiet = flyReference(false);
+    const layered = flyReference(true);
+    expect(layered.length).toBe(quiet.length);
+    expect(layered.length).toBeGreaterThan(1000);
+    for (let i = 0; i < quiet.length; i++) {
+      const got = layered[i];
+      const want = quiet[i];
+      if (got.x !== want.x || got.y !== want.y || got.step !== want.step || got.rate !== want.rate) {
+        throw new Error(`sample ${i} (step ${want.step}) moved: (${got.x}, ${got.y}) vs (${want.x}, ${want.y})`);
+      }
+    }
+  });
 });
+
+describe("clock-rate heat", () => {
+  it("paints a stopped clock hot and a full-rate clock clear", () => {
+    expect(clockHeatRgb(1)).toEqual(srgb01(palette.path));
+    expect(clockHeatRgb(0.82)).toEqual(srgb01(palette.planetStartBase));
+    expect(clockHeatRgb(0.55)).toEqual(srgb01(palette.planetStartBase));
+    expect(clockHeatRgb(0.4)).toEqual(srgb01(palette.fuelLow));
+    expect(clockHeatRgb(0.2)).toEqual(srgb01(palette.starCorona));
+    expect(clockHeatRgb(0)).toEqual(srgb01(palette.starGlow));
+    const alpha = theme.gravity.heatAlpha;
+    expect(clockHeatAlpha(1, alpha)).toBe(0);
+    expect(clockHeatAlpha(0, alpha)).toBeCloseTo(0.84);
+    expect(clockHeatAlpha(0.4, alpha)).toBeGreaterThan(0.7);
+    expect(clockHeatAlpha(0.82, alpha)).toBeLessThan(0.15);
+    expect(clockHeatAlpha(0.4, alpha)).toBeGreaterThan(clockHeatAlpha(0.9, alpha));
+  });
+});
+
+function flyReference(toggle: boolean): Array<{ x: number; y: number; step: number; rate: number }> {
+  const game = createGame(passage);
+  setPlan(game, slingshotPlan);
+  const predicted = game.prediction.path.map((sample) => ({
+    x: sample.x,
+    y: sample.y,
+    step: sample.step,
+    rate: sample.rate,
+  }));
+  launch(game);
+  const flown: Array<{ x: number; y: number; step: number; rate: number }> = [];
+  let guard = 0;
+  while (game.mode === "flying" && guard++ < passage.maxSteps) {
+    if (toggle) cycleGravity(game);
+    tick(game);
+    for (let i = 0; i < game.frameSamples.length; i++) {
+      const sample = game.frameSamples[i];
+      flown.push({ x: sample.x, y: sample.y, step: sample.step, rate: sample.rate });
+    }
+  }
+  expect(flown).toEqual(predicted);
+  return flown;
+}
 
 function run(toggle: boolean) {
   const game = createGame(passage);
@@ -371,10 +431,7 @@ function run(toggle: boolean) {
   const forecast = game.prediction;
   launch(game);
   for (let i = 0; i < 40; i++) {
-    if (toggle) {
-      cycleGravity(game);
-      setGravityClock(game, i % 2 === 0);
-    }
+    if (toggle) cycleGravity(game);
     tick(game);
   }
   expect(game.prediction).toBe(forecast);
