@@ -171,11 +171,40 @@ function lift(doc: Document, anim: Element, x: number, y: number, w: number, h: 
   svg.append(inner);
 }
 
-/** Shade, haze, rim and glint. Strips, the flat base and gameplay rings go. */
+/**
+ * True for a circle that is the capture zone baked into planet-x.svg.
+ * That zone is drawn live from `captureRadius` (see `target-zone.ts`).
+ * A dashed stroke, the `#pxZone` fill, or a bare stroked ring all count,
+ * so a leftover dotted outline cannot survive the light-layer bake.
+ */
+export function isBakedCaptureZone(attrs: {
+  fill?: string | null;
+  stroke?: string | null;
+  dash?: string | null;
+}): boolean {
+  const fill = attrs.fill ?? "";
+  if (fill.includes("pxZone")) return true;
+  if (attrs.dash) return true;
+  const bare = fill === "" || fill === "none";
+  return Boolean(attrs.stroke) && bare;
+}
+
+/** Shade, haze, rim and glint. Strips, the flat base, the halo and the target zone go. */
 export function keepLight(doc: Document, rootId: string): void {
   const root = doc.getElementById(rootId);
   if (!root) return;
   root.querySelector("[clip-path]")?.remove();
+  for (const child of [...root.querySelectorAll("circle")]) {
+    if (
+      isBakedCaptureZone({
+        fill: child.getAttribute("fill"),
+        stroke: child.getAttribute("stroke"),
+        dash: child.getAttribute("stroke-dasharray"),
+      })
+    ) {
+      child.remove();
+    }
+  }
   for (const child of [...root.children]) {
     if (child.localName !== "circle") continue;
     const fill = child.getAttribute("fill") ?? "";
