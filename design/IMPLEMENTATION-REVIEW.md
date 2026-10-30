@@ -164,6 +164,15 @@ Landed in [PR #64](https://github.com/stepwaec/slingshot/pull/64), from the ghos
 - **New work.** `shader-specs.md` §1 sets the R2.0 conventions, §2 the R2.1 stars (`shaders/star.frag`), §3 the R2.2 rocky planets and moons (`shaders/planet.frag` plus baked maps), §4 the R2.3 gas giants and rings (`shaders/giant.frag`), §5 the R2.4 compact objects (`shaders/compact.frag`), and §6 the R2.5 effects (instanced rocks, point particles and selective bloom). The spec set is complete.
 - **Acceptance.** Each sub-package PR shows the game next to `preview/shaders.html` at the same zoom and frozen time, plus an fps check in Safari and Chrome.
 
+## Tidal stress map (v3.6): the Layers menu's last row
+
+- **New work.** Follow `style.md` §22 and `threejs-notes.md` §26:
+  - the deforming-ring lattice from `tidalStressAt` and the summed tidal tensor
+  - level colours from `stressLevel`, so the map and the HUD chip agree
+  - the existing dashed tidal ring as the level-3 boundary
+  - a path chip where the plan crosses level 3
+- **Mockup:** the planning view should match `mockups/planning-tidal.svg`.
+
 ## Priority fixes
 
 Do these first. They are the biggest visible or gameplay gaps after #32.
