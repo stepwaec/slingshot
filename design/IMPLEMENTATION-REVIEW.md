@@ -136,6 +136,16 @@ Landed in [PR #64](https://github.com/stepwaec/slingshot/pull/64), from the ghos
 - **Mockup:** the planning view should match `mockups/planning-astrophage.svg`.
 - **Data:** the level fields in §22 are suggestions. Keep the knots deterministic, so the prediction knows the fuel on a path.
 
+## Layers menu (v3.3): replaces the map buttons
+
+- **Now:** `index.html` has `#gravity-controls`, with the Gravity button plus hidden Magnetism and Radiation buttons, and a floating `#mag-legend`. `input.ts` handles G and M; radiation has no key.
+- **Fix:** follow `style.md` §20 and `threejs-notes.md` §23:
+  - one Layers button with a count badge and a panel of rows, each with an icon, switch, key and legend, or a reason when unavailable
+  - keys L, G, M and D, with A and T for later layers
+  - availability per level
+
+  The planning view should match `mockups/planning-layers.svg`.
+
 ## Priority fixes
 
 Do these first. They are the biggest visible or gameplay gaps after #32.

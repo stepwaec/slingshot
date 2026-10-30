@@ -435,3 +435,22 @@ Designs: `assets/astro/*.svg`, `assets/ship/engine-spin.svg`, `assets/overlays/a
    - Three planets on Kepler orbits inside the disk's inner edge.
    - The eaten Petrova line.
 
+## 23. Layers menu
+
+Designs: `assets/layers-menu.svg`, `mockups/planning-layers.svg`. Values in `style.md` §20. This replaces `#gravity-controls` (three buttons) and `#mag-legend` in `index.html`, their styles in `src/style.css`, and the key handling in `src/game/input.ts`.
+
+1. **DOM.**
+   - One `<button id="layers">` at the old controls' spot, with the glyph, the label, a badge and a chevron, using `aria-expanded`.
+   - One `<div id="layers-panel" role="menu">` with one `<button role="menuitemcheckbox" aria-checked>` per layer. Each holds an inline SVG icon, the name, a `<kbd>`, a CSS switch, and a slot for the legend and the reason.
+   - Build the rows from one table (`id`, name, key, `available(level)`, `reason`, legend), so a new layer is one table entry.
+2. **State.**
+   - Keep the existing view flags (`game.gravity`, `game.magnetism`, and the radiation and Astrophage flags).
+   - The panel's open state is UI only. The badge is the number of flags that are on.
+   - Unavailable layers are forced off when a level loads.
+3. **Keys** in `input.ts`:
+   - Add L (toggle the panel) and D (radiation); radiation has no key today. A and T come with their layers.
+   - Esc closes the panel before it clears the selection.
+   - Ignore repeats and modifier chords, as `applyGravityKey` does.
+4. **Flight.** The rows stay readable but their switches are disabled. On pause they come back.
+5. **Legends.** Move the magnetism zones and the radiation dots into their rows. Delete the floating legend boxes.
+
