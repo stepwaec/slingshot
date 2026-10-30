@@ -186,6 +186,14 @@ The Project Hail Mary nod, in hints only. One colour, crimson, for everything As
 | `hud-astrophage.svg` | **Astrophage fuel row**: no row, harvesting, planning ghost, full | `#hudAstrophage`; `ha*` | the fuel block's second row, only with a spin drive |
 | `tau-ceti.svg` | **Tau Ceti**: the clean star (r 40, yellower), the tilted dust disk, three planets, the eaten Petrova line ending before the sea-green world | `#tauCeti`; `tc*`, `tcs*`, `tca*`, `tce*`, `tcf*`, `tpv*` | the mission's question, shown not told |
 
+## Shaders (`design/shaders/`, v3.5, Rendering v2)
+
+Reference shaders: GLSL ES 1.00, one impostor quad per body, with uniforms named as in `shader-specs.md`.
+
+| File | What | Spec |
+|---|---|---|
+| `star.frag` | **Stars (R2.1)**: haze, counter-rotating wisp and flame rings, a sphere photosphere (two plasma flows, boiling granulation, faculae, spots, gentle limb darkening under the bright rim), ragged rim, prominences, flare; plus a white-dwarf mode | `shader-specs.md` §2 |
+
 ## Previews (`design/preview/`)
 
 All self-contained pages (inline CSS, no scripts) on `bg.base`, inlining the assets **verbatim** (only the group translate changes); open from `file://` to see the SMIL animation. Because all inlined `<defs>` share one document, the id prefixes must stay unique (they are).
@@ -202,6 +210,7 @@ All self-contained pages (inline CSS, no scripts) on `bg.base`, inlining the ass
 | `space.html` WP12 row (v2.9) | The supernova progenitor, detonation and remnant, the quasar and its sweep, and the stray asteroid, each at 1× |
 | `sol.html` (v3.1) | The Sol bodies inlined at 1× in three rows (inner system, outer system, Kuiper belt and Voyager), plus a 3× detail row that shows the same files as images |
 | `space.html` Astrophage row (v3.2) | The infected star, Petrova line, knot, harvest, fuel row, Tau Ceti and the Astrophage map at 1×; `ship.html` gains the spin drive in the engines row and an "Astrophage runner" build |
+| `shaders.html` (v3.5) | Rendering v2 reference: each approved SVG star next to `shaders/star.frag` running live in WebGL at 1.5×; `?t=` freezes the clock (13.9 s shows the flare). Needs WebGL; the only preview page with a script |
 
 ## Mockups (`design/mockups/`, all `0 0 1440 900`; **PNG = 2× render**)
 

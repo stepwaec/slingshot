@@ -159,6 +159,11 @@ Landed in [PR #64](https://github.com/stepwaec/slingshot/pull/64), from the ghos
 
   The planning view should match `mockups/planning-gravity-time.svg`.
 
+## Rendering v2 (v3.5): the specs start
+
+- **New work.** `shader-specs.md` §1 sets the R2.0 conventions, and §2 the R2.1 stars, with the reference shader `shaders/star.frag`. The other families follow.
+- **Acceptance.** Each sub-package PR shows the game next to `preview/shaders.html` at the same zoom and frozen time, plus an fps check in Safari and Chrome.
+
 ## Priority fixes
 
 Do these first. They are the biggest visible or gameplay gaps after #32.

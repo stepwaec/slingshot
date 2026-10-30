@@ -479,3 +479,14 @@ Designs: `overlays/gravity-time.svg`, `mockups/planning-gravity-time.svg`. Value
    - Between two compact bodies, blend the two maps by their Φ shares.
 6. **The Layers legend** (§20) shows the six band swatches.
 
+## 25. Rendering v2: shader bodies
+
+Specs: `shader-specs.md`. Reference shaders: `shaders/*.frag`. Live comparison: `preview/shaders.html`. So far: R2.0 conventions (§1 there) and R2.1 stars (§2, `shaders/star.frag`).
+
+- **Port as written.** Port each reference shader into a `THREE.ShaderMaterial` on an impostor quad per body. Keep the uniform names, so the parameter tables apply one to one.
+- **Body radius.** `uR` is the body radius in device pixels (r · zoom · DPR).
+- **Time.** `uTime` is `frame.now` in seconds. Hazards stay on sim time.
+- **Blending.** Premultiplied output: `blending: THREE.CustomBlending`, `blendSrc: THREE.OneFactor`, `blendDst: THREE.OneMinusSrcAlphaFactor`, `transparent: true`, `depthWrite: false`.
+- **Fallback.** Behind `rendering.shaders`: when it is off, draw today's sprites. The sprite path stays until every family passes its side-by-side.
+- **Budget.** As §9: bake the star rings into frames when a star covers more than a quarter of the screen. Drop to 3 octaves below 6 px.
+
