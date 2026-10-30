@@ -161,7 +161,7 @@ Landed in [PR #64](https://github.com/stepwaec/slingshot/pull/64), from the ghos
 
 ## Rendering v2 (v3.5): the specs start
 
-- **New work.** `shader-specs.md` §1 sets the R2.0 conventions, and §2 the R2.1 stars, with the reference shader `shaders/star.frag`. The other families follow.
+- **New work.** `shader-specs.md` §1 sets the R2.0 conventions, §2 the R2.1 stars (`shaders/star.frag`), and §3 the R2.2 rocky planets and moons (`shaders/planet.frag` plus baked maps). Gas giants, compact objects and effects follow.
 - **Acceptance.** Each sub-package PR shows the game next to `preview/shaders.html` at the same zoom and frozen time, plus an fps check in Safari and Chrome.
 
 ## Priority fixes
