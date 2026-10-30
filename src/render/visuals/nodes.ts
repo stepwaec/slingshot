@@ -43,6 +43,8 @@ interface NodeVisual {
   outerU: RingUniforms;
   arcU: RingUniforms;
   flashU: RingUniforms;
+  /** Last world point this node was drawn at. Pause drops past snapshots. */
+  at: Vec2 | null;
 }
 
 class NodesVisual implements Visual {
@@ -69,18 +71,21 @@ class NodesVisual implements Visual {
     const fuel = editing ? planFuel(game) : null;
     for (let i = 0; i < game.nodes.length; i++) {
       const visual = this.ensure(i);
+      const node = game.nodes[i];
+      const simOffset = game.mode === "planning" ? null : (game.ship.step - node.step) * game.level.dt;
       const pos = nodePosition(game, i);
-      if (!pos) {
+      if (pos) visual.at = { x: pos.x, y: pos.y };
+      const fired = simOffset !== null && simOffset > spec.ignite;
+      const at = pos ?? (editing && fired ? visual.at : null);
+      if (!at) {
         visual.root.visible = false;
         continue;
       }
-      projectToScreen(pos.x, pos.y, width, height, this.scratch);
+      projectToScreen(at.x, at.y, width, height, this.scratch);
       const x = this.scratch.x;
       const y = height - this.scratch.y;
-      const node = game.nodes[i];
       const offset = burnHandleOffset(node.dvx, node.dvy, game.level.dvPerPixel, nodeIncoming(game, i));
       const cue = anim?.cues.find((item) => item.index === i);
-      const simOffset = game.mode === "planning" ? null : (game.ship.step - node.step) * game.level.dt;
       const paint = paintNode(
         {
           editing,
@@ -93,8 +98,9 @@ class NodesVisual implements Visual {
         },
         cue?.phase === "windup" ? cue.amount : 0,
       );
-      visual.root.visible = true;
       visual.root.position.set(x, y, 0);
+      visual.root.visible = paint.drawn;
+      if (!paint.drawn) continue;
       this.applyPaint(visual, paint);
       if (!paint.arrow && !(editing && offset.placing)) {
         visual.shaft.visible = false;
@@ -230,7 +236,7 @@ class NodesVisual implements Visual {
       handle.renderOrder = 19;
       root.add(flash, arc, outer, fill, ring, core, ghost, shaft, head, handle);
       this.object.add(root);
-      this.nodes.push({ root, fill, ring, outer, core, arc, flash, handle, shaft, head, ghost, ringU, outerU, arcU, flashU });
+      this.nodes.push({ root, fill, ring, outer, core, arc, flash, handle, shaft, head, ghost, ringU, outerU, arcU, flashU, at: null });
     }
     return this.nodes[index];
   }
