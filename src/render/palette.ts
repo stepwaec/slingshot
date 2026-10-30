@@ -154,6 +154,22 @@ export const palette = {
   ghostCollision: "#FF5A5F",
   ghostGone: "#FF9F43",
   ghostTie: "#8B95B5",
+  /** design/style.md §19 astro.*. */
+  astroCrimson: "#FF3D6E",
+  astroPink: "#FF7A9C",
+  astroPale: "#FFC2D2",
+  astroSpark: "#FFF2F6",
+  astroCell: "#1A0610",
+  astroBeam: "#FFD6E0",
+  astroBeamEnd: "#C0287A",
+  astroBar0: "#C8285A",
+  astroBar1: "#FF3D6E",
+  astroBar2: "#FF7A9C",
+  astroTaumoeba: "#6EF0A0",
+  astroTaumoebaPale: "#C8FFD9",
+  astroClean: "#FFD27A",
+  astroChamber: "#1C2348",
+  astroCore: "#FFF4F7",
 } as const;
 
 /** Linear blend in sRGB, matching the arrow.power ramp in design/canvas-notes.md §9. */

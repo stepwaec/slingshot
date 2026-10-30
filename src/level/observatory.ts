@@ -62,6 +62,9 @@ const LOOK_KIND: Partial<Record<BodyLook, BodyKind>> = {
   "moon-volcanic": "moon",
   dwarf: "planet",
   comet: "planet",
+  "tau-hot": "planet",
+  "tau-cold": "planet",
+  "tau-green": "planet",
 };
 
 const LOOK_NAME: Partial<Record<BodyLook, string>> = {
@@ -79,6 +82,10 @@ const LOOK_NAME: Partial<Record<BodyLook, string>> = {
   pulsar: "Pulsar",
   magnetar: "Magnetar",
   comet: "Comet",
+  "tau-ceti": "Tau Ceti",
+  "tau-hot": "Hot world",
+  "tau-cold": "Cold world",
+  "tau-green": "Green world",
 };
 
 const KIND_NAME: Partial<Record<BodyKind, string>> = {
@@ -136,12 +143,6 @@ interface ExhibitSpec {
 
 /** Known pictures. A look that is not listed still gets a body, from `defaultLook`. */
 const LOOK_SPEC: Partial<Record<BodyLook, ExhibitSpec>> = {
-  sun: {
-    radius: 22,
-    mass: 1400,
-    reach: 130,
-    extra: { flare: { angle: 0.4, period: 22, start: 0, duration: 8 } },
-  },
   "binary-hot": { radius: 18, mass: 1200, reach: 140 },
   "binary-cool": { radius: 14, mass: 900, reach: 140 },
   "white-dwarf": { radius: 12, mass: 1600, reach: 110 },
@@ -168,6 +169,16 @@ const LOOK_SPEC: Partial<Record<BodyLook, ExhibitSpec>> = {
   },
   magnetar: { radius: 9, mass: 2000, reach: 170, extra: { magnet: { b1Reach: 84, tilt: 0.35 } } },
   comet: { radius: 4, mass: 80, reach: 200, extra: { harvest: 6, harvestRadius: 36 } },
+  "tau-ceti": { radius: 18, mass: 1400, reach: 200 },
+  "tau-hot": { radius: 12, mass: 400, reach: 48 },
+  "tau-cold": { radius: 15, mass: 500, reach: 56 },
+  "tau-green": { radius: 18, mass: 700, reach: 64 },
+  sun: {
+    radius: 22,
+    mass: 1400,
+    reach: 130,
+    extra: { flare: { angle: 0.4, period: 22, start: 0, duration: 8 }, astrophage: { level: 6, dims: 0.03 } },
+  },
 };
 
 const defaultLook: ExhibitSpec = { radius: 20, mass: 700, reach: 140 };
@@ -636,6 +647,14 @@ function build(): Level {
     c: 1_000_000,
     horizon: { seconds: 18, oneOrbit: false, shorten: 0, ref: 6 },
     physics: { dosePerD1: 0.04, doseLimit: 8000 },
+    petrova: [
+      {
+        from: "look-sun",
+        to: "look-tau-green",
+        bulge: 26,
+        knots: [{ t: 0.45, fuel: 0.4, radius: 34 }],
+      },
+    ],
     nebulae,
     belts,
     wormholes,

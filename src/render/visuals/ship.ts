@@ -3,7 +3,7 @@ import { simConfigFromLevel } from "../../level/catalog";
 import { sampleBurnAnim, tailFromBurn, windupFlicker, type BurnCue, type BurnSample } from "../burn-anim";
 import { plumeFrame, type PlumeFrame } from "../plume";
 import { projectToScreen } from "../camera";
-import { shipLook } from "../appearance";
+import { lookForLevel } from "../appearance";
 import { srgbVec, shader } from "./materials";
 import {
   chargingNearStar,
@@ -60,6 +60,8 @@ class ShipVisual implements Visual {
   private readonly flashRadius: THREE.IUniform<number>;
   private readonly flashAlpha: THREE.IUniform<number>;
   private readonly pulse: THREE.Mesh;
+  private readonly spinBeam: THREE.Mesh;
+  private readonly spinRing: THREE.Mesh;
   private readonly solarGlow: THREE.Mesh;
   private readonly hitFlash: THREE.Mesh;
   private readonly chevrons: THREE.Group;
@@ -163,8 +165,21 @@ class ShipVisual implements Visual {
     this.pulse.renderOrder = 4;
     this.pulse.visible = false;
     this.ship.add(this.pulse);
+    this.spinBeam = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), spinBeamMaterial());
+    this.spinBeam.name = "spin-beam";
+    this.spinBeam.frustumCulled = false;
+    this.spinBeam.renderOrder = 4;
+    this.spinBeam.visible = false;
+    this.ship.add(this.spinBeam);
+    this.spinRing = new THREE.Mesh(new THREE.PlaneGeometry(this.theme.astro.ringRx * 2, this.theme.astro.ringRy * 2), spinRingMaterial());
+    this.spinRing.name = "spin-ring";
+    this.spinRing.position.set(0, -this.theme.astro.ringY, 0);
+    this.spinRing.frustumCulled = false;
+    this.spinRing.renderOrder = 7;
+    this.spinRing.visible = false;
+    this.ship.add(this.spinRing);
 
-    for (const look of ["chemical", "ion", "pulse"] as const) {
+    for (const look of ["chemical", "ion", "pulse", "spin"] as const) {
       const mesh = spriteMesh(frame, 6);
       mesh.name = `engine-${look}`;
       mesh.visible = false;
@@ -210,7 +225,7 @@ class ShipVisual implements Visual {
     }
     const crashed = game.mode !== "planning" && game.ship.status === "crashed";
     const pose = game.mode === "planning" ? game.initial : game.ship;
-    const build = shipBuild(game.upgrades, shipLook);
+    const build = shipBuild(game.upgrades, lookForLevel(game.level));
     const band = damageBand(pose.hull, pose.hullMax);
     const shown = new Set(visibleParts(build, band));
     this.ensureBake(frame);
@@ -236,6 +251,16 @@ class ShipVisual implements Visual {
       if (mesh) mesh.visible = shown.has(key);
     }
     for (const [look, mesh] of this.engines) mesh.visible = shown.has("engine") && look === build.engine;
+    this.spinRing.visible = shown.has("engine") && build.engine === "spin" && !crashed;
+    if (this.spinRing.visible) {
+      const firing = game.mode === "flying" || game.mode === "paused";
+      const period = firing ? 0.5 : 2;
+      const lo = firing ? 0.6 : 0.4;
+      const hi = firing ? 1 : 0.8;
+      const wave = 0.5 + 0.5 * Math.sin((now / 1000 / period) * Math.PI * 2);
+      const ringMat = this.spinRing.material as THREE.ShaderMaterial;
+      ringMat.uniforms.uAlpha.value = lo + (hi - lo) * wave;
+    }
     for (const plume of this.plumes.values()) plume.mesh.visible = false;
     for (const mesh of this.damageBands.values()) mesh.visible = false;
     const damageMesh = band === "none" ? undefined : this.damageBands.get(band);
@@ -255,6 +280,7 @@ class ShipVisual implements Visual {
       this.glow.visible = false;
       this.flash.visible = false;
       this.pulse.visible = false;
+      this.spinBeam.visible = false;
     } else {
       this.poseThrust(
         sampleBurnAnim(game.ship.step, game.level.dt, game.nodes, this.theme.burn.windup, tailFromBurn(this.theme.burn)),
@@ -350,6 +376,15 @@ class ShipVisual implements Visual {
       this.flashRadius.value = plumeSpec.flashRadius0 + (plumeSpec.flashRadius1 - plumeSpec.flashRadius0) * drawn.flash;
       this.flashAlpha.value = 1 - drawn.flash;
     }
+    if (look === "spin") {
+      this.glow.visible = false;
+      this.flash.visible = false;
+      this.pulse.visible = false;
+      this.poseSpin(anim, nowMs);
+      return;
+    }
+    this.spinBeam.visible = false;
+    this.spinRing.visible = false;
     if (spec.continuous) {
       this.pulse.visible = false;
       const plume = this.plumes.get(look);
@@ -369,6 +404,20 @@ class ShipVisual implements Visual {
     const radius = 5 + 12 * t;
     this.pulse.scale.set(radius, radius * 0.65, 1);
     (this.pulse.material as THREE.MeshBasicMaterial).opacity = 0.9 * (1 - t);
+  }
+
+  private poseSpin(anim: BurnSample, nowMs: number): void {
+    const astro = this.theme.astro;
+    const firing = anim.cues.some((cue) => cue.phase === "burn" || cue.phase === "tail");
+    const length = Math.min(astro.beamCap, astro.beamBase + astro.beamPerDv * anim.thrustMag);
+    this.spinBeam.visible = firing && length > 0 && anim.thrust > 0.001;
+    if (!this.spinBeam.visible) return;
+    this.spinBeam.scale.set(astro.beamWidth1, length, 1);
+    this.spinBeam.position.set(0, -astro.beamRoot - length / 2, 0);
+    const mat = this.spinBeam.material as THREE.ShaderMaterial;
+    mat.uniforms.uTime.value = nowMs / 1000;
+    mat.uniforms.uLength.value = length;
+    mat.uniforms.uFade.value = anim.thrust;
   }
 
   private poseChevrons(game: VisualFrame["game"], config: SimConfig, width: number, height: number, now: number): void {
@@ -422,8 +471,13 @@ class ShipVisual implements Visual {
 
   private async bake(gen: number, width: number, height: number): Promise<void> {
     const assets = this.theme.assets;
-    const load = async (url: string, hide: readonly string[] = []): Promise<THREE.CanvasTexture> => {
-      const blob = await bakedSvgUrl(url, hide);
+    const load = async (
+      url: string,
+      hide: readonly string[] = [],
+      prep?: (doc: Document) => void,
+      tag?: string,
+    ): Promise<THREE.CanvasTexture> => {
+      const blob = await bakedSvgUrl(url, hide, prep ? { tag, prep } : undefined);
       const canvas = await rasterSvg(blob, width, height);
       const texture = new THREE.CanvasTexture(canvas);
       texture.colorSpace = THREE.SRGBColorSpace;
@@ -431,7 +485,7 @@ class ShipVisual implements Visual {
       return texture;
     };
     try {
-      const [hull, solar, tanks, platingBack, platingFront, cryo, scoop, sensors, shield, chemical, ion, pulse, d75, d45, d15] =
+      const [hull, solar, tanks, platingBack, platingFront, cryo, scoop, sensors, shield, chemical, ion, pulse, spin, d75, d45, d15] =
         await Promise.all([
           load(assets.hull),
           load(assets.solar),
@@ -445,12 +499,13 @@ class ShipVisual implements Visual {
           load(assets.engineChemical, ENGINE_PLUME_IDS.chemical),
           load(assets.engineIon, ENGINE_PLUME_IDS.ion),
           load(assets.enginePulse, ENGINE_PLUME_IDS.pulse),
+          load(assets.engineSpin, ENGINE_PLUME_IDS.spin, stripSpinCore, "spin-nozzle"),
           load(assets.damage75),
           load(assets.damage45),
           load(assets.damage15),
         ]);
       if (gen !== this.bakeGen) {
-        for (const texture of [hull, solar, tanks, platingBack, platingFront, cryo, scoop, sensors, shield, chemical, ion, pulse, d75, d45, d15]) {
+        for (const texture of [hull, solar, tanks, platingBack, platingFront, cryo, scoop, sensors, shield, chemical, ion, pulse, spin, d75, d45, d15]) {
           texture.dispose();
         }
         return;
@@ -469,6 +524,7 @@ class ShipVisual implements Visual {
       this.assign(this.engines.get("chemical"), chemical);
       this.assign(this.engines.get("ion"), ion);
       this.assign(this.engines.get("pulse"), pulse);
+      this.assign(this.engines.get("spin"), spin);
       this.assign(this.damageBands.get("75"), d75);
       this.assign(this.damageBands.get("45"), d45);
       this.assign(this.damageBands.get("15"), d15);
@@ -511,6 +567,96 @@ function stressSpot(
   if (!(pose.stress > 0) || pose.status === "crashed") return null;
   return { x: pose.x, y: pose.y, time: pose.t, stress: pose.stress };
 }
+
+function stripSpinCore(doc: Document): void {
+  const root = doc.getElementById("shipEngineSpin");
+  if (!root) return;
+  for (const child of [...root.children]) {
+    if (child.tagName.toLowerCase() === "path") child.remove();
+  }
+}
+
+function spinBeamMaterial(): THREE.ShaderMaterial {
+  return shader(spinBeamFrag, {
+    uTime: { value: 0 },
+    uLength: { value: 80 },
+    uFade: { value: 1 },
+    uWhite: { value: srgbVec("#FFFFFF") },
+    uPale: { value: srgbVec(palette.astroBeam) },
+    uCrimson: { value: srgbVec(palette.astroCrimson) },
+    uEnd: { value: srgbVec(palette.astroBeamEnd) },
+    uCore: { value: srgbVec(palette.astroCore) },
+  });
+}
+
+function spinRingMaterial(): THREE.ShaderMaterial {
+  return shader(spinRingFrag, {
+    uColor: { value: srgbVec(palette.astroCrimson) },
+    uAlpha: { value: 0.7 },
+  });
+}
+
+const spinRingFrag = /* glsl */ `
+precision highp float;
+varying vec2 vLocal;
+uniform vec3 uColor;
+uniform float uAlpha;
+void main() {
+  float q = length(vec2(vLocal.x / 4.4, vLocal.y / 1.4));
+  float fw = fwidth(q);
+  float band = 1.0 - smoothstep(0.0, fw * 2.2, abs(q - 1.0));
+  if (band <= 0.0) discard;
+  gl_FragColor = vec4(uColor, uAlpha * band);
+}
+`;
+
+const spinBeamFrag = /* glsl */ `
+precision highp float;
+varying vec2 vLocal;
+uniform float uTime;
+uniform float uLength;
+uniform float uFade;
+uniform vec3 uWhite;
+uniform vec3 uPale;
+uniform vec3 uCrimson;
+uniform vec3 uEnd;
+uniform vec3 uCore;
+void main() {
+  float t = clamp(0.5 - vLocal.y, 0.0, 1.0);
+  float shimmer = sin(vLocal.x * 48.0 + uTime * 23.0) * sin(t * 36.0 + uTime * 11.0);
+  float x = vLocal.x + shimmer * 0.035;
+  float limit = mix(3.6 / 8.4, 0.5, t);
+  if (abs(x) > limit) discard;
+  vec3 color = uWhite;
+  float alpha = 1.0;
+  if (t < 0.12) {
+    float k = t / 0.12;
+    color = mix(uWhite, uPale, k);
+    alpha = mix(1.0, 0.95, k);
+  } else if (t < 0.45) {
+    float k = (t - 0.12) / 0.33;
+    color = mix(uPale, uCrimson, k);
+    alpha = mix(0.95, 0.6, k);
+  } else if (t < 0.8) {
+    float k = (t - 0.45) / 0.35;
+    color = mix(uCrimson, uEnd, k);
+    alpha = mix(0.6, 0.22, k);
+  } else {
+    float k = (t - 0.8) / 0.2;
+    color = uEnd;
+    alpha = mix(0.22, 0.0, k);
+  }
+  float coreEnd = 54.4 / max(uLength, 1.0);
+  float coreHalf = mix(1.0, 0.6, clamp(t / max(coreEnd, 0.001), 0.0, 1.0)) / 8.4;
+  if (t < coreEnd && abs(x) < coreHalf) {
+    color = mix(uWhite, uCore, t / coreEnd);
+    alpha = max(alpha, mix(1.0, 0.0, t / coreEnd));
+  }
+  alpha *= uFade;
+  if (alpha < 0.02) discard;
+  gl_FragColor = vec4(color, alpha);
+}
+`;
 
 function spriteMesh(geometry: THREE.PlaneGeometry, order: number): THREE.Mesh {
   const mesh = new THREE.Mesh(

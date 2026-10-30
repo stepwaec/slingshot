@@ -71,6 +71,8 @@ export interface Game {
   magnetism: boolean;
   /** Planning radiation map. Does not affect prediction or flight. */
   radiation: boolean;
+  /** Astrophage map. Planning and pause only. Does not affect prediction or flight. */
+  astrophage: boolean;
   /**
    * Path sample under the pointer, in planning and pause.
    * Ghosts read it. Prediction and flight do not.
@@ -125,6 +127,7 @@ export function createGame(level: Level = passage, camera: Camera = { x: 0, y: 0
     gravity: "off",
     magnetism: false,
     radiation: false,
+    astrophage: false,
     cursorStep: null,
     previewSeconds: null,
   };
@@ -171,6 +174,17 @@ export function setRadiation(game: Game, on: boolean): void {
 
 export function toggleRadiation(game: Game): void {
   game.radiation = !game.radiation;
+}
+
+/** Astrophage flow map. Ignored by the sim and by prediction. */
+export function toggleAstrophage(game: Game): void {
+  game.astrophage = !game.astrophage;
+}
+
+/** True when the level has an infected star, a Petrova line, or Tau Ceti. */
+export function levelHasAstro(level: Level): boolean {
+  if (level.petrova && level.petrova.length > 0) return true;
+  return level.bodies.some((body) => body.astrophage !== undefined || body.look === "tau-ceti");
 }
 
 export function loadLevel(game: Game, level: Level): void {
@@ -234,7 +248,8 @@ export function buyUpgrade(game: Game, id: string): boolean {
 
 export function planFuel(game: Game): PlanFuel {
   const config = simConfigFromLevel(game.level, game.upgrades);
-  return assessPlan(game.nodes, config.fuelMax ?? game.level.fuel, config.fuelPerDv ?? game.level.fuelPerDv);
+  const perDv = config.engine === "spin" ? 0 : (config.fuelPerDv ?? game.level.fuelPerDv);
+  return assessPlan(game.nodes, config.fuelMax ?? game.level.fuel, perDv);
 }
 
 export function canLaunch(game: Game): boolean {
