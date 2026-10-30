@@ -1,6 +1,6 @@
 # Slingshot — visual style v1.5
 
-Calm, cinematic space for Slingshot. This file is the look; `canvas-notes.md` is the pixel-exact drawing reference (how each SVG recipe looks and what it costs, written for Canvas 2D); `threejs-notes.md` maps it onto the game's Three.js renderer (WP3); `assets.md` indexes every file. Sections: §1 mood · §2 palette (background, sky, the sun, the two original planets, the shared lighting tokens, UI) · §3 typography · §4 glow and blur rules, with **§4.1 Realism, vibrancy and crispness rules** · §5 motion · §6 layout · §7 asset index · §8 the **body library** (31 bodies: 12 planets, 6 stars and compact objects, 4 moons, 3 ringed planets, the 3 WP8 objects: binary star, red giant, moon chain, the 2 WP9 compact objects: pulsar, magnetar, and the WP10 comet) plus the WP9 **magnetism map** and the WP10 **solar recharge indicator** · §9 the **space environment** (nebulae, asteroid field, wreck debris) · §10 **ship systems** (modular ship, damage states, hull HUD, tidal-stress warning, upgrade screen) · §11 **WP11** (asteroid belts, Kuiper belt, rogue planet, radiation map, dose meter) · §12 **ship and planning view** (burn plume, burn node, gravity grid and sheet) · §13 **late game** (stellar engine, Dyson swarm, ringworld, Shkadov thruster, space elevator, wormhole pair) and **living surfaces**. Coding agents: read `IMPLEMENTING.md` first. Assets live in `design/assets` (bodies in `design/assets/bodies`, the environment in `design/assets/space`, map overlays in `design/assets/overlays`, the modular ship in `design/assets/ship`, late-game structures in `design/assets/mega`), mockups (1440×900, PNG = 2× render) in `design/mockups`, animated previews in `design/preview/planets.html`, `bodies.html` and `space.html`.
+Calm, cinematic space for Slingshot. This file is the look; `canvas-notes.md` is the pixel-exact drawing reference (how each SVG recipe looks and what it costs, written for Canvas 2D); `threejs-notes.md` maps it onto the game's Three.js renderer (WP3); `assets.md` indexes every file. Sections: §1 mood · §2 palette (background, sky, the sun, the two original planets, the shared lighting tokens, UI) · §3 typography · §4 glow and blur rules, with **§4.1 Realism, vibrancy and crispness rules** · §5 motion · §6 layout · §7 asset index · §8 the **body library** (31 bodies: 12 planets, 6 stars and compact objects, 4 moons, 3 ringed planets, the 3 WP8 objects: binary star, red giant, moon chain, the 2 WP9 compact objects: pulsar, magnetar, and the WP10 comet) plus the WP9 **magnetism map** and the WP10 **solar recharge indicator** · §9 the **space environment** (nebulae, asteroid field, wreck debris) · §10 **ship systems** (modular ship, damage states, hull HUD, tidal-stress warning, upgrade screen) · §11 **WP11** (asteroid belts, Kuiper belt, rogue planet, radiation map, dose meter) · §12 **ship and planning view** (burn plume, burn node, gravity grid and sheet) · §13 **late game** (stellar engine, Dyson swarm, ringworld, Shkadov thruster, space elevator, wormhole pair) and **living surfaces** · §14 **collisions and consumption** (impact, debris field, tidal disruption, burning up in a star, accretion, event telegraphs). Coding agents: read `IMPLEMENTING.md` first. Assets live in `design/assets` (bodies in `design/assets/bodies`, the environment in `design/assets/space`, map overlays in `design/assets/overlays`, the modular ship in `design/assets/ship`, late-game structures in `design/assets/mega`, scripted events in `design/assets/events`), mockups (1440×900, PNG = 2× render) in `design/mockups`, animated previews in `design/preview/planets.html`, `bodies.html` and `space.html`.
 
 **History in one paragraph.** v1 set the layout, UI and the two-glow rule. v1.1 was the first realism pass (limb-darkened star, planets with a terminator and a rim, a tinted starfield with a Milky Way). v1.2 made the planets rotate: a seamless texture strip slides under a lighting overlay that never moves. v1.3 built the body library (12 planets, 6 stars and compact objects) and gave the stars prominences and a flare. v1.4 adds moons, ringed planets, nebulae and debris fields (§8, §9). **v1.5 (revised) is the realism, vibrancy and crispness pass**, agreed with the client on two approved reference assets — the ocean world "variant F" and the sun "variant J" — and applied to every body: vivid multi-zone surfaces with crisp edges, elongated clouds with cast shadows, a warm terminator band, a lit-side haze and rim, a fiery plasma sun with ragged flame rings and an irregular rim, and no untinted grey anywhere. The earlier v1.5 "crispness pass" numbers (halve blurs, ±12 % lightness, limb line at α 0.30) were rejected as indistinguishable from v1.2 and are **not** used; §4.1 holds the rules that replaced them.
 
@@ -1231,3 +1231,34 @@ Bodies should never look like still pictures. The game now animates the sun's ri
 | Nebulae | Two textures cross-fade over 40 s (slow morph) | Never brighter than their α caps |
 
 Never animate the lighting, the crash radius or anything a player reads as a hazard edge.
+
+## 14. Collisions and consumption (v2.7, Living universe LU3)
+
+Files: `assets/events/impact.svg`, `debris-field.svg`, `tidal-disruption.svg`, `burn-up.svg`, `accretion.svg`, `event-telegraphs.svg`, mockup `mockups/showcase-burning-planet.svg` (the Ash level). Renderer notes: `threejs-notes.md` §17. Each sample draws a placeholder disc where the real star or planet goes.
+
+Events are scripted and deterministic, keyed to sim time, so the visuals play on sim time too: they pause, slow down and scrub with the plan. Small cosmetic motion inside them (flicker, sparkle) may use `frame.now`.
+
+| Event | Script (level data) | Timeline |
+|---|---|---|
+| Impact | `impact { at, into }` | Approach until `at`; flash 0.6 s; shock ring 1.3 s; rim flash 1.8 s; ejecta cone 2.7 s; crater afterglow 3.6 s; then the debris field |
+| Debris field | follows an impact | Chunks spread along the orbit; the hazard edge crawls; chips count down the narrowing gap |
+| Tidal disruption | proposed `disrupt { centerId, start, end }` | The body stretches toward the mass; a bound stream heats as it falls in, an unbound tail flies out |
+| Burning up | `consume { centerId, start, end, radius }` | Heat `u = (t − start) / (end − start)` grows the dayside glow and the ablation tail; at `end`: plunge flash 0.55 s, ripple across the star 1.8 s, star brightening 1.6 s |
+| Accretion | proposed `accrete { centerId, start, end }` | The star stretches; a stream arcs from its near side into the disk; a hotspot flickers where they meet; the hole's mass grows |
+
+**Telegraphs** (planning, before the event): the collision course dashed in `event.warn`, a pulsing impact reticle, a countdown chip, and the follow-on (debris, decaying orbit) dashed in `event.next`. Never a tinted fill: low-alpha orange over navy reads brown.
+
+| Token | Hex | Used for |
+|---|---|---|
+| `event.flash` | `#FFFFFF` → `#FFF6D6` (α 0.9) → `#FFE7A0` α 0 | Impact and plunge flashes, accretion hotspot |
+| `event.shock` | `#FFE7A0` | Shock ring, rim flash, star brightening |
+| `event.glow` | `#FFE7A0` → `#FF8A3A` (α 0.85) → `#FF6A2A` α 0 | Crater afterglow, stream hotspot, dayside heating |
+| `event.ejecta` | `#FFB45A` (hot) · `#C8A684` / `#9A7A5E` / `#8E8478` (rock) | Ejecta and debris dust |
+| `event.ablation` | `#FFF6D6` → `#FFB45A` → `#FF5A8A` → `#E0408A` | Ablation tail (hot pink, never brown) |
+| `event.stream` | body colours → `#FFB45A` → `#FFF6D6` | Tidal stream heating as it falls; accretion stream `#FFB43A` → `#FF8A3A` → `#FFE7A0` |
+| `event.ripple` | `#FFF1C2` | Ripple across the star after a plunge |
+| `disk.hot` | `#E6F4FF` → `#FFE7A0` → `#FF8A3A` → `#A8303A` | Accretion disk, hot inside; photon ring `#FFC857` + `#FFFFFF` |
+| `event.warn` | `#FF9F43` | The event itself: course, reticle, countdown chip, decaying spiral (= `stress.warn`) |
+| `event.next` | `#FFC857` | What follows: debris forecast, "gap narrows", "orbit decaying" |
+
+The showcase mockup also previews where the target will be at arrival (a dashed `#3DE0C2` ring with its capture radius). The ghost-marker design itself is the next request.

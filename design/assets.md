@@ -1,6 +1,6 @@
-# Slingshot — asset index (v2.6)
+# Slingshot — asset index (v2.7)
 
-One row per file in `design/assets/` (14 top-level files, 30 bodies in `bodies/`, 16 ship files in `ship/`, 6 late-game structures in `mega/`, 4 map overlays in `overlays/`, 9 environment files in `space/` — 79 SVGs). Coding agents implementing these designs: read `IMPLEMENTING.md` first; `IMPLEMENTATION-REVIEW.md` lists fixes for what is already in the game, then the previews and the mockups. All SVGs are self-contained (no scripts, external refs or raster), `xmllint --noout` clean and use only the tokens of `style.md` §2 / §8 / §9. "Anchor" is the point the game positions and rotates. Exact Canvas code is in `canvas-notes.md` (§ numbers below). How to build each asset in the game\'s Three.js renderer is in `threejs-notes.md` (§10 maps every asset to its factory).
+One row per file in `design/assets/` (14 top-level files, 30 bodies in `bodies/`, 16 ship files in `ship/`, 6 late-game structures in `mega/`, 6 scripted events in `events/`, 4 map overlays in `overlays/`, 9 environment files in `space/` — 85 SVGs). Coding agents implementing these designs: read `IMPLEMENTING.md` first; `IMPLEMENTATION-REVIEW.md` lists fixes for what is already in the game, then the previews and the mockups. All SVGs are self-contained (no scripts, external refs or raster), `xmllint --noout` clean and use only the tokens of `style.md` §2 / §8 / §9. "Anchor" is the point the game positions and rotates. Exact Canvas code is in `canvas-notes.md` (§ numbers below). How to build each asset in the game\'s Three.js renderer is in `threejs-notes.md` (§10 maps every asset to its factory).
 
 **Structure.** Every body and environment asset is `<defs>` (ids prefixed per file) + **one** top-level group `<g id="…" transform="translate(cx cy)">` with all geometry relative to (0, 0), SMIL animation inside, and a **header comment listing every parameter — the header is the canon**. Mockups and galleries copy the defs and the group verbatim and change only the translate (plus scene-local lighting wrappers). Ids are unique across all 37 SVGs (checked: no id defined in two files, every `url(#…)` / `href` resolves). Static renders and mockups show t = 0.
 
@@ -87,6 +87,19 @@ Every part uses one frame — viewBox `0 0 96 160`, ship centre at (48, 64), nos
 | `ship-builds.svg` | **Four example builds** composed from the parts: base, explorer, harvester, full | `#shipBuilds`, 384 × 160; `sxB1*`–`sxB4*` | preview only; tokens `ship.*` (`style.md` §10) |
 | `plume-states.svg` (v2.5) | **Burn plume** states on the base hull: wind-up, ignition, small / medium / large burn, tail-off (1.55× with 1× beside) | sample sheet `0 0 1140 330`, nozzle at local y 28.2 | `#plumeStates`; `pm*` | shape function, length from Δv and state timings in the header; tokens `plume.*` (`style.md` §12) |
 
+## Scripted events (`design/assets/events/`, v2.7, Living universe LU3)
+
+Each sample draws a placeholder disc where the real body goes; timelines in each header (`style.md` §14, `threejs-notes.md` §17).
+
+| File | What | Group; ids | Script |
+|---|---|---|---|
+| `impact.svg` | **Impact**: comet approach, flash, shock ring, rim flash, ejecta cone, crater afterglow (6 s loop) | `#impactEvent`; `im*` | `impact { at, into }` |
+| `debris-field.svg` | **Debris field**: lit chunks and dust along the orbit, dashed hazard edge, gap countdown | `#debrisField`; `df*` | after an impact |
+| `tidal-disruption.svg` | **Tidal disruption**: stretched planet, heating bound stream into a black hole's disk, unbound tail | `#tidalDisruption`; `td*` | proposed `disrupt` |
+| `burn-up.svg` | **Burning up**: decaying spiral, dayside glow, ablation tail, plunge flash, ripple, star brightening (8 s loop) | `#burnUp`; `bu*` | `consume { centerId, start, end, radius }` |
+| `accretion.svg` | **Accretion**: stretched star, stream into the disk, hotspot, turning disk | `#accretionEvent`; `ac*` | proposed `accrete` |
+| `event-telegraphs.svg` | **Telegraphs** in planning: collision course, impact reticle, countdown and debris forecast | `#eventTelegraphs`; `tg*` | every scripted event |
+
 ## Late game (`design/assets/mega/`, v2.6)
 
 Each structure is drawn around the level's real star or planet; these samples show a placeholder disc there (`style.md` §13, `threejs-notes.md` §16).
@@ -137,10 +150,11 @@ All self-contained pages (inline CSS, no scripts) on `bg.base`, inlining the ass
 | `ship.html` (v2.3) | The modular ship: four builds, three engines, seven modules, four damage states, a game-scale row and the hull HUD sheet. Every tile stacks the real part files from `assets/ship/` as `<img>` layers in the draw order, so the page also proves that the parts compose |
 | `space.html` WP11 row (v2.4) | Belts (sparse, medium, dense), the Kuiper belt and the radiation-map sample, each at 1×; `bodies.html` gains a rogue-planet row |
 | `space.html` late-game row (v2.6) | The six late-game structures at 1×, plus the living-sun reference |
+| `space.html` events row (v2.7) | The six scripted-event samples at 1× |
 
 ## Mockups (`design/mockups/`, all `0 0 1440 900`; **PNG = 2× render**)
 
-Every PNG is a 2× render of its SVG (2880 × 1800, `--force-device-scale-factor=2`, same filename). All sixteen share the v1.1 background (the upgrade screen dims it) (a `bg.edge` rect, the vignette centred (720, 450) r 900, then the `#starfield` group verbatim) and splice every body group **verbatim** from the v1.5 assets with only its translate changed; where a library body's upper-right light does not face the scene's star, its lighting layers sit in a scene-local `rotate(angle(L_scene) − angle(L_library))` wrapper (strips and the asset files untouched).
+Every PNG is a 2× render of its SVG (2880 × 1800, `--force-device-scale-factor=2`, same filename). All seventeen share the v1.1 background (the upgrade screen dims it) (a `bg.edge` rect, the vignette centred (720, 450) r 900, then the `#starfield` group verbatim) and splice every body group **verbatim** from the v1.5 assets with only its translate changed; where a library body's upper-right light does not face the scene's star, its lighting layers sit in a scene-local `rotate(angle(L_scene) − angle(L_library))` wrapper (strips and the asset files untouched).
 
 | File | Mode | What it demonstrates |
 |---|---|---|
@@ -160,6 +174,7 @@ Every PNG is a 2× render of its SVG (2880 × 1800, `--force-device-scale-factor
 | `planning-grid.svg` / `.png` (v2.5) | Planning, gravity grid on | The restyled grid over the planning scene (tidal ring at r 96 around the sun), a selected correction burn (node 2) with its Δv chip and delete button, an idle capture node (3), and the Gravity grid toggle pressed |
 | `flight-burn.svg` / `.png` (v2.5) | In flight, mid-burn | The modular ship firing a medium chemical plume (L 80), the burn being executed behind it as a fired node, the next node ahead in its wind-up arc, the predicted path ahead, and a 3.3× callout (mockup only) of the plume; the removed trail is gone |
 | `late-game.svg` / `.png` (v2.6) | Planning, late-game system | A Dyson swarm rings the sun (sun at α 0.72), a space elevator stands on the home planet with its release arrow and "free Δv 2.4", and a wormhole pair sits between them with "exit clock +3.2 h" |
+| `showcase-burning-planet.svg` / `.png` (v2.7) | Planning, the Ash showcase | Planet X on its decaying orbit, heating and shedding an ablation tail; the dashed spiral into the sun; the predicted path racing to where X will be at arrival (dashed mint ring and capture radius); chips "burns up in 1:42", "orbit decaying", "arrive 1:10 · margin 0:32" |
 
 ## Usage rules
 
