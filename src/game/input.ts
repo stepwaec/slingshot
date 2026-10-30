@@ -5,13 +5,7 @@ import {
   clearPlan,
   deleteSelected,
   isEditing,
-  applyGravityKey,
-  cycleGravity,
   launch,
-  toggleMagnetism,
-  levelHasAstro,
-  toggleAstrophage,
-  toggleRadiation,
   moveNodeAlong,
   nodeIncoming,
   nodePosition,
@@ -26,8 +20,9 @@ import {
   type Game,
   type RailSample,
 } from "./state";
+import { applyLayerKey, closeLayersOnEscape, type LayersPanelState } from "./layers";
 import { panBy, worldToScreen, zoomAt } from "../render/camera";
-import { hasMagneticBody, SIM_SPEEDS, SPEED_KEY, type SimSpeed } from "../sim/physics";
+import { SIM_SPEEDS, SPEED_KEY, type SimSpeed } from "../sim/physics";
 
 export interface InputElements {
   canvas: HTMLCanvasElement;
@@ -41,10 +36,9 @@ export interface InputElements {
   pauseButton: HTMLButtonElement;
   resumeButton: HTMLButtonElement;
   slowButton: HTMLButtonElement;
-  gravityButton: HTMLButtonElement;
-  magnetismButton: HTMLButtonElement;
-  radiationButton: HTMLButtonElement;
-  astrophageButton: HTMLButtonElement;
+  layersButton: HTMLButtonElement;
+  /** UI-only. Opening the panel does not touch the sim. */
+  layersPanel: LayersPanelState;
 }
 
 const HANDLE_RADIUS = 16;
@@ -164,15 +158,8 @@ export function bindInput(
   elements.pauseButton.addEventListener("click", () => pause(game));
   elements.resumeButton.addEventListener("click", () => resume(game));
   elements.slowButton.addEventListener("click", () => setSlow(game, !game.slow));
-  elements.gravityButton.addEventListener("click", () => cycleGravity(game));
-  elements.magnetismButton.addEventListener("click", () => {
-    if (!hasMagneticBody(game.level.bodies)) return;
-    toggleMagnetism(game);
-  });
-  elements.radiationButton.addEventListener("click", () => toggleRadiation(game));
-  elements.astrophageButton.addEventListener("click", () => {
-    if (!levelHasAstro(game.level)) return;
-    toggleAstrophage(game);
+  elements.layersButton.addEventListener("click", () => {
+    elements.layersPanel.open = !elements.layersPanel.open;
   });
   elements.deleteButton.addEventListener("click", () => deleteSelected(game));
   elements.nodeRemove.addEventListener("click", (event) => {
@@ -209,17 +196,10 @@ export function bindInput(
       if (event.repeat) return;
       deleteSelected(game);
     } else if (event.key === "Escape") {
-      selectNode(game, null);
-    } else if (applyGravityKey(game, event)) {
+      if (closeLayersOnEscape(elements.layersPanel, event)) event.preventDefault();
+      else if (!event.repeat && !event.metaKey && !event.ctrlKey && !event.altKey) selectNode(game, null);
+    } else if (applyLayerKey(game, elements.layersPanel, event)) {
       event.preventDefault();
-    } else if (event.key === "a" || event.key === "A") {
-      if (event.repeat || event.metaKey || event.ctrlKey || event.altKey) return;
-      if (!levelHasAstro(game.level)) return;
-      toggleAstrophage(game);
-    } else if (event.key === "m" || event.key === "M") {
-      if (event.repeat || event.metaKey || event.ctrlKey || event.altKey) return;
-      if (!hasMagneticBody(game.level.bodies)) return;
-      toggleMagnetism(game);
     } else if (applySpeedKey(game, event)) {
       event.preventDefault();
     }

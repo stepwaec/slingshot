@@ -24,6 +24,7 @@ import {
 } from "../sim/physics";
 import type { Camera } from "../render/camera";
 import { scoreMission, type MissionScore } from "../sim/score";
+import { enforceLayerAvailability } from "./layers";
 import { UPGRADE_POINTS, UPGRADES, isUpgradeId, type UpgradeId } from "./upgrades";
 
 export type GameMode = "planning" | "flying" | "paused" | "finished";
@@ -206,6 +207,7 @@ export function loadLevel(game: Game, level: Level): void {
   game.mode = "planning";
   game.points = UPGRADE_POINTS;
   game.upgrades = [];
+  enforceLayerAvailability(game);
   restoreShip(game);
   recompute(game, 0, "coast");
 }
