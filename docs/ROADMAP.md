@@ -197,7 +197,7 @@ The stellar engine, Dyson swarm and Shkadov thruster from that pack are in the g
 2. **Ghost markers** (LU2) for where a moving body will be. The path ghosts, the recharge planning ghost and the dose ghost are already specified. A marker on a body's future position is not.
 3. **A lone stray asteroid**, outside a belt. The WP11 note above still stands: `design/` has the belt fields and the rogue planet, not a stray rock.
 4. **Supernova and quasar art.** The countdown, the remnant shock, and the quasar jet are in the game as placeholders. `design/` has no asset for them.
-5. **Target zone.** A nicer target zone replacing the dotted-line ring, for example a soft glowing band or a subtle animated orbit corridor that lights up when the ship is inside.
+5. **Target zone.** Replace the dotted ring with a solid ring that glows and pulses slowly. It gets brighter or steady when the ship enters the zone. It changes colour or flashes once when a stable orbit is achieved (tied to the Orbit capture work package). Keep it subtle so it doesn't compete with the planet.
 
 **Guidelines:** a realistic and vibrant style matching v1.5 and v2; SVG files under `design/assets/`; easter eggs only as hints, never logos or characters.
 
