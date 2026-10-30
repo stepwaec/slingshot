@@ -7,6 +7,7 @@ import {
   createGame,
   gravityLabel,
   isEditing,
+  levelHasAstro,
   loadLevel,
   missionResult,
   nodeIncoming,
@@ -35,6 +36,7 @@ import {
   SIM_SPEEDS,
   solarRechargeRate,
   spreadAlong,
+  bodyPose,
   type SimSpeed,
 } from "./sim/physics";
 import { shipLoadout } from "./game/upgrades";
@@ -42,7 +44,9 @@ import { mountShipyard, syncShipyard } from "./hud/shipyard";
 import { resetShipLook } from "./render/appearance";
 import { hullRatio, hullSegmentsLit, hullTone, stressLevel } from "./render/ship-art";
 import { burnChipText } from "./render/node-style";
+import { sampleBurnAnim, tailFromBurn, thrustDuration } from "./render/burn-anim";
 import { theme } from "./render/theme";
+import { ASTRO_CAPACITY, ASTRO_DV, curvePoint, petrovaCurve } from "./sim/astrophage";
 
 const levels: readonly Level[] = [...LEVELS, observatory];
 
@@ -119,6 +123,15 @@ const routeDeep = required<HTMLButtonElement>("#route-deep");
 const gravityButton = required<HTMLButtonElement>("#gravity");
 const magnetismButton = required<HTMLButtonElement>("#magnetism");
 const radiationButton = required<HTMLButtonElement>("#radiation");
+const astrophageButton = required<HTMLButtonElement>("#astrophage");
+const astroRow = required<HTMLElement>("#astro-row");
+const astroValue = required<HTMLElement>("#astro-value");
+const astroFill = required<HTMLElement>("#astro-fill");
+const astroGhost = required<HTMLElement>("#astro-ghost");
+const astroSpark = required<HTMLElement>("#astro-spark");
+const astroChip = required<HTMLElement>("#astro-chip");
+const astroLegend = required<HTMLElement>("#astro-legend");
+const astroChips = required<HTMLElement>("#astro-chips");
 const doseBlock = required<HTMLElement>("#dose");
 const doseValue = required<HTMLElement>("#dose-value");
 const doseFill = required<HTMLElement>("#dose-fill");
@@ -183,6 +196,7 @@ bindInput(
     gravityButton,
     magnetismButton,
     radiationButton,
+    astrophageButton,
   },
   () => ({ width: canvas.clientWidth, height: canvas.clientHeight }),
   () => frameLevel(game.camera, canvas.clientWidth, canvas.clientHeight, game.level),
@@ -293,6 +307,117 @@ function syncDose(current: Game): void {
   doseRate.textContent = reading.source === "shadow" ? "0.0 mSv/s · shadow" : `+${rate.toFixed(1)} mSv/s · ${reading.source}`;
 }
 
+function syncAstro(current: Game): void {
+  const fitted = current.level.fit?.engine === "spin";
+  astroRow.hidden = !fitted;
+  app.dataset.astro = fitted ? "on" : "off";
+  const armed = levelHasAstro(current.level);
+  astrophageButton.hidden = !armed;
+  const on = armed && current.astrophage;
+  astrophageButton.setAttribute("aria-pressed", on ? "true" : "false");
+  astroLegend.hidden = !(on && isEditing(current));
+  if (!fitted) {
+    astroChip.hidden = true;
+    astroChips.replaceChildren();
+    return;
+  }
+  const capacity = current.level.astro?.capacity ?? ASTRO_CAPACITY;
+  const pose = current.mode === "planning" ? current.initial : current.ship;
+  const ratio = Math.max(0, Math.min(1, pose.astro / capacity));
+  astroFill.style.width = `${Math.round(ratio * 220)}px`;
+  astroValue.textContent = `${Math.round(ratio * 100)} %`;
+  const gained = Math.max(0, current.prediction.final.astroGained);
+  const ghost = Math.max(0, Math.min(1 - ratio, gained / capacity));
+  const editing = isEditing(current);
+  astroGhost.hidden = !(editing && ghost > 0.005);
+  astroGhost.style.width = `${Math.round(ghost * 220)}px`;
+  astroGhost.style.left = `${Math.round(ratio * 220)}px`;
+  const harvesting = pose.astroRate > 0 && current.mode !== "planning";
+  astroSpark.hidden = !harvesting;
+  astroSpark.style.left = `${Math.round(ratio * 220)}px`;
+  const dv = current.level.astro?.dv ?? ASTRO_DV;
+  let chip = "";
+  let tone = "pale";
+  if (harvesting) {
+    chip = `harvesting +${(pose.astroRate * 100).toFixed(1)} %/s`;
+    tone = "crimson";
+  } else if (editing && gained / capacity > 0.005) {
+    chip = `+${Math.round((gained / capacity) * 100)} % on this path`;
+  } else if (pose.astro >= capacity - 1e-6) {
+    chip = `spin drive ready · Δv ×${Number.isInteger(dv) ? dv.toFixed(0) : dv.toFixed(1)}`;
+  }
+  if (current.mode === "flying" || current.mode === "paused") {
+    const anim = sampleBurnAnim(pose.step, current.level.dt, current.nodes, theme.burn.windup, tailFromBurn(theme.burn));
+    const burning = anim.cues.some((cue) => cue.phase === "burn" || cue.phase === "tail");
+    if (burning && anim.thrustMag > 0) {
+      const tail = thrustDuration(anim.thrustMag, { base: theme.burn.tailBase, perDv: theme.burn.tailPerDv, max: theme.burn.tailMax });
+      const pct = ((anim.thrustMag / dv) / capacity) * 100 / Math.max(tail, current.level.dt);
+      chip = `spin drive · burning ${pct.toFixed(1)} %/s`;
+      tone = "pink";
+    }
+  }
+  astroChip.hidden = chip.length === 0;
+  astroChip.textContent = chip;
+  astroChip.dataset.tone = tone;
+  syncAstroChips(current, editing);
+}
+
+function syncAstroChips(current: Game, editing: boolean): void {
+  astroChips.replaceChildren();
+  if (!editing) return;
+  const time = current.mode === "planning" ? 0 : current.ship.t;
+  const bodies = current.level.bodies;
+  const width = canvas.clientWidth;
+  const height = canvas.clientHeight;
+  const place = (x: number, y: number, text: string, tone: string) => {
+    const screen = worldToScreen(current.camera, width, height, x, y);
+    const chip = document.createElement("p");
+    chip.className = "astro-float";
+    chip.dataset.tone = tone;
+    chip.textContent = text;
+    chip.style.left = `${screen.x}px`;
+    chip.style.top = `${screen.y}px`;
+    astroChips.append(chip);
+  };
+  for (const body of bodies) {
+    const at = bodyPose(body, time, bodies, current.level.g);
+    if (body.astrophage) {
+      const dims = Math.round(body.astrophage.dims * 100);
+      const recharge = (1 - body.astrophage.dims).toFixed(2).replace(/0$/, "");
+      place(at.x, at.y - body.radius - 36, `infected ${body.astrophage.level}/10 · dims ${dims} % · recharge ×${recharge}`, "crimson");
+    } else if (body.kind === "star" && current.level.petrova?.some((line) => line.from === body.id && line.eaten !== undefined)) {
+      place(at.x, at.y - body.radius - 28, "clean · full brightness", "clean");
+    }
+  }
+  const lines = current.level.petrova ?? [];
+  let index = 0;
+  const pose = current.mode === "planning" ? current.initial : current.ship;
+  for (const line of lines) {
+    const from = bodies.find((body) => body.id === line.from);
+    const to = bodies.find((body) => body.id === line.to);
+    if (!from || !to) {
+      index += line.knots.length;
+      continue;
+    }
+    const a = bodyPose(from, time, bodies, current.level.g);
+    const b = bodyPose(to, time, bodies, current.level.g);
+    const curve = petrovaCurve(a.x, a.y, from.radius, b.x, b.y, to.radius, line.bulge);
+    for (const knot of line.knots) {
+      const at = curvePoint(curve, knot.t);
+      const left = pose.knots[index] ?? knot.fuel;
+      const share = knot.fuel > 0 ? left / knot.fuel : 0;
+      const pct = Math.round(knot.fuel * 100 * share);
+      const label = current.astrophage ? `knot · +${pct} % Astrophage` : `Astrophage · scoop to harvest · +${pct} %`;
+      place(at.x, at.y - knot.radius - 8, label, current.astrophage ? "pale" : "crimson");
+      index += 1;
+    }
+    if (line.eaten !== undefined) {
+      const at = curvePoint(curve, line.eaten);
+      place(at.x, at.y - 16, "Astrophage eaten here", "eaten");
+    }
+  }
+}
+
 function syncMagnetism(current: Game): void {
   const show = hasMagneticBody(current.level.bodies);
   magnetismButton.hidden = !show;
@@ -321,6 +446,7 @@ function syncHud(current: Game): void {
   syncGravity(current);
   syncMagnetism(current);
   syncDose(current);
+  syncAstro(current);
   modeLabel.textContent = planning ? "Planning" : current.mode === "paused" ? "Paused" : "In flight";
   planningActions.hidden = !planning;
   flightActions.hidden = planning;

@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { artForBody, artForNebula, artMaterial, artMesh, loadArtTexture, poseArt, rasterPixels, type ArtFit } from "../art-sprite";
+import { applyTauTint, artForBody, artForNebula, artMaterial, artMesh, loadArtTexture, poseArt, rasterPixels, type ArtFit } from "../art-sprite";
 import {
   brightestOffset,
   cometDustMirror,
@@ -150,6 +150,11 @@ class GalleryVisual implements Visual {
         this.addRedGiant(body);
         continue;
       }
+      if (body.look === "tau-hot" || body.look === "tau-cold" || body.look === "tau-green") {
+        const fit = artForBody(body, theme);
+        if (fit) this.add(fit, body.id, body, null, "body", 0);
+        continue;
+      }
       const kind = surfaceKind(body);
       if (kind) {
         this.addSurface(body, kind);
@@ -168,25 +173,33 @@ class GalleryVisual implements Visual {
   private addSun(body: Body): void {
     const base = artForBody(body, this.theme);
     if (!base) return;
-    const haze: ArtFit = { ...base, bake: { tag: "sun-haze", prep: sunHaze } };
-    const wisp: ArtFit = { ...base, bake: { tag: "sun-wisp", prep: sunRing("starWispRing") } };
-    const flame: ArtFit = { ...base, bake: { tag: "sun-flame", prep: sunRing("starFlameRing") } };
+    const tint = body.look === "tau-ceti";
+    const sunBake = (tag: string, prep: (doc: Document) => void): ArtFit["bake"] =>
+      tint
+        ? {
+            tag: `tau-${tag}`,
+            prep: (doc) => {
+              prep(doc);
+              applyTauTint(doc);
+            },
+          }
+        : { tag, prep };
+    const haze: ArtFit = { ...base, bake: sunBake("sun-haze", sunHaze) };
+    const wisp: ArtFit = { ...base, bake: sunBake("sun-wisp", sunRing("starWispRing")) };
+    const flame: ArtFit = { ...base, bake: sunBake("sun-flame", sunRing("starFlameRing")) };
     this.add(haze, `${body.id}-haze`, body, null, "haze", 0, true);
     this.add(wisp, `${body.id}-wisp`, body, null, "wisp", 1);
     this.add(flame, `${body.id}-flame`, body, null, "flame", 2);
     for (const prom of SUN_PROMINENCES) {
-      const layer: ArtFit = {
+      const promLayer: ArtFit = {
         ...base,
-        bake: { tag: prom.id, prep: sunProm(prom.id) },
+        bake: sunBake(prom.id, sunProm(prom.id)),
       };
-      this.add(layer, `${body.id}-${prom.id}`, body, null, "prom", 3, false, prom);
+      this.add(promLayer, `${body.id}-${prom.id}`, body, null, "prom", 3, false, prom);
     }
-    const flare: ArtFit = {
-      ...base,
-      bake: { tag: "sun-flare", prep: sunFlare },
-    };
-    const grain: ArtFit = { ...base, bake: { tag: "sun-grain", prep: sunGrain } };
-    const limb: ArtFit = { ...base, bake: { tag: "sun-limb", prep: sunLimb } };
+    const flare: ArtFit = { ...base, bake: sunBake("sun-flare", sunFlare) };
+    const grain: ArtFit = { ...base, bake: sunBake("sun-grain", sunGrain) };
+    const limb: ArtFit = { ...base, bake: sunBake("sun-limb", sunLimb) };
     this.add(flare, `${body.id}-flare`, body, null, "flare", 4);
     this.add(grain, `${body.id}-grain`, body, null, "grain", 5);
     this.add(limb, `${body.id}-limb`, body, null, "limb", 6);
@@ -764,7 +777,7 @@ class GalleryVisual implements Visual {
 }
 
 function isSun(body: Body): boolean {
-  return body.kind === "star" && (body.look === undefined || body.look === "sun");
+  return body.kind === "star" && (body.look === undefined || body.look === "sun" || body.look === "tau-ceti");
 }
 
 function poseProminence(sprite: Sprite, x: number, y: number, radius: number, seconds: number): void {

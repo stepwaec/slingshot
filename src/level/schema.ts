@@ -1,3 +1,4 @@
+import type { AstrophageSpec, PetrovaKnot, PetrovaLine } from "../sim/astrophage";
 import type { Belt, BeltTier } from "../sim/belts";
 import {
   BODY_LOOKS,
@@ -116,6 +117,34 @@ export interface Level {
   belts?: readonly Belt[];
   /** Wormhole pairs. Omitted means the level has none. */
   wormholes?: readonly WormholePair[];
+  /** Petrova lines. Omitted means the level has none. */
+  petrova?: readonly PetrovaLine[];
+  /**
+   * Engine and scoop fitted at launch. Omitted keeps the cosmetic ship look
+   * and leaves the Astrophage tank off.
+   */
+  fit?: ShipFit;
+  /** Spin-drive tank. Omitted uses the design defaults when `fit.engine` is `spin`. */
+  astro?: AstroTank;
+}
+
+export const SHIP_ENGINES = ["chemical", "ion", "pulse", "spin"] as const;
+export type ShipEngine = (typeof SHIP_ENGINES)[number];
+
+export interface ShipFit {
+  engine: ShipEngine;
+  scoop?: boolean;
+}
+
+export interface AstroTank {
+  /** Tank size. Knot `fuel` is a share of this. Omitted is 1. */
+  capacity?: number;
+  /** Fill at launch, in tank units. */
+  start?: number;
+  /** Fraction of the tank per second inside a knot. */
+  rate?: number;
+  /** Δv a full tank buys. */
+  dv?: number;
 }
 
 /** A level file failed to parse or failed the schema. `issues` names each field. */
@@ -157,6 +186,9 @@ const LEVEL_KEYS = [
   "nebulae",
   "belts",
   "wormholes",
+  "petrova",
+  "fit",
+  "astro",
 ] as const;
 
 const BODY_KEYS = [
@@ -185,6 +217,7 @@ const BODY_KEYS = [
   "shkadov",
   "ring",
   "elevator",
+  "astrophage",
   "solid",
 ] as const;
 const ENGINE_KEYS = ["angle", "burn", "scoop", "push"] as const;
@@ -213,6 +246,11 @@ const SHIP_ORBIT_KEYS = ["bodyId", "radius"] as const;
 const BOUNDS_KEYS = ["minX", "maxX", "minY", "maxY"] as const;
 const MISSION_KEYS = ["deadline", "crewLimit", "fuelStarMin", "crewWeight", "fuelWeight"] as const;
 const HORIZON_KEYS = ["seconds", "oneOrbit", "shorten", "ref"] as const;
+const ASTRO_BODY_KEYS = ["level", "dims"] as const;
+const PETROVA_KEYS = ["from", "to", "bulge", "eaten", "knots"] as const;
+const KNOT_KEYS = ["t", "fuel", "radius"] as const;
+const FIT_KEYS = ["engine", "scoop"] as const;
+const ASTRO_TANK_KEYS = ["capacity", "start", "rate", "dv"] as const;
 const PHYSICS_KEYS = [
   "c",
   "gravityScale",
@@ -525,6 +563,10 @@ function readBody(value: unknown, path: string, issues: string[]): Body | undefi
   if (Object.prototype.hasOwnProperty.call(value, "ring")) ring = readRing(value.ring, `${path}.ring`, issues);
   let elevator: SpaceElevator | undefined;
   if (Object.prototype.hasOwnProperty.call(value, "elevator")) elevator = readElevator(value.elevator, `${path}.elevator`, issues);
+  let astrophage: AstrophageSpec | undefined;
+  if (Object.prototype.hasOwnProperty.call(value, "astrophage")) {
+    astrophage = readAstrophage(value.astrophage, `${path}.astrophage`, issues);
+  }
   let solid: boolean | undefined;
   if (Object.prototype.hasOwnProperty.call(value, "solid")) {
     const raw = value.solid;
@@ -573,10 +615,101 @@ function readBody(value: unknown, path: string, issues: string[]): Body | undefi
   if (shkadov) body.shkadov = shkadov;
   if (ring) body.ring = ring;
   if (elevator) body.elevator = elevator;
+  if (astrophage) body.astrophage = astrophage;
   if (harvestRadius !== undefined && radius !== undefined && !(harvestRadius > radius)) {
     issues.push(`${path}.harvestRadius must be greater than radius`);
   }
   return body;
+}
+
+function readAstrophage(value: unknown, path: string, issues: string[]): AstrophageSpec | undefined {
+  if (!isObject(value)) {
+    issues.push(`${path} must be an object`);
+    return undefined;
+  }
+  rejectUnknown(value, ASTRO_BODY_KEYS, path, issues);
+  const level = readFinite(value, "level", path, issues, { min: 1, max: 10, integer: true });
+  const dims = readFinite(value, "dims", path, issues, { min: 0, max: 1 });
+  if (level === undefined || dims === undefined) return undefined;
+  return { level, dims };
+}
+
+function readKnot(value: unknown, path: string, issues: string[]): PetrovaKnot | undefined {
+  if (!isObject(value)) {
+    issues.push(`${path} must be an object`);
+    return undefined;
+  }
+  rejectUnknown(value, KNOT_KEYS, path, issues);
+  const t = readFinite(value, "t", path, issues, { min: 0, max: 1 });
+  const fuel = readFinite(value, "fuel", path, issues, { min: 0, exclusiveMin: true });
+  const radius = readFinite(value, "radius", path, issues, { min: 0, exclusiveMin: true });
+  if (t === undefined || fuel === undefined || radius === undefined) return undefined;
+  return { t, fuel, radius };
+}
+
+function readPetrova(value: unknown, path: string, issues: string[]): PetrovaLine | undefined {
+  if (!isObject(value)) {
+    issues.push(`${path} must be an object`);
+    return undefined;
+  }
+  rejectUnknown(value, PETROVA_KEYS, path, issues);
+  const from = readString(value, "from", path, issues);
+  const to = readString(value, "to", path, issues);
+  const bulge = readFinite(value, "bulge", path, issues, {});
+  const eaten = readOptionalFinite(value, "eaten", path, issues, { min: 0, max: 1 });
+  if (!Object.prototype.hasOwnProperty.call(value, "knots")) issues.push(`${path}.knots is required`);
+  else if (!Array.isArray(value.knots)) issues.push(`${path}.knots must be an array`);
+  const knots: PetrovaKnot[] = [];
+  if (Array.isArray(value.knots)) {
+    for (let i = 0; i < value.knots.length; i++) {
+      const knot = readKnot(value.knots[i], `${path}.knots[${i}]`, issues);
+      if (knot) knots.push(knot);
+    }
+  }
+  if (from === undefined || to === undefined || bulge === undefined) return undefined;
+  if (!Array.isArray(value.knots)) return undefined;
+  const line: PetrovaLine = { from, to, bulge, knots };
+  if (eaten !== undefined) line.eaten = eaten;
+  return line;
+}
+
+function readFit(value: unknown, path: string, issues: string[]): ShipFit | undefined {
+  if (!isObject(value)) {
+    issues.push(`${path} must be an object`);
+    return undefined;
+  }
+  rejectUnknown(value, FIT_KEYS, path, issues);
+  const engine = value.engine;
+  if (typeof engine !== "string" || !SHIP_ENGINES.includes(engine as ShipEngine)) {
+    issues.push(`${path}.engine must be one of ${SHIP_ENGINES.join(", ")}`);
+  }
+  let scoop: boolean | undefined;
+  if (Object.prototype.hasOwnProperty.call(value, "scoop")) {
+    if (typeof value.scoop !== "boolean") issues.push(`${path}.scoop must be a boolean`);
+    else scoop = value.scoop;
+  }
+  if (typeof engine !== "string" || !SHIP_ENGINES.includes(engine as ShipEngine)) return undefined;
+  const fit: ShipFit = { engine: engine as ShipEngine };
+  if (scoop !== undefined) fit.scoop = scoop;
+  return fit;
+}
+
+function readAstroTank(value: unknown, path: string, issues: string[]): AstroTank | undefined {
+  if (!isObject(value)) {
+    issues.push(`${path} must be an object`);
+    return undefined;
+  }
+  rejectUnknown(value, ASTRO_TANK_KEYS, path, issues);
+  const capacity = readOptionalFinite(value, "capacity", path, issues, { min: 0, exclusiveMin: true });
+  const start = readOptionalFinite(value, "start", path, issues, { min: 0 });
+  const rate = readOptionalFinite(value, "rate", path, issues, { min: 0 });
+  const dv = readOptionalFinite(value, "dv", path, issues, { min: 0, exclusiveMin: true });
+  const tank: AstroTank = {};
+  if (capacity !== undefined) tank.capacity = capacity;
+  if (start !== undefined) tank.start = start;
+  if (rate !== undefined) tank.rate = rate;
+  if (dv !== undefined) tank.dv = dv;
+  return tank;
 }
 
 function readEngine(value: unknown, path: string, issues: string[]): StellarEngine | undefined {
@@ -1040,6 +1173,33 @@ export function loadLevelData(data: unknown, source = "level"): Level {
   if (nebulae.length > 0) level.nebulae = nebulae;
   if (belts.length > 0) level.belts = belts;
   if (wormholes.length > 0) level.wormholes = wormholes;
+
+  const petrova: PetrovaLine[] = [];
+  if (Object.prototype.hasOwnProperty.call(data, "petrova")) {
+    if (!Array.isArray(data.petrova)) issues.push("level.petrova must be an array");
+    else {
+      for (let i = 0; i < data.petrova.length; i++) {
+        const line = readPetrova(data.petrova[i], `level.petrova[${i}]`, issues);
+        if (!line) continue;
+        if (!bodies.some((body) => body.id === line.from)) {
+          issues.push(`level.petrova[${i}].from "${line.from}" does not match a body`);
+        }
+        if (!bodies.some((body) => body.id === line.to)) {
+          issues.push(`level.petrova[${i}].to "${line.to}" does not match a body`);
+        }
+        petrova.push(line);
+      }
+    }
+  }
+  let fit: ShipFit | undefined;
+  if (Object.prototype.hasOwnProperty.call(data, "fit")) fit = readFit(data.fit, "level.fit", issues);
+  let astro: AstroTank | undefined;
+  if (Object.prototype.hasOwnProperty.call(data, "astro")) astro = readAstroTank(data.astro, "level.astro", issues);
+  if (issues.length > 0) throw new LevelError(source, issues);
+
+  if (petrova.length > 0) level.petrova = petrova;
+  if (fit) level.fit = fit;
+  if (astro) level.astro = astro;
   return level;
 }
 
