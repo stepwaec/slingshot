@@ -5,9 +5,7 @@ import {
   canLaunch,
   canPause,
   createGame,
-  gravityLabel,
   isEditing,
-  levelHasAstro,
   loadLevel,
   missionResult,
   nodeIncoming,
@@ -46,6 +44,8 @@ import { hullRatio, hullSegmentsLit, hullTone, stressLevel } from "./render/ship
 import { burnChipText } from "./render/node-style";
 import { sampleBurnAnim, tailFromBurn, thrustDuration } from "./render/burn-anim";
 import { theme } from "./render/theme";
+import { toggleLayer, type LayersPanelState } from "./game/layers";
+import { mountLayersMenu, syncLayersMenu } from "./hud/layers-menu";
 import { ASTRO_CAPACITY, ASTRO_DV, curvePoint, petrovaCurve } from "./sim/astrophage";
 
 const levels: readonly Level[] = [...LEVELS, observatory];
@@ -120,23 +120,20 @@ const deadlineFill = required<HTMLElement>("#deadline-fill");
 const routeActions = required<HTMLElement>("#route-actions");
 const routeSafe = required<HTMLButtonElement>("#route-safe");
 const routeDeep = required<HTMLButtonElement>("#route-deep");
-const gravityButton = required<HTMLButtonElement>("#gravity");
-const magnetismButton = required<HTMLButtonElement>("#magnetism");
-const radiationButton = required<HTMLButtonElement>("#radiation");
-const astrophageButton = required<HTMLButtonElement>("#astrophage");
+const layersButton = required<HTMLButtonElement>("#layers");
+const layersPanelEl = required<HTMLElement>("#layers-panel");
 const astroRow = required<HTMLElement>("#astro-row");
 const astroValue = required<HTMLElement>("#astro-value");
 const astroFill = required<HTMLElement>("#astro-fill");
 const astroGhost = required<HTMLElement>("#astro-ghost");
 const astroSpark = required<HTMLElement>("#astro-spark");
 const astroChip = required<HTMLElement>("#astro-chip");
-const astroLegend = required<HTMLElement>("#astro-legend");
 const astroChips = required<HTMLElement>("#astro-chips");
 const doseBlock = required<HTMLElement>("#dose");
 const doseValue = required<HTMLElement>("#dose-value");
 const doseFill = required<HTMLElement>("#dose-fill");
 const doseRate = required<HTMLElement>("#dose-rate");
-const magLegend = required<HTMLElement>("#mag-legend");
+const layersPanel: LayersPanelState = { open: false };
 
 const game = createGame();
 if (import.meta.env.DEV) {
@@ -180,6 +177,10 @@ levelSelect.addEventListener("change", () => {
   framed = true;
 });
 
+mountLayersMenu(layersPanelEl, (id) => {
+  toggleLayer(game, id);
+});
+
 bindInput(
   game,
   {
@@ -193,10 +194,8 @@ bindInput(
     pauseButton,
     resumeButton,
     slowButton,
-    gravityButton,
-    magnetismButton,
-    radiationButton,
-    astrophageButton,
+    layersButton,
+    layersPanel,
   },
   () => ({ width: canvas.clientWidth, height: canvas.clientHeight }),
   () => frameLevel(game.camera, canvas.clientWidth, canvas.clientHeight, game.level),
@@ -287,9 +286,6 @@ function syncDose(current: Game): void {
   const per = current.level.physics?.dosePerD1 ?? 0;
   const armed = per > 0 && limit > 0;
   doseBlock.hidden = !armed;
-  radiationButton.hidden = !armed;
-  const on = armed && current.radiation;
-  radiationButton.setAttribute("aria-pressed", on ? "true" : "false");
   if (!armed) return;
   const pose = current.mode === "flying" ? current.ship : current.initial;
   const dose = current.mode === "flying" ? current.ship.dose : current.prediction.final.dose;
@@ -311,11 +307,6 @@ function syncAstro(current: Game): void {
   const fitted = current.level.fit?.engine === "spin";
   astroRow.hidden = !fitted;
   app.dataset.astro = fitted ? "on" : "off";
-  const armed = levelHasAstro(current.level);
-  astrophageButton.hidden = !armed;
-  const on = armed && current.astrophage;
-  astrophageButton.setAttribute("aria-pressed", on ? "true" : "false");
-  astroLegend.hidden = !(on && isEditing(current));
   if (!fitted) {
     astroChip.hidden = true;
     astroChips.replaceChildren();
@@ -418,23 +409,6 @@ function syncAstroChips(current: Game, editing: boolean): void {
   }
 }
 
-function syncMagnetism(current: Game): void {
-  const show = hasMagneticBody(current.level.bodies);
-  magnetismButton.hidden = !show;
-  const on = show && current.magnetism;
-  magnetismButton.setAttribute("aria-pressed", on ? "true" : "false");
-  magLegend.hidden = !(on && isEditing(current));
-}
-
-function syncGravity(current: Game): void {
-  const label = gravityLabel(current.gravity);
-  // Rewriting the text node every frame makes Safari drop the next click:
-  // mousedown and mouseup land on different nodes, so the map stays on.
-  if (gravityButton.textContent !== label) gravityButton.textContent = label;
-  const pressed = current.gravity === "off" ? "false" : "true";
-  if (gravityButton.getAttribute("aria-pressed") !== pressed) gravityButton.setAttribute("aria-pressed", pressed);
-}
-
 function syncHud(current: Game): void {
   const width = canvas.clientWidth;
   const height = canvas.clientHeight;
@@ -443,8 +417,7 @@ function syncHud(current: Game): void {
   const planning = current.mode === "planning";
   const editing = isEditing(current);
   app.dataset.mode = current.mode;
-  syncGravity(current);
-  syncMagnetism(current);
+  syncLayersMenu(current, layersPanel, layersButton, layersPanelEl);
   syncDose(current);
   syncAstro(current);
   modeLabel.textContent = planning ? "Planning" : current.mode === "paused" ? "Paused" : "In flight";

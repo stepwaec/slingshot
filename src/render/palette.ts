@@ -32,6 +32,12 @@ export const palette = {
   arrow: "#FFFFFF",
   text: "#ECF0FA",
   textMuted: "#8B95B5",
+  /** design/style.md §20. The button fill when any layer is on. Same hex as the HUD accent. */
+  layersOn: "#5EA0FF",
+  /** Unavailable rows, their reasons, and the in-flight note. */
+  layersDim: "#5E6788",
+  /** Count badge ink, and the label on the accent button. */
+  layersInk: "#050710",
   fuelFull: "#3DE0C2",
   fuelLow: "#FFC857",
   fuelCritical: "#FF5A5F",
