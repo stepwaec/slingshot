@@ -22,11 +22,9 @@ describe("compact object shader", () => {
     expect(STAR_PARAMS["white-dwarf"].smooth).toBe(1);
     expect(shaderFamily(body({ kind: "star", look: "sun" }))).toBe("star");
     expect(frost.bodies.some((item) => compactKey(item) !== null)).toBe(false);
-    const neutron = body({ kind: "star", look: "neutron" });
-    const sun = body({ kind: "star", look: "sun" });
-    expect(usesShader(neutron, false)).toBe(true);
-    expect(usesShader(sun, false)).toBe(false);
-    expect(usesShader(sun, true)).toBe(true);
+    expect(usesShader(body({ kind: "star", look: "neutron" }))).toBe(true);
+    expect(usesShader(body({ kind: "star", look: "sun" }))).toBe(true);
+    expect(usesShader(body({ kind: "star", look: "tau-ceti" }))).toBe(false);
   });
 
   it("runs pulsar beams on the level reach and the magnetic axis", () => {

@@ -26,14 +26,9 @@ export function shaderFamily(body: Body): ShaderFamily | null {
   return null;
 }
 
-/**
- * Compact objects always use the shader. The other families still follow
- * `rendering.shaders` / `?sprites=1` until R2.6 removes that flag.
- */
-export function usesShader(body: Body, shadersOn: boolean): boolean {
-  const family = shaderFamily(body);
-  if (family === "compact") return true;
-  return shadersOn && family !== null;
+/** A body with a shader family is always drawn that way. There is no sprite flag. */
+export function usesShader(body: Body): boolean {
+  return shaderFamily(body) !== null;
 }
 
 export function createBodyShader(body: Body): THREE.ShaderMaterial | null {

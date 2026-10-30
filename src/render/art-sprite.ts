@@ -2,7 +2,7 @@ import * as THREE from "three";
 import type { Body, Nebula } from "../sim/physics";
 import { zoomBucket } from "./ship-art";
 import type { Theme } from "./theme";
-import { isSolLook, solArt, solLight } from "./sol-art";
+import { solArt } from "./sol-art";
 import { bakedSvgUrl, rasterSvg, type SvgBakeOptions } from "./svg-bake";
 
 /**
@@ -31,20 +31,16 @@ export interface ArtFit {
   bake?: SvgBakeOptions;
 }
 
-const UP_RIGHT = { x: 1, y: 1 };
-const DOWN_LEFT = { x: -1, y: -1 };
-
 export function artForBody(body: Body, theme: Theme): ArtFit | null {
-  if (isSolLook(body.look)) {
+  if (body.look === "voyager" || body.look === "arrokoth") {
     const art = solArt(body.look);
-    const spin = art.mode === "locked" ? "light" : "none";
-    return fit(theme.assets[art.asset], art.viewW, art.viewH, art.svgRadius, spin, art.mode === "prop" || art.mode === "sun" ? null : solLight());
+    const url = body.look === "voyager" ? theme.assets.solVoyager : theme.assets.solArrokoth;
+    return fit(url, art.viewW, art.viewH, art.svgRadius, "none", null);
   }
   const assets = theme.assets;
   if (body.kind === "rogue") {
     return { ...fit(assets.rogue, 260, 200, 36, "none", null), ox: 100 - 130, oy: 0, hide: ["rpDrift"] };
   }
-  if (body.kind === "blackhole") return fit(assets.blackHole, 320, 320, 22, "none", null);
   if (body.look === "comet") {
     return {
       ...fit(assets.comet, 520, 240, 5, "tail", null),
@@ -53,41 +49,10 @@ export function artForBody(body: Body, theme: Theme): ArtFit | null {
       hide: ["cmHarvest"],
     };
   }
-  if (body.look === "gas-giant") return fit(assets.gasGiant, 160, 160, 44, "light", UP_RIGHT);
-  if (body.look === "gas-ringed") return fit(assets.gasRinged, 320, 200, 44, "light", UP_RIGHT);
-  if (body.look === "ice-ring") return fit(assets.iceRing, 400, 240, 44, "light", UP_RIGHT);
-  if (body.look === "moon-icy") return fit(assets.moonIcy, 48, 48, 12, "light", UP_RIGHT);
-  if (body.look === "moon-volcanic") return fit(assets.moonVolcanic, 48, 48, 13, "light", UP_RIGHT);
-  if (body.look === "dwarf") return fit(assets.dwarf, 40, 40, 10, "light", UP_RIGHT);
-  if (body.look === "rocky") return fit(assets.rocky, 120, 120, 30, "light", UP_RIGHT);
-  if (body.look === "ice") return fit(assets.iceWorld, 120, 120, 28, "light", UP_RIGHT);
-  if (body.look === "lava") return fit(assets.lava, 120, 120, 26, "light", UP_RIGHT);
-  if (body.look === "toxic") return fit(assets.toxic, 120, 120, 32, "light", UP_RIGHT);
-  if (body.look === "cracked") return fit(assets.cracked, 120, 120, 27, "light", UP_RIGHT);
-  if (body.look === "moon" || body.kind === "moon") return fit(assets.moon, 60, 60, 14, "light", UP_RIGHT);
   if (body.look === "tau-hot") return tauPlanet(assets.tauCeti, "tce", 12);
   if (body.look === "tau-cold") return tauPlanet(assets.tauCeti, "tcf", 15);
   if (body.look === "tau-green") return tauPlanet(assets.tauCeti, "tca", 18);
-  if (body.kind === "target") return fit(assets.planetX, 240, 240, 30, "light", DOWN_LEFT);
-  if (body.kind === "home") return fit(assets.planetStart, 120, 120, 34, "light", UP_RIGHT);
-  if (body.look === "binary-hot") {
-    return {
-      ...fit(assets.binaryStar, 400, 400, 30, "none", null),
-      bake: { tag: "hot", prep: keepBinary("bnPrimary") },
-    };
-  }
-  if (body.look === "binary-cool") {
-    return {
-      ...fit(assets.binaryStar, 400, 400, 20, "none", null),
-      bake: { tag: "cool", prep: keepBinary("bnSecondary") },
-    };
-  }
-  if (body.look === "white-dwarf") return fit(assets.whiteDwarf, 240, 240, 16, "none", null);
-  if (body.look === "red-giant") return fit(assets.redGiant, 600, 600, 120, "none", null);
-  if (body.look === "pulsar") return fit(assets.pulsar, 480, 480, 8, "beam", null);
-  if (body.look === "magnetar") return fit(assets.magnetar, 320, 320, 9, "none", null);
-  if (body.look === "neutron") return fit(assets.neutronStar, 120, 120, 8, "neutron", null);
-  if (body.kind === "star") return fit(assets.star, 400, 400, 46, "none", null);
+  if (body.look === "tau-ceti") return fit(assets.star, 400, 400, 46, "none", null);
   return null;
 }
 
@@ -167,17 +132,6 @@ function fit(
   light: ArtFit["light"],
 ): ArtFit {
   return { url, viewW, viewH, svgRadius, ox: 0, oy: 0, light, spin };
-}
-
-function keepBinary(which: "bnPrimary" | "bnSecondary"): (doc: Document) => void {
-  return (doc) => {
-    const root = doc.getElementById("binaryStar");
-    if (!root) return;
-    for (const child of [...root.children]) {
-      if (child.id !== which) child.remove();
-    }
-    root.querySelectorAll("animateMotion").forEach((node) => node.remove());
-  };
 }
 
 /** Longest side, in pixels. A zoomed-in sun is several full-viewBox layers. */

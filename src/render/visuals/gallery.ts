@@ -29,17 +29,8 @@ import {
 import { shaderFamily } from "../shaders/families";
 import { planetKey } from "../shaders/planet-params";
 import { zoomBucket } from "../ship-art";
-import {
-  SOL_PROMINENCES,
-  isSolLook,
-  prepSol,
-  prepSolSun,
-  solArt,
-  solLight,
-  type SolArt,
-  type SolSunPart,
-} from "../sol-art";
-import { keepBase, keepHalo, keepLight, stripsFor, surfaceKind, type StripSpec, type SurfaceKind } from "../surface-art";
+import { isSolLook, prepSol, solArt, solLight, type SolArt } from "../sol-art";
+import { keepHalo, type StripSpec } from "../surface-art";
 import { rasterMarkup } from "../svg-bake";
 import { shader, srgbVec } from "./materials";
 import { beamAxis, bodyPose, bodyPresent, type Body, type Nebula } from "../../sim/physics";
@@ -55,16 +46,6 @@ import { disposeObject, type Visual, type VisualFactory, type VisualFrame } from
  * turns under a fixed limb, and the flare keeps the 22 s timeline.
  */
 export const createGallery: VisualFactory = (theme, level) => new GalleryVisual(theme, level);
-
-const SURFACE_ROOT: Record<SurfaceKind, { id: string; fill: string }> = {
-  ocean: { id: "planetStart", fill: "#1E5BD6" },
-  planetx: { id: "planetX", fill: "#17B39C" },
-  giant: { id: "gasBanded", fill: "#EBA75E" },
-  moon: { id: "moon", fill: "#A6A2B6" },
-  "moon-icy": { id: "moonIcy", fill: "#DCE4FF" },
-  "moon-volcanic": { id: "moonVolcanic", fill: "#E0C25A" },
-  dwarf: { id: "dwarf", fill: "#CDA273" },
-};
 
 type Role =
   | "body"
@@ -133,9 +114,8 @@ class GalleryVisual implements Visual {
         if (planetKey(body) === "planetx") this.addPlanetHalo(body);
         continue;
       }
-      if (isSolLook(body.look)) {
-        if (body.look === "sol-sun") this.addSolSun(body);
-        else this.addSol(body);
+      if (body.look === "voyager" || body.look === "arrokoth") {
+        this.addSol(body);
         continue;
       }
       if (isSun(body)) {
@@ -146,26 +126,9 @@ class GalleryVisual implements Visual {
         this.addComet(body);
         continue;
       }
-      if (body.look === "pulsar") {
-        this.addPulsar(body);
-        continue;
-      }
-      if (body.look === "magnetar") {
-        this.addMagnetar(body);
-        continue;
-      }
-      if (body.look === "red-giant") {
-        this.addRedGiant(body);
-        continue;
-      }
       if (body.look === "tau-hot" || body.look === "tau-cold" || body.look === "tau-green") {
         const fit = artForBody(body, theme);
         if (fit) this.add(fit, body.id, body, null, "body", 0);
-        continue;
-      }
-      const kind = surfaceKind(body);
-      if (kind) {
-        this.addSurface(body, kind);
         continue;
       }
       const fit = artForBody(body, theme);
@@ -214,38 +177,6 @@ class GalleryVisual implements Visual {
   }
 
   /** sol/sun.svg: the same living layers as the library sun, plus spots under the flame ring. */
-  private addSolSun(body: Body): void {
-    const base = artForBody(body, this.theme);
-    const art = solArt("sol-sun");
-    if (!base) return;
-    const layer = (part: SolSunPart, tag: string, promId?: string): ArtFit => ({
-      ...base,
-      spin: "none",
-      light: null,
-      bake: { tag, prep: (doc) => prepSolSun(doc, part, promId) },
-    });
-    this.add(layer("haze", "sol-haze"), `${body.id}-haze`, body, null, "haze", 0, true);
-    this.add(layer("wisp", "sol-wisp"), `${body.id}-wisp`, body, null, "wisp", 1);
-    this.add(layer("flame", "sol-flame"), `${body.id}-flame`, body, null, "flame", 2);
-    for (const prom of SOL_PROMINENCES) {
-      this.add(layer("prom", prom.id, prom.id), `${body.id}-${prom.id}`, body, null, "prom", 3, false, prom);
-    }
-    this.add(layer("flare", "sol-flare"), `${body.id}-flare`, body, null, "flare", 4);
-    this.add(layer("grain", "sol-grain"), `${body.id}-grain`, body, null, "grain", 5);
-    for (const spec of art.strips) {
-      const fit: ArtFit = {
-        ...base,
-        viewW: spec.viewW,
-        viewH: spec.viewH,
-        spin: "none",
-        light: null,
-        bake: { tag: spec.id, prep: spec.prep },
-      };
-      this.addStrip(fit, `${body.id}-${spec.id}`, body, spec);
-    }
-    this.add(layer("limb", "sol-limb"), `${body.id}-limb`, body, null, "limb", 7);
-  }
-
   private addSol(body: Body): void {
     if (!isSolLook(body.look)) return;
     const art = solArt(body.look);
@@ -343,47 +274,11 @@ class GalleryVisual implements Visual {
     void this.addSparkles(body, base);
   }
 
-  private addPulsar(body: Body): void {
-    const base = artForBody(body, this.theme);
-    if (!base) return;
-    const beams: ArtFit = { ...base, spin: "beam", bake: { tag: "pulsar-beams", prep: pulsarBeams } };
-    const star: ArtFit = { ...base, spin: "none", bake: { tag: "pulsar-body", prep: pulsarBody } };
-    this.add(beams, `${body.id}-beams`, body, null, "beams", 0);
-    this.add(star, body.id, body, null, "body", 1);
-  }
-
-  /** Planet X's mint halo stays a sprite. planet.frag does not draw it. */
   private addPlanetHalo(body: Body): void {
     const base = artForBody(body, this.theme);
     if (!base) return;
     const halo: ArtFit = { ...base, spin: "none", bake: { tag: "px-halo", prep: keepHalo } };
     this.add(halo, `${body.id}-halo`, body, null, "halo", 0);
-  }
-
-  private addSurface(body: Body, kind: SurfaceKind): void {
-    const base = artForBody(body, this.theme);
-    if (!base) return;
-    const root = SURFACE_ROOT[kind];
-    const rootId = root.id;
-    const fill = root.fill;
-    const disc: ArtFit = { ...base, spin: "none", bake: { tag: `${kind}-base`, prep: (doc) => keepBase(doc, rootId, fill) } };
-    const light: ArtFit = { ...base, bake: { tag: `${kind}-light-dayrim`, prep: (doc) => keepLight(doc, rootId) } };
-    if (kind === "planetx") {
-      const halo: ArtFit = { ...base, spin: "none", bake: { tag: "px-halo", prep: keepHalo } };
-      this.add(halo, `${body.id}-halo`, body, null, "halo", 0);
-    }
-    this.add(disc, `${body.id}-base`, body, null, "body", 1);
-    for (const spec of stripsFor(kind)) {
-      const fit: ArtFit = {
-        ...base,
-        viewW: spec.viewW,
-        viewH: spec.viewH,
-        spin: "none",
-        bake: { tag: spec.id, prep: spec.prep },
-      };
-      this.addStrip(fit, `${body.id}-${spec.id}`, body, spec);
-    }
-    this.add(light, `${body.id}-light`, body, null, "body", 5);
   }
 
   private addStrip(fit: ArtFit, name: string, body: Body, spec: StripSpec): void {
@@ -398,21 +293,6 @@ class GalleryVisual implements Visual {
     void this.paint(mesh, fit, false, 1, 1, this.bakeGen);
   }
 
-  private addRedGiant(body: Body): void {
-    const base = artForBody(body, this.theme);
-    if (!base) return;
-    const star: ArtFit = { ...base, bake: { tag: "rg-star", prep: redGiantStar } };
-    const atmo: ArtFit = { ...base, bake: { tag: "rg-atmo", prep: redGiantAtmo } };
-    const grain: ArtFit = { ...base, bake: { tag: "rg-grain", prep: redGiantGrain } };
-    const flare: ArtFit = { ...base, bake: { tag: "rg-flare", prep: redGiantFlare } };
-    this.add(atmo, `${body.id}-atmo`, body, null, "atmo", 0);
-    this.add(grain, `${body.id}-grain`, body, null, "grain", 1);
-    this.add(star, `${body.id}-star`, body, null, "body", 2);
-    this.add(flare, `${body.id}-flare`, body, null, "flare", 3);
-    this.addDragEdge(body);
-  }
-
-  /** Dashed drag boundary. Stays its own overlay when the star is a shader. */
   private addDragEdge(body: Body): void {
     const base = artForBody(body, this.theme);
     if (!base) return;
@@ -429,61 +309,6 @@ class GalleryVisual implements Visual {
     edge.renderOrder = 4;
     this.object.add(edge);
     this.sprites.push({ mesh: edge, fit: base, body, cloud: null, role: "edge" });
-  }
-
-  private addMagnetar(body: Body): void {
-    const base = artForBody(body, this.theme);
-    if (!base) return;
-    const star: ArtFit = { ...base, spin: "none", bake: { tag: "mg-body", prep: magnetarBody } };
-    this.add(star, body.id, body, null, "body", 2);
-    for (const flicker of MAG_FLICKER) {
-      const layer: ArtFit = {
-        ...base,
-        spin: "none",
-        bake: { tag: `mg-${flicker.dur}`, prep: magnetarFlicker(flicker.dur) },
-      };
-      const mesh = artMesh(layer, `${body.id}-${flicker.dur}`);
-      mesh.renderOrder = 1;
-      mesh.userData.flicker = flicker;
-      this.object.add(mesh);
-      this.sprites.push({ mesh, fit: layer, body, cloud: null, role: "body" });
-      void this.paint(mesh, layer, false, 1, 1, this.bakeGen);
-    }
-    for (const seed of ["A", "B"] as const) {
-      const layer: ArtFit = { ...base, spin: "none", bake: { tag: `mg-noise-${seed}`, prep: magnetarNoise(seed) } };
-      this.add(layer, `${body.id}-noise-${seed}`, body, null, seed === "A" ? "body" : "body", 0);
-      const mesh = this.sprites[this.sprites.length - 1]?.mesh;
-      if (mesh) mesh.userData.noise = seed;
-    }
-    const quake = new THREE.Mesh(
-      new THREE.PlaneGeometry(2, 2),
-      shader(quakeFrag, {
-        uColor: { value: srgbVec("#FFFFFF") },
-        uAlpha: { value: 0 },
-      }),
-    );
-    quake.name = `${body.id}-quake`;
-    quake.frustumCulled = false;
-    quake.renderOrder = 3;
-    this.object.add(quake);
-    this.sprites.push({ mesh: quake, fit: base, body, cloud: null, role: "quake" });
-    const flash = new THREE.Mesh(
-      new THREE.CircleGeometry(1, 32),
-      new THREE.MeshBasicMaterial({
-        color: "#FFFFFF",
-        transparent: true,
-        opacity: 0,
-        depthTest: false,
-        depthWrite: false,
-        toneMapped: false,
-      }),
-    );
-    flash.name = `${body.id}-flash`;
-    flash.frustumCulled = false;
-    flash.renderOrder = 4;
-    this.object.add(flash);
-    this.sprites.push({ mesh: flash, fit: base, body, cloud: null, role: "flash" });
-    this.watchLive(body, base, artMesh(base, `${body.id}-dashes`), magnetarDashes, 1);
   }
 
   private addKnot(body: Body, base: ArtFit): void {
@@ -543,24 +368,6 @@ class GalleryVisual implements Visual {
     holder.remove();
   }
 
-  private watchLive(
-    body: Body,
-    fit: ArtFit,
-    mesh: THREE.Mesh,
-    edit: (doc: Document, seconds: number) => void,
-    order: number,
-  ): void {
-    mesh.renderOrder = order;
-    mesh.frustumCulled = false;
-    this.object.add(mesh);
-    this.sprites.push({ mesh, fit, body, cloud: null, role: "body" });
-    void fetch(fit.url)
-      .then((res) => res.text())
-      .then((svg) => {
-        const size = rasterPixels(fit.viewW, fit.viewH);
-        this.live.push({ mesh, svg, width: size.width, height: size.height, edit, last: -1 });
-      });
-  }
 
   private trackLive(mesh: THREE.Mesh, fit: ArtFit, edit: (doc: Document, seconds: number) => void): void {
     void fetch(fit.url)
@@ -1049,9 +856,6 @@ function stripMotion(node: Element | null): void {
   node?.querySelectorAll("animate, animateTransform").forEach((item) => item.remove());
 }
 
-function pulsarBody(doc: Document): void {
-  doc.getElementById("puSweep")?.remove();
-}
 
 function cometKnot(doc: Document): void {
   const ellipse = doc.querySelector("#cmTails ellipse");
@@ -1068,145 +872,6 @@ function cometKnot(doc: Document): void {
   svg.append(ellipse);
 }
 
-function redGiantStar(doc: Document): void {
-  doc.getElementById("rgAtmosphere")?.remove();
-  doc.getElementById("rgStarFlare")?.remove();
-  doc.querySelector("#rgStarDisc circle[filter]")?.remove();
-}
-
-function redGiantGrain(doc: Document): void {
-  const circle = doc.querySelector("#rgStarDisc circle[filter]");
-  if (!circle) return;
-  keepAncestors(circle);
-}
-
-function redGiantFlare(doc: Document): void {
-  const flare = doc.getElementById("rgStarFlare");
-  if (!flare) return;
-  flare.removeAttribute("opacity");
-  flare.querySelectorAll("animate").forEach((node) => node.remove());
-  keepAncestors(flare);
-}
-
-function keepAncestors(node: Element): void {
-  let current = node;
-  const svg = node.ownerDocument.documentElement;
-  while (current.parentElement && current.parentElement !== svg) {
-    const parent = current.parentElement;
-    for (const child of [...parent.children]) {
-      if (child !== current) child.remove();
-    }
-    current = parent;
-  }
-}
-
-function redGiantAtmo(doc: Document): void {
-  const atmo = doc.getElementById("rgAtmosphere");
-  if (!atmo) return;
-  atmo.querySelectorAll("animate, animateTransform").forEach((node) => node.remove());
-  for (const child of [...atmo.children]) {
-    if (child.getAttribute("stroke-dasharray")) child.remove();
-  }
-  doc.getElementById("rgStar")?.remove();
-}
-
-function magnetarBody(doc: Document): void {
-  doc.getElementById("mgInterference")?.remove();
-  const field = doc.getElementById("mgField");
-  if (field) {
-    for (const child of [...field.children]) {
-      if (child.localName === "g") child.remove();
-    }
-  }
-  const root = doc.getElementById("magnetar");
-  for (const child of [...(root?.children ?? [])]) {
-    if (child.getAttribute("stroke-width") === "1.5" || child.getAttribute("r") === "12") child.remove();
-  }
-  doc.querySelectorAll("animate, animateTransform").forEach((node) => node.remove());
-}
-
-function magnetarFlicker(dur: number): (doc: Document) => void {
-  return (doc) => {
-    const root = doc.getElementById("magnetar");
-    for (const child of [...(root?.children ?? [])]) {
-      if (child.id !== "mgField") child.remove();
-    }
-    const field = doc.getElementById("mgField");
-    for (const group of [...(field?.children ?? [])]) {
-      if (group.localName === "circle") {
-        group.remove();
-        continue;
-      }
-      const anim = group.querySelector("animate");
-      if (anim?.getAttribute("dur") !== `${dur}s`) {
-        group.remove();
-        continue;
-      }
-      group.querySelectorAll("[stroke-dasharray]").forEach((node) => node.remove());
-      group.querySelectorAll("animate").forEach((node) => node.remove());
-      group.setAttribute("opacity", "1");
-    }
-  };
-}
-
-function magnetarNoise(seed: "A" | "B"): (doc: Document) => void {
-  return (doc) => {
-    const root = doc.getElementById("magnetar");
-    const noise = doc.getElementById("mgInterference");
-    for (const child of [...(root?.children ?? [])]) {
-      if (child !== noise) child.remove();
-    }
-    const groups = [...(noise?.children ?? [])];
-    const keep = seed === "A" ? groups[0] : groups[1];
-    for (const group of groups) {
-      if (group !== keep) group.remove();
-    }
-    keep?.querySelectorAll("animate").forEach((node) => node.remove());
-    noise?.setAttribute("opacity", "1");
-  };
-}
-
-function magnetarDashes(doc: Document, seconds: number): void {
-  const root = doc.getElementById("magnetar");
-  for (const child of [...(root?.children ?? [])]) {
-    if (child.id !== "mgField") child.remove();
-  }
-  const field = doc.getElementById("mgField");
-  field?.querySelectorAll("circle").forEach((node) => node.remove());
-  for (const group of [...(field?.children ?? [])]) {
-    const solid = [...group.children].find((node) => node.localName === "path" && !node.getAttribute("stroke-dasharray"));
-    solid?.remove();
-    const anim = group.querySelector("animate");
-    const dashAnim = group.querySelector("animate[attributeName='stroke-dashoffset']");
-    const dur = Number.parseFloat(dashAnim?.getAttribute("dur") ?? "1");
-    const from = Number.parseFloat(dashAnim?.getAttribute("from") ?? "0");
-    const to = Number.parseFloat(dashAnim?.getAttribute("to") ?? "0");
-    const u = ((seconds % dur) + dur) % dur / (dur || 1);
-    const dash = group.querySelector("[stroke-dasharray]");
-    dash?.setAttribute("stroke-dashoffset", String(from + (to - from) * u));
-    anim?.remove();
-    dashAnim?.remove();
-    group.setAttribute("opacity", "1");
-  }
-}
-
-function pulsarBeams(doc: Document): void {
-  const root = doc.getElementById("pulsar");
-  if (!root) return;
-  for (const child of [...root.children]) {
-    if (child.id !== "puSweep") child.remove();
-  }
-  root.querySelectorAll("animateTransform").forEach((node) => node.remove());
-}
-
-const MAG_FLICKER = [
-  { dur: 1.7, values: [0.85, 1, 0.7, 1, 0.9, 0.6, 1] },
-  { dur: 2.3, values: [1, 0.75, 1, 0.9, 0.65, 1, 0.85] },
-  { dur: 3.1, values: [0.9, 1, 0.8, 0.6, 1, 0.95, 0.9] },
-  { dur: 2.7, values: [0.85, 1, 0.7, 1, 0.9, 0.6, 1] },
-  { dur: 1.9, values: [1, 0.75, 1, 0.9, 0.65, 1, 0.85] },
-  { dur: 3.4, values: [0.9, 1, 0.8, 0.6, 1, 0.95, 0.9] },
-] as const;
 
 const SPARKLES = [
   { path: "cmS0", radius: 1.1, dur: 9, begin: 0 },
@@ -1232,19 +897,6 @@ void main() {
   float dash = fract((along - uOffset) / 16.0);
   if (dash > 0.625) discard;
   if (ring <= 0.0) discard;
-  gl_FragColor = vec4(uColor, uAlpha * ring);
-}
-`;
-
-const quakeFrag = /* glsl */ `
-varying vec2 vLocal;
-uniform vec3 uColor;
-uniform float uAlpha;
-void main() {
-  float r = length(vLocal);
-  float w = 1.5 * fwidth(r);
-  float ring = 1.0 - smoothstep(0.0, w, abs(r - 1.0));
-  if (ring <= 0.0 || uAlpha <= 0.0) discard;
   gl_FragColor = vec4(uColor, uAlpha * ring);
 }
 `;

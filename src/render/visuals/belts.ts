@@ -71,21 +71,12 @@ class BeltsVisual implements Visual {
   private readonly fields: ShaderField[] = [];
   private readonly g: number;
 
-  constructor(theme: Theme, level: Parameters<VisualFactory>[1]) {
+  constructor(_theme: Theme, level: Parameters<VisualFactory>[1]) {
     this.object.name = "belts";
     this.bodies = level.bodies;
     this.g = level.g;
     const belts = level.belts ?? [];
     this.rocks = belts.length > 0 ? placeBelts(belts) : [];
-    const asset = belts.some((belt) => belt.tier === "kuiper")
-      ? theme.assets.kuiper
-      : belts.some((belt) => belt.tier === "dense")
-        ? theme.assets.beltDense
-        : belts.some((belt) => belt.tier === "medium")
-          ? theme.assets.beltMedium
-          : theme.assets.beltSparse;
-    this.object.userData.asset = asset;
-
     for (const belt of belts) this.fields.push(this.makeField(belt));
 
     for (const belt of belts) {
