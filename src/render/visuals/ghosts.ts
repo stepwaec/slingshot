@@ -6,11 +6,15 @@ import {
   aheadFade,
   burnsAhead,
   collisionPulse,
+  chipBox,
   ghostChip,
   ghostDraw,
+  keptLabels,
+  labelRank,
   pickGhostKind,
   planGhosts,
   previewGhosts,
+  retainMoonGhosts,
   shipAtStep,
   shipInside,
   trackSamples,
@@ -744,15 +748,42 @@ class GhostsVisual implements Visual {
       drawn,
     );
     for (let i = 0; i < extras.length; i++) slots.push(extras[i]);
+    const focused = retainMoonGhosts(slots, approaches, bodies);
     const origin = game.mode === "paused" ? game.ship : game.initial;
     const fallback = [origin, game.prediction.final];
     const seconds = frame.now / 1000;
     const period = spec.captureDash + spec.captureGap;
     const captureOffset = -((seconds * spec.captureCrawl) % period);
     const pulse = collisionPulse(seconds, spec.collisionPeriod, spec.collisionHigh, spec.collisionLow);
+    const chips = focused.map((slot) => {
+      const body = bodies[slot.bodyIndex];
+      const time = slot.step * game.level.dt;
+      const pose = bodyPose(body, time, game.level.bodies, game.level.g);
+      const ship = shipAtStep(game.prediction.path, slot.step, fallback);
+      const colliding = !!ship && shipInside(ship.x, ship.y, pose.x, pose.y, body.radius);
+      const kind = pickGhostKind({
+        present: bodyPresent(body, time),
+        colliding,
+        arrival: slot.arrival,
+        cursor: slot.cursor,
+        target: body.id === activeId,
+      });
+      const label = ghostChip(kind, (slot.step - drawn) * game.level.dt);
+      if (!label) return { x: 0, y: 0, w: 0, h: 0, rank: 0 };
+      return chipBox(
+        pose.x,
+        pose.y,
+        Math.max(body.radius, spec.minRadius),
+        label,
+        zoom,
+        labelRank(kind, slot.step),
+        spec,
+      );
+    });
+    const showLabel = keptLabels(chips);
     let count = 0;
-    for (let i = 0; i < slots.length; i++) {
-      const slot = slots[i];
+    for (let i = 0; i < focused.length; i++) {
+      const slot = focused[i];
       const body = bodies[slot.bodyIndex];
       const time = slot.step * game.level.dt;
       const present = bodyPresent(body, time);
@@ -772,7 +803,7 @@ class GhostsVisual implements Visual {
       const ringPulse = kind === "collision" ? pulse : 1;
       const marker = this.ensure(count);
       count += 1;
-      const label = ghostChip(kind, (slot.step - drawn) * game.level.dt);
+      const label = showLabel[i] ? ghostChip(kind, (slot.step - drawn) * game.level.dt) : null;
       marker.show({
         theme: this.theme,
         draw,

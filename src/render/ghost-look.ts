@@ -362,6 +362,109 @@ export function shipAtStep(
   return null;
 }
 
+/**
+ * One ghost of each moon, at that moon's closest approach.
+ * Planets keep a ghost at every burn, scrub, and preview end.
+ */
+export function retainMoonGhosts(
+  slots: readonly GhostSlot[],
+  approaches: readonly { bodyId: string; step: number }[],
+  moving: readonly { id: string; kind: string }[],
+): GhostSlot[] {
+  const only = new Map<number, number>();
+  for (let i = 0; i < approaches.length; i++) {
+    const mark = approaches[i];
+    for (let b = 0; b < moving.length; b++) {
+      if (moving[b].id === mark.bodyId && moving[b].kind === "moon") only.set(b, mark.step);
+    }
+  }
+  if (only.size === 0) return slots.slice();
+  const out: GhostSlot[] = [];
+  const seen = new Set<number>();
+  for (let i = 0; i < slots.length; i++) {
+    const slot = slots[i];
+    const step = only.get(slot.bodyIndex);
+    if (step === undefined) {
+      out.push(slot);
+      continue;
+    }
+    if (slot.step !== step || seen.has(slot.bodyIndex)) continue;
+    seen.add(slot.bodyIndex);
+    out.push(slot);
+  }
+  return out;
+}
+
+/** Higher ranks stay when two time chips occupy the same screen box. Earlier steps win a tie. */
+export function labelRank(kind: GhostKind, step: number): number {
+  const base =
+    kind === "collision" ? 50 : kind === "arrival" ? 40 : kind === "cursor" ? 30 : kind === "gone" ? 20 : kind === "burn" ? 10 : 0;
+  return base - step * 1e-6;
+}
+
+/** Centre and size of a time chip, in world units. Width is a generous measure of the monospace chip. */
+export interface LabelChip {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  rank: number;
+}
+
+export function chipBox(
+  x: number,
+  y: number,
+  radius: number,
+  text: string,
+  zoom: number,
+  rank: number,
+  metrics: { chipHeight: number; chipOffsetX: number; chipOffsetY: number; chipFont: number; chipPad: number },
+): LabelChip {
+  const z = zoom > 0 ? zoom : 1;
+  const cssW = text.length * metrics.chipFont * 0.64 + metrics.chipPad * 2 + 4;
+  const w = cssW / z;
+  const h = metrics.chipHeight / z;
+  return {
+    x: x + radius + metrics.chipOffsetX / z + w / 2,
+    y: y - metrics.chipOffsetY / z,
+    w,
+    h,
+    rank,
+  };
+}
+
+function chipsOverlap(a: LabelChip, b: LabelChip): boolean {
+  return Math.abs(a.x - b.x) < (a.w + b.w) / 2 && Math.abs(a.y - b.y) < (a.h + b.h) / 2;
+}
+
+/**
+ * Which chips to draw. A lower-rank chip that collides with a kept one is
+ * dropped, so two +time labels never sit on top of each other.
+ */
+export function keptLabels(chips: readonly LabelChip[]): boolean[] {
+  const order: number[] = [];
+  for (let i = 0; i < chips.length; i++) order.push(i);
+  order.sort((a, b) => chips[b].rank - chips[a].rank || a - b);
+  const keep = new Array<boolean>(chips.length).fill(false);
+  const kept: number[] = [];
+  for (let n = 0; n < order.length; n++) {
+    const i = order[n];
+    const chip = chips[i];
+    if (!(chip.w > 0) || !(chip.h > 0)) continue;
+    let hit = false;
+    for (let k = 0; k < kept.length; k++) {
+      if (chipsOverlap(chip, chips[kept[k]])) {
+        hit = true;
+        break;
+      }
+    }
+    if (hit) continue;
+    keep[i] = true;
+    kept.push(i);
+  }
+  return keep;
+}
+
 /** Sim times strictly between the ends, one tick per `every` seconds. */
 export function trackTicks(t0: number, t1: number, every: number): number[] {
   const out: number[] = [];

@@ -12,8 +12,9 @@ import { disposeObject, type Visual, type VisualFactory, type VisualFrame } from
  * bright at the ship and transparent at the end, plus a tick every 10 s of
  * flight. Gold recharge stays a marker on that stroke. The closed capture
  * ellipse stays dotted. Samples come from the game prediction; nothing here
- * writes the sim. The stroke is drawn in the dominant body's frame, so an
- * orbit closes on that body instead of tracing its motion around the Sun.
+ * writes the sim. Before the Moon dominates the stroke is the inertial
+ * path. Once the Moon dominates, that stretch is drawn around the ghost
+ * Moon at closest approach.
  */
 export const createPath: VisualFactory = (theme) => new PathVisual(theme);
 
