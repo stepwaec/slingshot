@@ -1,7 +1,7 @@
 import { formatClock } from "./event-look";
 import { palette } from "./palette";
 import { stressLevel, type StressLevel } from "./ship-art";
-import { STRESS_WARN, tidalDamageRate, tidalStressAt, type SimConfig } from "../sim/physics";
+import { STRESS_WARN, tidalTensorAt, tidalWarns, type SimConfig } from "../sim/physics";
 import { theme } from "./theme";
 
 /**
@@ -124,14 +124,15 @@ export function tidalPathChip(
   let run: Run | null = null;
   for (let i = 0; i < path.length; i++) {
     const sample = path[i];
-    const stress = tidalStressAt(sample.x, sample.y, config, sample.step * dt);
-    if (stress >= STRESS_WARN) {
+    const field = tidalTensorAt(sample.x, sample.y, config, sample.step * dt);
+    const stress = field.stress;
+    if (tidalWarns(field.ordinary, field.compact) && stress >= STRESS_WARN) {
       if (!run || sample.step !== path[i - 1].step + 1) {
         if (run) best = prefer(best, run);
         run = { start: i, end: i, hull: 0, peak: -1, peakI: i };
       }
       run.end = i;
-      run.hull += tidalDamageRate(stress) * dt;
+      run.hull += stress * dt;
       if (stress > run.peak) {
         run.peak = stress;
         run.peakI = i;

@@ -1857,14 +1857,19 @@ const CLOSE_RATE = 18;
 /** Hull damage per second that draws the level-3 ring and the warning. */
 export const STRESS_WARN = 4;
 /**
- * The tidal layer and hull damage start at this stress.
- * S = 2GM L / r³ is summed for every mass. Below this line it is too faint
- * to draw or to hurt. 3.6 is above a low Earth orbit (about 2) and the
- * library-stage parking orbit (about 3.4), and below the gradient just
- * outside the Observatory black hole, neutron star, pulsar and magnetar,
- * and just outside the Sol Sun.
+ * Visibility line for compact objects, and the first step of the colour ramp.
+ * S = 2GM L / r³ is summed for every mass. 3.6 is the gradient just outside
+ * the Observatory black hole, and farther out from a neutron star, a pulsar
+ * and a magnetar. Those danger radii stay on this line.
  */
 export const TIDAL_VISIBLE = 3.6;
+
+/**
+ * Visibility line for every other mass. The 10× Moon's own gradient at its
+ * surface is about 6.097, so 6.2 puts that danger radius under the surface.
+ * Earth's shell shrinks with the same line and remains just above its surface.
+ */
+export const TIDAL_ORDINARY = 6.2;
 
 /**
  * Summed tidal tensor at a point. Every body with mass contributes.
@@ -1874,7 +1879,12 @@ export const TIDAL_VISIBLE = 3.6;
  * design/style.md §22 and design/threejs-notes.md §26.
  */
 export interface TidalTensor {
+  /** Physical sum, `2GM L / r³` over every mass. */
   stress: number;
+  /** Sum over masses that are not compact. */
+  ordinary: number;
+  /** Sum over white dwarfs, neutron stars, pulsars, magnetars and black holes. */
+  compact: number;
   txx: number;
   txy: number;
   tyy: number;
@@ -1891,6 +1901,8 @@ export function tidalStressAt(x: number, y: number, config: SimConfig, time: num
 export function tidalTensorAt(x: number, y: number, config: SimConfig, time: number): TidalTensor {
   const g = gravityConstant(config);
   let stress = 0;
+  let ordinary = 0;
+  let compact = 0;
   let txx = 0;
   let txy = 0;
   let tyy = 0;
@@ -1909,6 +1921,8 @@ export function tidalTensorAt(x: number, y: number, config: SimConfig, time: num
     if (!(r > body.radius)) continue;
     const radial = (2 * g * body.mass * SHIP_LENGTH) / (r2 * r);
     stress += radial;
+    if (isCompactBody(body)) compact += radial;
+    else ordinary += radial;
     const nx = dx / r;
     const ny = dy / r;
     const half = radial * 0.5;
@@ -1920,12 +1934,25 @@ export function tidalTensorAt(x: number, y: number, config: SimConfig, time: num
   const disc = Math.hypot(txx - tyy, 2 * txy);
   return {
     stress,
+    ordinary,
+    compact,
     txx,
     txy,
     tyy,
     stretch: (txx + tyy + disc) * 0.5,
     angle: 0.5 * Math.atan2(2 * txy, txx - tyy),
   };
+}
+
+/** True when a compact tide crosses 3.6 or any other tide crosses `TIDAL_ORDINARY`. */
+export function tidalWarns(ordinary: number, compact: number): boolean {
+  return compact >= TIDAL_VISIBLE || ordinary >= TIDAL_ORDINARY;
+}
+
+/** Hull per second from the physical stress, or 0 when `tidalWarns` is false. */
+export function tidalDamageAt(x: number, y: number, config: SimConfig, time: number): number {
+  const field = tidalTensorAt(x, y, config, time);
+  return tidalWarns(field.ordinary, field.compact) ? field.stress : 0;
 }
 
 /**
@@ -1937,10 +1964,15 @@ export function tidalDamageRate(stress: number): number {
   return stress >= TIDAL_VISIBLE ? stress : 0;
 }
 
-/** Radius where tidal stress reaches `TIDAL_VISIBLE`, or 0 when the surface is already quieter. */
+/**
+ * Radius where this body's own tide reaches its visibility line, or 0 when
+ * that radius is inside the body. Compact objects use `TIDAL_VISIBLE`.
+ * Everything else uses `TIDAL_ORDINARY`.
+ */
 export function tidalDangerRadius(body: Body, g: number): number {
   if (!(body.mass > 0) || !(g > 0)) return 0;
-  const r = Math.cbrt((2 * g * body.mass * SHIP_LENGTH) / TIDAL_VISIBLE);
+  const line = isCompactBody(body) ? TIDAL_VISIBLE : TIDAL_ORDINARY;
+  const r = Math.cbrt((2 * g * body.mass * SHIP_LENGTH) / line);
   return r > body.radius ? r : 0;
 }
 
@@ -2336,16 +2368,22 @@ function dysonNick(x: number, y: number, time: number, bodies: readonly Body[], 
  * a zero stress. Hull at 0 is a loss, judged here so prediction and flight agree.
  */
 function applyShipSystems(state: SimState, config: SimConfig, time: number): void {
-  const stress = tidalStressAt(state.x, state.y, config, time);
+  const field = tidalTensorAt(state.x, state.y, config, time);
+  const stress = field.stress;
   const pass = closePassRate(state.x, state.y, config, time);
   const beam = beamDamageRate(state.x, state.y, time, config.bodies);
   state.stress = stress;
-  if (stress > state.peakStress) state.peakStress = stress;
+  if (tidalWarns(field.ordinary, field.compact) && stress > state.peakStress) state.peakStress = stress;
   const g = gravityConstant(config);
   const engine = engineRates(state.x, state.y, time, config.bodies, g);
   const nick = dysonNick(state.x, state.y, time, config.bodies, g);
   const damage =
-    (tidalDamageRate(stress) + pass + beam + beltDust(state.x, state.y, config, time) + engine.burn + nick) *
+    ((tidalWarns(field.ordinary, field.compact) ? stress : 0) +
+      pass +
+      beam +
+      beltDust(state.x, state.y, config, time) +
+      engine.burn +
+      nick) *
     config.dt;
   if (damage > 0) {
     state.hull -= damage;

@@ -6,9 +6,9 @@ import { palette, srgb01 } from "../palette";
 import {
   bodyPose,
   gravityConstant,
-  TIDAL_VISIBLE,
   tidalDangerRadius,
   tidalTensorAt,
+  tidalWarns,
   type Body,
   type SimConfig,
 } from "../../sim/physics";
@@ -214,7 +214,6 @@ class TidalVisual implements Visual {
   private sample(frame: VisualFrame, config: SimConfig, time: number, zoom: number): void {
     const spec = theme.tidal;
     const cell = spec.cell;
-    const floor = TIDAL_VISIBLE;
     const bodies = config.bodies;
     const g = gravityConstant(config);
     const poses: { x: number; y: number; radius: number }[] = [];
@@ -231,7 +230,7 @@ class TidalVisual implements Visual {
         const world = screenToWorld(frame.game.camera, frame.width, frame.height, x, y);
         if (this.blocked(world.x, world.y, poses, pad)) continue;
         const field = tidalTensorAt(world.x, world.y, config, time);
-        if (!(field.stress >= floor)) continue;
+        if (!tidalWarns(field.ordinary, field.compact)) continue;
         const axes = tidalGlyphAxes(field.stress);
         const paint = tidalRingPaint(field.stress);
         const rgb = srgb01(paint.hex);
