@@ -86,6 +86,8 @@ const LOOK_NAME: Partial<Record<BodyLook, string>> = {
   "binary-cool": "Binary cool",
   "white-dwarf": "White dwarf",
   "red-giant": "Red giant",
+  "red-dwarf": "Red dwarf",
+  "blue-giant": "Blue giant",
   "gas-giant": "Gas giant",
   "gas-ringed": "Ringed giant",
   "ice-ring": "Ice ring",
@@ -168,10 +170,14 @@ interface ExhibitSpec {
 
 /** Known pictures. A look that is not listed still gets a body, from `defaultLook`. */
 const LOOK_SPEC: Partial<Record<BodyLook, ExhibitSpec>> = {
-  "binary-hot": { radius: 18, mass: 1200, reach: 140 },
-  "binary-cool": { radius: 14, mass: 900, reach: 140 },
+  // binary-star.svg: r 30 and r 20, masses 1.8:1, one shared slot (see binarySlot).
+  "binary-hot": { radius: 30, mass: 1800, reach: 180 },
+  "binary-cool": { radius: 20, mass: 1000, reach: 180 },
   "white-dwarf": { radius: 12, mass: 1600, reach: 110 },
   "red-giant": { radius: 48, mass: 1100, reach: 170, extra: { atmosphereRadius: 78 } },
+  // design/assets/bodies/red-dwarf.svg and blue-giant.svg: crash radii 40 and 54.
+  "red-dwarf": { radius: 40, mass: 800, reach: 220 },
+  "blue-giant": { radius: 54, mass: 1800, reach: 300 },
   "gas-giant": { radius: 36, mass: 800, reach: 110, extra: { magnet: { b1Reach: 90, tilt: 0.3 } } },
   "gas-ringed": { radius: 44, mass: 800, reach: 150 },
   "ice-ring": { radius: 44, mass: 800, reach: 150 },
@@ -203,7 +209,8 @@ const LOOK_SPEC: Partial<Record<BodyLook, ExhibitSpec>> = {
     reach: 170,
     extra: {
       magnet: { b1Reach: 70, tilt: 0, averaged: true },
-      beam: { reach: 150, period: 4, base: 4, tip: 16, damage: 0 },
+      // pulsar.svg: reach 228 = 28.5 r, full width 4 at the surface and 18 at the tip.
+      beam: { reach: 228, period: 4, base: 4, tip: 18, damage: 0 },
     },
   },
   magnetar: { radius: 9, mass: 2000, reach: 170, extra: { magnet: { b1Reach: 84, tilt: 0.35 } } },
@@ -336,6 +343,31 @@ function chainSlot(bodies: Body[]): Slot {
         item.x = x + Math.cos(moon.phase) * moon.a;
         item.y = y + Math.sin(moon.phase) * moon.a;
       }
+    },
+  };
+}
+
+/**
+ * One bound pair. binary-star.svg: barycentre, masses 1.8:1, separation 120,
+ * so the hot primary circles at 42.9 and the cool secondary at 77.1, opposite
+ * phase, period 40 s, counter-clockwise. The faint orbit guides stay out.
+ */
+function binarySlot(bodies: Body[]): Slot {
+  const hot = lookBody("binary-hot").body;
+  const cool = lookBody("binary-cool").body;
+  bodies.push(hot, cool);
+  const aHot = 42.9;
+  const aCool = 77.1;
+  const omega = (Math.PI * 2) / 40;
+  return {
+    reach: 180,
+    place(x, y) {
+      hot.orbit = { cx: x, cy: y, radius: aHot, phase: 0, omega };
+      cool.orbit = { cx: x, cy: y, radius: aCool, phase: Math.PI, omega };
+      hot.x = x + aHot;
+      hot.y = y;
+      cool.x = x - aCool;
+      cool.y = y;
     },
   };
 }
@@ -620,7 +652,8 @@ function parkOrbit(
 function pack(slots: readonly Slot[]): void {
   const gap = 72;
   const minStep = 300;
-  const rowWidth = 3360;
+  // Wide enough that the bound binary and the moon chain still frame clear of the HUD.
+  const rowWidth = 3720;
   let cursor = 0;
   let y = 0;
   let rowH = 0;
@@ -645,6 +678,11 @@ function build(): Level {
 
   const kindsFromLooks = new Set<BodyKind>();
   for (const look of BODY_LOOKS) {
+    if (look === "binary-hot" || look === "binary-cool") {
+      if (look === "binary-hot") slots.push(binarySlot(bodies));
+      kindsFromLooks.add("star");
+      continue;
+    }
     if (look === "double-big" || look === "double-small") {
       if (look === "double-big") slots.push(doubleSlot(bodies));
       kindsFromLooks.add("planet");

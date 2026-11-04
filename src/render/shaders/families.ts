@@ -32,11 +32,12 @@ export function usesShader(body: Body): boolean {
 }
 
 /**
- * The impostor quad for this body. A supernova's progenitor and a quasar's
- * core are drawn by the hazard visual, so a second quad would stack on top.
+ * The impostor quad for this body. A supernova's progenitor is drawn by the
+ * hazard visual, so a second quad would stack on top. A quasar keeps the
+ * compact-shader hole; the hazard visual draws only the jets.
  */
 export function drawsImpostor(body: Body): boolean {
-  if (body.supernova || body.quasar) return false;
+  if (body.supernova) return false;
   return shaderFamily(body) !== null;
 }
 

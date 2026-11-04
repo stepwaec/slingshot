@@ -85,7 +85,7 @@ export type BodyKind = "home" | "star" | "target" | "moon" | "blackhole" | "plan
 
 /**
  * Visual recipe for a body. Omitted looks use the kind's original disc.
- * Stars: `sun`, `binary-hot`, `binary-cool`, `white-dwarf`, `red-giant`.
+ * Stars: `sun`, `binary-hot`, `binary-cool`, `white-dwarf`, `red-giant`, `red-dwarf`, `blue-giant`.
  * Compact objects: `neutron`, `pulsar`, `magnetar`.
  * Planets and moons: `gas-giant`, `gas-ringed`, `ice-ring`, `moon`, `moon-icy`, `moon-volcanic`, `dwarf`,
  * `rocky`, `ice`, `lava`, `toxic`, `cracked`, `double-big`, `double-small`, `moon-captured`, `moon-chain`.
@@ -98,6 +98,8 @@ export const BODY_LOOKS = [
   "binary-cool",
   "white-dwarf",
   "red-giant",
+  "red-dwarf",
+  "blue-giant",
   "gas-giant",
   "gas-ringed",
   "ice-ring",

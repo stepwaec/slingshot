@@ -127,6 +127,71 @@ describe("Observatory", () => {
     const state = makeState(coast.ship.x, coast.ship.y, coast.ship.vx, coast.ship.vy, config);
     const predicted = predictPlan(state, config, []);
     const flown = flyPlan(state, config, [], 1);
+    expect(flown.status).toBe(predicted.status);
+    expect(flown.path).toHaveLength(predicted.path.length);
+    for (let i = 0; i < predicted.path.length; i++) {
+      expect(flown.path[i]?.x).toBe(predicted.path[i]?.x);
+      expect(flown.path[i]?.y).toBe(predicted.path[i]?.y);
+    }
+  });
+
+  it("keeps the binary on one barycentric period, and the coast matches the flight", () => {
+    const hot = observatory.bodies.find((body) => body.look === "binary-hot");
+    const cool = observatory.bodies.find((body) => body.look === "binary-cool");
+    if (!hot?.orbit || !cool?.orbit) throw new Error("binary");
+    expect(hot.radius).toBe(30);
+    expect(cool.radius).toBe(20);
+    expect(hot.mass / cool.mass).toBeCloseTo(1.8, 5);
+    expect(hot.orbit.radius).toBe(42.9);
+    expect(cool.orbit.radius).toBe(77.1);
+    expect(hot.orbit.omega).toBeCloseTo((Math.PI * 2) / 40, 8);
+    expect(cool.orbit.phase - hot.orbit.phase).toBeCloseTo(Math.PI, 8);
+    const bodies = observatory.bodies;
+    const g = observatory.g;
+    const primary = bodyPose(hot, 0, bodies, g);
+    const secondary = bodyPose(cool, 0, bodies, g);
+    expect(Math.hypot(primary.x - secondary.x, primary.y - secondary.y)).toBeCloseTo(120, 6);
+    const mass = hot.mass + cool.mass;
+    const bx = (primary.x * hot.mass + secondary.x * cool.mass) / mass;
+    const by = (primary.y * hot.mass + secondary.y * cool.mass) / mass;
+    expect(bx).toBeCloseTo(hot.orbit.cx ?? 0, 1);
+    expect(by).toBeCloseTo(hot.orbit.cy ?? 0, 1);
+    const turned = bodyPose(hot, 20, bodies, g);
+    expect(turned.x - (hot.orbit.cx ?? 0)).toBeCloseTo(-(primary.x - (hot.orbit.cx ?? 0)), 5);
+    expect(turned.y - (hot.orbit.cy ?? 0)).toBeCloseTo(-(primary.y - (hot.orbit.cy ?? 0)), 5);
+    const back = bodyPose(hot, 40, bodies, g);
+    expect(back.x).toBeCloseTo(primary.x, 5);
+    expect(back.y).toBeCloseTo(primary.y, 5);
+
+    const cx = hot.orbit.cx ?? 0;
+    const cy = hot.orbit.cy ?? 0;
+    const pair = [hot, cool].map((body) => ({
+      ...body,
+      x: body.x - cx,
+      y: body.y - cy,
+      orbit: body.orbit ? { ...body.orbit, cx: 0, cy: 0 } : undefined,
+    }));
+    const coast: Level = {
+      ...observatory,
+      id: "binary-coast",
+      bodies: [
+        ...pair,
+        { id: "x", name: "Far", kind: "target", x: 900, y: 0, mass: 10, radius: 8, captureRadius: 20 },
+      ],
+      targetId: "x",
+      ship: { x: 280, y: 30, vx: 0, vy: 4 },
+      orbit: { bodyId: "x", radius: 40 },
+      belts: [],
+      nebulae: [],
+      wormholes: [],
+      petrova: [],
+      maxSteps: 160,
+    };
+    const config = simConfigFromLevel(coast);
+    const state = makeState(coast.ship.x, coast.ship.y, coast.ship.vx, coast.ship.vy, config);
+    const predicted = predictPlan(state, config, []);
+    const flown = flyPlan(state, config, [], 1);
+    expect(flown.status).toBe(predicted.status);
     expect(flown.path).toHaveLength(predicted.path.length);
     for (let i = 0; i < predicted.path.length; i++) {
       expect(flown.path[i]?.x).toBe(predicted.path[i]?.x);
@@ -183,7 +248,16 @@ describe("Observatory", () => {
   it("can be flown: the opening coast stays clear, and the frame does not drift", () => {
     const orbiting = observatory.bodies.filter((body) => body.orbit).map((body) => body.id).sort();
     expect(orbiting).toEqual(
-      ["chain-barren", "chain-dwarf", "chain-icy", "chain-volcanic", "look-double-big", "look-double-small"].sort(),
+      [
+        "chain-barren",
+        "chain-dwarf",
+        "chain-icy",
+        "chain-volcanic",
+        "look-binary-cool",
+        "look-binary-hot",
+        "look-double-big",
+        "look-double-small",
+      ].sort(),
     );
     expect(observatory.bodies.some((body) => body.kind === "rogue" && body.drift)).toBe(true);
     expect(frameAcceleration(observatory.bodies)).toBeNull();
