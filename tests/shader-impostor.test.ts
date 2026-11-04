@@ -1,6 +1,10 @@
+import * as THREE from "three";
 import { describe, expect, it } from "vitest";
 import { observatory } from "../src/level/catalog";
-import { shaderFamily } from "../src/render/shaders/families";
+import { placeProgenitor } from "../src/render/visuals/hazards";
+import { drawsImpostor, shaderFamily } from "../src/render/shaders/families";
+import { createStarMaterial } from "../src/render/shaders/star-shader";
+import type { VisualFrame } from "../src/render/visual";
 import { artLightLocked, impostorSide, lightDirection, planetSide, ringOctaves } from "../src/render/shaders/impostor";
 import { GIANT_FRAGMENT } from "../src/render/shaders/giant-shader";
 import { PLANET_FRAGMENT } from "../src/render/shaders/planet-shader";
@@ -49,6 +53,34 @@ describe("shader impostors", () => {
     expect(planetSide(21.6, 1.12)).toBeCloseTo(2 * 1.12 * 21.6 * 1.06);
     expect(impostorSide(46, 4.35)).toBeCloseTo(2 * 4.35 * 46 * 1.06);
     expect(impostorSide(16, 4.35, 1)).toBeCloseTo(2 * 6.25 * 16 * 1.06);
+  });
+
+  it("parks the supernova progenitor on the body in screen space", () => {
+    const material = createStarMaterial("red-giant");
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), material);
+    const frame = {
+      now: 0,
+      width: 800,
+      height: 600,
+      dpr: 2,
+      game: { camera: { x: 100, y: 50, zoom: 2 } },
+    } as VisualFrame;
+    placeProgenitor(mesh, 100, 50, 20, frame, 2);
+    const center = material.uniforms.uCenter.value as THREE.Vector2;
+    expect(center.x).toBeCloseTo(400 * 2);
+    expect(center.y).toBeCloseTo(300 * 2);
+    expect(material.uniforms.uR.value).toBeCloseTo(80);
+  });
+
+  it("does not stack an impostor on the hazard progenitor or quasar core", () => {
+    const nova = observatory.bodies.find((body) => body.supernova);
+    const quasar = observatory.bodies.find((body) => body.quasar);
+    const sun = observatory.bodies.find((body) => body.id === "look-sun");
+    if (!nova || !quasar || !sun) throw new Error("missing exhibit");
+    expect(drawsImpostor(nova)).toBe(false);
+    expect(drawsImpostor(quasar)).toBe(false);
+    expect(drawsImpostor(sun)).toBe(true);
+    expect(shaderFamily({ ...nova, look: "red-giant" })).toBe("star");
   });
 
   it("aims the light uniform at the brightest star", () => {

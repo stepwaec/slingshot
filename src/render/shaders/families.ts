@@ -31,6 +31,15 @@ export function usesShader(body: Body): boolean {
   return shaderFamily(body) !== null;
 }
 
+/**
+ * The impostor quad for this body. A supernova's progenitor and a quasar's
+ * core are drawn by the hazard visual, so a second quad would stack on top.
+ */
+export function drawsImpostor(body: Body): boolean {
+  if (body.supernova || body.quasar) return false;
+  return shaderFamily(body) !== null;
+}
+
 export function createBodyShader(body: Body): THREE.ShaderMaterial | null {
   const star = starKind(body);
   if (star) return createStarMaterial(star);

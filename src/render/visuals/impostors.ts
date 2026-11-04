@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { isEditing, type Game } from "../../game/state";
 import { bodyPose, type Body } from "../../sim/physics";
 import { projectToScreen, syncTopDown } from "../camera";
-import { createBodyShader, shaderFamily } from "../shaders/families";
+import { createBodyShader, drawsImpostor, shaderFamily } from "../shaders/families";
 import {
   artLightLocked,
   impostorSide,
@@ -47,7 +47,7 @@ class ImpostorVisual implements Visual {
   constructor(_theme: Theme, level: Parameters<VisualFactory>[1]) {
     this.object.name = "shader-bodies";
     for (const body of level.bodies) {
-      const material = shaderFamily(body) ? createBodyShader(body) : null;
+      const material = drawsImpostor(body) ? createBodyShader(body) : null;
       const designR = numberUniform(material, "uDesignR", body.radius);
       const hazeR = numberUniform(material, "uHazeR", 1);
       const smooth = numberUniform(material, "uSmooth", 0);

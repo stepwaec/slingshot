@@ -3,6 +3,7 @@ import { jetAngle, shellRadius, type QuasarJet, type Supernova } from "../../sim
 import { bodyPose, type Body } from "../../sim/physics";
 import { isEditing } from "../../game/state";
 import { artMesh, loadArtTexture, poseArt, rasterPixels, type ArtFit } from "../art-sprite";
+import { projectToScreen, syncTopDown } from "../camera";
 import {
   blastCall,
   blastChip,
@@ -28,7 +29,7 @@ import type { Theme } from "../theme";
 import { disposeObject, type Visual, type VisualFactory, type VisualFrame } from "../visual";
 import { shader, srgbVec } from "./materials";
 import { createBodyShader } from "../shaders/families";
-import { impostorSide } from "../shaders/impostor";
+import { cosmeticSeconds, impostorSide, screenRadius } from "../shaders/impostor";
 import { markEmissive } from "../shaders/bloom";
 
 /**
@@ -424,6 +425,8 @@ class HazardsVisual implements Visual {
       const scale = view.side * breathe * shrink;
       view.star.position.set(pose.x, pose.y, 0);
       view.star.scale.set(scale, scale, 1);
+      // The star shader paints from uCenter and uR, not from the quad's UVs.
+      placeProgenitor(view.star, pose.x, pose.y, body.radius * breathe * shrink, frame, zoom);
     }
     for (let i = 0; i < view.shells.length; i += 1) {
       const radius = oldShellRadius(body.radius, spec.shellRadii[i], seconds, spec);
@@ -864,6 +867,21 @@ function quasarFit(theme: Theme, tag: string, prep: (doc: Document) => void): Ar
     spin: "none",
     bake: { tag, prep },
   };
+}
+
+/** Screen-space uniforms for the red-giant progenitor. The quad only has to cover the disc. */
+export function placeProgenitor(star: THREE.Mesh, x: number, y: number, radius: number, frame: VisualFrame, zoom: number): void {
+  const uniforms = (star.material as THREE.ShaderMaterial).uniforms;
+  const dpr = frame.dpr > 0 ? frame.dpr : 1;
+  syncTopDown(frame.game.camera, frame.width, frame.height);
+  const screen = { x: 0, y: 0 };
+  projectToScreen(x, y, frame.width, frame.height, screen);
+  const center = uniforms.uCenter?.value as THREE.Vector2 | undefined;
+  center?.set(screen.x * dpr, (frame.height - screen.y) * dpr);
+  if (uniforms.uR) uniforms.uR.value = screenRadius(radius, zoom) * dpr;
+  if (uniforms.uTime) uniforms.uTime.value = cosmeticSeconds(frame.now);
+  if (uniforms.uZoom) uniforms.uZoom.value = zoom;
+  if (uniforms.uDPR) uniforms.uDPR.value = dpr;
 }
 
 function numberOf(uniform: { value: unknown } | undefined): number {
