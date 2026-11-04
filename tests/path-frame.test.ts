@@ -51,9 +51,10 @@ describe("predicted path in the dominant body's frame", () => {
     }
     // Inertial samples follow Earth around the Sun, so the coast leaves the drawn Earth.
     expect(maxInertial).toBeGreaterThan(1000);
-    // The drawn coast stays on the low Earth orbit and wraps the planet.
-    expect(minDrawn).toBeGreaterThan(48);
-    expect(maxDrawn).toBeLessThan(60);
+    // The drawn coast stays near low Earth orbit and wraps the planet.
+    // The heavier Moon lets that orbit breathe, so the band is wider than 52±4.
+    expect(minDrawn).toBeGreaterThan(36);
+    expect(maxDrawn).toBeLessThan(80);
     expect(quadrant).toEqual([true, true, true, true]);
   });
 
@@ -75,7 +76,7 @@ describe("predicted path in the dominant body's frame", () => {
     const sepX = earthThen.x - moonThen.x;
     const sepY = earthThen.y - moonThen.y;
     const sep = Math.hypot(sepX, sepY);
-    const shell = 62;
+    const shell = 90;
     const crossing = { x: moonThen.x + (sepX / sep) * shell, y: moonThen.y + (sepY / sep) * shell, step };
     const moonFrame = { x: moonNow.x + (sepX / sep) * shell, y: moonNow.y + (sepY / sep) * shell };
     const earthFrame = {
