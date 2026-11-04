@@ -184,6 +184,60 @@ describe("tidal stress", () => {
     expect(tidalDangerRadius(config.bodies[0], 1)).toBeGreaterThan(16);
   });
 
+  it("stays under the tidal line above the Moon, and from low Earth orbit outward", () => {
+    const g = moonMission.g;
+    const mission = simConfigFromLevel(moonMission);
+    const moon = moonMission.bodies.find((item) => item.id === "luna");
+    const earth = moonMission.bodies.find((item) => item.id === "earth");
+    if (!moon || !earth) throw new Error("earth or moon");
+    const at = (body: typeof earth, radius: number, angle: number) => {
+      const pose = bodyPose(body, 0, moonMission.bodies, g);
+      return tidalStressAt(
+        pose.x + Math.cos(angle) * radius,
+        pose.y + Math.sin(angle) * radius,
+        mission,
+        0,
+      );
+    };
+    const moonPose = bodyPose(moon, 0, moonMission.bodies, g);
+    const earthPose = bodyPose(earth, 0, moonMission.bodies, g);
+    const separation = Math.hypot(earthPose.x - moonPose.x, earthPose.y - moonPose.y);
+    expect(tidalDangerRadius(moon, g)).toBe(0);
+    // Stay on the Moon's side of the gap so a sample does not wander into Earth's shell.
+    const moonReach = Math.min((moon.captureRadius ?? moon.radius) * 1.5, separation * 0.45);
+    expect(moonReach).toBeGreaterThan(moon.radius + 20);
+    for (let i = 0; i <= 20; i++) {
+      const radius = moon.radius + 0.02 + (i / 20) * (moonReach - moon.radius);
+      for (let k = 0; k < 8; k++) {
+        const stress = at(moon, radius, (k * Math.PI) / 4);
+        expect(stress, `moon r=${radius.toFixed(2)} a=${k}`).toBeLessThan(TIDAL_VISIBLE);
+        expect(tidalDamageRate(stress)).toBe(0);
+      }
+    }
+    const towardEarth = Math.atan2(earthPose.y - moonPose.y, earthPose.x - moonPose.x);
+    const nearSide = at(moon, moon.radius + 0.02, towardEarth);
+    expect(nearSide, "moon surface facing Earth").toBeLessThan(TIDAL_VISIBLE);
+    // Earth's own gradient crosses the line in a shell above the surface and
+    // above the lowest legal capture periapsis. That shell ends before the
+    // mission's starting orbit. From there outward the tide stays quiet.
+    const shell = tidalDangerRadius(earth, g);
+    const leo = moonMission.orbit.radius;
+    expect(shell).toBeGreaterThan(earth.radius + moonMission.periapsisMargin);
+    expect(shell).toBeLessThan(leo);
+    const skim = earth.radius + moonMission.periapsisMargin + 0.05;
+    expect(at(earth, skim, 0)).toBeGreaterThanOrEqual(TIDAL_VISIBLE);
+    for (let i = 0; i <= 24; i++) {
+      const radius = leo + i * earth.radius * 0.4;
+      for (let k = 0; k < 8; k++) {
+        const stress = at(earth, radius, (k * Math.PI) / 4);
+        expect(stress, `earth r=${radius.toFixed(2)} a=${k}`).toBeLessThan(TIDAL_VISIBLE);
+        expect(tidalDamageRate(stress)).toBe(0);
+      }
+    }
+    expect(tidalStressAt(moonMission.ship.x, moonMission.ship.y, mission, 0)).toBeLessThan(TIDAL_VISIBLE);
+    expect(tidalDamageRate(tidalStressAt(moonMission.ship.x, moonMission.ship.y, mission, 0))).toBe(0);
+  });
+
   it("stays under the line for ordinary Sol planets and crosses it near the Sun and a black hole", () => {
     const config = {
       g: solWorld.g,

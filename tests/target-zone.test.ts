@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { isBakedCaptureZone } from "../src/render/surface-art";
-import { targetZoneLook, targetZonePhase, type ZoneInput } from "../src/render/target-zone";
+import { drawsCaptureRing, targetZoneLook, targetZonePhase, type ZoneInput } from "../src/render/target-zone";
 import { theme } from "../src/render/theme";
 
 const spec = theme.zone;
@@ -26,6 +26,17 @@ function input(patch: Partial<ZoneInput> = {}): ZoneInput {
 }
 
 describe("target zone", () => {
+  it("draws the capture sphere for a target and not for Earth or the Moon", () => {
+    expect(drawsCaptureRing({ id: "x", captureRadius: 72 })).toBe(true);
+    expect(drawsCaptureRing({ id: "planet-x", look: "planet-x", captureRadius: 40 })).toBe(true);
+    expect(drawsCaptureRing({ id: "phobos", look: "moon", captureRadius: 20 })).toBe(true);
+    expect(drawsCaptureRing({ id: "earth", look: "earth", captureRadius: 96 })).toBe(false);
+    expect(drawsCaptureRing({ id: "luna", look: "luna", captureRadius: 72 })).toBe(false);
+    expect(drawsCaptureRing({ id: "gaia", look: "earth", captureRadius: 40 })).toBe(false);
+    expect(drawsCaptureRing({ id: "selene", look: "luna", captureRadius: 30 })).toBe(false);
+    expect(drawsCaptureRing({ id: "mars" })).toBe(false);
+  });
+
   it("rests as a dim solid ring at t = 0 and brightens over the 4 s pulse", () => {
     const rest = targetZoneLook(input(), spec, colors);
     expect(rest.phase).toBe("idle");
