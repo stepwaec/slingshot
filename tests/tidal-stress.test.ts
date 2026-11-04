@@ -202,12 +202,16 @@ describe("tidal stress", () => {
     const moonPose = bodyPose(moon, 0, moonMission.bodies, g);
     const earthPose = bodyPose(earth, 0, moonMission.bodies, g);
     const separation = Math.hypot(earthPose.x - moonPose.x, earthPose.y - moonPose.y);
-    expect(tidalDangerRadius(moon, g)).toBe(0);
+    // The 10× Moon puts a thin danger shell above the surface. It ends before a legal periapsis.
+    const moonShell = tidalDangerRadius(moon, g);
+    const moonFloor = moon.radius + moonMission.periapsisMargin;
+    expect(moonShell).toBeGreaterThan(moon.radius);
+    expect(moonShell).toBeLessThan(moonFloor);
     // Stay on the Moon's side of the gap so a sample does not wander into Earth's shell.
     const moonReach = Math.min((moon.captureRadius ?? moon.radius) * 1.5, separation * 0.45);
     expect(moonReach).toBeGreaterThan(moon.radius + 20);
     for (let i = 0; i <= 20; i++) {
-      const radius = moon.radius + 0.02 + (i / 20) * (moonReach - moon.radius);
+      const radius = moonFloor + 0.05 + (i / 20) * (moonReach - moonFloor);
       for (let k = 0; k < 8; k++) {
         const stress = at(moon, radius, (k * Math.PI) / 4);
         expect(stress, `moon r=${radius.toFixed(2)} a=${k}`).toBeLessThan(TIDAL_VISIBLE);
@@ -216,7 +220,8 @@ describe("tidal stress", () => {
     }
     const towardEarth = Math.atan2(earthPose.y - moonPose.y, earthPose.x - moonPose.x);
     const nearSide = at(moon, moon.radius + 0.02, towardEarth);
-    expect(nearSide, "moon surface facing Earth").toBeLessThan(TIDAL_VISIBLE);
+    expect(nearSide, "moon surface facing Earth").toBeGreaterThanOrEqual(TIDAL_VISIBLE);
+    expect(at(moon, moonFloor + 0.05, towardEarth), "legal periapsis facing Earth").toBeLessThan(TIDAL_VISIBLE);
     // Earth's own gradient crosses the line in a shell above the surface and
     // above the lowest legal capture periapsis. That shell ends before the
     // mission's starting orbit. From there outward the tide stays quiet.
