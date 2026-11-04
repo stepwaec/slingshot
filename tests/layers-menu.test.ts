@@ -217,7 +217,9 @@ describe("layers menu keys", () => {
 
 describe("layers menu availability and flight lock", () => {
   it("forces unavailable layers off when a level loads", () => {
-    const game = createGame(needle);
+    // The library stage is enough until the level actually changes. Starting
+    // on the Observatory integrates that chart twice and sits on the 5s limit.
+    const game = createGame(passage);
     game.gravity = "on";
     game.magnetism = true;
     game.radiation = true;
