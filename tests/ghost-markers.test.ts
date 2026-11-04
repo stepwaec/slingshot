@@ -8,9 +8,11 @@ import {
   collisionPulse,
   ghostChip,
   ghostDraw,
+  keptLabels,
   pickGhostKind,
   planGhosts,
   previewGhosts,
+  retainMoonGhosts,
   pointAtStep,
   shipInside,
   trackTicks,
@@ -173,5 +175,36 @@ describe("LU2 ghost markers", () => {
     ]);
     const again = previewGhosts(slots, [{ bodyId: "luna", step: 40 }], ["earth", "luna"], null, 40, 0);
     expect(again).toEqual([]);
+  });
+
+  it("keeps a single Moon ghost at closest approach", () => {
+    const slots = [
+      { step: 10, bodyIndex: 0, burnNumber: 1, cursor: false, arrival: false },
+      { step: 10, bodyIndex: 1, burnNumber: 1, cursor: false, arrival: false },
+      { step: 40, bodyIndex: 1, burnNumber: null, cursor: false, arrival: false },
+      { step: 80, bodyIndex: 1, burnNumber: null, cursor: true, arrival: false },
+      { step: 80, bodyIndex: 0, burnNumber: null, cursor: false, arrival: false },
+    ];
+    const kept = retainMoonGhosts(
+      slots,
+      [
+        { bodyId: "earth", step: 20 },
+        { bodyId: "luna", step: 40 },
+      ],
+      [
+        { id: "earth", kind: "planet" },
+        { id: "luna", kind: "moon" },
+      ],
+    );
+    expect(kept.map((slot) => `${slot.bodyIndex}@${slot.step}`)).toEqual(["0@10", "1@40", "0@80"]);
+  });
+
+  it("drops a time chip that collides with a higher one", () => {
+    const keep = keptLabels([
+      { x: 0, y: 0, w: 40, h: 16, rank: 10 },
+      { x: 12, y: 0, w: 40, h: 16, rank: 9 },
+      { x: 200, y: 0, w: 40, h: 16, rank: 8 },
+    ]);
+    expect(keep).toEqual([true, false, true]);
   });
 });

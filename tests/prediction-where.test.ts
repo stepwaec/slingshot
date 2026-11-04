@@ -69,15 +69,21 @@ describe("predicted positions are the flight", () => {
           const drawnPlan = showPath(predicted, bodies, moonMission.g, moonMission.dt, 0);
           const drawnFly = showPath(flown.slice(0, predicted.length), bodies, moonMission.g, moonMission.dt, 0);
           expect(drawnFly.length, label).toBe(drawnPlan.length);
+          let framed = 0;
           for (let i = 0; i < drawnPlan.length; i++) {
             const got = drawnFly[i];
             const want = drawnPlan[i];
-            if (got.x !== want.x || got.y !== want.y || got.x !== predicted[i].x || got.y !== predicted[i].y) {
+            if (got.x !== want.x || got.y !== want.y || got.bodyId !== want.bodyId) {
               throw new Error(
                 `${label} drawing diverged at sample ${i} (step ${predicted[i].step}): (${got.x}, ${got.y}) vs (${want.x}, ${want.y})`,
               );
             }
+            if (want.bodyId === "" && (want.x !== predicted[i].x || want.y !== predicted[i].y)) {
+              throw new Error(`${label} moved a world sample at ${i}`);
+            }
+            if (want.bodyId === "luna") framed += 1;
           }
+          if (plan.name === "reference" && seconds === 140 && cursor === null) expect(framed).toBeGreaterThan(100);
           if (plan.name === "reference" && seconds === 140 && cursor === null) {
             const marks = pathApproaches(predicted, bodies, moonMission.g, moonMission.dt, 0);
             const moon = marks.find((mark) => mark.bodyId === "luna");

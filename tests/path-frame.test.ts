@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { simConfigFromLevel } from "../src/level/catalog";
-import { pathApproaches, showPath } from "../src/render/path-frame";
+import { pathApproaches, showPath, shownPoint } from "../src/render/path-frame";
 import { bodyPose, flyPlan, makeState, predictPlan, type Body, type BurnNode } from "../src/sim/physics";
 import { moonMission } from "../src/world/moon-mission";
 
@@ -79,10 +79,6 @@ describe("predicted path in world coordinates", () => {
       }
     }
     const drawn = showPath(predicted.path, moonMission.bodies, moonMission.g, moonMission.dt, 0);
-    for (let i = 0; i < drawn.length; i++) {
-      expect(drawn[i].x).toBe(predicted.path[i].x);
-      expect(drawn[i].y).toBe(predicted.path[i].y);
-    }
     const marks = pathApproaches(predicted.path, moonMission.bodies, moonMission.g, moonMission.dt, 0);
     const mark = marks.find((item) => item.bodyId === "luna");
     expect(mark).toBeDefined();
@@ -99,5 +95,66 @@ describe("predicted path in world coordinates", () => {
     expect(mark.y).toBe(moonThen.y);
     expect(Math.hypot(ship.x - mark.x, ship.y - mark.y)).toBeLessThan(body("luna").captureRadius ?? 0);
     expect(Math.hypot(mark.x - moonNow.x, mark.y - moonNow.y)).toBeGreaterThan(body("luna").captureRadius ?? 0);
+  });
+
+  it("keeps the Earth coast in world space and draws the lunar lap around the ghost", () => {
+    const predicted = predictPlan(start(), config, plan);
+    const drawn = showPath(predicted.path, moonMission.bodies, moonMission.g, moonMission.dt, 0);
+    const marks = pathApproaches(predicted.path, moonMission.bodies, moonMission.g, moonMission.dt, 0);
+    const mark = marks.find((item) => item.bodyId === "luna");
+    if (!mark) throw new Error("moon approach");
+    let world = 0;
+    let framed = 0;
+    let turned = 0;
+    let prev = 0;
+    let started = false;
+    let maxJump = 0;
+    for (let i = 0; i < drawn.length; i++) {
+      const sample = predicted.path[i];
+      if (i > 0) {
+        const jump = Math.hypot(drawn[i].x - drawn[i - 1].x, drawn[i].y - drawn[i - 1].y);
+        if (jump > maxJump) maxJump = jump;
+      }
+      if (drawn[i].bodyId === "") {
+        expect(drawn[i].x).toBe(sample.x);
+        expect(drawn[i].y).toBe(sample.y);
+        world += 1;
+        continue;
+      }
+      expect(drawn[i].bodyId).toBe("luna");
+      framed += 1;
+      const pose = bodyPose(body("luna"), sample.step * moonMission.dt, moonMission.bodies, moonMission.g);
+      const dx = drawn[i].x - mark.x;
+      const dy = drawn[i].y - mark.y;
+      const sx = sample.x - pose.x;
+      const sy = sample.y - pose.y;
+      const sameRadius = Math.abs(Math.hypot(dx, dy) - Math.hypot(sx, sy)) < 1e-6;
+      if (!sameRadius) continue;
+      const angle = Math.atan2(dy, dx);
+      if (started) {
+        let delta = angle - prev;
+        if (delta > Math.PI) delta -= Math.PI * 2;
+        if (delta < -Math.PI) delta += Math.PI * 2;
+        turned += delta;
+      }
+      prev = angle;
+      started = true;
+    }
+    expect(world).toBeGreaterThan(400);
+    expect(framed).toBeGreaterThan(400);
+    expect(Math.abs(turned)).toBeGreaterThan(Math.PI * 2 * 0.9);
+    expect(maxJump).toBeLessThan(2);
+    const deep = drawn.findIndex((point, index) => point.bodyId === "luna" && predicted.path[index].step !== mark.step);
+    expect(deep).toBeGreaterThan(0);
+    expect(drawn[deep].x).not.toBe(predicted.path[deep].x);
+    const view = {
+      mode: "planning",
+      ship: { step: 0 },
+      level: { bodies: moonMission.bodies, g: moonMission.g, dt: moonMission.dt },
+      prediction: { path: predicted.path },
+    };
+    const at = shownPoint(view, predicted.path[deep].x, predicted.path[deep].y, predicted.path[deep].step);
+    expect(at.x).toBeCloseTo(drawn[deep].x, 6);
+    expect(at.y).toBeCloseTo(drawn[deep].y, 6);
   });
 });
