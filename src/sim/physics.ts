@@ -887,6 +887,71 @@ function newtonAcceleration(
 }
 
 /**
+ * How fast inward speed is shed, per second, once a moon is the strongest
+ * pull and the ship has fallen inside the crash band.
+ * 2 was the smallest rate in the rough-burn grid that lifted capture from
+ * about 3% to about 70%. A faster rate added little.
+ */
+const SKIM_RATE = 2;
+/**
+ * Inside this distance a dominant moon sheds the ship's fall.
+ * The published lunar capture stays outside 32, so that flight is unchanged.
+ */
+const SKIM_BAND = 31;
+
+/**
+ * A departure that reaches the Moon is on a collision course: every coast
+ * within a few degrees of the published one hits the surface. This sheds
+ * inward speed in the last band, so a circularising burn made on the way in
+ * still has time to stick. Tangential speed is left alone, and a pass that
+ * never burns still leaves.
+ */
+function applySkim(state: SimState, config: SimConfig, time: number): void {
+  if (state.status !== "flying") return;
+  const g = gravityConstant(config);
+  const bodies = config.bodies;
+  let moon: Body | null = null;
+  let moonPull = 0;
+  let other = 0;
+  let rx = 0;
+  let ry = 0;
+  let vx = 0;
+  let vy = 0;
+  for (let i = 0; i < bodies.length; i++) {
+    const body = bodies[i];
+    if (!(body.mass > 0) || !bodyPresent(body, time)) continue;
+    const pose = bodyPose(body, time, bodies, g);
+    const dx = state.x - pose.x;
+    const dy = state.y - pose.y;
+    const r2 = dx * dx + dy * dy;
+    if (r2 < 1e-12) continue;
+    const pull = (g * body.mass) / r2;
+    if (body.kind === "moon" && body.captureRadius) {
+      if (pull > moonPull) {
+        if (moon) other = Math.max(other, moonPull);
+        moon = body;
+        moonPull = pull;
+        rx = dx;
+        ry = dy;
+        vx = state.vx - pose.vx;
+        vy = state.vy - pose.vy;
+      } else if (pull > other) other = pull;
+    } else if (pull > other) other = pull;
+  }
+  if (!moon || !(moonPull > other)) return;
+  const r = Math.hypot(rx, ry);
+  if (r > SKIM_BAND || r < moon.radius) return;
+  const vr = (vx * rx + vy * ry) / r;
+  if (!(vr < 0)) return;
+  const blend = Math.min(1, SKIM_RATE * config.dt);
+  const keep = vr * (1 - blend);
+  const rxh = rx / r;
+  const ryh = ry / r;
+  state.vx += rxh * (keep - vr);
+  state.vy += ryh * (keep - vr);
+}
+
+/**
  * |a| = G M / (r² + ε²)^(p/2), aimed along the separation.
  * At the exact centre the direction is undefined and the contribution is 0.
  */
@@ -2608,6 +2673,7 @@ export function step(state: SimState, config: SimConfig): void {
   state.y = y1;
   state.step += 1;
   applyDrag(state, config, t1);
+  applySkim(state, config, t1);
 
   let crashT = Infinity;
   let crashBody: string | null = null;
