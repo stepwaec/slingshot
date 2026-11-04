@@ -1,4 +1,5 @@
 import type { PauseRule, SimConfig } from "../sim/physics";
+import { solChart } from "../world/sol";
 import { observatory } from "./observatory";
 import type { Level, LevelPhysics } from "./schema";
 import { shipLoadout } from "../game/upgrades";
@@ -6,14 +7,16 @@ import { placeBelts } from "../sim/belts";
 import { ASTRO_CAPACITY, ASTRO_DV, ASTRO_HARVEST_RATE, flattenKnots } from "../sim/astrophage";
 
 /**
- * Shipped levels. The Sol campaign is not built yet, so this list is empty.
- * New missions will be assembled from the body library. The Observatory is
- * the showcase and is not part of this list.
+ * Campaign missions. Empty until Mission 1. The Sol world is `WORLD_CHARTS`.
+ * The Observatory is the showcase and is not part of either list.
  */
 
 export const LEVELS: readonly Level[] = [];
 
-/** Showcase chart. The playable chart until Sol missions exist. */
+/** The persistent world, as a flyable chart. Not a campaign mission. */
+export const WORLD_CHARTS: readonly Level[] = [solChart];
+
+/** Showcase chart. */
 export { observatory };
 
 export function burnLimit(level: Level): number {

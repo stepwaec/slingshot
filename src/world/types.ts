@@ -48,6 +48,11 @@ export interface Mission {
   regionId: string;
   /** Replaces the region bounds for the camera and for leaving the region. */
   bounds?: Bounds;
+  /**
+   * Camera box when it should be tighter than the lost-in-space bounds.
+   * Omitted frames the bounds themselves.
+   */
+  frame?: Bounds;
   ship: { x: number; y: number; vx: number; vy: number };
   orbit: { bodyId: string; radius: number };
   fuel: number;
