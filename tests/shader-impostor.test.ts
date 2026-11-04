@@ -26,6 +26,15 @@ describe("shader impostors", () => {
     expect(shaderFamily(home)).toBe("planet");
     expect(shaderFamily(target)).toBe("planet");
     expect(starKind(sol)).toBe("sol-sun");
+    const redDwarf = observatory.bodies.find((body) => body.look === "red-dwarf");
+    const blueGiant = observatory.bodies.find((body) => body.look === "blue-giant");
+    if (!redDwarf || !blueGiant) throw new Error("missing dwarf or giant");
+    expect(redDwarf.radius).toBe(40);
+    expect(blueGiant.radius).toBe(54);
+    expect(starKind(redDwarf)).toBe("red-dwarf");
+    expect(starKind(blueGiant)).toBe("blue-giant");
+    expect(shaderFamily(redDwarf)).toBe("star");
+    expect(shaderFamily(blueGiant)).toBe("star");
     expect(shaderFamily(sol)).toBe("star");
     expect(STAR_PARAMS.sun.core).toBe("#FFB43A");
     expect(STAR_PARAMS.sun.limbDark).toBe(0.18);
