@@ -17,6 +17,7 @@ import { compactMotion } from "../shaders/compact-params";
 import { giantArtLight } from "../shaders/giant-params";
 import { planetArtLight } from "../shaders/planet-params";
 import { markEmissive } from "../shaders/bloom";
+import { isSolChart, solDrawnRadius } from "../sol-scale";
 import { theme, type Theme } from "../theme";
 import { disposeObject, type Visual, type VisualFactory, type VisualFrame } from "../visual";
 
@@ -32,6 +33,10 @@ interface Slot {
   mesh: THREE.Mesh;
   /** World-unit side of the quad. 2 r until a family sets a larger extent. */
   side: number;
+  /** Outer rim in body radii. 0 means a star quad sized from the haze. */
+  extent: number;
+  hazeR: number;
+  smooth: number;
   designR: number;
   baseProm: number;
   baseFaculae: number;
@@ -43,8 +48,12 @@ class ImpostorVisual implements Visual {
   readonly object = new THREE.Group();
   private readonly slots: Slot[] = [];
   private readonly scratch = { x: 0, y: 0 };
+  private readonly sol: boolean;
+  private readonly earthRadius: number;
 
   constructor(_theme: Theme, level: Parameters<VisualFactory>[1]) {
+    this.sol = isSolChart(level.bodies);
+    this.earthRadius = level.bodies.find((body) => body.id === "earth")?.radius ?? 0;
     this.object.name = "shader-bodies";
     for (const body of level.bodies) {
       const material = drawsImpostor(body) ? createBodyShader(body) : null;
@@ -70,6 +79,9 @@ class ImpostorVisual implements Visual {
         body,
         mesh,
         side,
+        extent,
+        hazeR,
+        smooth,
         designR: designR > 0 ? designR : Math.max(body.radius, 1),
         baseProm: numberUniform(material, "uProm", 0),
         baseFaculae: numberUniform(material, "uFaculae", 0),
@@ -98,7 +110,12 @@ class ImpostorVisual implements Visual {
       const uniforms = material.uniforms;
       const center = uniforms.uCenter?.value as THREE.Vector2 | undefined;
       center?.set(this.scratch.x * dpr, (frame.height - this.scratch.y) * dpr);
-      const radiusPx = screenRadius(slot.body.radius, zoom);
+      const drawn = solDrawnRadius(slot.body, this.sol, zoom, this.earthRadius);
+      const side =
+        slot.extent > 0 ? planetSide(drawn, slot.extent) : impostorSide(drawn, slot.hazeR, slot.smooth);
+      slot.side = side;
+      slot.mesh.scale.set(side, side, 1);
+      const radiusPx = screenRadius(drawn, zoom);
       const uR = radiusPx * dpr;
       if (uniforms.uR) uniforms.uR.value = uR;
       if (uniforms.uTime) uniforms.uTime.value = seconds;
