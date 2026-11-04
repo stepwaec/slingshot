@@ -40,6 +40,7 @@ describe("Observatory", () => {
     for (const kind of BODY_KINDS) {
       expect(observatory.bodies.some((body) => body.kind === kind), `missing kind ${kind}`).toBe(true);
     }
+    expect(observatory.bodies.some((body) => body.id === "kind-planet")).toBe(false);
     for (const look of NEBULA_LOOKS) {
       expect(observatory.nebulae?.some((cloud) => cloud.look === look), `missing nebula ${look}`).toBe(true);
     }

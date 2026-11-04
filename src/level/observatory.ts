@@ -574,7 +574,7 @@ function build(): Level {
     slots.push({ reach: made.reach, place: (x, y) => placeBody(made.body, x, y) });
   }
   for (const kind of BODY_KINDS) {
-    if (kind !== "planet" && kindsFromLooks.has(kind)) continue;
+    if (kindsFromLooks.has(kind)) continue;
     const made = kindBody(kind);
     bodies.push(made.body);
     slots.push({ reach: made.reach, place: (x, y) => placeBody(made.body, x, y) });
