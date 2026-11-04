@@ -264,14 +264,9 @@ export function planFuel(game: Game): PlanFuel {
   return assessPlan(game.nodes, config.fuelMax ?? game.level.fuel, perDv);
 }
 
+/** Planning can leave the pad on a coast. An unaffordable plan stays put. */
 export function canLaunch(game: Game): boolean {
-  if (game.mode !== "planning") return false;
-  if (!planFuel(game).affordable) return false;
-  for (let i = 0; i < game.nodes.length; i++) {
-    const node = game.nodes[i];
-    if (Math.hypot(node.dvx, node.dvy) >= 0.25) return true;
-  }
-  return false;
+  return game.mode === "planning" && planFuel(game).affordable;
 }
 
 /** Replace the plan and predict it from the start. Planning only. */

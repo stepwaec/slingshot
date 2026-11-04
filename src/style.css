@@ -80,7 +80,8 @@ html, body, #app {
   background: #0a0d1a;
   color: var(--text);
   font: 600 9px/10px var(--ui);
-  pointer-events: auto;
+  /* The canvas pick uses a smaller disc. This glyph must not steal path clicks. */
+  pointer-events: none;
   transform: translate(-50%, -50%);
   cursor: pointer;
   z-index: 2;
