@@ -123,13 +123,13 @@ export function planGhosts(
 }
 
 /**
- * Ghosts the burn list does not already carry: each later body at closest
- * approach, and each relevant body at the scrubber or, with no scrubber, at
- * the end of the preview. `movingIds` is the same order as `planGhosts`.
+ * Ghosts the burn list does not already carry.
+ * Closest approach of each marked body, every moving body at the end of the
+ * preview, and every moving body at the scrubber when one is set.
+ * `movingIds` is the same order as `planGhosts`.
  */
 export function previewGhosts(
   slots: readonly GhostSlot[],
-  homeId: string,
   approaches: readonly { bodyId: string; step: number }[],
   movingIds: readonly string[],
   cursorStep: number | null,
@@ -150,18 +150,13 @@ export function previewGhosts(
     taken.add(id);
     extra.push({ step, bodyIndex, burnNumber: null, cursor: false, arrival: false });
   };
+  const eachMoving = (step: number | null): void => {
+    if (step === null) return;
+    for (let i = 0; i < movingIds.length; i++) push(step, i);
+  };
   for (let i = 0; i < approaches.length; i++) push(approaches[i].step, indexOf(approaches[i].bodyId));
-  const inspect = cursorStep !== null ? cursorStep : previewStep;
-  if (inspect !== null) {
-    if (homeId) push(inspect, indexOf(homeId));
-    const seen = new Set<string>();
-    for (let i = 0; i < approaches.length; i++) {
-      const id = approaches[i].bodyId;
-      if (seen.has(id)) continue;
-      seen.add(id);
-      push(inspect, indexOf(id));
-    }
-  }
+  eachMoving(previewStep);
+  eachMoving(cursorStep);
   return extra;
 }
 

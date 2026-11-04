@@ -72,17 +72,21 @@ describe("predicted positions are the flight", () => {
           for (let i = 0; i < drawnPlan.length; i++) {
             const got = drawnFly[i];
             const want = drawnPlan[i];
-            if (got.x !== want.x || got.y !== want.y || got.bodyId !== want.bodyId) {
+            if (got.x !== want.x || got.y !== want.y || got.x !== predicted[i].x || got.y !== predicted[i].y) {
               throw new Error(
-                `${label} frame diverged at sample ${i} (step ${predicted[i].step}): ${got.bodyId} (${got.x}, ${got.y}) vs ${want.bodyId} (${want.x}, ${want.y})`,
+                `${label} drawing diverged at sample ${i} (step ${predicted[i].step}): (${got.x}, ${got.y}) vs (${want.x}, ${want.y})`,
               );
             }
           }
           if (plan.name === "reference" && seconds === 140 && cursor === null) {
-            expect(drawnPlan.some((point) => point.bodyId === "earth")).toBe(true);
-            expect(drawnPlan.some((point) => point.bodyId === "luna")).toBe(true);
             const marks = pathApproaches(predicted, bodies, moonMission.g, moonMission.dt, 0);
-            expect(marks.some((mark) => mark.bodyId === "luna")).toBe(true);
+            const moon = marks.find((mark) => mark.bodyId === "luna");
+            expect(moon).toBeDefined();
+            if (moon) {
+              const at = predicted.find((sample) => sample.step === moon.step);
+              expect(at).toBeDefined();
+              if (at) expect(Math.hypot(at.x - moon.x, at.y - moon.y)).toBeLessThan(80);
+            }
             sawMoon = true;
           }
         }

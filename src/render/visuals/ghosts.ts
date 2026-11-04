@@ -18,7 +18,7 @@ import {
   type GhostDraw,
   type GhostInk,
 } from "../ghost-look";
-import { pathApproaches, pathHome, showPath, shownNow, viewBody, type DrawnPoint } from "../path-frame";
+import { pathApproaches } from "../path-frame";
 import type { Theme } from "../theme";
 import { disposeObject, type Visual, type VisualFactory, type VisualFrame } from "../visual";
 import { shader, srgbVec } from "./materials";
@@ -733,16 +733,10 @@ class GhostsVisual implements Visual {
     const won = game.prediction.status === "won";
     const capture = won ? game.prediction.steps : null;
     const slots = planGhosts(game.nodes, game.cursorStep, drawn, bodies.length, targetIndex, capture);
-    const now = shownNow(game.mode, game.ship.step, game.level.dt);
-    const approaches = pathApproaches(game.prediction.path, game.level.bodies, game.level.g, game.level.dt, now);
-    const homeId = pathHome(game.prediction.path, game.level.bodies, game.level.g, game.level.dt, now);
-    const home = homeBody(game.level.bodies, homeId);
-    const framing = home !== null && framesChild(homeId, approaches, game.level.bodies);
-    const framed = framing ? showPath(game.prediction.path, game.level.bodies, game.level.g, game.level.dt, now) : null;
+    const approaches = pathApproaches(game.prediction.path, game.level.bodies, game.level.g, game.level.dt);
     const previewStep = game.prediction.path.length > 0 ? game.prediction.path[game.prediction.path.length - 1].step : null;
     const extras = previewGhosts(
       slots,
-      homeId,
       approaches,
       bodies.map((body) => body.id),
       game.cursorStep,
@@ -763,7 +757,6 @@ class GhostsVisual implements Visual {
       const time = slot.step * game.level.dt;
       const present = bodyPresent(body, time);
       const pose = bodyPose(body, time, game.level.bodies, game.level.g);
-      if (framing && home && body.id === home.id) continue;
       const ship = shipAtStep(game.prediction.path, slot.step, fallback);
       const colliding = !!ship && shipInside(ship.x, ship.y, pose.x, pose.y, body.radius);
       const target = body.id === activeId;
@@ -780,13 +773,11 @@ class GhostsVisual implements Visual {
       const marker = this.ensure(count);
       count += 1;
       const label = ghostChip(kind, (slot.step - drawn) * game.level.dt);
-      const viewed = framing && home ? viewBody(body, time, home, now, game.level.bodies, game.level.g) : pose;
-      const shipDraw = framing && home ? shipOnView(game.prediction.path, framed, slot.step, ship, home, time, now, game.level.bodies, game.level.g) : ship;
       marker.show({
         theme: this.theme,
         draw,
-        x: viewed.x,
-        y: viewed.y,
+        x: pose.x,
+        y: pose.y,
         radius: Math.max(body.radius, spec.minRadius),
         captureRadius: body.captureRadius ?? 0,
         zoom,
@@ -802,14 +793,15 @@ class GhostsVisual implements Visual {
         tieAlpha: (kind === "cursor" ? spec.tieCursorAlpha : spec.tieAlpha) * fade,
         fade,
         cursorTie: kind === "cursor",
-        ship: shipDraw,
+        ship,
         burnNumber: draw.badge ? slot.burnNumber : null,
         label,
         labelColor: hexOf(draw.ink, this.theme),
       });
     }
     for (let i = count; i < this.markers.length; i++) this.markers[i].hide();
-    this.drawTrack(bodies, targetIndex, drawn, capture, game.level.dt, game.level.bodies, game.level.g, zoom, framing && home ? { home, now } : null);
+    const end = previewStep ?? drawn;
+    this.drawTracks(trackBodies(bodies), drawn, end, game.level.dt, game.level.bodies, game.level.g, zoom);
   }
 
   dispose(): void {
@@ -830,136 +822,97 @@ class GhostsVisual implements Visual {
     return marker;
   }
 
-  private drawTrack(
-    moving: readonly Body[],
-    targetIndex: number,
+  /** Faint world tracks of Earth and the Moon across the preview, or the moving bodies when those two are absent. */
+  private drawTracks(
+    tracked: readonly Body[],
     drawn: number,
-    capture: number | null,
+    endStep: number,
     dt: number,
     bodies: readonly Body[],
     g: number,
     zoom: number,
-    frame: { home: Body; now: number } | null,
   ): void {
     const spec = this.theme.ghost;
-    const target = targetIndex >= 0 ? moving[targetIndex] : undefined;
-    if (!target || capture === null || capture <= drawn || !(zoom > 0)) {
+    if (tracked.length === 0 || endStep <= drawn || !(zoom > 0)) {
       this.track.hide();
       return;
     }
     const t0 = drawn * dt;
-    const t1 = capture * dt;
-    const n = trackSamples(t0, t1, dt, spec.maxSamples);
+    const t1 = endStep * dt;
+    const share = Math.max(2, Math.floor(spec.maxSamples / tracked.length));
+    const n = trackSamples(t0, t1, dt, share);
     if (n < 2) {
       this.track.hide();
       return;
     }
-    for (let i = 0; i <= n; i++) {
-      const t = t0 + ((t1 - t0) * i) / n;
-      const pose = frame ? viewBody(target, t, frame.home, frame.now, bodies, g) : bodyPose(target, t, bodies, g);
-      this.xs[i] = pose.x;
-      this.ys[i] = pose.y;
-    }
-    let length = 0;
-    for (let i = 0; i < n; i++) length += Math.hypot(this.xs[i + 1] - this.xs[i], this.ys[i + 1] - this.ys[i]);
-    const spacing0 = (spec.trackDash + spec.trackGap) / zoom;
-    const spacing = length > 0 && length / spacing0 > spec.maxDots ? length / spec.maxDots : spacing0;
+    const dotBudget = Math.max(2, Math.floor(spec.maxDots / tracked.length));
+    const tickBudget = Math.max(1, Math.floor(spec.maxTicks / tracked.length));
     this.dotScratch.length = 0;
-    if (length > 0 && spacing > 0) {
-      let carried = 0;
-      this.dotScratch.push({ x: this.xs[0], y: this.ys[0] });
-      for (let i = 0; i < n && this.dotScratch.length < spec.maxDots; i++) {
-        const ax = this.xs[i];
-        const ay = this.ys[i];
-        const bx = this.xs[i + 1];
-        const by = this.ys[i + 1];
-        const seg = Math.hypot(bx - ax, by - ay);
-        if (seg < 1e-6) continue;
-        let dist = spacing - carried;
-        while (dist <= seg && this.dotScratch.length < spec.maxDots) {
-          const u = dist / seg;
-          this.dotScratch.push({ x: ax + (bx - ax) * u, y: ay + (by - ay) * u });
-          dist += spacing;
+    this.tickScratch.length = 0;
+    for (let b = 0; b < tracked.length; b++) {
+      const target = tracked[b];
+      for (let i = 0; i <= n; i++) {
+        const t = t0 + ((t1 - t0) * i) / n;
+        const pose = bodyPose(target, t, bodies, g);
+        this.xs[i] = pose.x;
+        this.ys[i] = pose.y;
+      }
+      let length = 0;
+      for (let i = 0; i < n; i++) length += Math.hypot(this.xs[i + 1] - this.xs[i], this.ys[i + 1] - this.ys[i]);
+      const spacing0 = (spec.trackDash + spec.trackGap) / zoom;
+      const spacing = length > 0 && length / spacing0 > dotBudget ? length / dotBudget : spacing0;
+      const dotStart = this.dotScratch.length;
+      if (length > 0 && spacing > 0) {
+        let carried = 0;
+        this.dotScratch.push({ x: this.xs[0], y: this.ys[0] });
+        for (let i = 0; i < n && this.dotScratch.length - dotStart < dotBudget; i++) {
+          const ax = this.xs[i];
+          const ay = this.ys[i];
+          const bx = this.xs[i + 1];
+          const by = this.ys[i + 1];
+          const seg = Math.hypot(bx - ax, by - ay);
+          if (seg < 1e-6) continue;
+          let dist = spacing - carried;
+          while (dist <= seg && this.dotScratch.length - dotStart < dotBudget) {
+            const u = dist / seg;
+            this.dotScratch.push({ x: ax + (bx - ax) * u, y: ay + (by - ay) * u });
+            dist += spacing;
+          }
+          carried = seg - (dist - spacing);
+          if (carried < 0) carried = 0;
         }
-        carried = seg - (dist - spacing);
-        if (carried < 0) carried = 0;
+      }
+      const times = trackTicks(t0, t1, spec.tickSeconds);
+      for (let i = 0; i < times.length && this.tickScratch.length < (b + 1) * tickBudget; i++) {
+        const t = times[i];
+        const pose = bodyPose(target, t, bodies, g);
+        const next = bodyPose(target, Math.min(t1, t + dt), bodies, g);
+        let tx = next.x - pose.x;
+        let ty = next.y - pose.y;
+        let len = Math.hypot(tx, ty);
+        if (len < 1e-6) {
+          tx = pose.vx;
+          ty = pose.vy;
+          len = Math.hypot(tx, ty);
+        }
+        if (len < 1e-6) continue;
+        this.tickScratch.push({ x: pose.x, y: pose.y, tx: -ty / len, ty: tx / len });
       }
     }
     this.track.drawDots(this.dotScratch, (spec.trackWidth * 0.5) / zoom);
-
-    const times = trackTicks(t0, t1, spec.tickSeconds);
-    this.tickScratch.length = 0;
-    for (let i = 0; i < times.length && i < spec.maxTicks; i++) {
-      const t = times[i];
-      const pose = frame ? viewBody(target, t, frame.home, frame.now, bodies, g) : bodyPose(target, t, bodies, g);
-      const nextTime = Math.min(t1, t + dt);
-      const next = frame ? viewBody(target, nextTime, frame.home, frame.now, bodies, g) : bodyPose(target, nextTime, bodies, g);
-      let tx = next.x - pose.x;
-      let ty = next.y - pose.y;
-      let len = Math.hypot(tx, ty);
-      if (len < 1e-6) {
-        const inertial = bodyPose(target, t, bodies, g);
-        tx = inertial.vx;
-        ty = inertial.vy;
-        len = Math.hypot(tx, ty);
-      }
-      if (len < 1e-6) continue;
-      this.tickScratch.push({ x: pose.x, y: pose.y, tx: -ty / len, ty: tx / len });
-    }
     this.track.drawTicks(this.tickScratch, (spec.tickLength * 0.5) / zoom, (spec.tickWidth * 0.5) / zoom);
   }
 }
 
-/** True when a later body orbits the view's home, so ghosts share that frame. */
-function framesChild(
-  homeId: string,
-  approaches: readonly { bodyId: string }[],
-  bodies: readonly Body[],
-): boolean {
-  for (let i = 0; i < approaches.length; i++) {
-    const body = findBody(bodies, approaches[i].bodyId);
-    if (body?.orbit?.centerId === homeId) return true;
+/** Earth and the Moon when they move. Otherwise the first two moving bodies. */
+function trackBodies(moving: readonly Body[]): Body[] {
+  const named: Body[] = [];
+  for (let i = 0; i < moving.length; i++) {
+    const id = moving[i].id;
+    if (id === "earth" || id === "luna") named.push(moving[i]);
   }
-  return false;
-}
-
-function homeBody(bodies: readonly Body[], id: string): Body | null {
-  if (!id) return null;
-  return findBody(bodies, id);
-}
-
-function findBody(bodies: readonly Body[], id: string): Body | null {
-  for (let i = 0; i < bodies.length; i++) if (bodies[i].id === id) return bodies[i];
-  return null;
-}
-
-/** Ship position on the drawn path, so a tie meets the stroke. */
-function shipOnView(
-  samples: readonly { step: number; x: number; y: number }[],
-  framed: readonly DrawnPoint[] | null,
-  step: number,
-  ship: { x: number; y: number } | null,
-  home: Body,
-  time: number,
-  now: number,
-  bodies: readonly Body[],
-  g: number,
-): { x: number; y: number } | null {
-  if (!ship) return null;
-  if (framed) {
-    let lo = 0;
-    let hi = samples.length - 1;
-    while (lo <= hi) {
-      const mid = (lo + hi) >> 1;
-      const found = samples[mid].step;
-      if (found === step) return framed[mid];
-      if (found < step) lo = mid + 1;
-      else hi = mid - 1;
-    }
-  }
-  const homeNow = viewBody(home, now, home, now, bodies, g);
-  const homeThen = time === now ? homeNow : viewBody(home, time, null, now, bodies, g);
-  return { x: homeNow.x + (ship.x - homeThen.x), y: homeNow.y + (ship.y - homeThen.y) };
+  if (named.length > 0) return named;
+  return moving.slice(0, 2);
 }
 
 function hexOf(ink: GhostInk, theme: Theme): string {

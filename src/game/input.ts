@@ -113,6 +113,7 @@ export function bindInput(
       }
     }
     if (drag.kind === "pan") {
+      game.follow = false;
       panBy(game.camera, event.offsetX - drag.lastX, event.offsetY - drag.lastY);
       drag.lastX = event.offsetX;
       drag.lastY = event.offsetY;
