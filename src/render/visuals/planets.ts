@@ -9,12 +9,9 @@ import { targetZoneLook } from "../target-zone";
 import { shader, srgbVec } from "./materials";
 
 /**
- * v1 planets: one lit disc each, plus Planet X's halo.
- * The capture ring is the v3 target zone: a solid stroke and a mint band,
- * sized from `captureRadius`. It does not dash. See `target-zone.ts`.
- * A black hole is a dark disc with a photon ring. Its radius is the horizon.
- * Swap this factory for textured meshes. Keep them in world space and light
- * them from the star's position so a later material can use the same vector.
+ * Capture rings only. Body discs are shader impostors or gallery sprites.
+ * The ring is the v3 target zone: a solid stroke and a mint band, sized from
+ * `captureRadius`. It does not dash. See `target-zone.ts`.
  */
 export const createPlanets: VisualFactory = (theme, level) => new PlanetsVisual(theme, level);
 
@@ -71,28 +68,6 @@ void main() {
 `;
 
 
-interface HoleView {
-  body: Body;
-  mesh: THREE.Mesh;
-  back: THREE.Mesh;
-  front: THREE.Mesh;
-  time: THREE.IUniform<number>;
-}
-
-interface PlanetView {
-  body: Body;
-  mesh: THREE.Mesh;
-  halo: THREE.Mesh | null;
-  belt: THREE.Mesh | null;
-  light: THREE.Vector2;
-  light2: THREE.Vector2;
-  weight2: THREE.IUniform;
-  spin: THREE.IUniform<number>;
-  cloudSpin: THREE.IUniform<number>;
-  surface: THREE.CanvasTexture;
-  clouds: THREE.CanvasTexture;
-}
-
 interface RingView {
   body: Body;
   mesh: THREE.Mesh;
@@ -107,15 +82,11 @@ class PlanetsVisual implements Visual {
   readonly space = "world" as const;
   readonly object = new THREE.Group();
   private readonly theme: Theme;
-  private readonly planets: PlanetView[] = [];
-  private readonly holes: HoleView[] = [];
   private readonly rings: RingView[] = [];
-  private readonly textures: THREE.CanvasTexture[] = [];
 
   constructor(theme: Theme, level: Parameters<VisualFactory>[1]) {
     this.theme = theme;
     this.object.name = "planets";
-    let order = 1;
     for (const body of level.bodies) {
       if (body.kind === "star" || body.kind === "rogue" || body.kind === "blackhole" || body.look === "comet" || body.look === "asteroid") continue;
       if (body.captureRadius !== undefined) {
@@ -154,7 +125,6 @@ class PlanetsVisual implements Visual {
         ring.name = `${body.id}-ring`;
         markEmissive(ring);
         this.object.add(wave, ring);
-        order += 1;
         this.rings.push({ body, mesh: ring, wave, color, waveColor, wonAt: -1 });
       }
     }
@@ -164,24 +134,6 @@ class PlanetsVisual implements Visual {
     const zoom = frame.game.camera.zoom;
     const time = simTime(frame.game);
     const bodies = frame.game.level.bodies;
-    const spin = (frame.now / 1000) * 0.12;
-    const spinTime = frame.now / 1000;
-    for (const hole of this.holes) {
-      const pose = bodyPose(hole.body, time, bodies);
-      hole.mesh.position.set(pose.x, pose.y, 0);
-      hole.back.position.set(pose.x, pose.y, 0);
-      hole.front.position.set(pose.x, pose.y, 0);
-      hole.time.value = spinTime;
-    }
-    for (const planet of this.planets) {
-      const pose = bodyPose(planet.body, time, bodies);
-      planet.mesh.position.set(pose.x, pose.y, 0);
-      planet.spin.value = spin + planet.body.radius * 0.01;
-      planet.cloudSpin.value = spin * 1.7;
-      if (planet.belt) planet.belt.position.set(pose.x, pose.y, 0);
-      if (planet.halo) planet.halo.position.set(pose.x, pose.y, 0);
-      planet.weight2.value = starLights(pose.x, pose.y, bodies, time, planet.light, planet.light2);
-    }
     const zone = this.theme.zone;
     const colors = this.theme.colors;
     const ship = frame.game.ship;
@@ -241,7 +193,6 @@ class PlanetsVisual implements Visual {
   }
 
   dispose(): void {
-    for (const texture of this.textures) texture.dispose();
     disposeObject(this.object);
   }
 }
@@ -249,57 +200,5 @@ class PlanetsVisual implements Visual {
 function simTime(game: Game): number {
   const step = game.mode === "planning" ? 0 : game.ship.step;
   return step * game.level.dt;
-}
-
-const lightScratch = { x: 0, y: 0, w: 0 };
-
-/** Up to two star directions, weighted by mass / distance². Writes into the planet's vectors. */
-function starLights(
-  x: number,
-  y: number,
-  bodies: readonly Body[],
-  time: number,
-  primary: THREE.Vector2,
-  secondary: THREE.Vector2,
-): number {
-  let firstW = 0;
-  let secondW = 0;
-  let px = 1;
-  let py = 0;
-  let sx = 1;
-  let sy = 0;
-  let have = false;
-  for (let i = 0; i < bodies.length; i++) {
-    const body = bodies[i];
-    if (body.kind !== "star") continue;
-    const pose = bodyPose(body, time, bodies);
-    const dx = pose.x - x;
-    const dy = pose.y - y;
-    const r2 = dx * dx + dy * dy;
-    if (!(r2 > 1e-8)) continue;
-    const weight = body.mass / r2;
-    const inv = 1 / Math.sqrt(r2);
-    const lx = dx * inv;
-    const ly = dy * inv;
-    if (!have || weight > firstW) {
-      secondW = firstW;
-      sx = px;
-      sy = py;
-      firstW = weight;
-      px = lx;
-      py = ly;
-      have = true;
-    } else if (weight > secondW) {
-      secondW = weight;
-      sx = lx;
-      sy = ly;
-    }
-  }
-  if (have) {
-    primary.set(px, py);
-    secondary.set(sx, sy);
-  }
-  lightScratch.w = firstW > 0 ? secondW / firstW : 0;
-  return lightScratch.w;
 }
 
