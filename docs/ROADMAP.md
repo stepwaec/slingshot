@@ -68,6 +68,27 @@ Note on numbering: Brainstormer's first draft called the flight loop "WP2" and r
 
 Tidal forces always exist. The stress on the ship is `2GM L / r³` from every mass, with no `tidalStrength` switch. Compact objects warn at `TIDAL_VISIBLE` (3.6), so the line stays just outside the Observatory black hole and farther out from a neutron star, a pulsar and a magnetar. Every other mass warns at `TIDAL_ORDINARY` (6.2), above the 10× Moon's surface gradient, so that Moon has no danger zone. Earth's zone shrinks to a thin shell above the surface and inside a legal periapsis. A low Earth orbit stays under both lines. A gas giant's cloud tops stay quiet, because `M / r³` there is smaller than in low Earth orbit. Prediction matches the flight.
 
+### Pause and replan
+
+**Status:** In progress.
+
+**Goal.** During flight the player can pause, read the predicted path from the ship as it is now, add a boost, change or delete a future one, and resume. Burns that have already fired stay locked. Prediction after the edit matches the rest of the flight, including several replans in one flight. `SimState.disturbances` is the list `step` will apply at a given step, so a later event changes prediction and flight together. No event kinds are implemented yet.
+
+**Acceptance.**
+- Pause shows the path from the frozen ship. Resume continues that trajectory.
+- A past burn cannot be moved, resized, or deleted. A future burn can.
+- After a replan, and after several replans in one flight, the flown samples match the prediction that was on screen, sample for sample.
+
+**Out of scope.** Planning-horizon limits, overlap selection, and the events themselves.
+
+### Events that break the plan
+
+**Status:** Not built. Roadmap only.
+
+**Goal.** Events that knock a flying plan off the line the player drew. A solar flare is a small push, or it knocks out the guidance display for a while. An engine failure fires a boost weaker or late. A sensor glitch lets the prediction drift until the player recalibrates. Debris forces a dodge. Some events are announced ahead, so the player can react with skill. Events come from a seed, so the physics stays deterministic and a replay matches. Scoring rewards fewer replans and less correction fuel. They will be entries on `SimState.disturbances`, applied in `step`.
+
+**Out of scope.** Building the events, the guidance blackout, the recalibrate control, and the score change.
+
 ## Open world
 
 One persistent world, grown over time. The first region is Sol: the Sun, the planets, the major moons on Kepler orbits, and the belts. Later regions come from the object catalogue (other stars, Tau Ceti and Astrophage, compact objects). A mission is a start state, camera and region bounds, objectives, and scoring, sharing that world's bodies and physics. The Observatory stays a showcase chart and is not a mission.

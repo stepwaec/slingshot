@@ -214,7 +214,8 @@ export function bindInput(
 /** Shift drags at a quarter of the level's Δv per pixel. */
 const FINE_BOOST = 0.25;
 
-function aimHandle(
+/** Drag the boost handle. Past burns are refused by `setNodeBurn`. */
+export function aimHandle(
   game: Game,
   size: { width: number; height: number },
   index: number,
@@ -329,6 +330,7 @@ function closestNode(game: Game, width: number, height: number, sx: number, sy: 
   let best = -1;
   let bestD = NODE_RADIUS * NODE_RADIUS;
   for (let i = 0; i < game.nodes.length; i++) {
+    if (i < game.cursor.index) continue;
     const pos = nodePosition(game, i);
     if (!pos) continue;
     const shown = shownPoint(game, pos.x, pos.y, game.nodes[i].step);
@@ -403,6 +405,7 @@ function closestPathStep(game: Game, width: number, height: number, sx: number, 
 }
 
 function handlePoint(game: Game, width: number, height: number, index: number): { x: number; y: number } | null {
+  if (index < game.cursor.index) return null;
   const pos = nodePosition(game, index);
   if (!pos) return null;
   const node = game.nodes[index];
