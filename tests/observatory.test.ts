@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { LEVELS, observatory, simConfigFromLevel } from "../src/level/catalog";
 import { observatoryPlacards, observatoryShips, shipModuleKeys } from "../src/level/observatory";
-import { BODY_KINDS, NEBULA_LOOKS } from "../src/level/schema";
+import { BODY_KINDS, NEBULA_LOOKS, type Level } from "../src/level/schema";
 import { frameLevel } from "../src/render/camera";
 import { ENGINE_PLUMES, type EngineLook } from "../src/render/ship-art";
 import { BELT_TIERS, type BeltTier } from "../src/sim/belts";
@@ -17,7 +17,7 @@ import {
 } from "../src/sim/mega";
 import { movingBodies } from "../src/game/ghosts";
 import { SOL_LOOKS, solArt } from "../src/render/sol-art";
-import { BODY_LOOKS, bodySolid, makeState, step, type BodyLook } from "../src/sim/physics";
+import { BODY_LOOKS, bodyPose, bodySolid, flyPlan, makeState, predictPlan, step, type BodyLook } from "../src/sim/physics";
 
 describe("Observatory", () => {
   it("stays off the campaign list and is its own chart", () => {
@@ -74,6 +74,70 @@ describe("Observatory", () => {
     expect(new Set(names).size).toBe(names.length);
   });
 
+  it("keeps the binary on one barycentric period, and the coast matches the flight", () => {
+    const hot = observatory.bodies.find((body) => body.look === "binary-hot");
+    const cool = observatory.bodies.find((body) => body.look === "binary-cool");
+    if (!hot?.orbit || !cool?.orbit) throw new Error("binary");
+    expect(hot.radius).toBe(30);
+    expect(cool.radius).toBe(20);
+    expect(hot.mass / cool.mass).toBeCloseTo(1.8, 5);
+    expect(hot.orbit.radius).toBe(42.9);
+    expect(cool.orbit.radius).toBe(77.1);
+    expect(hot.orbit.omega).toBeCloseTo((Math.PI * 2) / 40, 8);
+    expect(cool.orbit.phase - hot.orbit.phase).toBeCloseTo(Math.PI, 8);
+    const bodies = observatory.bodies;
+    const g = observatory.g;
+    const primary = bodyPose(hot, 0, bodies, g);
+    const secondary = bodyPose(cool, 0, bodies, g);
+    expect(Math.hypot(primary.x - secondary.x, primary.y - secondary.y)).toBeCloseTo(120, 6);
+    const mass = hot.mass + cool.mass;
+    const bx = (primary.x * hot.mass + secondary.x * cool.mass) / mass;
+    const by = (primary.y * hot.mass + secondary.y * cool.mass) / mass;
+    expect(bx).toBeCloseTo(hot.orbit.cx ?? 0, 1);
+    expect(by).toBeCloseTo(hot.orbit.cy ?? 0, 1);
+    const turned = bodyPose(hot, 20, bodies, g);
+    expect(turned.x - (hot.orbit.cx ?? 0)).toBeCloseTo(-(primary.x - (hot.orbit.cx ?? 0)), 5);
+    expect(turned.y - (hot.orbit.cy ?? 0)).toBeCloseTo(-(primary.y - (hot.orbit.cy ?? 0)), 5);
+    const back = bodyPose(hot, 40, bodies, g);
+    expect(back.x).toBeCloseTo(primary.x, 5);
+    expect(back.y).toBeCloseTo(primary.y, 5);
+
+    const cx = hot.orbit.cx ?? 0;
+    const cy = hot.orbit.cy ?? 0;
+    const pair = [hot, cool].map((body) => ({
+      ...body,
+      x: body.x - cx,
+      y: body.y - cy,
+      orbit: body.orbit ? { ...body.orbit, cx: 0, cy: 0 } : undefined,
+    }));
+    const coast: Level = {
+      ...observatory,
+      id: "binary-coast",
+      bodies: [
+        ...pair,
+        { id: "x", name: "Far", kind: "target", x: 900, y: 0, mass: 10, radius: 8, captureRadius: 20 },
+      ],
+      targetId: "x",
+      ship: { x: 280, y: 30, vx: 0, vy: 4 },
+      orbit: { bodyId: "x", radius: 40 },
+      belts: [],
+      nebulae: [],
+      wormholes: [],
+      petrova: [],
+      maxSteps: 160,
+    };
+    const config = simConfigFromLevel(coast);
+    const state = makeState(coast.ship.x, coast.ship.y, coast.ship.vx, coast.ship.vy, config);
+    const predicted = predictPlan(state, config, []);
+    const flown = flyPlan(state, config, [], 1);
+    expect(flown.status).toBe(predicted.status);
+    expect(flown.path).toHaveLength(predicted.path.length);
+    for (let i = 0; i < predicted.path.length; i++) {
+      expect(flown.path[i]?.x).toBe(predicted.path[i]?.x);
+      expect(flown.path[i]?.y).toBe(predicted.path[i]?.y);
+    }
+  });
+
   it("spaces bodies so each picture has its own place", () => {
     const bodies = observatory.bodies;
     for (let i = 0; i < bodies.length; i++) {
@@ -116,7 +180,8 @@ describe("Observatory", () => {
   });
 
   it("can be flown: the opening coast stays clear, and the frame does not drift", () => {
-    expect(observatory.bodies.every((body) => body.orbit === undefined)).toBe(true);
+    const orbiting = observatory.bodies.filter((body) => body.orbit).map((body) => body.look);
+    expect(orbiting.sort()).toEqual(["binary-cool", "binary-hot"]);
     expect(observatory.bodies.some((body) => body.kind === "rogue" && body.drift)).toBe(true);
     expect(frameAcceleration(observatory.bodies)).toBeNull();
     expect(observatory.bodies.some((body) => body.magnet)).toBe(true);
@@ -134,7 +199,8 @@ describe("Observatory", () => {
     for (let i = 0; i < 600; i++) step(state, config);
     expect(state.status).toBe("flying");
     for (const body of observatory.bodies) {
-      const distance = Math.hypot(state.x - body.x, state.y - body.y);
+      const pose = bodyPose(body, state.t, observatory.bodies, observatory.g);
+      const distance = Math.hypot(state.x - pose.x, state.y - pose.y);
       expect(distance, body.id).toBeGreaterThan(body.radius + 8);
     }
   });
