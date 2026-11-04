@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { screenToWorld, worldToScreen, type Camera } from "../src/render/camera";
+import { frameContent, screenToWorld, worldToScreen, type Camera } from "../src/render/camera";
+import { createGame } from "../src/game/state";
+import { moonMission } from "../src/world/moon-mission";
 import { powerHex } from "../src/render/palette";
 
 /** The pre-Three mapping. The orthographic camera must reproduce it. */
@@ -42,6 +44,28 @@ describe("top-down camera", () => {
     const again = worldToScreen(camera, 1280, 720, back.x, back.y);
     expect(again.x).toBeCloseTo(400, 3);
     expect(again.y).toBeCloseTo(250, 3);
+  });
+});
+
+describe("framing the predicted path", () => {
+  it("opens the chart until a coast around Earth fits", () => {
+    const game = createGame(moonMission);
+    const camera: Camera = { x: 0, y: 0, zoom: 1 };
+    frameContent(camera, 1440, 900, moonMission, game.prediction.path);
+    const frame = moonMission.frame;
+    if (!frame) throw new Error("frame");
+    let minX = Infinity;
+    let maxX = -Infinity;
+    for (let i = 0; i < game.prediction.path.length; i++) {
+      minX = Math.min(minX, game.prediction.path[i].x);
+      maxX = Math.max(maxX, game.prediction.path[i].x);
+    }
+    expect(maxX - minX).toBeGreaterThan(frame.maxX - frame.minX);
+    const halfW = 1440 / (2 * camera.zoom);
+    expect(camera.x - halfW).toBeLessThan(minX);
+    expect(camera.x + halfW).toBeGreaterThan(maxX);
+    expect(camera.zoom).toBeGreaterThanOrEqual(0.18);
+    expect(camera.zoom).toBeLessThanOrEqual(6);
   });
 });
 

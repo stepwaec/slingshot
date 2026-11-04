@@ -10,6 +10,7 @@ import {
   ghostDraw,
   pickGhostKind,
   planGhosts,
+  previewGhosts,
   shipAtStep,
   shipInside,
   trackSamples,
@@ -17,6 +18,7 @@ import {
   type GhostDraw,
   type GhostInk,
 } from "../ghost-look";
+import { pathApproaches } from "../path-frame";
 import type { Theme } from "../theme";
 import { disposeObject, type Visual, type VisualFactory, type VisualFrame } from "../visual";
 import { shader, srgbVec } from "./materials";
@@ -731,6 +733,17 @@ class GhostsVisual implements Visual {
     const won = game.prediction.status === "won";
     const capture = won ? game.prediction.steps : null;
     const slots = planGhosts(game.nodes, game.cursorStep, drawn, bodies.length, targetIndex, capture);
+    const approaches = pathApproaches(game.prediction.path, game.level.bodies, game.level.g, game.level.dt);
+    const previewStep = game.prediction.path.length > 0 ? game.prediction.path[game.prediction.path.length - 1].step : null;
+    const extras = previewGhosts(
+      slots,
+      approaches,
+      bodies.map((body) => body.id),
+      game.cursorStep,
+      previewStep,
+      drawn,
+    );
+    for (let i = 0; i < extras.length; i++) slots.push(extras[i]);
     const origin = game.mode === "paused" ? game.ship : game.initial;
     const fallback = [origin, game.prediction.final];
     const seconds = frame.now / 1000;
@@ -787,7 +800,8 @@ class GhostsVisual implements Visual {
       });
     }
     for (let i = count; i < this.markers.length; i++) this.markers[i].hide();
-    this.drawTrack(bodies, targetIndex, drawn, capture, game.level.dt, game.level.bodies, game.level.g, zoom);
+    const end = previewStep ?? drawn;
+    this.drawTracks(trackBodies(bodies), drawn, end, game.level.dt, game.level.bodies, game.level.g, zoom);
   }
 
   dispose(): void {
@@ -808,81 +822,97 @@ class GhostsVisual implements Visual {
     return marker;
   }
 
-  private drawTrack(
-    moving: readonly Body[],
-    targetIndex: number,
+  /** Faint world tracks of Earth and the Moon across the preview, or the moving bodies when those two are absent. */
+  private drawTracks(
+    tracked: readonly Body[],
     drawn: number,
-    capture: number | null,
+    endStep: number,
     dt: number,
     bodies: readonly Body[],
     g: number,
     zoom: number,
   ): void {
     const spec = this.theme.ghost;
-    const target = targetIndex >= 0 ? moving[targetIndex] : undefined;
-    if (!target || capture === null || capture <= drawn || !(zoom > 0)) {
+    if (tracked.length === 0 || endStep <= drawn || !(zoom > 0)) {
       this.track.hide();
       return;
     }
     const t0 = drawn * dt;
-    const t1 = capture * dt;
-    const n = trackSamples(t0, t1, dt, spec.maxSamples);
+    const t1 = endStep * dt;
+    const share = Math.max(2, Math.floor(spec.maxSamples / tracked.length));
+    const n = trackSamples(t0, t1, dt, share);
     if (n < 2) {
       this.track.hide();
       return;
     }
-    for (let i = 0; i <= n; i++) {
-      const t = t0 + ((t1 - t0) * i) / n;
-      const pose = bodyPose(target, t, bodies, g);
-      this.xs[i] = pose.x;
-      this.ys[i] = pose.y;
-    }
-    let length = 0;
-    for (let i = 0; i < n; i++) length += Math.hypot(this.xs[i + 1] - this.xs[i], this.ys[i + 1] - this.ys[i]);
-    const spacing0 = (spec.trackDash + spec.trackGap) / zoom;
-    const spacing = length > 0 && length / spacing0 > spec.maxDots ? length / spec.maxDots : spacing0;
+    const dotBudget = Math.max(2, Math.floor(spec.maxDots / tracked.length));
+    const tickBudget = Math.max(1, Math.floor(spec.maxTicks / tracked.length));
     this.dotScratch.length = 0;
-    if (length > 0 && spacing > 0) {
-      let carried = 0;
-      this.dotScratch.push({ x: this.xs[0], y: this.ys[0] });
-      for (let i = 0; i < n && this.dotScratch.length < spec.maxDots; i++) {
-        const ax = this.xs[i];
-        const ay = this.ys[i];
-        const bx = this.xs[i + 1];
-        const by = this.ys[i + 1];
-        const seg = Math.hypot(bx - ax, by - ay);
-        if (seg < 1e-6) continue;
-        let dist = spacing - carried;
-        while (dist <= seg && this.dotScratch.length < spec.maxDots) {
-          const u = dist / seg;
-          this.dotScratch.push({ x: ax + (bx - ax) * u, y: ay + (by - ay) * u });
-          dist += spacing;
+    this.tickScratch.length = 0;
+    for (let b = 0; b < tracked.length; b++) {
+      const target = tracked[b];
+      for (let i = 0; i <= n; i++) {
+        const t = t0 + ((t1 - t0) * i) / n;
+        const pose = bodyPose(target, t, bodies, g);
+        this.xs[i] = pose.x;
+        this.ys[i] = pose.y;
+      }
+      let length = 0;
+      for (let i = 0; i < n; i++) length += Math.hypot(this.xs[i + 1] - this.xs[i], this.ys[i + 1] - this.ys[i]);
+      const spacing0 = (spec.trackDash + spec.trackGap) / zoom;
+      const spacing = length > 0 && length / spacing0 > dotBudget ? length / dotBudget : spacing0;
+      const dotStart = this.dotScratch.length;
+      if (length > 0 && spacing > 0) {
+        let carried = 0;
+        this.dotScratch.push({ x: this.xs[0], y: this.ys[0] });
+        for (let i = 0; i < n && this.dotScratch.length - dotStart < dotBudget; i++) {
+          const ax = this.xs[i];
+          const ay = this.ys[i];
+          const bx = this.xs[i + 1];
+          const by = this.ys[i + 1];
+          const seg = Math.hypot(bx - ax, by - ay);
+          if (seg < 1e-6) continue;
+          let dist = spacing - carried;
+          while (dist <= seg && this.dotScratch.length - dotStart < dotBudget) {
+            const u = dist / seg;
+            this.dotScratch.push({ x: ax + (bx - ax) * u, y: ay + (by - ay) * u });
+            dist += spacing;
+          }
+          carried = seg - (dist - spacing);
+          if (carried < 0) carried = 0;
         }
-        carried = seg - (dist - spacing);
-        if (carried < 0) carried = 0;
+      }
+      const times = trackTicks(t0, t1, spec.tickSeconds);
+      for (let i = 0; i < times.length && this.tickScratch.length < (b + 1) * tickBudget; i++) {
+        const t = times[i];
+        const pose = bodyPose(target, t, bodies, g);
+        const next = bodyPose(target, Math.min(t1, t + dt), bodies, g);
+        let tx = next.x - pose.x;
+        let ty = next.y - pose.y;
+        let len = Math.hypot(tx, ty);
+        if (len < 1e-6) {
+          tx = pose.vx;
+          ty = pose.vy;
+          len = Math.hypot(tx, ty);
+        }
+        if (len < 1e-6) continue;
+        this.tickScratch.push({ x: pose.x, y: pose.y, tx: -ty / len, ty: tx / len });
       }
     }
     this.track.drawDots(this.dotScratch, (spec.trackWidth * 0.5) / zoom);
-
-    const times = trackTicks(t0, t1, spec.tickSeconds);
-    this.tickScratch.length = 0;
-    for (let i = 0; i < times.length && i < spec.maxTicks; i++) {
-      const t = times[i];
-      const pose = bodyPose(target, t, bodies, g);
-      const next = bodyPose(target, Math.min(t1, t + dt), bodies, g);
-      let tx = next.x - pose.x;
-      let ty = next.y - pose.y;
-      let len = Math.hypot(tx, ty);
-      if (len < 1e-6) {
-        tx = pose.vx;
-        ty = pose.vy;
-        len = Math.hypot(tx, ty);
-      }
-      if (len < 1e-6) continue;
-      this.tickScratch.push({ x: pose.x, y: pose.y, tx: -ty / len, ty: tx / len });
-    }
     this.track.drawTicks(this.tickScratch, (spec.tickLength * 0.5) / zoom, (spec.tickWidth * 0.5) / zoom);
   }
+}
+
+/** Earth and the Moon when they move. Otherwise the first two moving bodies. */
+function trackBodies(moving: readonly Body[]): Body[] {
+  const named: Body[] = [];
+  for (let i = 0; i < moving.length; i++) {
+    const id = moving[i].id;
+    if (id === "earth" || id === "luna") named.push(moving[i]);
+  }
+  if (named.length > 0) return named;
+  return moving.slice(0, 2);
 }
 
 function hexOf(ink: GhostInk, theme: Theme): string {

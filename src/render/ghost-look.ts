@@ -122,6 +122,44 @@ export function planGhosts(
   return slots;
 }
 
+/**
+ * Ghosts the burn list does not already carry.
+ * Closest approach of each marked body, every moving body at the end of the
+ * preview, and every moving body at the scrubber when one is set.
+ * `movingIds` is the same order as `planGhosts`.
+ */
+export function previewGhosts(
+  slots: readonly GhostSlot[],
+  approaches: readonly { bodyId: string; step: number }[],
+  movingIds: readonly string[],
+  cursorStep: number | null,
+  previewStep: number | null,
+  drawnStep: number,
+): GhostSlot[] {
+  const extra: GhostSlot[] = [];
+  const taken = new Set<string>();
+  for (let i = 0; i < slots.length; i++) taken.add(`${slots[i].step}:${slots[i].bodyIndex}`);
+  const indexOf = (id: string): number => {
+    for (let i = 0; i < movingIds.length; i++) if (movingIds[i] === id) return i;
+    return -1;
+  };
+  const push = (step: number, bodyIndex: number): void => {
+    if (bodyIndex < 0 || step === drawnStep) return;
+    const id = `${step}:${bodyIndex}`;
+    if (taken.has(id)) return;
+    taken.add(id);
+    extra.push({ step, bodyIndex, burnNumber: null, cursor: false, arrival: false });
+  };
+  const eachMoving = (step: number | null): void => {
+    if (step === null) return;
+    for (let i = 0; i < movingIds.length; i++) push(step, i);
+  };
+  for (let i = 0; i < approaches.length; i++) push(approaches[i].step, indexOf(approaches[i].bodyId));
+  eachMoving(previewStep);
+  eachMoving(cursorStep);
+  return extra;
+}
+
 /** §18 order: gone, collision, arrival, cursor, then a burn or another body. */
 export function pickGhostKind(input: {
   present: boolean;

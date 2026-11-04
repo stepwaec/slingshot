@@ -141,6 +141,46 @@ function syncSheetIfActive(camera: Camera, width: number, height: number): void 
   if (sheetOn && spaceCam) syncSpaceTime(camera, width, height, spaceCam);
 }
 
+/**
+ * Fit the level's chart, expanded to the predicted path, so a world-space
+ * coast stays on screen. Zoom stays inside the pan limits.
+ */
+export function frameContent(
+  camera: Camera,
+  width: number,
+  height: number,
+  level: Level,
+  points: readonly { x: number; y: number }[],
+): void {
+  const framed = level.frame;
+  if (!framed || width < 2 || height < 2) {
+    frameLevel(camera, width, height, level);
+    return;
+  }
+  let minX = framed.minX;
+  let maxX = framed.maxX;
+  let minY = framed.minY;
+  let maxY = framed.maxY;
+  for (let i = 0; i < points.length; i++) {
+    const point = points[i];
+    if (point.x < minX) minX = point.x;
+    if (point.x > maxX) maxX = point.x;
+    if (point.y < minY) minY = point.y;
+    if (point.y > maxY) maxY = point.y;
+  }
+  const pad = 48;
+  minX -= pad;
+  maxX += pad;
+  minY -= pad;
+  maxY += pad;
+  const worldW = Math.max(1, maxX - minX);
+  const worldH = Math.max(1, maxY - minY);
+  camera.x = (minX + maxX) / 2;
+  camera.y = (minY + maxY) / 2;
+  const zoom = Math.min(width / worldW, height / worldH) * 0.9;
+  camera.zoom = Math.min(6, Math.max(0.18, zoom));
+}
+
 export function frameLevel(camera: Camera, width: number, height: number, level: Level): void {
   const framed = level.frame;
   if (framed) {

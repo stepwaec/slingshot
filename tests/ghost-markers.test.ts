@@ -10,6 +10,7 @@ import {
   ghostDraw,
   pickGhostKind,
   planGhosts,
+  previewGhosts,
   pointAtStep,
   shipInside,
   trackTicks,
@@ -159,5 +160,18 @@ describe("LU2 ghost markers", () => {
     expect(atCapture[0].arrival).toBe(true);
     expect(slots.filter((slot) => slot.step === 120)).toHaveLength(1);
     expect(slots.some((slot) => slot.step === 0)).toBe(false);
+  });
+
+  it("adds the scrubber, the preview end, and closest approach without a second ring on a burn", () => {
+    const slots = planGhosts([{ step: 40 }], 55, 0, 2, 1, null);
+    const extra = previewGhosts(slots, [{ bodyId: "luna", step: 90 }], ["earth", "luna"], 55, 140, 0);
+    expect(extra).toEqual([
+      { step: 90, bodyIndex: 1, burnNumber: null, cursor: false, arrival: false },
+      { step: 140, bodyIndex: 0, burnNumber: null, cursor: false, arrival: false },
+      { step: 140, bodyIndex: 1, burnNumber: null, cursor: false, arrival: false },
+      { step: 55, bodyIndex: 0, burnNumber: null, cursor: false, arrival: false },
+    ]);
+    const again = previewGhosts(slots, [{ bodyId: "luna", step: 40 }], ["earth", "luna"], null, 40, 0);
+    expect(again).toEqual([]);
   });
 });
