@@ -22,6 +22,7 @@ import {
 } from "./state";
 import { applyLayerKey, closeLayersOnEscape, type LayersPanelState } from "./layers";
 import { panBy, worldToScreen, zoomAt } from "../render/camera";
+import { shownPath, shownPoint } from "../render/path-frame";
 import { theme } from "../render/theme";
 import { SIM_SPEEDS, SPEED_KEY, type SimSpeed } from "../sim/physics";
 
@@ -218,7 +219,8 @@ function aimHandle(
 ): void {
   const origin = nodePosition(game, index);
   if (!origin) return;
-  const screen = worldToScreen(game.camera, size.width, size.height, origin.x, origin.y);
+  const shown = shownPoint(game, origin.x, origin.y, game.nodes[index].step);
+  const screen = worldToScreen(game.camera, size.width, size.height, shown.x, shown.y);
   const dx = sx - screen.x;
   const dy = sy - screen.y;
   const pixels = Math.hypot(dx, dy);
@@ -241,9 +243,11 @@ function slideNode(
   if (rail.length === 0) return;
   let best = rail[0];
   let bestD = Infinity;
+  const framed = shownPath(game, rail);
   for (let i = 0; i < rail.length; i++) {
     const sample = rail[i];
-    const screen = worldToScreen(game.camera, size.width, size.height, sample.x, sample.y);
+    const at = framed[i] ?? sample;
+    const screen = worldToScreen(game.camera, size.width, size.height, at.x, at.y);
     const d = (screen.x - sx) * (screen.x - sx) + (screen.y - sy) * (screen.y - sy);
     if (d < bestD) {
       bestD = d;
@@ -296,7 +300,8 @@ function removeMarkerPoint(game: Game, width: number, height: number): { x: numb
   if (game.mode !== "planning" && (game.ship.step - node.step) * game.level.dt > theme.nodes.ignite) return null;
   const pos = nodePosition(game, index);
   if (!pos) return null;
-  const screen = worldToScreen(game.camera, width, height, pos.x, pos.y);
+  const shown = shownPoint(game, pos.x, pos.y, node.step);
+  const screen = worldToScreen(game.camera, width, height, shown.x, shown.y);
   return { x: screen.x + theme.nodes.deleteX, y: screen.y + theme.nodes.deleteY };
 }
 
@@ -321,7 +326,8 @@ function closestNode(game: Game, width: number, height: number, sx: number, sy: 
   for (let i = 0; i < game.nodes.length; i++) {
     const pos = nodePosition(game, i);
     if (!pos) continue;
-    const screen = worldToScreen(game.camera, width, height, pos.x, pos.y);
+    const shown = shownPoint(game, pos.x, pos.y, game.nodes[i].step);
+    const screen = worldToScreen(game.camera, width, height, shown.x, shown.y);
     const d = (screen.x - sx) * (screen.x - sx) + (screen.y - sy) * (screen.y - sy);
     if (d <= bestD) {
       bestD = d;
@@ -331,36 +337,72 @@ function closestNode(game: Game, width: number, height: number, sx: number, sy: 
   return best < 0 ? null : best;
 }
 
+/** Samples this close to the nearest hit are the same point on a stacked loop. */
+const STACK_PX = 3;
+/** A cluster that spans more than this is several passes, not one arc. */
+const STACK_SECONDS = 1;
+
 function closestPathStep(game: Game, width: number, height: number, sx: number, sy: number): number | null {
-  let bestStep: number | null = null;
-  let bestD = PATH_RADIUS * PATH_RADIUS;
   const pose = game.mode === "paused" ? game.ship : game.initial;
+  const hits: { step: number; d: number }[] = [];
   const origin = worldToScreen(game.camera, width, height, pose.x, pose.y);
   const originD = (origin.x - sx) * (origin.x - sx) + (origin.y - sy) * (origin.y - sy);
-  if (originD <= 16 * 16) {
-    bestD = originD;
-    bestStep = pose.step;
-  }
+  if (originD <= 16 * 16) hits.push({ step: pose.step, d: originD });
   const path = game.prediction.path;
+  const framed = shownPath(game, path);
   // The step that ended the flight is already lost or won; a new burn there never fires.
   const closed = game.prediction.final.status !== "flying" ? game.prediction.final.step : -1;
+  const limit = PATH_RADIUS * PATH_RADIUS;
   for (let i = 0; i < path.length; i++) {
     if (path[i].step === closed) continue;
-    const screen = worldToScreen(game.camera, width, height, path[i].x, path[i].y);
-    const d = (screen.x - sx) * (screen.x - sx) + (screen.y - sy) * (screen.y - sy);
-    if (d <= bestD) {
-      bestD = d;
-      bestStep = path[i].step;
-    }
+    const at = framed[i] ?? path[i];
+    const screen = worldToScreen(game.camera, width, height, at.x, at.y);
+    const dx = screen.x - sx;
+    const dy = screen.y - sy;
+    const d = dx * dx + dy * dy;
+    if (d <= limit) hits.push({ step: path[i].step, d });
   }
-  return bestStep;
+  if (hits.length === 0) return null;
+  let closest = hits[0];
+  for (let i = 1; i < hits.length; i++) {
+    if (hits[i].d < closest.d) closest = hits[i];
+  }
+  const reach = Math.sqrt(closest.d) + STACK_PX;
+  let minStep = closest.step;
+  let maxStep = closest.step;
+  const near: { step: number; d: number }[] = [];
+  for (let i = 0; i < hits.length; i++) {
+    if (Math.sqrt(hits[i].d) > reach) continue;
+    near.push(hits[i]);
+    if (hits[i].step < minStep) minStep = hits[i].step;
+    if (hits[i].step > maxStep) maxStep = hits[i].step;
+  }
+  if ((maxStep - minStep) * game.level.dt < STACK_SECONDS) return closest.step;
+  let after = -1;
+  for (let i = 0; i < game.nodes.length; i++) {
+    if (game.nodes[i].step > after) after = game.nodes[i].step;
+  }
+  if (after >= 0) {
+    let earliest = -1;
+    for (let i = 0; i < near.length; i++) {
+      const step = near[i].step;
+      if (step > after && (earliest < 0 || step < earliest)) earliest = step;
+    }
+    if (earliest >= 0) return earliest;
+  }
+  let phase = near[0];
+  for (let i = 1; i < near.length; i++) {
+    if (Math.abs(near[i].step - pose.step) < Math.abs(phase.step - pose.step)) phase = near[i];
+  }
+  return phase.step;
 }
 
 function handlePoint(game: Game, width: number, height: number, index: number): { x: number; y: number } | null {
   const pos = nodePosition(game, index);
   if (!pos) return null;
   const node = game.nodes[index];
-  const screen = worldToScreen(game.camera, width, height, pos.x, pos.y);
+  const shown = shownPoint(game, pos.x, pos.y, node.step);
+  const screen = worldToScreen(game.camera, width, height, shown.x, shown.y);
   const offset = burnHandleOffset(node.dvx, node.dvy, game.level.dvPerPixel, nodeIncoming(game, index));
   return { x: screen.x + offset.x, y: screen.y + offset.y };
 }
