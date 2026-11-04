@@ -517,6 +517,21 @@ export interface SimState {
   astroRate: number;
   /** Fuel still in each Petrova knot. Empty when the level has no knots. */
   knots: number[];
+  /**
+   * Perturbations fired at a sim step, before that step integrates.
+   * `step` reads this list, so prediction and flight share it.
+   * No kinds are implemented yet.
+   */
+  disturbances: Disturbance[];
+}
+
+/**
+ * A later in-flight event at one sim step.
+ * The list is the hook. Kinds (a flare, a weak burn, a sensor drift, debris)
+ * are not implemented; `applyDisturbances` is where they will change the ship.
+ */
+export interface Disturbance {
+  step: number;
 }
 
 /** One impulsive burn at an exact sim step. Nodes are ordered by `step`. */
@@ -643,7 +658,11 @@ export function spendPause(rule: PauseRule, budget: PauseBudget): PauseBudget | 
 }
 
 export function cloneState(state: SimState): SimState {
-  return { ...state, knots: state.knots.slice() };
+  return {
+    ...state,
+    knots: state.knots.slice(),
+    disturbances: state.disturbances.slice(),
+  };
 }
 
 function findBody(bodies: readonly Body[], id: string): Body | undefined {
@@ -1262,6 +1281,7 @@ export function makeState(
     astroSpent: 0,
     astroRate: 0,
     knots: config.knotFuel ? config.knotFuel.slice() : [],
+    disturbances: [],
   };
 }
 
@@ -2553,9 +2573,22 @@ function transitWormhole(
   return true;
 }
 
+/**
+ * Apply every disturbance scheduled at the current step.
+ * Called from `step`, which prediction and flight both use.
+ * Kinds are not implemented, so the ship is unchanged.
+ */
+export function applyDisturbances(state: SimState): void {
+  const list = state.disturbances;
+  for (let i = 0; i < list.length; i++) {
+    if (list[i].step !== state.step) continue;
+  }
+}
+
 export function step(state: SimState, config: SimConfig): void {
   if (state.status !== "flying") return;
 
+  applyDisturbances(state);
   const dt = config.dt;
   const t0 = state.step * dt;
   releaseTransit(state, config, t0);
