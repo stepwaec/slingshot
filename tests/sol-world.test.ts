@@ -22,6 +22,8 @@ function sunDistance(id: string): number {
 
 describe("Sol world", () => {
   it("keeps the real order and Kepler mean motion", () => {
+    expect(solRadius(1)).toBe(820 * 1.5);
+    expect(body("luna").orbit?.radius).toBe(168 * 1.5);
     expect(solRadius(1)).toBeLessThan(solRadius(1.524));
     expect(solRadius(5)).toBeGreaterThan(solRadius(1.524));
     let previous = 0;
@@ -70,7 +72,7 @@ describe("Sol world", () => {
     const twice = placeBelts(belts);
     expect(twice).toBe(once);
     expect(once.length).toBeGreaterThan(100);
-    expect(once.length).toBeLessThan(6_000);
+    expect(once.length).toBeLessThan(12_000);
     expect(once.some((rock) => rock.beltId === "kuiper" && rock.material === "K")).toBe(true);
   });
 

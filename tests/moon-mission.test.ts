@@ -6,10 +6,10 @@ import { moonMission } from "../src/world/moon-mission";
 
 /** Departure, lunar capture, leave the Moon, Earth capture. */
 const plan: BurnNode[] = [
-  { step: 0, dvx: 0, dvy: -4.6 },
-  { step: 1247, dvx: 4.149142077933419, dvy: 2.2711384972551034 },
-  { step: 1278, dvx: -0.8651049861158008, dvy: -0.5015908322503313 },
-  { step: 2337, dvx: 1.3119158945943816, dvy: 4.959317243430171 },
+  { step: 0, dvx: 0, dvy: -6 },
+  { step: 1845, dvx: 1.6386, dvy: 2.9171 },
+  { step: 1865, dvx: -2.598076211353316, dvy: 1.5 },
+  { step: 7680, dvx: 0.3406, dvy: -14.781 },
 ];
 
 function body(id: string) {
@@ -45,6 +45,7 @@ describe("Mission 1, Moon and back", () => {
     const flown = flyPlan(state(), config, plan, 1);
     expect(predicted.status).toBe("won");
     expect(predicted.final.leg).toBe(1);
+    expect(predicted.outsideTime).toBeLessThan(moonMission.mission.deadline);
     expect(flown.status).toBe(predicted.status);
     expect(flown.lostReason).toBe(predicted.lostReason);
     expect(flown.steps).toBe(predicted.steps);
