@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { isEditing, type Game } from "../../game/state";
 import { simConfigFromLevel } from "../../level/catalog";
 import { worldToScreen } from "../camera";
-import { bodyPose, gravityConstant, isCompactBody, properTimeRate, tidalDangerRadius, type SimConfig } from "../../sim/physics";
+import { bodyPose, gravityConstant, properTimeRate, tidalDangerRadius, type SimConfig } from "../../sim/physics";
 import {
   clipSegment,
   deepestFinite,
@@ -491,15 +491,12 @@ class GravityVisual implements Visual {
   }
 
   private syncDanger(config: SimConfig, time: number, now: number, zoom: number, showLabel: boolean): void {
-    const strength = config.tidalStrength ?? 0;
     const g = gravityConstant(config);
     const spec = this.theme.gravity;
     let count = 0;
-    if (strength > 0) {
-      for (let i = 0; i < config.bodies.length; i++) {
+    for (let i = 0; i < config.bodies.length; i++) {
         const body = config.bodies[i];
-        if (!isCompactBody(body)) continue;
-        const radius = tidalDangerRadius(body, g, strength);
+        const radius = tidalDangerRadius(body, g);
         if (!(radius > 0)) continue;
         let ring = this.zones[count];
         if (!ring) {
@@ -527,7 +524,6 @@ class GravityVisual implements Visual {
           ring.label.visible = false;
         }
         count += 1;
-      }
     }
     for (let i = count; i < this.zones.length; i++) {
       const zone = this.zones[i];

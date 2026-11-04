@@ -51,8 +51,6 @@ export interface MissionProfile {
  * - `dilationCap` — maximum slowdown, for example `10` keeps `dτ/dt` at or
  *   above `1/10`. Omitted means no finite cap: the rate may reach 0, which is
  *   the hard clamp used today. A finite cap saturates smoothly.
- * - `tidalStrength` — hull damage per second from the gravity gradient near a
- *   white dwarf, neutron star or black hole. Omitted or 0 deals none.
  * - `dragStrength` — scales drag inside a body's `atmosphereRadius`. Omitted
  *   or 0 is no drag. The force only slows the ship relative to that body.
  *
@@ -65,7 +63,6 @@ export interface LevelPhysics {
   p?: number;
   dilationStrength?: number;
   dilationCap?: number;
-  tidalStrength?: number;
   dragStrength?: number;
   /** mSv per second per unit of environmental dose rate. Omitted is 0. */
   dosePerD1?: number;
@@ -276,7 +273,6 @@ const PHYSICS_KEYS = [
   "p",
   "dilationStrength",
   "dilationCap",
-  "tidalStrength",
   "dragStrength",
   "dosePerD1",
   "doseLimit",
@@ -916,7 +912,6 @@ function readPhysics(value: unknown, path: string, issues: string[]): LevelPhysi
   const p = readOptionalFinite(value, "p", path, issues, { min: 1, exclusiveMin: true });
   const dilationStrength = readOptionalFinite(value, "dilationStrength", path, issues, { min: 0 });
   const dilationCap = readOptionalFinite(value, "dilationCap", path, issues, { min: 1 });
-  const tidalStrength = readOptionalFinite(value, "tidalStrength", path, issues, { min: 0 });
   const dragStrength = readOptionalFinite(value, "dragStrength", path, issues, { min: 0 });
   const dosePerD1 = readOptionalFinite(value, "dosePerD1", path, issues, { min: 0 });
   const doseLimit = readOptionalFinite(value, "doseLimit", path, issues, { min: 0 });
@@ -926,7 +921,6 @@ function readPhysics(value: unknown, path: string, issues: string[]): LevelPhysi
   if (p !== undefined) physics.p = p;
   if (dilationStrength !== undefined) physics.dilationStrength = dilationStrength;
   if (dilationCap !== undefined) physics.dilationCap = dilationCap;
-  if (tidalStrength !== undefined) physics.tidalStrength = tidalStrength;
   if (dragStrength !== undefined) physics.dragStrength = dragStrength;
   if (dosePerD1 !== undefined) physics.dosePerD1 = dosePerD1;
   if (doseLimit !== undefined) physics.doseLimit = doseLimit;

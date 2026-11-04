@@ -1,8 +1,8 @@
 import {
   bodyPose,
   gravityConstant,
-  isCompactBody,
   STRESS_WARN,
+  TIDAL_VISIBLE,
   type SimConfig,
   type Vec2,
 } from "../sim/physics";
@@ -161,7 +161,7 @@ export function hullSegmentsLit(hull: number, hullMax: number): number {
  * is coming apart quickly. The chip stays hidden at 0.
  */
 export function stressLevel(stress: number): StressLevel {
-  if (!(stress > 0)) return 0;
+  if (!(stress >= TIDAL_VISIBLE)) return 0;
   if (stress >= STRESS_WARN) return 3;
   if (stress >= STRESS_WARN / 2) return 2;
   return 1;
@@ -219,7 +219,7 @@ export function chargingNearStar(x: number, y: number, config: SimConfig, time: 
   return false;
 }
 
-/** Direction from the ship toward the compact body with the strongest GM/r³. */
+/** Direction from the ship toward the mass with the strongest GM/r³. */
 export function tidalAxis(x: number, y: number, config: SimConfig, time: number): Vec2 | null {
   const g = gravityConstant(config);
   let best = 0;
@@ -228,7 +228,7 @@ export function tidalAxis(x: number, y: number, config: SimConfig, time: number)
   const bodies = config.bodies;
   for (let i = 0; i < bodies.length; i++) {
     const body = bodies[i];
-    if (!isCompactBody(body) || !(body.mass > 0)) continue;
+    if (!(body.mass > 0)) continue;
     const pose = body.orbit ? bodyPose(body, time, bodies) : { x: body.x, y: body.y, vx: 0, vy: 0 };
     const ox = x - pose.x;
     const oy = y - pose.y;

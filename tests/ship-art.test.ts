@@ -9,7 +9,7 @@ import {
   visibleParts,
   shipBuild,
 } from "../src/render/ship-art";
-import { STRESS_WARN } from "../src/sim/physics";
+import { STRESS_WARN, TIDAL_VISIBLE } from "../src/sim/physics";
 
 describe("ship art rules", () => {
   it("picks one damage overlay from the hull fraction", () => {
@@ -34,10 +34,11 @@ describe("ship art rules", () => {
     expect(hullTone(29, 100)).toBe("critical");
   });
 
-  it("hides the stress chip at zero and turns it red at the existing warning", () => {
+  it("hides the stress chip under the visible line and turns it red at the warning", () => {
     expect(stressLevel(0)).toBe(0);
-    expect(stressLevel(0.1)).toBe(1);
-    expect(stressLevel(STRESS_WARN / 2)).toBe(2);
+    expect(stressLevel(0.1)).toBe(0);
+    expect(stressLevel(TIDAL_VISIBLE - 0.01)).toBe(0);
+    expect(stressLevel((TIDAL_VISIBLE + STRESS_WARN) / 2)).toBe(2);
     expect(stressLevel(STRESS_WARN)).toBe(3);
   });
 

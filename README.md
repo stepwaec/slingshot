@@ -85,7 +85,7 @@ An optional `physics` object overrides the integrator. Every field has a default
 | `p` | `2` | Falloff exponent. Force magnitude is `G M / (r² + ε²)^(p/2)`. |
 | `dilationStrength` | `1` | Scales both `2Φ/c²` and `v²/c²`. |
 | `dilationCap` | none | Max slowdown. `10` means `dτ/dt` stays above `0.1`, approaching that floor smoothly instead of jumping to 0. |
-| `tidalStrength`, `dragStrength` | `0` | Stored only. The sim does not read them yet. |
+| `dragStrength` | `0` | Drag inside a body's atmosphere. Tides are not a knob: every mass contributes `2GM L / r³`, and hull damage starts at the visible line. |
 
 The potential is the integral of that force, so the clock rate and the gravity map use the same field as the acceleration. Prediction and flight share `SimConfig`, so a knob cannot change one and not the other.
 

@@ -60,7 +60,6 @@ export function simConfigFromLevel(level: Level, upgrades: readonly string[] = [
   if (physics?.p !== undefined) config.p = physics.p;
   if (physics?.dilationStrength !== undefined) config.dilationStrength = physics.dilationStrength;
   if (physics?.dilationCap !== undefined) config.dilationCap = physics.dilationCap;
-  if (physics?.tidalStrength !== undefined) config.tidalStrength = physics.tidalStrength;
   if (physics?.dragStrength !== undefined) config.dragStrength = physics.dragStrength;
   if (physics?.dosePerD1 !== undefined) config.dosePerD1 = physics.dosePerD1;
   if (physics?.doseLimit !== undefined) config.doseLimit = physics.doseLimit;

@@ -1,6 +1,6 @@
 import type { Level } from "../level/schema";
 import { levelHasAstro } from "./state";
-import { hasMagneticBody, isCompactBody, starLuminosity } from "../sim/physics";
+import { hasMagneticBody, starLuminosity, tidalDangerRadius } from "../sim/physics";
 
 /**
  * Map layers menu. One table drives the rows, so a later layer is one entry.
@@ -50,18 +50,15 @@ export function hasRadiationSource(level: Level): boolean {
   return false;
 }
 
-/** White dwarf, neutron star (including pulsar and magnetar), or black hole. */
-export function hasTidalBody(level: Level): boolean {
+/**
+ * The row is on when some body is dense enough that the visible line sits
+ * outside its surface. Ordinary worlds at a low orbit stay under that line.
+ */
+export function tidalLayerReady(level: Level): boolean {
   for (let i = 0; i < level.bodies.length; i++) {
-    if (isCompactBody(level.bodies[i])) return true;
+    if (tidalDangerRadius(level.bodies[i], level.g) > 0) return true;
   }
   return false;
-}
-
-/** Compact body and a positive tidalStrength. Otherwise the row stays dim. */
-export function tidalLayerReady(level: Level): boolean {
-  const strength = level.physics?.tidalStrength ?? 0;
-  return strength > 0 && hasTidalBody(level);
 }
 
 export const LAYERS: readonly LayerDef[] = [
