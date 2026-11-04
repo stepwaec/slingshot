@@ -69,6 +69,10 @@ const LOOK_KIND: Partial<Record<BodyLook, BodyKind>> = {
   lava: "planet",
   toxic: "planet",
   cracked: "planet",
+  "double-big": "planet",
+  "double-small": "planet",
+  "moon-captured": "moon",
+  "moon-chain": "planet",
   comet: "planet",
   asteroid: "planet",
   "tau-hot": "planet",
@@ -96,6 +100,10 @@ const LOOK_NAME: Partial<Record<BodyLook, string>> = {
   lava: "Lava world",
   toxic: "Toxic world",
   cracked: "Cracked world",
+  "double-big": "Double ocean",
+  "double-small": "Double rock",
+  "moon-captured": "Captured moon",
+  "moon-chain": "Moon chain",
   neutron: "Neutron star",
   pulsar: "Pulsar",
   magnetar: "Magnetar",
@@ -182,6 +190,12 @@ const LOOK_SPEC: Partial<Record<BodyLook, ExhibitSpec>> = {
   lava: { radius: 26, mass: 600, reach: 74 },
   toxic: { radius: 32, mass: 750, reach: 84 },
   cracked: { radius: 27, mass: 620, reach: 74 },
+  // double.svg: r 18 and r 11, masses ~ r³ so 7.06×5832 = 30.94×1331.
+  "double-big": { radius: 18, mass: 5832, reach: 90 },
+  "double-small": { radius: 11, mass: 1331, reach: 90 },
+  "moon-captured": { radius: 9, mass: 40, reach: 48 },
+  // moon-chain.svg: the banded giant is r 44. The moons are placed with it.
+  "moon-chain": { radius: 44, mass: 800, reach: 220 },
   asteroid: { radius: 15, mass: 0, reach: 48, extra: { drift: { vx: 0.02, vy: 0 } } },
   neutron: {
     radius: 8,
@@ -269,6 +283,69 @@ for (const look of SOL_LOOKS) {
 }
 
 const defaultLook: ExhibitSpec = { radius: 20, mass: 700, reach: 140 };
+
+/** double.svg: clockwise 40 s, big at −7.06, small at +30.94, t = 0. */
+function doubleSlot(bodies: Body[]): Slot {
+  const big = lookBody("double-big").body;
+  const small = lookBody("double-small").body;
+  bodies.push(big, small);
+  const aBig = 7.06;
+  const aSmall = 30.94;
+  const omega = (-Math.PI * 2) / 40;
+  return {
+    reach: 90,
+    place(x, y) {
+      big.orbit = { cx: x, cy: y, radius: aBig, phase: Math.PI, omega };
+      small.orbit = { cx: x, cy: y, radius: aSmall, phase: 0, omega };
+      big.x = x - aBig;
+      big.y = y;
+      small.x = x + aSmall;
+      small.y = y;
+    },
+  };
+}
+
+/** moon-chain.svg: 1:2:3:4 resonance, a = 68 n^(2/3), periods 18, 36, 54, 72 s. */
+function chainSlot(bodies: Body[]): Slot {
+  const giant = lookBody("moon-chain").body;
+  giant.kind = "planet";
+  const moons: { id: string; name: string; look: BodyLook; radius: number; a: number; period: number; phase: number }[] = [
+    { id: "chain-volcanic", name: "Chain volcanic", look: "moon-volcanic", radius: 6.5, a: 68, period: 18, phase: 0 },
+    { id: "chain-icy", name: "Chain icy", look: "moon-icy", radius: 6, a: 107.9, period: 36, phase: (95 * Math.PI) / 180 },
+    { id: "chain-barren", name: "Chain moon", look: "moon", radius: 7, a: 141.4, period: 54, phase: (205 * Math.PI) / 180 },
+    { id: "chain-dwarf", name: "Chain dwarf", look: "dwarf", radius: 4.5, a: 171.3, period: 72, phase: (300 * Math.PI) / 180 },
+  ];
+  const made = moons.map((moon) =>
+    body(
+      {
+        id: moon.id,
+        name: moon.name,
+        kind: "moon",
+        look: moon.look,
+        x: 0,
+        y: 0,
+        mass: 1,
+        radius: moon.radius,
+      },
+      moon.a + moon.radius + 16,
+    ),
+  );
+  bodies.push(giant, ...made);
+  return {
+    reach: 220,
+    place(x, y) {
+      placeBody(giant, x, y);
+      for (let i = 0; i < moons.length; i++) {
+        const moon = moons[i]!;
+        const item = made[i]!;
+        const omega = (Math.PI * 2) / moon.period;
+        item.orbit = { centerId: giant.id, radius: moon.a, phase: moon.phase, omega };
+        item.x = x + Math.cos(moon.phase) * moon.a;
+        item.y = y + Math.sin(moon.phase) * moon.a;
+      }
+    },
+  };
+}
 
 /**
  * One bound pair. binary-star.svg: barycentre, masses 1.8:1, separation 120,
@@ -575,7 +652,8 @@ function parkOrbit(
 function pack(slots: readonly Slot[]): void {
   const gap = 72;
   const minStep = 300;
-  const rowWidth = 3360;
+  // Wide enough that the bound binary and the moon chain still frame clear of the HUD.
+  const rowWidth = 3720;
   let cursor = 0;
   let y = 0;
   let rowH = 0;
@@ -603,6 +681,17 @@ function build(): Level {
     if (look === "binary-hot" || look === "binary-cool") {
       if (look === "binary-hot") slots.push(binarySlot(bodies));
       kindsFromLooks.add("star");
+      continue;
+    }
+    if (look === "double-big" || look === "double-small") {
+      if (look === "double-big") slots.push(doubleSlot(bodies));
+      kindsFromLooks.add("planet");
+      continue;
+    }
+    if (look === "moon-chain") {
+      slots.push(chainSlot(bodies));
+      kindsFromLooks.add("planet");
+      kindsFromLooks.add("moon");
       continue;
     }
     const made = lookBody(look);

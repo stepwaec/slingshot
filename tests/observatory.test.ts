@@ -74,6 +74,67 @@ describe("Observatory", () => {
     expect(new Set(names).size).toBe(names.length);
   });
 
+  it("orbits the double planet and the moon chain, and the coast matches the flight", () => {
+    const bodies = observatory.bodies;
+    const g = observatory.g;
+    const big = bodies.find((body) => body.id === "look-double-big");
+    const small = bodies.find((body) => body.id === "look-double-small");
+    const giant = bodies.find((body) => body.id === "look-moon-chain");
+    const volcanic = bodies.find((body) => body.id === "chain-volcanic");
+    const icy = bodies.find((body) => body.id === "chain-icy");
+    if (!big?.orbit || !small?.orbit || !giant || !volcanic?.orbit || !icy?.orbit) throw new Error("pair");
+    expect(big.radius).toBe(18);
+    expect(small.radius).toBe(11);
+    expect(big.orbit.radius).toBe(7.06);
+    expect(small.orbit.radius).toBe(30.94);
+    expect(big.mass / small.mass).toBeCloseTo(5832 / 1331, 5);
+    const b0 = bodyPose(big, 0, bodies, g);
+    const s0 = bodyPose(small, 0, bodies, g);
+    expect(Math.hypot(b0.x - s0.x, s0.y - b0.y)).toBeCloseTo(38, 4);
+    expect(s0.x - (small.orbit.cx ?? 0)).toBeCloseTo(30.94, 4);
+    expect(b0.x - (big.orbit.cx ?? 0)).toBeCloseTo(-7.06, 4);
+    const half = bodyPose(small, 20, bodies, g);
+    expect(half.x - (small.orbit.cx ?? 0)).toBeCloseTo(-30.94, 3);
+    expect(volcanic.orbit.radius).toBe(68);
+    expect(icy.orbit.radius / volcanic.orbit.radius).toBeCloseTo(2 ** (2 / 3), 2);
+    expect(icy.orbit.omega * 2).toBeCloseTo(volcanic.orbit.omega, 6);
+    const v0 = bodyPose(volcanic, 0, bodies, g);
+    expect(Math.hypot(v0.x - giant.x, v0.y - giant.y)).toBeCloseTo(68, 4);
+    const vTurn = bodyPose(volcanic, 18, bodies, g);
+    expect(vTurn.x).toBeCloseTo(v0.x, 3);
+    expect(vTurn.y).toBeCloseTo(v0.y, 3);
+
+    const coast: Level = {
+      ...observatory,
+      id: "pair-coast",
+      bodies: [
+        big,
+        small,
+        giant,
+        volcanic,
+        { id: "x", name: "Far", kind: "target", x: 1200, y: 0, mass: 10, radius: 8, captureRadius: 20 },
+      ],
+      targetId: "x",
+      ship: { x: 400, y: 80, vx: 0, vy: 3 },
+      orbit: { bodyId: "x", radius: 40 },
+      belts: [],
+      nebulae: [],
+      wormholes: [],
+      petrova: [],
+      maxSteps: 120,
+    };
+    const config = simConfigFromLevel(coast);
+    const state = makeState(coast.ship.x, coast.ship.y, coast.ship.vx, coast.ship.vy, config);
+    const predicted = predictPlan(state, config, []);
+    const flown = flyPlan(state, config, [], 1);
+    expect(flown.status).toBe(predicted.status);
+    expect(flown.path).toHaveLength(predicted.path.length);
+    for (let i = 0; i < predicted.path.length; i++) {
+      expect(flown.path[i]?.x).toBe(predicted.path[i]?.x);
+      expect(flown.path[i]?.y).toBe(predicted.path[i]?.y);
+    }
+  });
+
   it("keeps the binary on one barycentric period, and the coast matches the flight", () => {
     const hot = observatory.bodies.find((body) => body.look === "binary-hot");
     const cool = observatory.bodies.find((body) => body.look === "binary-cool");
@@ -145,7 +206,12 @@ describe("Observatory", () => {
         const a = bodies[i];
         const b = bodies[j];
         const distance = Math.hypot(a.x - b.x, a.y - b.y);
-        expect(distance, `${a.id} overlaps ${b.id}`).toBeGreaterThan(a.radius + b.radius + 36);
+        const bound =
+          a.orbit?.centerId === b.id ||
+          b.orbit?.centerId === a.id ||
+          (a.orbit?.cx !== undefined && a.orbit.cx === b.orbit?.cx && a.orbit.cy === b.orbit?.cy);
+        const pad = bound ? 0 : 36;
+        expect(distance, `${a.id} overlaps ${b.id}`).toBeGreaterThan(a.radius + b.radius + pad);
       }
     }
     for (const host of bodies) {
@@ -180,8 +246,19 @@ describe("Observatory", () => {
   });
 
   it("can be flown: the opening coast stays clear, and the frame does not drift", () => {
-    const orbiting = observatory.bodies.filter((body) => body.orbit).map((body) => body.look);
-    expect(orbiting.sort()).toEqual(["binary-cool", "binary-hot"]);
+    const orbiting = observatory.bodies.filter((body) => body.orbit).map((body) => body.id).sort();
+    expect(orbiting).toEqual(
+      [
+        "chain-barren",
+        "chain-dwarf",
+        "chain-icy",
+        "chain-volcanic",
+        "look-binary-cool",
+        "look-binary-hot",
+        "look-double-big",
+        "look-double-small",
+      ].sort(),
+    );
     expect(observatory.bodies.some((body) => body.kind === "rogue" && body.drift)).toBe(true);
     expect(frameAcceleration(observatory.bodies)).toBeNull();
     expect(observatory.bodies.some((body) => body.magnet)).toBe(true);

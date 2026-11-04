@@ -361,6 +361,7 @@ export function giantKey(body: Body): GiantKey | null {
     case "neptune":
       return "neptune";
     case "gas-giant":
+    case "moon-chain":
       return "banded";
     case "gas-ringed":
       return "ringed";
