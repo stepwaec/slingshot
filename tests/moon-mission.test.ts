@@ -6,10 +6,10 @@ import { moonMission } from "../src/world/moon-mission";
 
 /** Departure, lunar capture, leave the Moon, Earth capture. */
 const plan: BurnNode[] = [
-  { step: 0, dvx: 0, dvy: -6 },
-  { step: 1845, dvx: 1.6386, dvy: 2.9171 },
-  { step: 1865, dvx: -2.598076211353316, dvy: 1.5 },
-  { step: 7680, dvx: 0.3406, dvy: -14.781 },
+  { step: 0, dvx: 0, dvy: -6.15 },
+  { step: 1890, dvx: 0.542338481131118, dvy: 3.880447072991457 },
+  { step: 1920, dvx: -1.414213562373095, dvy: 1.4142135623730951 },
+  { step: 8640, dvx: -13.83714503852748, dvy: -28.661266346109254 },
 ];
 
 function body(id: string) {
