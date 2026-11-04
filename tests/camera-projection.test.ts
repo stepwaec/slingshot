@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { frameContent, screenToWorld, worldToScreen, type Camera } from "../src/render/camera";
+import { frameContent, screenToWorld, wheelZoomFactor, worldToScreen, zoomAt, type Camera } from "../src/render/camera";
 import { createGame } from "../src/game/state";
 import { moonMission } from "../src/world/moon-mission";
 import { powerHex } from "../src/render/palette";
@@ -66,6 +66,45 @@ describe("framing the predicted path", () => {
     expect(camera.x + halfW).toBeGreaterThan(maxX);
     expect(camera.zoom).toBeGreaterThanOrEqual(0.18);
     expect(camera.zoom).toBeLessThanOrEqual(6);
+  });
+});
+
+describe("wheel zoom", () => {
+  const oldK = 0.0011;
+  const notch = 100;
+
+  it("grows with the scroll and is symmetric in and out", () => {
+    const small = wheelZoomFactor(-40, 0);
+    const large = wheelZoomFactor(-200, 0);
+    expect(small).toBeGreaterThan(1);
+    expect(large).toBeGreaterThan(small);
+    expect(wheelZoomFactor(200, 0)).toBeLessThan(wheelZoomFactor(40, 0));
+    expect(wheelZoomFactor(40, 0)).toBeLessThan(1);
+    expect(wheelZoomFactor(120, 0) * wheelZoomFactor(-120, 0)).toBeCloseTo(1, 12);
+    expect(wheelZoomFactor(3, 1)).toBeCloseTo(wheelZoomFactor(3 * 16, 0), 12);
+    expect(wheelZoomFactor(1, 2)).toBeCloseTo(wheelZoomFactor(800, 0), 12);
+  });
+
+  it("makes one mouse notch about two to three times the old log step", () => {
+    const oldStep = notch * oldK;
+    const nextStep = -Math.log(wheelZoomFactor(notch, 0));
+    expect(nextStep / oldStep).toBeGreaterThan(2);
+    expect(nextStep / oldStep).toBeLessThan(3);
+  });
+
+  it("keeps the point under the cursor and clamps the zoom", () => {
+    const camera: Camera = { x: 40, y: -20, zoom: 1 };
+    const before = screenToWorld(camera, 800, 600, 300, 200);
+    zoomAt(camera, 800, 600, 300, 200, wheelZoomFactor(-notch, 0));
+    const after = screenToWorld(camera, 800, 600, 300, 200);
+    expect(after.x).toBeCloseTo(before.x, 6);
+    expect(after.y).toBeCloseTo(before.y, 6);
+    expect(camera.zoom).toBeGreaterThan(1);
+
+    zoomAt(camera, 800, 600, 300, 200, 1e6);
+    expect(camera.zoom).toBe(6);
+    zoomAt(camera, 800, 600, 300, 200, 1e-9);
+    expect(camera.zoom).toBe(0.18);
   });
 });
 

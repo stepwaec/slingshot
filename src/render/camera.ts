@@ -100,6 +100,29 @@ export function zoomAt(camera: Camera, width: number, height: number, sx: number
   camera.y += before.y - after.y;
 }
 
+/** DOM_DELTA_LINE and DOM_DELTA_PAGE. Pixel mode is the raw delta. */
+const WHEEL_LINE = 1;
+const WHEEL_PAGE = 2;
+/** One line is a short notch, not a pixel. */
+const WHEEL_LINE_PX = 16;
+/** One page is many notches. Page mode is rare. */
+const WHEEL_PAGE_PX = 800;
+/**
+ * Log zoom per pixel of wheel travel.
+ * Was 0.0011. This is 2.5× that, so a 100px mouse notch (Chrome's usual step)
+ * changes zoom by about 2.5× the old log step. A fast trackpad flick, hundreds
+ * of pixels, covers a large range. Pinch is the same event with ctrlKey set.
+ */
+const WHEEL_ZOOM_K = 0.00275;
+
+/** Multiplier for one wheel event. Scroll down (positive deltaY) zooms out. */
+export function wheelZoomFactor(deltaY: number, deltaMode: number): number {
+  let pixels = deltaY;
+  if (deltaMode === WHEEL_LINE) pixels = deltaY * WHEEL_LINE_PX;
+  else if (deltaMode === WHEEL_PAGE) pixels = deltaY * WHEEL_PAGE_PX;
+  return Math.exp(-pixels * WHEEL_ZOOM_K);
+}
+
 /**
  * The parked perspective camera, framed on the same world point as the
  * orthographic view. The offset keeps the original rig's tilt: south of

@@ -21,7 +21,7 @@ import {
   type RailSample,
 } from "./state";
 import { applyLayerKey, closeLayersOnEscape, type LayersPanelState } from "./layers";
-import { panBy, worldToScreen, zoomAt } from "../render/camera";
+import { panBy, wheelZoomFactor, worldToScreen, zoomAt } from "../render/camera";
 import { shownPath, shownPoint } from "../render/path-frame";
 import { theme } from "../render/theme";
 import { SIM_SPEEDS, SPEED_KEY, type SimSpeed } from "../sim/physics";
@@ -148,8 +148,15 @@ export function bindInput(
     (event) => {
       event.preventDefault();
       const size = getSize();
-      const dy = event.deltaMode === 1 ? event.deltaY * 16 : event.deltaY;
-      zoomAt(game.camera, size.width, size.height, event.offsetX, event.offsetY, Math.exp(-dy * 0.0011));
+      // ctrlKey is a trackpad pinch. Same curve as a mouse wheel.
+      zoomAt(
+        game.camera,
+        size.width,
+        size.height,
+        event.offsetX,
+        event.offsetY,
+        wheelZoomFactor(event.deltaY, event.deltaMode),
+      );
     },
     { passive: false },
   );
