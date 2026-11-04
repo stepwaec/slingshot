@@ -41,7 +41,7 @@ export function compileMission(worlds: readonly World[], regions: readonly Regio
     fuel: mission.fuel,
     fuelPerDv: mission.fuelPerDv,
     bounds,
-    frame: bounds,
+    frame: mission.frame ?? bounds,
     maxSteps: mission.maxSteps,
     dvPerPixel: mission.dvPerPixel,
     periapsisMargin: mission.periapsisMargin,

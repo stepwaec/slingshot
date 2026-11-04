@@ -19,7 +19,7 @@ import {
   tick,
   type Game,
 } from "./game/state";
-import { burnLimit, LEVELS, observatory, pauseRuleOf, simConfigFromLevel, type Level } from "./level/catalog";
+import { burnLimit, LEVELS, WORLD_CHARTS, observatory, pauseRuleOf, simConfigFromLevel, type Level } from "./level/catalog";
 import { createClockLatches, readClocks, type ClockLatches } from "./hud/readout";
 import type { MissionScore } from "./sim/score";
 import { frameLevel, worldToScreen } from "./render/camera";
@@ -48,7 +48,7 @@ import { toggleLayer, type LayersPanelState } from "./game/layers";
 import { mountLayersMenu, syncLayersMenu } from "./hud/layers-menu";
 import { ASTRO_CAPACITY, ASTRO_DV, curvePoint, petrovaCurve } from "./sim/astrophage";
 
-const levels: readonly Level[] = [...LEVELS, observatory];
+const levels: readonly Level[] = [...LEVELS, ...WORLD_CHARTS, observatory];
 
 function addLevelGroup(select: HTMLSelectElement, label: string, groupLevels: readonly Level[]): void {
   const group = document.createElement("optgroup");
@@ -154,6 +154,7 @@ let spreadFor: Game["prediction"] | null = null;
 let spreadSigma = 0;
 
 if (LEVELS.length > 0) addLevelGroup(levelSelect, "Campaign", LEVELS);
+if (WORLD_CHARTS.length > 0) addLevelGroup(levelSelect, "World", WORLD_CHARTS);
 addLevelGroup(levelSelect, "Showcase", [observatory]);
 upgradeToggle.addEventListener("click", () => {
   upgradePanel.hidden = !upgradePanel.hidden;
