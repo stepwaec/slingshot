@@ -337,31 +337,64 @@ function closestNode(game: Game, width: number, height: number, sx: number, sy: 
   return best < 0 ? null : best;
 }
 
+/** Samples this close to the nearest hit are the same point on a stacked loop. */
+const STACK_PX = 3;
+/** A cluster that spans more than this is several passes, not one arc. */
+const STACK_SECONDS = 1;
+
 function closestPathStep(game: Game, width: number, height: number, sx: number, sy: number): number | null {
-  let bestStep: number | null = null;
-  let bestD = PATH_RADIUS * PATH_RADIUS;
   const pose = game.mode === "paused" ? game.ship : game.initial;
+  const hits: { step: number; d: number }[] = [];
   const origin = worldToScreen(game.camera, width, height, pose.x, pose.y);
   const originD = (origin.x - sx) * (origin.x - sx) + (origin.y - sy) * (origin.y - sy);
-  if (originD <= 16 * 16) {
-    bestD = originD;
-    bestStep = pose.step;
-  }
+  if (originD <= 16 * 16) hits.push({ step: pose.step, d: originD });
   const path = game.prediction.path;
   const framed = shownPath(game, path);
   // The step that ended the flight is already lost or won; a new burn there never fires.
   const closed = game.prediction.final.status !== "flying" ? game.prediction.final.step : -1;
+  const limit = PATH_RADIUS * PATH_RADIUS;
   for (let i = 0; i < path.length; i++) {
     if (path[i].step === closed) continue;
     const at = framed[i] ?? path[i];
     const screen = worldToScreen(game.camera, width, height, at.x, at.y);
-    const d = (screen.x - sx) * (screen.x - sx) + (screen.y - sy) * (screen.y - sy);
-    if (d <= bestD) {
-      bestD = d;
-      bestStep = path[i].step;
-    }
+    const dx = screen.x - sx;
+    const dy = screen.y - sy;
+    const d = dx * dx + dy * dy;
+    if (d <= limit) hits.push({ step: path[i].step, d });
   }
-  return bestStep;
+  if (hits.length === 0) return null;
+  let closest = hits[0];
+  for (let i = 1; i < hits.length; i++) {
+    if (hits[i].d < closest.d) closest = hits[i];
+  }
+  const reach = Math.sqrt(closest.d) + STACK_PX;
+  let minStep = closest.step;
+  let maxStep = closest.step;
+  const near: { step: number; d: number }[] = [];
+  for (let i = 0; i < hits.length; i++) {
+    if (Math.sqrt(hits[i].d) > reach) continue;
+    near.push(hits[i]);
+    if (hits[i].step < minStep) minStep = hits[i].step;
+    if (hits[i].step > maxStep) maxStep = hits[i].step;
+  }
+  if ((maxStep - minStep) * game.level.dt < STACK_SECONDS) return closest.step;
+  let after = -1;
+  for (let i = 0; i < game.nodes.length; i++) {
+    if (game.nodes[i].step > after) after = game.nodes[i].step;
+  }
+  if (after >= 0) {
+    let earliest = -1;
+    for (let i = 0; i < near.length; i++) {
+      const step = near[i].step;
+      if (step > after && (earliest < 0 || step < earliest)) earliest = step;
+    }
+    if (earliest >= 0) return earliest;
+  }
+  let phase = near[0];
+  for (let i = 1; i < near.length; i++) {
+    if (Math.abs(near[i].step - pose.step) < Math.abs(phase.step - pose.step)) phase = near[i];
+  }
+  return phase.step;
 }
 
 function handlePoint(game: Game, width: number, height: number, index: number): { x: number; y: number } | null {
