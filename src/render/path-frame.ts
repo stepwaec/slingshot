@@ -16,6 +16,15 @@ import { bodyPose, bodyPresent, type Body, type Pose, type Vec2 } from "../sim/p
  * every sphere the strongest pull wins. Crossing a sphere blends the two
  * frames across the outer shell, so the stroke does not jump.
  *
+ * The body the ship is with at the sprite clock stays anchored there, so a
+ * loop around Earth sits on the Earth that is drawn. A later body, such as
+ * the Moon, keeps one anchor for its whole stretch: that body's position in
+ * the home frame at closest approach. The lunar loop then sits where the
+ * Moon will be relative to the Earth on screen, and it meets the Earth-frame
+ * path instead of hooking back to the Moon's sprite. Anchoring the Moon at
+ * its inertial position would leave a gap the size of Earth's motion around
+ * the Sun. Anchoring each sample at its own time would put the cycloid back.
+ *
  * Nothing here writes the sim. The samples keep their inertial coordinates.
  */
 
@@ -24,6 +33,14 @@ export interface DrawnPoint {
   y: number;
   /** Body the sample was drawn against. Empty when nothing pulls. */
   bodyId: string;
+}
+
+/** A later body, the step where the ship is nearest it, and where that body is drawn. */
+export interface ApproachMark {
+  bodyId: string;
+  step: number;
+  x: number;
+  y: number;
 }
 
 /** Outer fraction of a sphere where the frame blends into its host. */
@@ -52,7 +69,14 @@ export function shownPath(
   return showPath(samples, view.level.bodies, view.level.g, view.level.dt, shownNow(view.mode, view.ship.step, view.level.dt));
 }
 
-const cache = new WeakMap<object, { now: number; points: DrawnPoint[] }>();
+interface Layout {
+  now: number;
+  points: DrawnPoint[];
+  approaches: ApproachMark[];
+  homeId: string;
+}
+
+const cache = new WeakMap<object, Layout>();
 
 /** Drawn positions for a path. Cached on the sample array and the anchor time. */
 export function showPath(
@@ -62,16 +86,83 @@ export function showPath(
   dt: number,
   now: number,
 ): DrawnPoint[] {
-  const hit = cache.get(samples);
-  if (hit && hit.now === now) return hit.points;
-  const refs = refsFor(bodies, g, now);
-  const points: DrawnPoint[] = new Array(samples.length);
-  for (let i = 0; i < samples.length; i++) {
-    const sample = samples[i];
-    points[i] = drawSample(sample.x, sample.y, sample.step, bodies, g, dt, now, refs);
+  return layoutPath(samples, bodies, g, dt, now).points;
+}
+
+/** Closest approach of each body the path visits after the one it starts with. */
+export function pathApproaches(
+  samples: readonly { x: number; y: number; step: number }[],
+  bodies: readonly Body[],
+  g: number,
+  dt: number,
+  now: number,
+): ApproachMark[] {
+  return layoutPath(samples, bodies, g, dt, now).approaches;
+}
+
+/** Body the samples are with at the sprite clock. Empty when nothing pulls. */
+export function pathHome(
+  samples: readonly { x: number; y: number; step: number }[],
+  bodies: readonly Body[],
+  g: number,
+  dt: number,
+  now: number,
+): string {
+  return layoutPath(samples, bodies, g, dt, now).homeId;
+}
+
+/**
+ * Where `body` is drawn at `time` when the view is anchored on `home` at `now`.
+ * The home body stays on the sprite. No home leaves the inertial pose.
+ */
+export function viewBody(
+  body: Body,
+  time: number,
+  home: Body | null,
+  now: number,
+  bodies: readonly Body[],
+  g: number,
+): Vec2 {
+  if (home && home.id === body.id) {
+    const at = bodyPose(home, now, bodies, g);
+    return { x: at.x, y: at.y };
   }
-  cache.set(samples, { now, points });
-  return points;
+  const pose = bodyPose(body, time, bodies, g);
+  if (!home) return { x: pose.x, y: pose.y };
+  const homeNow = bodyPose(home, now, bodies, g);
+  const homeThen = time === now ? homeNow : bodyPose(home, time, bodies, g);
+  return { x: homeNow.x + (pose.x - homeThen.x), y: homeNow.y + (pose.y - homeThen.y) };
+}
+
+function layoutPath(
+  samples: readonly { x: number; y: number; step: number }[],
+  bodies: readonly Body[],
+  g: number,
+  dt: number,
+  now: number,
+): Layout {
+  const hit = cache.get(samples);
+  if (hit && hit.now === now) return hit;
+  const refs = refsFor(bodies, g, now);
+  const raw: RawSample[] = new Array(samples.length);
+  for (let i = 0; i < samples.length; i++) {
+    raw[i] = measureSample(samples[i].x, samples[i].y, samples[i].step, bodies, g, dt, now, refs);
+  }
+  const home = homeIndex(raw, now, dt);
+  const homeId = home < 0 ? "" : raw[home].innerId;
+  const runs = anchorRuns(raw, refs, bodies, g, dt, now, homeId);
+  const points: DrawnPoint[] = new Array(raw.length);
+  const approaches: ApproachMark[] = [];
+  for (let r = 0; r < runs.length; r++) {
+    const run = runs[r];
+    if (run.id !== homeId && run.id !== "") {
+      approaches.push({ bodyId: run.id, step: run.step, x: run.anchorX, y: run.anchorY });
+    }
+  }
+  for (let i = 0; i < raw.length; i++) points[i] = placeSample(raw[i], i, runs, refs, homeId);
+  const laid = { now, points, approaches, homeId };
+  cache.set(samples, laid);
+  return laid;
 }
 
 interface Ref {
@@ -123,7 +214,33 @@ function referenceRadius(body: Body, bodies: readonly Body[]): number {
   return Math.max(soi, capture);
 }
 
-function drawSample(
+interface RawSample {
+  step: number;
+  x: number;
+  y: number;
+  innerId: string;
+  innerDist: number;
+  /** 1 deep in the sphere. Below 1 the point blends toward `hostId`. */
+  weight: number;
+  ox: number;
+  oy: number;
+  hostId: string;
+  hx: number;
+  hy: number;
+}
+
+interface Run {
+  id: string;
+  start: number;
+  end: number;
+  fromStep: number;
+  toStep: number;
+  step: number;
+  anchorX: number;
+  anchorY: number;
+}
+
+function measureSample(
   x: number,
   y: number,
   step: number,
@@ -132,7 +249,7 @@ function drawSample(
   dt: number,
   now: number,
   refs: readonly Ref[],
-): DrawnPoint {
+): RawSample {
   const time = step * dt;
   let inner: Candidate | null = null;
   let secondSphere: Candidate | null = null;
@@ -165,22 +282,180 @@ function drawSample(
     }
   }
   if (!inner) {
-    if (!strongest) return { x, y, bodyId: "" };
-    const placed = place(strongest, x, y);
-    return { x: placed.x, y: placed.y, bodyId: strongest.ref.body.id };
+    if (!strongest) {
+      return { step, x, y, innerId: "", innerDist: Infinity, weight: 1, ox: 0, oy: 0, hostId: "", hx: 0, hy: 0 };
+    }
+    return {
+      step,
+      x,
+      y,
+      innerId: strongest.ref.body.id,
+      innerDist: strongest.dist,
+      weight: 1,
+      ox: x - strongest.then.x,
+      oy: y - strongest.then.y,
+      hostId: "",
+      hx: 0,
+      hy: 0,
+    };
   }
   const parentId = inner.ref.body.orbit?.centerId;
   const parent = parentId ? byId.get(parentId) : undefined;
   const host = hostOf(inner, secondSphere, parent, nextPull, strongest);
   const weight = shellWeight(inner.dist, inner.ref.radius);
-  const here = place(inner, x, y);
-  if (!host || weight >= 1) return { x: here.x, y: here.y, bodyId: inner.ref.body.id };
-  const there = place(host, x, y);
+  if (!host || weight >= 1) {
+    return {
+      step,
+      x,
+      y,
+      innerId: inner.ref.body.id,
+      innerDist: inner.dist,
+      weight: 1,
+      ox: x - inner.then.x,
+      oy: y - inner.then.y,
+      hostId: "",
+      hx: 0,
+      hy: 0,
+    };
+  }
   return {
-    x: there.x + (here.x - there.x) * weight,
-    y: there.y + (here.y - there.y) * weight,
-    bodyId: weight >= 0.5 ? inner.ref.body.id : host.ref.body.id,
+    step,
+    x,
+    y,
+    innerId: inner.ref.body.id,
+    innerDist: inner.dist,
+    weight,
+    ox: x - inner.then.x,
+    oy: y - inner.then.y,
+    hostId: host.ref.body.id,
+    hx: x - host.then.x,
+    hy: y - host.then.y,
   };
+}
+
+/** Sample nearest the sprite clock. The first wins a tie. */
+function homeIndex(raw: readonly RawSample[], now: number, dt: number): number {
+  let best = -1;
+  let bestAbs = Infinity;
+  for (let i = 0; i < raw.length; i++) {
+    const dist = Math.abs(raw[i].step * dt - now);
+    if (dist < bestAbs) {
+      bestAbs = dist;
+      best = i;
+    }
+  }
+  return best;
+}
+
+function anchorRuns(
+  raw: readonly RawSample[],
+  refs: readonly Ref[],
+  bodies: readonly Body[],
+  g: number,
+  dt: number,
+  now: number,
+  homeId: string,
+): Run[] {
+  const runs: Run[] = [];
+  const home = refById(refs, homeId);
+  let i = 0;
+  while (i < raw.length) {
+    const id = raw[i].innerId;
+    let end = i + 1;
+    while (end < raw.length && raw[end].innerId === id) end += 1;
+    let nearest = i;
+    for (let k = i + 1; k < end; k++) {
+      if (raw[k].innerDist < raw[nearest].innerDist) nearest = k;
+    }
+    const ref = refById(refs, id);
+    const step = raw[nearest].step;
+    let anchorX = 0;
+    let anchorY = 0;
+    if (ref && (id === homeId || !ref.body.orbit)) {
+      anchorX = ref.now.x;
+      anchorY = ref.now.y;
+    } else if (ref) {
+      const placed = viewBody(ref.body, step * dt, home ? home.body : null, now, bodies, g);
+      anchorX = placed.x;
+      anchorY = placed.y;
+    }
+    runs.push({
+      id,
+      start: i,
+      end,
+      fromStep: raw[i].step,
+      toStep: raw[end - 1].step,
+      step,
+      anchorX,
+      anchorY,
+    });
+    i = end;
+  }
+  return runs;
+}
+
+function placeSample(
+  sample: RawSample,
+  index: number,
+  runs: readonly Run[],
+  refs: readonly Ref[],
+  homeId: string,
+): DrawnPoint {
+  if (sample.innerId === "") return { x: sample.x, y: sample.y, bodyId: "" };
+  const run = runAt(runs, index);
+  const ax = run.anchorX + sample.ox;
+  const ay = run.anchorY + sample.oy;
+  if (sample.weight >= 1 || sample.hostId === "") return { x: ax, y: ay, bodyId: sample.innerId };
+  const host = hostAnchor(sample.hostId, sample.step, index, runs, refs, homeId);
+  const bx = host.x + sample.hx;
+  const by = host.y + sample.hy;
+  const weight = sample.weight;
+  return {
+    x: bx + (ax - bx) * weight,
+    y: by + (ay - by) * weight,
+    bodyId: weight >= 0.5 ? sample.innerId : sample.hostId,
+  };
+}
+
+/** Sprite pose, unless a later run of the host covers this sample. */
+function hostAnchor(
+  hostId: string,
+  step: number,
+  index: number,
+  runs: readonly Run[],
+  refs: readonly Ref[],
+  homeId: string,
+): { x: number; y: number } {
+  if (hostId !== homeId) {
+    const cover = coveringRun(runs, hostId, index, step);
+    if (cover) return { x: cover.anchorX, y: cover.anchorY };
+  }
+  const ref = refById(refs, hostId);
+  return ref ? { x: ref.now.x, y: ref.now.y } : { x: 0, y: 0 };
+}
+
+function coveringRun(runs: readonly Run[], id: string, index: number, step: number): Run | null {
+  for (let i = 0; i < runs.length; i++) {
+    const run = runs[i];
+    if (run.id !== id) continue;
+    if (index >= run.start && index < run.end) return run;
+    if (step >= run.fromStep && step <= run.toStep) return run;
+  }
+  return null;
+}
+
+function runAt(runs: readonly Run[], index: number): Run {
+  for (let i = 0; i < runs.length; i++) {
+    if (index >= runs[i].start && index < runs[i].end) return runs[i];
+  }
+  return runs[runs.length - 1];
+}
+
+function refById(refs: readonly Ref[], id: string): Ref | null {
+  for (let i = 0; i < refs.length; i++) {
+    if (refs[i].body.id === id) return refs[i];
+  }
+  return null;
 }
 
 function hostOf(
@@ -207,9 +482,3 @@ function shellWeight(dist: number, radius: number): number {
   return 1 - s;
 }
 
-function place(cand: Candidate, x: number, y: number): Vec2 {
-  return {
-    x: cand.ref.now.x + (x - cand.then.x),
-    y: cand.ref.now.y + (y - cand.then.y),
-  };
-}

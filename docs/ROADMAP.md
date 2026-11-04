@@ -123,7 +123,7 @@ One persistent world, grown over time. The first region is Sol: the Sun, the pla
 
 ### OW4: Mission 1, Moon and back
 
-**Goal.** The first campaign mission, in the Earth–Moon region of the Sol world. The ship starts in a low Earth orbit. Leg 1 is a lunar capture: a burn inside the Moon's ring, then one full revolution still inside that ring. The Moon's mass is `MOON_MASS_FACTOR` times Earth/81 so Earth's tide does not end that lap immediately. Leg 2 is the return, a burn inside Earth's zone that leaves a stable Earth orbit. The mission is listed in the campaign menu. Scoring uses the mission profile. A one-line objective readout uses the existing HUD type until Claude's briefing lands.
+**Goal.** The first campaign mission, in the Earth–Moon region of the Sol world. The ship starts in a low Earth orbit. Leg 1 is a lunar capture: a burn inside the Moon's ring, then one full revolution still inside that ring. The Moon's mass is `MOON_MASS_FACTOR` times Earth/81 so Earth's tide does not end that lap immediately. Leg 2 is the return, a burn inside Earth's zone that leaves a stable Earth orbit. The drawn lunar loop sits on the Moon's position at closest approach in the Earth's frame, with a ghost on that Moon, so it is not drawn on the Moon's sprite. The mission is listed in the campaign menu. Scoring uses the mission profile. A one-line objective readout uses the existing HUD type until Claude's briefing lands.
 
 **Acceptance.**
 - At launch the ship is bound to Earth, above the surface, inside Earth's capture sphere, and outside the Moon's.

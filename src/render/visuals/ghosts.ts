@@ -10,6 +10,7 @@ import {
   ghostDraw,
   pickGhostKind,
   planGhosts,
+  previewGhosts,
   shipAtStep,
   shipInside,
   trackSamples,
@@ -17,6 +18,7 @@ import {
   type GhostDraw,
   type GhostInk,
 } from "../ghost-look";
+import { pathApproaches, pathHome, showPath, shownNow, viewBody, type DrawnPoint } from "../path-frame";
 import type { Theme } from "../theme";
 import { disposeObject, type Visual, type VisualFactory, type VisualFrame } from "../visual";
 import { shader, srgbVec } from "./materials";
@@ -731,6 +733,23 @@ class GhostsVisual implements Visual {
     const won = game.prediction.status === "won";
     const capture = won ? game.prediction.steps : null;
     const slots = planGhosts(game.nodes, game.cursorStep, drawn, bodies.length, targetIndex, capture);
+    const now = shownNow(game.mode, game.ship.step, game.level.dt);
+    const approaches = pathApproaches(game.prediction.path, game.level.bodies, game.level.g, game.level.dt, now);
+    const homeId = pathHome(game.prediction.path, game.level.bodies, game.level.g, game.level.dt, now);
+    const home = homeBody(game.level.bodies, homeId);
+    const framing = home !== null && framesChild(homeId, approaches, game.level.bodies);
+    const framed = framing ? showPath(game.prediction.path, game.level.bodies, game.level.g, game.level.dt, now) : null;
+    const previewStep = game.prediction.path.length > 0 ? game.prediction.path[game.prediction.path.length - 1].step : null;
+    const extras = previewGhosts(
+      slots,
+      homeId,
+      approaches,
+      bodies.map((body) => body.id),
+      game.cursorStep,
+      previewStep,
+      drawn,
+    );
+    for (let i = 0; i < extras.length; i++) slots.push(extras[i]);
     const origin = game.mode === "paused" ? game.ship : game.initial;
     const fallback = [origin, game.prediction.final];
     const seconds = frame.now / 1000;
@@ -744,6 +763,7 @@ class GhostsVisual implements Visual {
       const time = slot.step * game.level.dt;
       const present = bodyPresent(body, time);
       const pose = bodyPose(body, time, game.level.bodies, game.level.g);
+      if (framing && home && body.id === home.id) continue;
       const ship = shipAtStep(game.prediction.path, slot.step, fallback);
       const colliding = !!ship && shipInside(ship.x, ship.y, pose.x, pose.y, body.radius);
       const target = body.id === activeId;
@@ -760,11 +780,13 @@ class GhostsVisual implements Visual {
       const marker = this.ensure(count);
       count += 1;
       const label = ghostChip(kind, (slot.step - drawn) * game.level.dt);
+      const viewed = framing && home ? viewBody(body, time, home, now, game.level.bodies, game.level.g) : pose;
+      const shipDraw = framing && home ? shipOnView(game.prediction.path, framed, slot.step, ship, home, time, now, game.level.bodies, game.level.g) : ship;
       marker.show({
         theme: this.theme,
         draw,
-        x: pose.x,
-        y: pose.y,
+        x: viewed.x,
+        y: viewed.y,
         radius: Math.max(body.radius, spec.minRadius),
         captureRadius: body.captureRadius ?? 0,
         zoom,
@@ -780,14 +802,14 @@ class GhostsVisual implements Visual {
         tieAlpha: (kind === "cursor" ? spec.tieCursorAlpha : spec.tieAlpha) * fade,
         fade,
         cursorTie: kind === "cursor",
-        ship,
+        ship: shipDraw,
         burnNumber: draw.badge ? slot.burnNumber : null,
         label,
         labelColor: hexOf(draw.ink, this.theme),
       });
     }
     for (let i = count; i < this.markers.length; i++) this.markers[i].hide();
-    this.drawTrack(bodies, targetIndex, drawn, capture, game.level.dt, game.level.bodies, game.level.g, zoom);
+    this.drawTrack(bodies, targetIndex, drawn, capture, game.level.dt, game.level.bodies, game.level.g, zoom, framing && home ? { home, now } : null);
   }
 
   dispose(): void {
@@ -817,6 +839,7 @@ class GhostsVisual implements Visual {
     bodies: readonly Body[],
     g: number,
     zoom: number,
+    frame: { home: Body; now: number } | null,
   ): void {
     const spec = this.theme.ghost;
     const target = targetIndex >= 0 ? moving[targetIndex] : undefined;
@@ -833,7 +856,7 @@ class GhostsVisual implements Visual {
     }
     for (let i = 0; i <= n; i++) {
       const t = t0 + ((t1 - t0) * i) / n;
-      const pose = bodyPose(target, t, bodies, g);
+      const pose = frame ? viewBody(target, t, frame.home, frame.now, bodies, g) : bodyPose(target, t, bodies, g);
       this.xs[i] = pose.x;
       this.ys[i] = pose.y;
     }
@@ -868,14 +891,16 @@ class GhostsVisual implements Visual {
     this.tickScratch.length = 0;
     for (let i = 0; i < times.length && i < spec.maxTicks; i++) {
       const t = times[i];
-      const pose = bodyPose(target, t, bodies, g);
-      const next = bodyPose(target, Math.min(t1, t + dt), bodies, g);
+      const pose = frame ? viewBody(target, t, frame.home, frame.now, bodies, g) : bodyPose(target, t, bodies, g);
+      const nextTime = Math.min(t1, t + dt);
+      const next = frame ? viewBody(target, nextTime, frame.home, frame.now, bodies, g) : bodyPose(target, nextTime, bodies, g);
       let tx = next.x - pose.x;
       let ty = next.y - pose.y;
       let len = Math.hypot(tx, ty);
       if (len < 1e-6) {
-        tx = pose.vx;
-        ty = pose.vy;
+        const inertial = bodyPose(target, t, bodies, g);
+        tx = inertial.vx;
+        ty = inertial.vy;
         len = Math.hypot(tx, ty);
       }
       if (len < 1e-6) continue;
@@ -883,6 +908,58 @@ class GhostsVisual implements Visual {
     }
     this.track.drawTicks(this.tickScratch, (spec.tickLength * 0.5) / zoom, (spec.tickWidth * 0.5) / zoom);
   }
+}
+
+/** True when a later body orbits the view's home, so ghosts share that frame. */
+function framesChild(
+  homeId: string,
+  approaches: readonly { bodyId: string }[],
+  bodies: readonly Body[],
+): boolean {
+  for (let i = 0; i < approaches.length; i++) {
+    const body = findBody(bodies, approaches[i].bodyId);
+    if (body?.orbit?.centerId === homeId) return true;
+  }
+  return false;
+}
+
+function homeBody(bodies: readonly Body[], id: string): Body | null {
+  if (!id) return null;
+  return findBody(bodies, id);
+}
+
+function findBody(bodies: readonly Body[], id: string): Body | null {
+  for (let i = 0; i < bodies.length; i++) if (bodies[i].id === id) return bodies[i];
+  return null;
+}
+
+/** Ship position on the drawn path, so a tie meets the stroke. */
+function shipOnView(
+  samples: readonly { step: number; x: number; y: number }[],
+  framed: readonly DrawnPoint[] | null,
+  step: number,
+  ship: { x: number; y: number } | null,
+  home: Body,
+  time: number,
+  now: number,
+  bodies: readonly Body[],
+  g: number,
+): { x: number; y: number } | null {
+  if (!ship) return null;
+  if (framed) {
+    let lo = 0;
+    let hi = samples.length - 1;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      const found = samples[mid].step;
+      if (found === step) return framed[mid];
+      if (found < step) lo = mid + 1;
+      else hi = mid - 1;
+    }
+  }
+  const homeNow = viewBody(home, now, home, now, bodies, g);
+  const homeThen = time === now ? homeNow : viewBody(home, time, null, now, bodies, g);
+  return { x: homeNow.x + (ship.x - homeThen.x), y: homeNow.y + (ship.y - homeThen.y) };
 }
 
 function hexOf(ink: GhostInk, theme: Theme): string {

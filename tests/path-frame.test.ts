@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { simConfigFromLevel } from "../src/level/catalog";
-import { showPath } from "../src/render/path-frame";
+import { pathApproaches, showPath } from "../src/render/path-frame";
 import { bodyPose, flyPlan, makeState, predictPlan, type Body, type BurnNode } from "../src/sim/physics";
 import { moonMission } from "../src/world/moon-mission";
 
@@ -118,17 +118,26 @@ describe("predicted path in the dominant body's frame", () => {
     }
     const drawn = showPath(predicted.path, moonMission.bodies, moonMission.g, moonMission.dt, 0);
     expect(drawn.some((point) => point.bodyId === "earth")).toBe(true);
+    expect(drawn.some((point) => point.bodyId === "luna")).toBe(true);
+    const marks = pathApproaches(predicted.path, moonMission.bodies, moonMission.g, moonMission.dt, 0);
+    const mark = marks.find((item) => item.bodyId === "luna");
+    expect(mark).toBeDefined();
+    if (!mark) return;
+    const index = predicted.path.findIndex((sample) => sample.step === mark.step);
+    expect(index).toBeGreaterThan(0);
+    const dt = moonMission.dt;
+    const earthNow = bodyPose(body("earth"), 0, moonMission.bodies, moonMission.g);
+    const earthThen = bodyPose(body("earth"), mark.step * dt, moonMission.bodies, moonMission.g);
+    const moonThen = bodyPose(body("luna"), mark.step * dt, moonMission.bodies, moonMission.g);
     const moonNow = bodyPose(body("luna"), 0, moonMission.bodies, moonMission.g);
-    let nearest = Infinity;
-    let nearestId = "";
-    for (let i = 0; i < drawn.length; i++) {
-      const dist = Math.hypot(drawn[i].x - moonNow.x, drawn[i].y - moonNow.y);
-      if (dist < nearest) {
-        nearest = dist;
-        nearestId = drawn[i].bodyId;
-      }
-    }
-    expect(nearest).toBeLessThan(body("luna").captureRadius ?? 0);
-    expect(nearestId).toBe("luna");
+    const ship = predicted.path[index];
+    // Closest approach is the Earth-frame point, so the stroke does not jump.
+    expect(drawn[index].x).toBeCloseTo(earthNow.x + (ship.x - earthThen.x), 6);
+    expect(drawn[index].y).toBeCloseTo(earthNow.y + (ship.y - earthThen.y), 6);
+    expect(Math.hypot(drawn[index].x - mark.x, drawn[index].y - mark.y)).toBeLessThan(body("luna").captureRadius ?? 0);
+    expect(mark.x).toBeCloseTo(earthNow.x + (moonThen.x - earthThen.x), 6);
+    expect(mark.y).toBeCloseTo(earthNow.y + (moonThen.y - earthThen.y), 6);
+    // The Moon moves along its orbit, so that meeting point is not the sprite.
+    expect(Math.hypot(mark.x - moonNow.x, mark.y - moonNow.y)).toBeGreaterThan(body("luna").captureRadius ?? 0);
   });
 });
