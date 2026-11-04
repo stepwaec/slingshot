@@ -22,26 +22,34 @@ describe("Sol visual scale", () => {
   const earth = body("earth");
   const moon = body("luna");
 
-  it("keeps crash radii, and draws the Sun at 5 Earth diameters and the Moon at 0.27", () => {
+  it("keeps crash radii, and draws the Sun at 8 Earth diameters and the Moon at 0.27", () => {
     expect(sun.radius).toBe(46);
     expect(earth.radius).toBe(34);
     expect(moon.radius).toBe(18);
-    expect(SUN_EARTH_DIAMETERS).toBe(5);
-    expect(solGameVisualRadius(sun, earth.radius)).toBe(5 * earth.radius);
+    expect(SUN_EARTH_DIAMETERS).toBe(8);
+    expect(solGameVisualRadius(sun, earth.radius)).toBe(8 * earth.radius);
     expect(solGameVisualRadius(moon, earth.radius)).toBeCloseTo(MOON_EARTH_FRACTION * earth.radius, 8);
     expect(solGameVisualRadius(earth, earth.radius)).toBe(earth.radius);
     expect(isSolChart(solWorld.bodies)).toBe(true);
     expect(isSolChart(moonMission.bodies)).toBe(true);
   });
 
-  it("keeps Mercury outside the bright wind and Earth outside the corona", () => {
+  it("keeps every planet orbit and the Moon's path outside the Sun's disc and corona", () => {
     const drawn = solGameVisualRadius(sun, earth.radius);
-    const mercury = body("mercury");
     const look = STAR_PARAMS["sol-sun"];
+    const corona = drawn * Math.max(1, look.wiR, look.flR);
+    expect(corona).toBeGreaterThan(drawn);
+    const planets = ["mercury", "venus", "earth", "mars", "jupiter", "saturn", "uranus", "neptune"] as const;
+    for (const id of planets) {
+      const planet = body(id);
+      const orbit = planet.orbit?.radius ?? 0;
+      expect(orbit, id).toBeGreaterThan(corona);
+      expect(orbit - planet.radius, `${id} disc`).toBeGreaterThan(drawn);
+    }
+    const nearestMoon = (earth.orbit?.radius ?? 0) - (moon.orbit?.radius ?? 0) - moon.radius;
+    expect(nearestMoon).toBeGreaterThan(corona);
     expect(moonMission.orbit.radius).toBeGreaterThan(earth.radius + moonMission.periapsisMargin);
     expect(earth.orbit?.radius).toBeGreaterThan(sun.radius);
-    expect((mercury.orbit?.radius ?? 0) - mercury.radius).toBeGreaterThan(drawn * look.wiR);
-    expect(earth.orbit?.radius).toBeGreaterThan(drawn * look.hazeR);
   });
 
   it("uses a pixel floor zoomed out and the game-scale radius zoomed in", () => {

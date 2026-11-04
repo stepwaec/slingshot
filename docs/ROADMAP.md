@@ -103,7 +103,7 @@ One persistent world, grown over time. The first region is Sol: the Sun, the pla
 - The asteroid belt's centre radius lies between Mars and Jupiter. The Kuiper belt lies beyond Neptune. Rocks placed from a belt are a pure function of its seed.
 - A chart compiled from the inner region flies, and prediction matches that flight.
 - The Observatory is unchanged.
-- Visual scale only: the Sun's disc is 5 Earth diameters, inside Mercury's orbit, and the Moon is 0.27 of Earth. Crash radii, masses, and orbits stay as they are. Zoomed out, planets and moons keep an 8 px radius so they stay visible. Zoomed in, they use that game-scale size.
+- Visual scale only: the Sun's disc is 8 Earth diameters and the Moon is 0.27 of Earth. Planet orbits and the Moon's path stay outside the disc and its bright corona. Crash radii, masses, and orbits stay as they are. Zoomed out, planets and moons keep an 8 px radius so they stay visible. Zoomed in, they use that game-scale size.
 
 **Out of scope.** Mission objectives, the capture rule, JWST at L2, other stars, Tau Ceti, and compact objects.
 
