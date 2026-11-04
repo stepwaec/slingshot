@@ -21,7 +21,7 @@ import {
   zoomBucket,
 } from "../ship-art";
 import { bakedSvgUrl, rasterSvg } from "../svg-bake";
-import { TIDAL_VISIBLE, tidalStressAt, type SimConfig, type Vec2 } from "../../sim/physics";
+import { tidalTensorAt, tidalWarns, type SimConfig, type Vec2 } from "../../sim/physics";
 import { palette } from "../palette";
 import type { Theme } from "../theme";
 import { disposeObject, type Visual, type VisualFactory, type VisualFrame } from "../visual";
@@ -557,20 +557,23 @@ function stressSpot(
 ): { x: number; y: number; time: number; stress: number } | null {
   if (game.mode === "planning") {
     const origin = game.initial;
-    const atStart = tidalStressAt(origin.x, origin.y, config, origin.t);
-    if (atStart >= TIDAL_VISIBLE) return { x: origin.x, y: origin.y, time: origin.t, stress: atStart };
+    const atStart = tidalTensorAt(origin.x, origin.y, config, origin.t);
+    if (tidalWarns(atStart.ordinary, atStart.compact)) {
+      return { x: origin.x, y: origin.y, time: origin.t, stress: atStart.stress };
+    }
     const path = game.prediction.path;
     for (let i = 0; i < path.length; i++) {
       const sample = path[i];
       if (!sample) continue;
       const time = sample.step * game.level.dt;
-      const stress = tidalStressAt(sample.x, sample.y, config, time);
-      if (stress >= TIDAL_VISIBLE) return { x: sample.x, y: sample.y, time, stress };
+      const field = tidalTensorAt(sample.x, sample.y, config, time);
+      if (tidalWarns(field.ordinary, field.compact)) return { x: sample.x, y: sample.y, time, stress: field.stress };
     }
     return null;
   }
   const pose = game.ship;
-  if (!(pose.stress >= TIDAL_VISIBLE) || pose.status === "crashed") return null;
+  const live = tidalTensorAt(pose.x, pose.y, config, pose.t);
+  if (!tidalWarns(live.ordinary, live.compact) || pose.status === "crashed") return null;
   return { x: pose.x, y: pose.y, time: pose.t, stress: pose.stress };
 }
 

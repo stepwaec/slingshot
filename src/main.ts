@@ -37,6 +37,8 @@ import {
   solarRechargeRate,
   spreadAlong,
   bodyPose,
+  tidalTensorAt,
+  tidalWarns,
   type SimSpeed,
 } from "./sim/physics";
 import { shipLoadout } from "./game/upgrades";
@@ -513,7 +515,10 @@ function syncHull(current: Game): void {
   hullValue.dataset.band = tone;
   hullValue.textContent = `${Math.round(hullRatio(pose.hull, pose.hullMax) * 100)}%`;
   hullSegments.forEach((segment, index) => segment.classList.toggle("on", index < lit));
-  const stress = current.mode === "planning" ? current.prediction.final.peakStress : current.ship.stress;
+  const config = simConfigFromLevel(current.level, current.upgrades);
+  const live = tidalTensorAt(pose.x, pose.y, config, pose.t);
+  const shown = tidalWarns(live.ordinary, live.compact) ? live.stress : 0;
+  const stress = current.mode === "planning" ? current.prediction.final.peakStress : shown;
   const level = stressLevel(stress);
   stressChip.hidden = level === 0;
   stressChip.dataset.level = String(level);

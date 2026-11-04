@@ -17,7 +17,10 @@ import {
   makeState,
   predictPlan,
   STRESS_WARN,
+  TIDAL_ORDINARY,
   TIDAL_VISIBLE,
+  isCompactBody,
+  tidalDamageAt,
   tidalDamageRate,
   tidalDangerRadius,
   tidalStressAt,
@@ -202,35 +205,45 @@ describe("tidal stress", () => {
     const moonPose = bodyPose(moon, 0, moonMission.bodies, g);
     const earthPose = bodyPose(earth, 0, moonMission.bodies, g);
     const separation = Math.hypot(earthPose.x - moonPose.x, earthPose.y - moonPose.y);
-    // The 10× Moon puts a thin danger shell above the surface. It ends before a legal periapsis.
-    const moonShell = tidalDangerRadius(moon, g);
-    const moonFloor = moon.radius + moonMission.periapsisMargin;
-    expect(moonShell).toBeGreaterThan(moon.radius);
-    expect(moonShell).toBeLessThan(moonFloor);
+    const open = Math.cbrt((2 * g * moon.mass * 6) / TIDAL_ORDINARY);
+    expect(open).toBeLessThan(moon.radius);
+    expect(tidalDangerRadius(moon, g)).toBe(0);
     // Stay on the Moon's side of the gap so a sample does not wander into Earth's shell.
     const moonReach = Math.min((moon.captureRadius ?? moon.radius) * 1.5, separation * 0.45);
     expect(moonReach).toBeGreaterThan(moon.radius + 20);
+    const hurt = (body: typeof earth, radius: number, angle: number) => {
+      const pose = bodyPose(body, 0, moonMission.bodies, g);
+      return tidalDamageAt(
+        pose.x + Math.cos(angle) * radius,
+        pose.y + Math.sin(angle) * radius,
+        mission,
+        0,
+      );
+    };
     for (let i = 0; i <= 20; i++) {
-      const radius = moonFloor + 0.05 + (i / 20) * (moonReach - moonFloor);
+      const radius = moon.radius + 0.02 + (i / 20) * (moonReach - moon.radius);
       for (let k = 0; k < 8; k++) {
         const stress = at(moon, radius, (k * Math.PI) / 4);
-        expect(stress, `moon r=${radius.toFixed(2)} a=${k}`).toBeLessThan(TIDAL_VISIBLE);
-        expect(tidalDamageRate(stress)).toBe(0);
+        expect(stress, `moon r=${radius.toFixed(2)} a=${k}`).toBeLessThan(TIDAL_ORDINARY);
+        expect(hurt(moon, radius, (k * Math.PI) / 4), `moon damage r=${radius.toFixed(2)}`).toBe(0);
       }
     }
     const towardEarth = Math.atan2(earthPose.y - moonPose.y, earthPose.x - moonPose.x);
     const nearSide = at(moon, moon.radius + 0.02, towardEarth);
-    expect(nearSide, "moon surface facing Earth").toBeGreaterThanOrEqual(TIDAL_VISIBLE);
-    expect(at(moon, moonFloor + 0.05, towardEarth), "legal periapsis facing Earth").toBeLessThan(TIDAL_VISIBLE);
-    // Earth's own gradient crosses the line in a shell above the surface and
-    // above the lowest legal capture periapsis. That shell ends before the
-    // mission's starting orbit. From there outward the tide stays quiet.
+    // The gradient is still there. It is under the ordinary line, so it does not warn.
+    expect(nearSide, "moon surface facing Earth").toBeGreaterThan(TIDAL_VISIBLE);
+    expect(nearSide, "moon surface facing Earth").toBeLessThan(TIDAL_ORDINARY);
+    expect(hurt(moon, moon.radius + 0.02, towardEarth)).toBe(0);
+    // Earth's shell stays above the surface and ends before a legal periapsis.
     const shell = tidalDangerRadius(earth, g);
     const leo = moonMission.orbit.radius;
-    expect(shell).toBeGreaterThan(earth.radius + moonMission.periapsisMargin);
+    const floor = earth.radius + moonMission.periapsisMargin;
+    expect(shell).toBeGreaterThan(earth.radius);
+    expect(shell).toBeLessThan(floor);
     expect(shell).toBeLessThan(leo);
-    const skim = earth.radius + moonMission.periapsisMargin + 0.05;
-    expect(at(earth, skim, 0)).toBeGreaterThanOrEqual(TIDAL_VISIBLE);
+    const skim = (earth.radius + shell) / 2;
+    expect(hurt(earth, skim, 0)).toBeGreaterThan(0);
+    expect(hurt(earth, floor, 0)).toBe(0);
     for (let i = 0; i <= 24; i++) {
       const radius = leo + i * earth.radius * 0.4;
       for (let k = 0; k < 8; k++) {
@@ -282,6 +295,18 @@ describe("tidal stress", () => {
     const observatoryConfig = simConfigFromLevel(observatory);
     expect(tidalDangerRadius(hole, observatory.g)).toBeGreaterThan(hole.radius);
     expect(tidalStressAt(hole.x + hole.radius + 0.2, hole.y, observatoryConfig, 0)).toBeGreaterThanOrEqual(TIDAL_VISIBLE);
+    const onCompactLine = (body: typeof hole) => {
+      const radius = Math.cbrt((2 * observatory.g * body.mass * 6) / TIDAL_VISIBLE);
+      return radius > body.radius ? radius : 0;
+    };
+    expect(tidalDangerRadius(hole, observatory.g)).toBe(onCompactLine(hole));
+    let compactCount = 0;
+    for (const body of observatory.bodies) {
+      if (!isCompactBody(body) || !(body.mass > 0)) continue;
+      compactCount += 1;
+      expect(tidalDangerRadius(body, observatory.g), body.id).toBe(onCompactLine(body));
+    }
+    expect(compactCount).toBeGreaterThan(4);
     for (const look of ["neutron", "pulsar", "magnetar"] as const) {
       const body = observatory.bodies.find((item) => item.look === look);
       if (!body) throw new Error(look);
