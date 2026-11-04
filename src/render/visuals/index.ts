@@ -8,7 +8,6 @@ import { createImpostors } from "./impostors";
 import { createMega } from "./mega";
 import { createHazards } from "./hazards";
 import { createGhosts } from "./ghosts";
-import { createClouds } from "./clouds";
 import { createComet } from "./comet";
 import { createGravity } from "./gravity";
 import { createMagnetism } from "./magnetism";
@@ -23,7 +22,6 @@ import { createStray } from "./stray";
 import { createTidal } from "./tidal";
 import { createRelativity } from "./relativity";
 import { createShip } from "./ship";
-import { createScenery } from "./scenery";
 import { createStarfield } from "./starfield";
 
 /**
@@ -41,7 +39,6 @@ export const visualFactories = {
   radiation: createRadiation,
   astroMap: createAstroMap,
   tidal: createTidal,
-  scenery: createScenery,
   belts: createBelts,
   impostors: createImpostors,
   gallery: createGallery,
@@ -52,7 +49,6 @@ export const visualFactories = {
   rogue: createRogue,
   stray: createStray,
   comet: createComet,
-  clouds: createClouds,
   ghosts: createGhosts,
   hazards: createHazards,
   placards: createPlacards,
