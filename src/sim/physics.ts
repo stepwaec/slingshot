@@ -88,7 +88,7 @@ export type BodyKind = "home" | "star" | "target" | "moon" | "blackhole" | "plan
  * Stars: `sun`, `binary-hot`, `binary-cool`, `white-dwarf`, `red-giant`.
  * Compact objects: `neutron`, `pulsar`, `magnetar`.
  * Planets and moons: `gas-giant`, `gas-ringed`, `ice-ring`, `moon`, `moon-icy`, `moon-volcanic`, `dwarf`,
- * `rocky`, `ice`, `lava`, `toxic`, `cracked`.
+ * `rocky`, `ice`, `lava`, `toxic`, `cracked`, `double-big`, `double-small`, `moon-captured`, `moon-chain`.
  * A lone rock: `asteroid`. The look is visual; mass and radius still collide.
  * Sol campaign: `sol-sun` and the bodies in design/style.md §18.
  */
@@ -110,6 +110,10 @@ export const BODY_LOOKS = [
   "lava",
   "toxic",
   "cracked",
+  "double-big",
+  "double-small",
+  "moon-captured",
+  "moon-chain",
   "neutron",
   "pulsar",
   "magnetar",

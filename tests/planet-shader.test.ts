@@ -28,6 +28,16 @@ describe("rocky planet shader", () => {
     expect(planetKey(body({ kind: "planet", look: "pluto" }))).toBe("pluto");
     expect(planetKey(body({ kind: "planet", look: "eris" }))).toBe("eris");
     expect(planetKey(body({ kind: "planet", look: "lava" }))).toBe("lava");
+    expect(planetKey(body({ kind: "planet", look: "double-big" }))).toBe("double-big");
+    expect(planetKey(body({ kind: "planet", look: "double-small" }))).toBe("double-small");
+    expect(planetKey(body({ kind: "moon", look: "moon-captured" }))).toBe("moon-captured");
+    expect(shaderFamily(body({ kind: "planet", look: "moon-chain" }))).toBe("giant");
+    expect(PLANETS["double-big"].proc).toBe(1);
+    expect(PLANETS["double-small"].proc).toBe(2);
+    expect(PLANETS["double-big"].spin).toBe(80);
+    expect(PLANETS["double-small"].airless).toBe(1);
+    expect(PLANETS["moon-captured"].spin).toBe(70);
+    expect(PLANET_FRAGMENT).toContain("potatoRadius");
     for (const look of ["arrokoth", "voyager"] as const) {
       expect(shaderFamily(body({ kind: "planet", look })), look).toBeNull();
     }

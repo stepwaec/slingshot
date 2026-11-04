@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { LEVELS, observatory, simConfigFromLevel } from "../src/level/catalog";
 import { observatoryPlacards, observatoryShips, shipModuleKeys } from "../src/level/observatory";
-import { BODY_KINDS, NEBULA_LOOKS } from "../src/level/schema";
+import { BODY_KINDS, NEBULA_LOOKS, type Level } from "../src/level/schema";
 import { frameLevel } from "../src/render/camera";
 import { ENGINE_PLUMES, type EngineLook } from "../src/render/ship-art";
 import { BELT_TIERS, type BeltTier } from "../src/sim/belts";
@@ -17,7 +17,7 @@ import {
 } from "../src/sim/mega";
 import { movingBodies } from "../src/game/ghosts";
 import { SOL_LOOKS, solArt } from "../src/render/sol-art";
-import { BODY_LOOKS, bodySolid, makeState, step, type BodyLook } from "../src/sim/physics";
+import { BODY_LOOKS, bodyPose, bodySolid, flyPlan, makeState, predictPlan, step, type BodyLook } from "../src/sim/physics";
 
 describe("Observatory", () => {
   it("stays off the campaign list and is its own chart", () => {
@@ -74,6 +74,66 @@ describe("Observatory", () => {
     expect(new Set(names).size).toBe(names.length);
   });
 
+  it("orbits the double planet and the moon chain, and the coast matches the flight", () => {
+    const bodies = observatory.bodies;
+    const g = observatory.g;
+    const big = bodies.find((body) => body.id === "look-double-big");
+    const small = bodies.find((body) => body.id === "look-double-small");
+    const giant = bodies.find((body) => body.id === "look-moon-chain");
+    const volcanic = bodies.find((body) => body.id === "chain-volcanic");
+    const icy = bodies.find((body) => body.id === "chain-icy");
+    if (!big?.orbit || !small?.orbit || !giant || !volcanic?.orbit || !icy?.orbit) throw new Error("pair");
+    expect(big.radius).toBe(18);
+    expect(small.radius).toBe(11);
+    expect(big.orbit.radius).toBe(7.06);
+    expect(small.orbit.radius).toBe(30.94);
+    expect(big.mass / small.mass).toBeCloseTo(5832 / 1331, 5);
+    const b0 = bodyPose(big, 0, bodies, g);
+    const s0 = bodyPose(small, 0, bodies, g);
+    expect(Math.hypot(b0.x - s0.x, s0.y - b0.y)).toBeCloseTo(38, 4);
+    expect(s0.x - (small.orbit.cx ?? 0)).toBeCloseTo(30.94, 4);
+    expect(b0.x - (big.orbit.cx ?? 0)).toBeCloseTo(-7.06, 4);
+    const half = bodyPose(small, 20, bodies, g);
+    expect(half.x - (small.orbit.cx ?? 0)).toBeCloseTo(-30.94, 3);
+    expect(volcanic.orbit.radius).toBe(68);
+    expect(icy.orbit.radius / volcanic.orbit.radius).toBeCloseTo(2 ** (2 / 3), 2);
+    expect(icy.orbit.omega * 2).toBeCloseTo(volcanic.orbit.omega, 6);
+    const v0 = bodyPose(volcanic, 0, bodies, g);
+    expect(Math.hypot(v0.x - giant.x, v0.y - giant.y)).toBeCloseTo(68, 4);
+    const vTurn = bodyPose(volcanic, 18, bodies, g);
+    expect(vTurn.x).toBeCloseTo(v0.x, 3);
+    expect(vTurn.y).toBeCloseTo(v0.y, 3);
+
+    const coast: Level = {
+      ...observatory,
+      id: "pair-coast",
+      bodies: [
+        big,
+        small,
+        giant,
+        volcanic,
+        { id: "x", name: "Far", kind: "target", x: 1200, y: 0, mass: 10, radius: 8, captureRadius: 20 },
+      ],
+      targetId: "x",
+      ship: { x: 400, y: 80, vx: 0, vy: 3 },
+      orbit: { bodyId: "x", radius: 40 },
+      belts: [],
+      nebulae: [],
+      wormholes: [],
+      petrova: [],
+      maxSteps: 120,
+    };
+    const config = simConfigFromLevel(coast);
+    const state = makeState(coast.ship.x, coast.ship.y, coast.ship.vx, coast.ship.vy, config);
+    const predicted = predictPlan(state, config, []);
+    const flown = flyPlan(state, config, [], 1);
+    expect(flown.path).toHaveLength(predicted.path.length);
+    for (let i = 0; i < predicted.path.length; i++) {
+      expect(flown.path[i]?.x).toBe(predicted.path[i]?.x);
+      expect(flown.path[i]?.y).toBe(predicted.path[i]?.y);
+    }
+  });
+
   it("spaces bodies so each picture has its own place", () => {
     const bodies = observatory.bodies;
     for (let i = 0; i < bodies.length; i++) {
@@ -81,7 +141,12 @@ describe("Observatory", () => {
         const a = bodies[i];
         const b = bodies[j];
         const distance = Math.hypot(a.x - b.x, a.y - b.y);
-        expect(distance, `${a.id} overlaps ${b.id}`).toBeGreaterThan(a.radius + b.radius + 36);
+        const bound =
+          a.orbit?.centerId === b.id ||
+          b.orbit?.centerId === a.id ||
+          (a.orbit?.cx !== undefined && a.orbit.cx === b.orbit?.cx && a.orbit.cy === b.orbit?.cy);
+        const pad = bound ? 0 : 36;
+        expect(distance, `${a.id} overlaps ${b.id}`).toBeGreaterThan(a.radius + b.radius + pad);
       }
     }
     for (const host of bodies) {
@@ -116,7 +181,10 @@ describe("Observatory", () => {
   });
 
   it("can be flown: the opening coast stays clear, and the frame does not drift", () => {
-    expect(observatory.bodies.every((body) => body.orbit === undefined)).toBe(true);
+    const orbiting = observatory.bodies.filter((body) => body.orbit).map((body) => body.id).sort();
+    expect(orbiting).toEqual(
+      ["chain-barren", "chain-dwarf", "chain-icy", "chain-volcanic", "look-double-big", "look-double-small"].sort(),
+    );
     expect(observatory.bodies.some((body) => body.kind === "rogue" && body.drift)).toBe(true);
     expect(frameAcceleration(observatory.bodies)).toBeNull();
     expect(observatory.bodies.some((body) => body.magnet)).toBe(true);
@@ -134,7 +202,8 @@ describe("Observatory", () => {
     for (let i = 0; i < 600; i++) step(state, config);
     expect(state.status).toBe("flying");
     for (const body of observatory.bodies) {
-      const distance = Math.hypot(state.x - body.x, state.y - body.y);
+      const pose = bodyPose(body, state.t, observatory.bodies, observatory.g);
+      const distance = Math.hypot(state.x - pose.x, state.y - pose.y);
       expect(distance, body.id).toBeGreaterThan(body.radius + 8);
     }
   });

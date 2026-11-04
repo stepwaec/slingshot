@@ -29,6 +29,9 @@ export const PLANET_KEYS = [
   "pluto",
   "charon",
   "eris",
+  "double-big",
+  "double-small",
+  "moon-captured",
 ] as const;
 
 export type PlanetKey = (typeof PLANET_KEYS)[number];
@@ -72,14 +75,22 @@ export interface PlanetParams {
   rim1: string;
   designR: number;
   maps: PlanetMaps;
+  /** 0 texture, 1 double ocean, 2 double rock, 3 captured potato. */
+  proc: number;
 }
 
 function row(
   light: readonly [number, number, number],
-  p: Omit<PlanetParams, "light" | "warm" | "night0" | "night1"> & { warm?: string; night0?: string; night1?: string },
+  p: Omit<PlanetParams, "light" | "warm" | "night0" | "night1" | "proc"> & {
+    warm?: string;
+    night0?: string;
+    night1?: string;
+    proc?: number;
+  },
 ): PlanetParams {
   return {
     ...p,
+    proc: p.proc ?? 0,
     light,
     warm: palette.planetWarm,
     night0: palette.planetNight0,
@@ -609,12 +620,97 @@ export const PLANETS: Record<PlanetKey, PlanetParams> = {
     designR: 14.5,
     maps: { face: "eris-face" },
   }),
+  // design/assets/bodies/double.svg: ice-ocean r 18, turn 80 s.
+  "double-big": row([0.587, 0.587, 0.556], {
+    locked: 0,
+    hasClouds: 0,
+    hasLights: 0,
+    glowDay: 0,
+    start: 0.4,
+    spin: 80,
+    cloudSpin: 80,
+    cloudA: 0,
+    shadowA: 0,
+    shadowOff: 0,
+    glint: 0.5,
+    lightsA: 0,
+    hi: "#E6F2FF",
+    hiA: 0.26,
+    warmA: 0.24,
+    airless: 0,
+    haze0: "#9CCBFF",
+    haze1: "#CFE6FF",
+    hazeA0: 0.42,
+    hazeA1: 0.65,
+    rim0: "#BFE3FF",
+    rim1: "#8CC4FF",
+    designR: 18,
+    proc: 1,
+    maps: {},
+  }),
+  // double.svg small companion: airless rock r 11, turn 60 s.
+  "double-small": row([0.587, 0.587, 0.556], {
+    locked: 0,
+    hasClouds: 0,
+    hasLights: 0,
+    glowDay: 0,
+    start: 0.24,
+    spin: 60,
+    cloudSpin: 60,
+    cloudA: 0,
+    shadowA: 0,
+    shadowOff: 0,
+    glint: 0,
+    lightsA: 0,
+    hi: "#FFF0DC",
+    hiA: 0.24,
+    warmA: 0.18,
+    airless: 1,
+    haze0: "#D08A4E",
+    haze1: "#D08A4E",
+    hazeA0: 0,
+    hazeA1: 0,
+    rim0: "#D08A4E",
+    rim1: "#D08A4E",
+    designR: 11,
+    proc: 2,
+    maps: {},
+  }),
+  // moon-captured.svg: mean r 9, tumble 70 s, airless, light stays fixed.
+  "moon-captured": row([0.587, 0.587, 0.556], {
+    locked: 0,
+    hasClouds: 0,
+    hasLights: 0,
+    glowDay: 0,
+    start: 0,
+    spin: 70,
+    cloudSpin: 70,
+    cloudA: 0,
+    shadowA: 0,
+    shadowOff: 0,
+    glint: 0,
+    lightsA: 0,
+    hi: "#C9BBA8",
+    hiA: 0.22,
+    warmA: 0.18,
+    airless: 1,
+    haze0: "#7E7468",
+    haze1: "#7E7468",
+    hazeA0: 0,
+    hazeA1: 0,
+    rim0: "#7E7468",
+    rim1: "#7E7468",
+    designR: 9,
+    proc: 3,
+    maps: {},
+  }),
 };
 
 
 /**
  * Which rocky look draws this body. Null keeps the sprite (stars, gas
- * giants, the double planet, the captured moon, props).
+ * giants, props). The double planet and the captured moon are procedural
+ * branches of this shader (uProc).
  * A home with no look is the ocean world. A target with no look is Planet X.
  * A moon with no look is the barren moon. An elevator anchor with no look
  * is that same ocean world (space-elevator.svg calls the placeholder the home planet).
@@ -657,6 +753,12 @@ export function planetKey(body: Body): PlanetKey | null {
       return "toxic";
     case "cracked":
       return "cracked";
+    case "double-big":
+      return "double-big";
+    case "double-small":
+      return "double-small";
+    case "moon-captured":
+      return "moon-captured";
     default:
       break;
   }
