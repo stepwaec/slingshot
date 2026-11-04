@@ -35,7 +35,6 @@ describe("ship systems", () => {
       g: 1,
       dt: 1 / 60,
       c: 1_000_000,
-      tidalStrength: 0.015,
       solarStrength: 30,
       shipMass: 1.35,
       engineScale: 1.15,
@@ -144,7 +143,6 @@ describe("ship systems", () => {
       g: 1,
       dt: 1 / 60,
       c: 1_000_000,
-      tidalStrength: 2,
       hullMax: 5,
       bodies: [
         {
@@ -162,14 +160,14 @@ describe("ship systems", () => {
       targetId: "hole",
       periapsisMargin: 1,
     };
-    const state = makeState(80, 0, -5, 0, config);
+    const state = makeState(40, 0, 0, 0, config);
     const cursor = { index: 0 };
     let guard = 0;
     while (state.status === "flying" && guard++ < 500) advancePlan(state, config, [], cursor);
     expect(state.status).toBe("lost");
     expect(state.lostReason).toBe("hull");
     expect(state.hull).toBe(0);
-    expect(tidalDangerRadius(config.bodies[0], 1, 2)).toBeGreaterThan(20);
+    expect(tidalDangerRadius(config.bodies[0], 1)).toBeGreaterThan(20);
   });
 
   it("spends points on a heavier hull and the new mass is in the prediction", () => {

@@ -361,8 +361,6 @@ export interface SimConfig {
    * A finite value `>= 1` smoothly keeps `dτ/dt` above `1 / dilationCap`.
    */
   dilationCap?: number;
-  /** Hull damage per second near a white dwarf, neutron star or black hole. Omitted or 0 deals none. */
-  tidalStrength?: number;
   /**
    * Scales drag inside a body's `atmosphereRadius`. Omitted or 0 leaves
    * velocity untouched, so stock levels stay bit-identical. The force is
@@ -1805,11 +1803,21 @@ const CLOSE_FACTOR = 1.12;
 const CLOSE_RATE = 18;
 /** Hull damage per second that draws the level-3 ring and the warning. */
 export const STRESS_WARN = 4;
+/**
+ * The tidal layer and hull damage start at this stress.
+ * S = 2GM L / r³ is summed for every mass. Below this line it is too faint
+ * to draw or to hurt. 3.6 is above a low Earth orbit (about 2) and the
+ * library-stage parking orbit (about 3.4), and below the gradient just
+ * outside the Observatory black hole, neutron star, pulsar and magnetar,
+ * and just outside the Sol Sun.
+ */
+export const TIDAL_VISIBLE = 3.6;
 
 /**
- * Summed tidal tensor at a point. S is hull per second from compact bodies.
- * T = Σ k · 2GM · L / r³ · (3 r̂r̂ − I) / 2. The larger eigenvalue is the
+ * Summed tidal tensor at a point. Every body with mass contributes.
+ * T = Σ 2GM · L / r³ · (3 r̂r̂ − I) / 2. The larger eigenvalue is the
  * stretch (equal to S for one body) and `angle` is that eigenvector.
+ * Hull damage and the layer use `TIDAL_VISIBLE`, not this raw field.
  * design/style.md §22 and design/threejs-notes.md §26.
  */
 export interface TidalTensor {
@@ -1828,8 +1836,6 @@ export function tidalStressAt(x: number, y: number, config: SimConfig, time: num
 }
 
 export function tidalTensorAt(x: number, y: number, config: SimConfig, time: number): TidalTensor {
-  const strength = config.tidalStrength ?? 0;
-  if (!(strength > 0)) return { stress: 0, txx: 0, txy: 0, tyy: 0, stretch: 0, angle: 0 };
   const g = gravityConstant(config);
   let stress = 0;
   let txx = 0;
@@ -1838,14 +1844,17 @@ export function tidalTensorAt(x: number, y: number, config: SimConfig, time: num
   const bodies = config.bodies;
   for (let i = 0; i < bodies.length; i++) {
     const body = bodies[i];
-    if (!isCompactBody(body) || !(body.mass > 0)) continue;
-    const pose = body.orbit ? bodyPose(body, time, bodies) : { x: body.x, y: body.y, vx: 0, vy: 0 };
+    if (!(body.mass > 0) || !bodyPresent(body, time)) continue;
+    const pose =
+      body.orbit || body.drift
+        ? bodyPose(body, time, bodies, g)
+        : { x: body.x, y: body.y, vx: 0, vy: 0 };
     const dx = x - pose.x;
     const dy = y - pose.y;
     const r2 = dx * dx + dy * dy;
     const r = Math.sqrt(r2);
     if (!(r > body.radius)) continue;
-    const radial = (strength * (2 * g * body.mass * SHIP_LENGTH)) / (r2 * r);
+    const radial = (2 * g * body.mass * SHIP_LENGTH) / (r2 * r);
     stress += radial;
     const nx = dx / r;
     const ny = dy / r;
@@ -1867,18 +1876,18 @@ export function tidalTensorAt(x: number, y: number, config: SimConfig, time: num
 }
 
 /**
- * Hull per second from tidal stress. The rate is S itself, so it grows as
- * 1/r³ through the level-3 ring. It does not step from zero at `STRESS_WARN`.
+ * Hull per second from tidal stress. The rate is S itself above
+ * `TIDAL_VISIBLE`, and 0 below that line, so a faint gradient does not drain
+ * the hull. Above the line it still grows as 1/r³.
  */
 export function tidalDamageRate(stress: number): number {
-  return stress > 0 ? stress : 0;
+  return stress >= TIDAL_VISIBLE ? stress : 0;
 }
 
-/** Radius where tidal stress reaches `STRESS_WARN`, or 0 when the knob is off. */
-export function tidalDangerRadius(body: Body, g: number, tidalStrength: number): number {
-  if (!isCompactBody(body) || !(tidalStrength > 0) || !(body.mass > 0) || !(g > 0)) return 0;
-  const r3 = (tidalStrength * 2 * g * body.mass * SHIP_LENGTH) / STRESS_WARN;
-  const r = Math.cbrt(r3);
+/** Radius where tidal stress reaches `TIDAL_VISIBLE`, or 0 when the surface is already quieter. */
+export function tidalDangerRadius(body: Body, g: number): number {
+  if (!(body.mass > 0) || !(g > 0)) return 0;
+  const r = Math.cbrt((2 * g * body.mass * SHIP_LENGTH) / TIDAL_VISIBLE);
   return r > body.radius ? r : 0;
 }
 

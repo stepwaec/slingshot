@@ -73,7 +73,6 @@ describe("physics knobs", () => {
       p: 2,
       dilationStrength: 1,
       dilationCap: Number.POSITIVE_INFINITY,
-      tidalStrength: 0,
       dragStrength: 0,
     });
     const point = { x: 80, y: -30 };
@@ -276,19 +275,18 @@ describe("physics knobs", () => {
     }
   });
 
-  it("stores tidal and drag without changing the flight", () => {
+  it("stores drag without changing the flight", () => {
     const level: typeof passage = {
       ...passage,
-      physics: { tidalStrength: 3, dragStrength: 4 },
+      physics: { dragStrength: 4 },
     };
     const tuned = simConfigFromLevel(level);
-    expect(tuned.tidalStrength).toBe(3);
     expect(tuned.dragStrength).toBe(4);
     const plain = { ...simConfigFromLevel(passage), maxSteps: 200 };
     const state = makeState(passage.ship.x, passage.ship.y, passage.ship.vx, passage.ship.vy, plain);
     const nodes = [{ step: 0, dvx: 1, dvy: 0.5 }];
     const left = flyPlan(state, plain, nodes, 1);
-    const right = flyPlan(state, { ...plain, tidalStrength: 3, dragStrength: 4 }, nodes, 1);
+    const right = flyPlan(state, { ...plain, dragStrength: 4 }, nodes, 1);
     const tunedFlight = flyPlan(
       makeState(passage.ship.x, passage.ship.y, passage.ship.vx, passage.ship.vy, tuned),
       { ...tuned, maxSteps: 200 },

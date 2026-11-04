@@ -23,7 +23,7 @@ const rescue = observatory;
 const ember: Level = {
   ...passage,
   id: "library-tide",
-  physics: { tidalStrength: 1 },
+  physics: {},
   bodies: [
     ...passage.bodies,
     {
@@ -102,8 +102,8 @@ describe("layers menu table", () => {
     const astro = layerView(layerById("astrophage"), createGame(dim));
     expect(astro.disabled).toBe(false);
     expect(astro.dim).toBe(false);
-    expect(layerById("tidal").available(passage)).toBe(false);
-    expect(layerById("tidal").available(rescue)).toBe(false);
+    expect(layerById("tidal").available(passage)).toBe(true);
+    expect(layerById("tidal").available(rescue)).toBe(true);
     expect(layerById("tidal").available(ember)).toBe(true);
     expect(layerById("tidal").reason).toBe("no tidal body here");
 
@@ -153,8 +153,13 @@ describe("layers menu keys", () => {
     expect(game.astrophage).toBe(false);
     expect(game.prediction).toBe(before);
     expect(applyLayerKey(game, panel, { key: "a", repeat: true, metaKey: false, ctrlKey: false, altKey: false })).toBe(false);
-    expect(applyLayerKey(game, panel, { key: "t", ...press })).toBe(false);
-    expect(toggleLayer(game, "tidal")).toBe(false);
+    expect(applyLayerKey(game, panel, { key: "t", ...press })).toBe(true);
+    expect(game.tidal).toBe(true);
+    expect(game.prediction).toBe(before);
+    expect(applyLayerKey(game, panel, { key: "t", ...press })).toBe(true);
+    expect(game.tidal).toBe(false);
+    expect(toggleLayer(game, "tidal")).toBe(true);
+    game.tidal = false;
 
     const plain = createGame(passage);
     expect(applyLayerKey(plain, panel, { key: "a", ...press })).toBe(false);
@@ -187,7 +192,8 @@ describe("layers menu keys", () => {
     expect(applyLayerKey(game, panel, { key: "C", ...press })).toBe(false);
     expect(applyLayerKey(game, panel, { key: "r", ...press })).toBe(false);
     expect(applyLayerKey(game, panel, { key: "a", ...press })).toBe(false);
-    expect(applyLayerKey(game, panel, { key: "t", ...press })).toBe(false);
+    expect(applyLayerKey(game, panel, { key: "t", ...press })).toBe(true);
+    expect(game.tidal).toBe(true);
     expect(game.radiation).toBe(true);
     expect(panel.open).toBe(false);
   });

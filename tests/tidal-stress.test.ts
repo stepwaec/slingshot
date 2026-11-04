@@ -1,4 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { observatory, simConfigFromLevel } from "../src/level/catalog";
+import { shipOnCircle } from "../src/world/orbit";
+import { moonMission } from "../src/world/moon-mission";
+import { solWorld } from "../src/world/sol";
 import {
   tidalGlyphAxes,
   tidalPathChip,
@@ -8,10 +12,12 @@ import {
 import {
   advancePlan,
   cloneState,
+  bodyPose,
   flyPlan,
   makeState,
   predictPlan,
   STRESS_WARN,
+  TIDAL_VISIBLE,
   tidalDamageRate,
   tidalDangerRadius,
   tidalStressAt,
@@ -31,7 +37,6 @@ function dwarfConfig(mass = 100_000): SimConfig {
     g: 1,
     dt: 1 / 60,
     c: 1_000_000,
-    tidalStrength: 1,
     hullMax: 100,
     fuelStart: 80,
     bodies: [
@@ -64,29 +69,35 @@ function dwarfConfig(mass = 100_000): SimConfig {
 }
 
 describe("tidal stress", () => {
-  it("falls as 1/r³ and stays continuous across the level-3 ring", () => {
+  it("falls as 1/r³ above the visible line and is zero below it", () => {
     const config = dwarfConfig();
     const body = config.bodies[0];
-    const radius = tidalDangerRadius(body, 1, 1);
+    const radius = tidalDangerRadius(body, 1);
     expect(radius).toBeGreaterThan(body.radius);
     const at = (distance: number) => tidalDamageRate(tidalStressAt(distance, 0, config, 0));
-    expect(at(radius)).toBeCloseTo(STRESS_WARN, 5);
-    expect(at(radius * 2)).toBeCloseTo(STRESS_WARN / 8, 5);
-    expect(at(radius * 3)).toBeCloseTo(STRESS_WARN / 27, 4);
-    expect(at(radius * 1.7) / at(radius * 0.85)).toBeCloseTo((0.85 / 1.7) ** 3, 6);
-    const eps = radius * 1e-3;
-    expect(at(radius + eps)).toBeGreaterThan(0);
-    expect(at(radius + eps)).toBeLessThan(STRESS_WARN);
-    expect(at(radius - eps)).toBeGreaterThan(STRESS_WARN);
-    expect(Math.abs(at(radius + eps) - at(radius - eps))).toBeLessThan(STRESS_WARN * 0.02);
+    const raw = (distance: number) => tidalStressAt(distance, 0, config, 0);
+    expect(raw(radius)).toBeCloseTo(TIDAL_VISIBLE, 4);
+    const insideLine = radius * 0.99;
+    expect(raw(insideLine)).toBeGreaterThan(TIDAL_VISIBLE);
+    expect(at(insideLine)).toBeCloseTo(raw(insideLine), 8);
+    expect(at(radius * 1.2)).toBe(0);
+    expect(raw(radius * 1.2)).toBeGreaterThan(0);
+    expect(raw(radius * 1.2)).toBeLessThan(TIDAL_VISIBLE);
+    expect(at(radius * 0.8)).toBeCloseTo(TIDAL_VISIBLE / 0.8 ** 3, 4);
+    expect(at(radius * 0.5) / at(radius * 0.8)).toBeCloseTo((0.8 / 0.5) ** 3, 5);
+    const eps = radius * 1e-4;
+    expect(at(radius + eps)).toBe(0);
+    expect(at(radius - eps)).toBeGreaterThan(TIDAL_VISIBLE);
     expect(at(body.radius)).toBe(0);
   });
 
   it("matches the flight hull exactly, including the tidal cost", () => {
-    const config = dwarfConfig();
-    const radius = tidalDangerRadius(config.bodies[0], 1, 1);
-    const start = makeState(radius * 3.2, radius * 2.4, 36, -6, config);
-    const nodes = [{ step: 30, dvx: 4, dvy: 1 }];
+    const config = { ...dwarfConfig(), maxSteps: 80 };
+    const radius = tidalDangerRadius(config.bodies[0], 1);
+    const distance = radius * 0.97;
+    const speed = Math.sqrt(config.bodies[0].mass / distance);
+    const start = makeState(distance, 0, 0, speed, config);
+    const nodes: { step: number; dvx: number; dvy: number }[] = [];
     const predicted = predictPlan(start, config, nodes);
     const flown = cloneState(start);
     const cursor = { index: 0 };
@@ -114,7 +125,7 @@ describe("tidal stress", () => {
 
   it("points the stretch axis along one body and turns it between two", () => {
     const config = dwarfConfig();
-    const radius = tidalDangerRadius(config.bodies[0], 1, 1);
+    const radius = tidalDangerRadius(config.bodies[0], 1);
     const alone = tidalTensorAt(radius, 0, config, 0);
     expect(alone.stress).toBe(tidalStressAt(radius, 0, config, 0));
     expect(alone.stretch).toBeCloseTo(alone.stress, 8);
@@ -143,14 +154,14 @@ describe("tidal stress", () => {
     expect(tidalStrokeAlpha(STRESS_WARN)).toBeCloseTo(0.92, 5);
     expect(tidalRingPaint(trace).hex).toBe("#7FE0FF");
     expect(tidalRingPaint(trace).fill).toBe(0);
-    expect(tidalRingPaint(STRESS_WARN / 2).hex).toBe("#FF9F43");
+    expect(tidalRingPaint((TIDAL_VISIBLE + STRESS_WARN) / 2).hex).toBe("#FF9F43");
     expect(tidalRingPaint(STRESS_WARN).hex).toBe("#FF5A5F");
     expect(tidalRingPaint(STRESS_WARN).fill).toBeCloseTo(0.22);
   });
 
   it("chips the longest level-3 stretch with its time and hull cost", () => {
     const config = dwarfConfig();
-    const radius = tidalDangerRadius(config.bodies[0], 1, 1);
+    const radius = tidalDangerRadius(config.bodies[0], 1);
     const inside = radius * 0.72;
     const outside = radius * 1.4;
     const stress = tidalStressAt(inside, 0, config, 0);
@@ -170,7 +181,102 @@ describe("tidal stress", () => {
     expect(chip?.text).toContain("path: tidal 3 for 0:02");
     expect(chip?.text).toContain("hull");
     expect(tidalPathChip(path.slice(0, 40), config)).toBeNull();
-    expect(config.tidalStrength).toBe(1);
-    expect(tidalDangerRadius(config.bodies[0], 1, 1)).toBeGreaterThan(16);
+    expect(tidalDangerRadius(config.bodies[0], 1)).toBeGreaterThan(16);
+  });
+
+  it("stays under the line for ordinary Sol planets and crosses it near the Sun and a black hole", () => {
+    const config = {
+      g: solWorld.g,
+      dt: solWorld.dt,
+      c: solWorld.c,
+      bodies: solWorld.bodies,
+      bounds: solWorld.bounds,
+      maxSteps: 200,
+      targetId: "earth",
+      periapsisMargin: 4,
+    };
+    const ship = shipOnCircle(solWorld.bodies, "earth", 52, Math.PI, solWorld.g);
+    expect(tidalStressAt(ship.x, ship.y, config, 0)).toBeLessThan(TIDAL_VISIBLE);
+    expect(tidalDamageRate(tidalStressAt(ship.x, ship.y, config, 0))).toBe(0);
+    for (const id of ["mercury", "venus", "mars", "luna"] as const) {
+      const body = solWorld.bodies.find((item) => item.id === id);
+      if (!body) throw new Error(id);
+      const pose = bodyPose(body, 0, solWorld.bodies, solWorld.g);
+      const distance = Math.max(body.radius * 2.5, body.radius + 30);
+      const stress = tidalStressAt(pose.x + distance, pose.y, config, 0);
+      expect(stress, id).toBeLessThan(TIDAL_VISIBLE);
+      expect(tidalDamageRate(stress), id).toBe(0);
+    }
+    const jupiter = solWorld.bodies.find((item) => item.id === "jupiter");
+    if (!jupiter) throw new Error("jupiter");
+    const jupiterPose = bodyPose(jupiter, 0, solWorld.bodies, solWorld.g);
+    const cloudTop = tidalStressAt(jupiterPose.x + jupiter.radius + 2, jupiterPose.y, config, 0);
+    expect(cloudTop).toBeLessThan(TIDAL_VISIBLE);
+    const sun = solWorld.bodies.find((item) => item.id === "sun");
+    if (!sun) throw new Error("sun");
+    const sunNear = tidalStressAt(sun.x + sun.radius * 1.4, sun.y, config, 0);
+    expect(sunNear).toBeGreaterThan(TIDAL_VISIBLE);
+    expect(tidalDamageRate(sunNear)).toBe(sunNear);
+
+    const hole = observatory.bodies.find((body) => body.kind === "blackhole");
+    if (!hole) throw new Error("black hole");
+    const observatoryConfig = simConfigFromLevel(observatory);
+    expect(tidalDangerRadius(hole, observatory.g)).toBeGreaterThan(hole.radius);
+    expect(tidalStressAt(hole.x + hole.radius + 0.2, hole.y, observatoryConfig, 0)).toBeGreaterThanOrEqual(TIDAL_VISIBLE);
+    for (const look of ["neutron", "pulsar", "magnetar"] as const) {
+      const body = observatory.bodies.find((item) => item.look === look);
+      if (!body) throw new Error(look);
+      expect(tidalDangerRadius(body, observatory.g), look).toBeGreaterThan(body.radius + 4);
+    }
+
+    const mission = simConfigFromLevel(moonMission);
+    const start = makeState(moonMission.ship.x, moonMission.ship.y, moonMission.ship.vx, moonMission.ship.vy, mission);
+    const short = { ...mission, maxSteps: 180 };
+    const predicted = predictPlan(start, short, []);
+    const flown = flyPlan(start, short, [], 1);
+    expect(flown.status).toBe(predicted.status);
+    expect(flown.steps).toBe(predicted.steps);
+    expect(flown.path.length).toBe(predicted.path.length);
+    for (let i = 0; i < predicted.path.length; i++) {
+      expect(flown.path[i].x).toBe(predicted.path[i].x);
+      expect(flown.path[i].y).toBe(predicted.path[i].y);
+    }
+  });
+
+  it("keeps the new Observatory bodies finite and on the right side of the line", () => {
+    const config = simConfigFromLevel(observatory);
+    const bodies = observatory.bodies;
+    const byLook = (look: string) => {
+      const body = bodies.find((item) => item.look === look);
+      if (!body) throw new Error(look);
+      return body;
+    };
+    const outside = (look: string, gap = 1) => {
+      const body = byLook(look);
+      const pose = bodyPose(body, 0, bodies, observatory.g);
+      const stress = tidalStressAt(pose.x + body.radius + gap, pose.y, config, 0);
+      expect(Number.isFinite(stress), look).toBe(true);
+      return stress;
+    };
+
+    for (const look of ["red-dwarf", "blue-giant", "red-giant", "binary-hot", "binary-cool", "gas-giant", "moon-chain", "moon-captured"]) {
+      expect(outside(look), look).toBeLessThan(TIDAL_VISIBLE);
+    }
+    expect(outside("double-big")).toBeGreaterThanOrEqual(TIDAL_VISIBLE);
+    expect(outside("double-small")).toBeGreaterThanOrEqual(TIDAL_VISIBLE);
+
+    const big = byLook("double-big");
+    const pose = bodyPose(big, 0, bodies, observatory.g);
+    const clear = tidalStressAt(pose.x + 120, pose.y + 120, config, 10);
+    expect(Number.isFinite(clear)).toBe(true);
+    expect(clear).toBeLessThan(TIDAL_VISIBLE);
+
+    for (const time of [0, 7, 20]) {
+      const hot = bodyPose(byLook("binary-hot"), time, bodies, observatory.g);
+      const field = tidalTensorAt(hot.x + 80, hot.y, config, time);
+      expect(Number.isFinite(field.stress)).toBe(true);
+      expect(Number.isFinite(field.angle)).toBe(true);
+      expect(field.stress).toBeLessThan(TIDAL_VISIBLE);
+    }
   });
 });

@@ -6,8 +6,7 @@ import { palette, srgb01 } from "../palette";
 import {
   bodyPose,
   gravityConstant,
-  isCompactBody,
-  STRESS_WARN,
+  TIDAL_VISIBLE,
   tidalDangerRadius,
   tidalTensorAt,
   type Body,
@@ -215,7 +214,7 @@ class TidalVisual implements Visual {
   private sample(frame: VisualFrame, config: SimConfig, time: number, zoom: number): void {
     const spec = theme.tidal;
     const cell = spec.cell;
-    const floor = spec.show * STRESS_WARN;
+    const floor = TIDAL_VISIBLE;
     const bodies = config.bodies;
     const g = gravityConstant(config);
     const poses: { x: number; y: number; radius: number }[] = [];
@@ -277,17 +276,15 @@ class TidalVisual implements Visual {
 
   private placeBoundary(frame: VisualFrame, config: SimConfig, time: number): void {
     const spec = theme.tidal;
-    const strength = config.tidalStrength ?? 0;
     const g = gravityConstant(config);
     const ang = Math.atan2(1, 0.8);
     const cos = Math.cos(ang);
     const sin = Math.sin(ang);
     let n = 0;
-    if (strength > 0 && this.boundaryMap) {
+    if (this.boundaryMap) {
       for (let i = 0; i < config.bodies.length; i++) {
         const body: Body = config.bodies[i];
-        if (!isCompactBody(body)) continue;
-        const radius = tidalDangerRadius(body, g, strength);
+        const radius = tidalDangerRadius(body, g);
         if (!(radius > 0)) continue;
         const pose = bodyPose(body, time, config.bodies, g);
         const screen = worldToScreen(
