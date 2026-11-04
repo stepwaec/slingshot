@@ -28,6 +28,23 @@ import type { Mission, Region, World } from "./types";
  */
 export const DISTANCE_SCALE = 3 / 2;
 
+/**
+ * Mass of the Moon relative to Earth/81. The real ratio cannot hold a low
+ * orbit against Earth's tide at this chart distance: a circular ship falls
+ * out of the capture ring or into the surface inside a revolution.
+ * 10 is the smallest factor in the survey where every tested phase at
+ * radius 32 stays inside the ring for more than two revolutions.
+ * The Moon's rail does not use this mass. Its period still follows Earth.
+ */
+export const MOON_MASS_FACTOR = 10;
+
+/**
+ * Extra stretch of the Earth–Moon distance on top of `DISTANCE_SCALE`.
+ * 1 leaves the Moon where that scale put it. A further stretch was tried
+ * and made the low orbit worse, so it stays at 1.
+ */
+export const MOON_DISTANCE_FACTOR = 1;
+
 /** Earth–Sun distance in world units. */
 export const SOL_AU = 820 * DISTANCE_SCALE;
 
@@ -136,7 +153,7 @@ const neptune = solBody("neptune", "Neptune", "neptune", "planet", 9_000, circle
 const pluto = solBody("pluto", "Pluto", "pluto", "planet", 400, circle("sun", solRadius(39.48), 2.4, SUN_MASS));
 const eris = solBody("eris", "Eris", "eris", "planet", 500, circle("sun", solRadius(67.8), 0.35, SUN_MASS));
 
-const LUNA_DISTANCE = 168 * DISTANCE_SCALE;
+const LUNA_DISTANCE = 168 * DISTANCE_SCALE * MOON_DISTANCE_FACTOR;
 /**
  * Lead the Moon so a prograde burn from the far side of Earth (angle π)
  * meets it near angle 0 after one Hohmann half-period. The Sun still
@@ -150,7 +167,7 @@ const luna = solBody(
   "Moon",
   "luna",
   "moon",
-  EARTH_MASS / 81,
+  (EARTH_MASS / 81) * MOON_MASS_FACTOR,
   circle("earth", LUNA_DISTANCE, LUNA_PHASE, EARTH_MASS),
   LUNA_CAPTURE,
 );

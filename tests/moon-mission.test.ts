@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { LEVELS, WORLD_CHARTS, observatory, simConfigFromLevel } from "../src/level/catalog";
 import { objectiveText } from "../src/hud/objective";
-import { bodyPose, flyPlan, makeState, orbitAbout, predictPlan, type BurnNode } from "../src/sim/physics";
+import { advancePlan, bodyPose, flyPlan, makeState, orbitAbout, predictPlan, type BurnNode } from "../src/sim/physics";
 import { moonMission } from "../src/world/moon-mission";
 
-/** Departure, lunar capture, leave the Moon, Earth capture. */
+/** Departure, lunar insertion, leave after one lap, Earth capture. */
 const plan: BurnNode[] = [
-  { step: 0, dvx: 0, dvy: -6.15 },
-  { step: 1890, dvx: 0.542338481131118, dvy: 3.880447072991457 },
-  { step: 1920, dvx: -1.414213562373095, dvy: 1.4142135623730951 },
-  { step: 8640, dvx: -13.83714503852748, dvy: -28.661266346109254 },
+  { step: 0, dvx: -0.8628732259524066, dvy: -6.139662026197736 },
+  { step: 1209, dvx: 9.207295198561756, dvy: 8.181441674484159 },
+  { step: 2911, dvx: 4.169690499008103, dvy: -2.7592899707137617 },
+  { step: 4679, dvx: 3.6546281923744104, dvy: 15.317513431665407 },
 ];
 
 function body(id: string) {
@@ -60,8 +60,20 @@ describe("Mission 1, Moon and back", () => {
     }
   });
 
+  it("does not finish the Moon leg on the insertion burn", () => {
+    const early = state();
+    const cursor = { index: 0 };
+    while (early.status === "flying" && early.step < plan[1].step + 30) {
+      advancePlan(early, config, plan, cursor);
+    }
+    expect(early.leg).toBe(0);
+    expect(early.status).toBe("flying");
+    expect(early.lapBurn).toBe(1);
+    expect(Math.abs(early.lap)).toBeLessThan(Math.PI * 2);
+  });
+
   it("does not win a lunar flyby", () => {
-    const flyby = predictPlan(state(), config, [plan[0]]);
+    const flyby = predictPlan(state(), config, [{ step: 0, dvx: 1.2155, dvy: -6.8937 }]);
     expect(flyby.status).toBe("lost");
     expect(flyby.lostReason).toBe("flyby");
     expect(flyby.final.leg).toBe(0);
@@ -78,7 +90,7 @@ describe("Mission 1, Moon and back", () => {
   it("reads the objective line", () => {
     const legs = moonMission.objectives;
     expect(objectiveText(undefined, 0, "flying", false)).toBeNull();
-    expect(objectiveText(legs, 0, "flying", false)).toBe("1/2  Capture the Moon");
+    expect(objectiveText(legs, 0, "flying", false)).toBe("1/2  One lap around the Moon");
     expect(objectiveText(legs, 1, "flying", false)).toBe("2/2  Return to Earth orbit");
     expect(objectiveText(legs, 0, "flying", true)).toBe("Plan completes both legs");
     expect(objectiveText(legs, 1, "won", false)).toBe("Mission complete");

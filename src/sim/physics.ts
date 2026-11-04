@@ -428,6 +428,11 @@ export interface FlightObjective {
   id: string;
   bodyId: string;
   kind: "capture" | "flyby";
+  /**
+   * When set, a capture is this many full revolutions inside the sphere
+   * after a burn there, not an osculating ellipse at one instant.
+   */
+  laps?: number;
 }
 
 /** How many times a flight may freeze so the player can edit burns. */
@@ -461,6 +466,14 @@ export interface SimState {
   lostReason: LostReason | null;
   /** True once the trajectory has touched the active capture sphere. */
   enteredCapture: boolean;
+  /** Radians swept around the active body while inside its capture sphere. */
+  lap: number;
+  /** 1 after a burn inside the active capture sphere. */
+  lapBurn: number;
+  /** 1 when `lapX`/`lapY` is a sample from inside the sphere. */
+  lapSeen: number;
+  lapX: number;
+  lapY: number;
   /**
    * Active objective. 0 when the flight has no objectives.
    * A finished capture or flyby advances this. The last leg stays put and wins.
@@ -1225,6 +1238,11 @@ export function makeState(
     crashedBodyId: null,
     lostReason: null,
     enteredCapture: false,
+    lap: 0,
+    lapBurn: 0,
+    lapSeen: 0,
+    lapX: 0,
+    lapY: 0,
     leg: 0,
     t: 0,
     tau: 0,
@@ -1476,12 +1494,17 @@ export function activeTargetId(
 function finishLeg(state: SimState, config: SimConfig): void {
   const list = config.objectives;
   if (!list) return;
+  state.lap = 0;
+  state.lapBurn = 0;
+  state.lapSeen = 0;
+  state.lapX = 0;
+  state.lapY = 0;
+  state.enteredCapture = false;
   if (state.leg + 1 >= list.length) {
     state.status = "won";
     return;
   }
   state.leg += 1;
-  state.enteredCapture = false;
 }
 
 function shipInsideBody(state: SimState, config: SimConfig, body: Body, radius: number, time: number): boolean {
@@ -1492,10 +1515,28 @@ function shipInsideBody(state: SimState, config: SimConfig, body: Body, radius: 
   return Math.hypot(state.x - pose.x, state.y - pose.y) <= radius + 1e-6;
 }
 
+/** Add the turn since the previous in-sphere sample. The first sample only arms it. */
+function trackLap(state: SimState, body: Body, config: SimConfig, time: number): void {
+  const pose =
+    body.orbit || body.drift
+      ? bodyPose(body, time, config.bodies, gravityConstant(config))
+      : { x: body.x, y: body.y, vx: 0, vy: 0 };
+  const rx = state.x - pose.x;
+  const ry = state.y - pose.y;
+  if (state.lapSeen) {
+    state.lap += Math.atan2(state.lapX * ry - state.lapY * rx, state.lapX * rx + state.lapY * ry);
+  }
+  state.lapX = rx;
+  state.lapY = ry;
+  state.lapSeen = 1;
+}
+
 /**
- * Advance the active leg. A capture completes only when `burned` is set and
- * the ship is inside the sphere on a stable orbit. Coasting into that orbit
- * does not count. Leaving the sphere completes a flyby leg and fails a capture.
+ * Advance the active leg. A capture with `laps` completes after that many
+ * revolutions inside the sphere, and only once a burn has fired there.
+ * Otherwise a capture completes on a burn that leaves a stable orbit.
+ * Coasting into that orbit does not count. Leaving the sphere completes a
+ * flyby leg and fails a capture.
  */
 function updateObjectives(
   state: SimState,
@@ -1523,12 +1564,24 @@ function updateObjectives(
       : circleEntry(segment.x0, segment.y0, segment.x1, segment.y1, body.x, body.y, radius) !== null;
   }
   const inside = shipInsideBody(state, config, body, radius, time);
-  if (burned && objective.kind === "capture" && inside && isStableCapture(state, config, body)) {
+  const laps = objective.laps ?? 0;
+  if (objective.kind === "capture" && laps > 0) {
+    if (burned && inside) state.lapBurn = 1;
+    if (inside) {
+      trackLap(state, body, config, time);
+      if (state.lapBurn && Math.abs(state.lap) >= laps * Math.PI * 2) {
+        finishLeg(state, config);
+        return;
+      }
+    } else {
+      state.lapSeen = 0;
+    }
+  } else if (burned && objective.kind === "capture" && inside && isStableCapture(state, config, body)) {
     finishLeg(state, config);
     return;
   }
-  if (burned) return;
   if (inside || crossed) state.enteredCapture = true;
+  if (burned) return;
   if (state.enteredCapture && !inside) {
     if (objective.kind === "flyby") finishLeg(state, config);
     else {

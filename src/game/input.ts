@@ -120,7 +120,7 @@ export function bindInput(
       return;
     }
     if (drag.kind === "handle") {
-      aimHandle(game, getSize(), drag.index, event.offsetX, event.offsetY);
+      aimHandle(game, getSize(), drag.index, event.offsetX, event.offsetY, event.shiftKey);
       return;
     }
     slideNode(game, getSize(), drag.index, drag.rail, event.offsetX, event.offsetY);
@@ -210,12 +210,16 @@ export function bindInput(
   });
 }
 
+/** Shift drags at a quarter of the level's Δv per pixel. */
+const FINE_BOOST = 0.25;
+
 function aimHandle(
   game: Game,
   size: { width: number; height: number },
   index: number,
   sx: number,
   sy: number,
+  fine = false,
 ): void {
   const origin = nodePosition(game, index);
   if (!origin) return;
@@ -228,7 +232,7 @@ function aimHandle(
     setNodeBurn(game, index, 0, 0);
     return;
   }
-  const dv = pixels * game.level.dvPerPixel;
+  const dv = pixels * game.level.dvPerPixel * (fine ? FINE_BOOST : 1);
   setNodeBurn(game, index, (dx / pixels) * dv, (-dy / pixels) * dv);
 }
 

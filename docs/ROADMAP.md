@@ -77,7 +77,7 @@ One persistent world, grown over time. The first region is Sol: the Sun, the pla
 | OW1: world data model and region/mission definition | In progress, opened 2026-11-04 in [PR #106](https://github.com/stepwaec/slingshot/pull/106) | A world holds the shared bodies, belts, and physics. A region names a subset of those bodies and a bounds box. A mission names a region plus the start state, the camera bounds, the objectives, and the scoring. Compiling a mission produces the level the sim already runs, and the bodies in that level are the world's own objects. |
 | OW2: Sol world | In progress, opened 2026-11-04 in [PR #107](https://github.com/stepwaec/slingshot/pull/107) | The Sun, the eight planets, and the major moons on Kepler circles, plus an asteroid belt between Mars and Jupiter and a Kuiper belt beyond Neptune. Distances are compressed and time is sped up. Order and parentage stay real. |
 | OW3: multi-leg objectives and orbit capture | In progress, opened 2026-11-04 in [PR #108](https://github.com/stepwaec/slingshot/pull/108) | Ordered legs. A capture leg completes only from a burn inside that body's capture sphere that leaves a stable orbit. A flyby leg completes by passing through. The flight continues until the last leg. |
-| OW4: Mission 1, Moon and back | In progress, opened 2026-11-04 in [PR #111](https://github.com/stepwaec/slingshot/pull/111) | Start in Earth orbit, capture the Moon, return to a stable Earth orbit. The mission is the first campaign entry. It uses the Sol world and the OW3 rules. |
+| OW4: Mission 1, Moon and back | In progress, opened 2026-11-04 in [PR #111](https://github.com/stepwaec/slingshot/pull/111) | Start in Earth orbit, fly one full lap inside the Moon's capture ring, return to a stable Earth orbit. The Moon is 10× Earth's real mass ratio so that lap can exist at the chart distance. The mission is the first campaign entry. |
 | OW5: later expansion | Planned | Further Sol missions, then other catalogue regions. Not built in this pass. |
 
 ### OW1: world data model and region/mission definition
@@ -122,7 +122,7 @@ One persistent world, grown over time. The first region is Sol: the Sun, the pla
 
 ### OW4: Mission 1, Moon and back
 
-**Goal.** The first campaign mission, in the Earth–Moon region of the Sol world. The ship starts in a low Earth orbit. Leg 1 is a lunar capture, matching `design/mockups/sol-moon.svg`: a burn inside the Moon's target zone that leaves a stable lunar orbit. Leg 2 is the return, a burn inside Earth's zone that leaves a stable Earth orbit. The mission is listed in the campaign menu. Scoring uses the mission profile. A one-line objective readout uses the existing HUD type until Claude's briefing lands.
+**Goal.** The first campaign mission, in the Earth–Moon region of the Sol world. The ship starts in a low Earth orbit. Leg 1 is a lunar capture: a burn inside the Moon's ring, then one full revolution still inside that ring. The Moon's mass is `MOON_MASS_FACTOR` times Earth/81 so Earth's tide does not end that lap immediately. Leg 2 is the return, a burn inside Earth's zone that leaves a stable Earth orbit. The mission is listed in the campaign menu. Scoring uses the mission profile. A one-line objective readout uses the existing HUD type until Claude's briefing lands.
 
 **Acceptance.**
 - At launch the ship is bound to Earth, above the surface, inside Earth's capture sphere, and outside the Moon's.

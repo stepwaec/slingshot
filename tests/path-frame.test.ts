@@ -4,12 +4,12 @@ import { showPath } from "../src/render/path-frame";
 import { bodyPose, flyPlan, makeState, predictPlan, type Body, type BurnNode } from "../src/sim/physics";
 import { moonMission } from "../src/world/moon-mission";
 
-/** Departure, lunar capture, leave the Moon, Earth capture. Same burns as the mission test. */
+/** Departure, lunar insertion, leave after one lap, Earth capture. Same burns as the mission test. */
 const plan: BurnNode[] = [
-  { step: 0, dvx: 0, dvy: -6.15 },
-  { step: 1890, dvx: 0.542338481131118, dvy: 3.880447072991457 },
-  { step: 1920, dvx: -1.414213562373095, dvy: 1.4142135623730951 },
-  { step: 8640, dvx: -13.83714503852748, dvy: -28.661266346109254 },
+  { step: 0, dvx: -0.8628732259524066, dvy: -6.139662026197736 },
+  { step: 1209, dvx: 9.207295198561756, dvy: 8.181441674484159 },
+  { step: 2911, dvx: 4.169690499008103, dvy: -2.7592899707137617 },
+  { step: 4679, dvx: 3.6546281923744104, dvy: 15.317513431665407 },
 ];
 
 function body(id: string): Body {
