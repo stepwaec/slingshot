@@ -82,6 +82,8 @@ const LOOK_NAME: Partial<Record<BodyLook, string>> = {
   "binary-cool": "Binary cool",
   "white-dwarf": "White dwarf",
   "red-giant": "Red giant",
+  "red-dwarf": "Red dwarf",
+  "blue-giant": "Blue giant",
   "gas-giant": "Gas giant",
   "gas-ringed": "Ringed giant",
   "ice-ring": "Ice ring",
@@ -164,6 +166,9 @@ const LOOK_SPEC: Partial<Record<BodyLook, ExhibitSpec>> = {
   "binary-cool": { radius: 14, mass: 900, reach: 140 },
   "white-dwarf": { radius: 12, mass: 1600, reach: 110 },
   "red-giant": { radius: 48, mass: 1100, reach: 170, extra: { atmosphereRadius: 78 } },
+  // design/assets/bodies/red-dwarf.svg and blue-giant.svg: crash radii 40 and 54.
+  "red-dwarf": { radius: 40, mass: 800, reach: 220 },
+  "blue-giant": { radius: 54, mass: 1800, reach: 300 },
   "gas-giant": { radius: 36, mass: 800, reach: 110, extra: { magnet: { b1Reach: 90, tilt: 0.3 } } },
   "gas-ringed": { radius: 44, mass: 800, reach: 150 },
   "ice-ring": { radius: 44, mass: 800, reach: 150 },
