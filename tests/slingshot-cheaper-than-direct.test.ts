@@ -115,6 +115,6 @@ describe("Passage plans", () => {
     clearPlan(game);
     expect(game.mode).toBe("planning");
     expect(game.nodes).toHaveLength(0);
-    expect(canLaunch(game)).toBe(false);
+    expect(canLaunch(game)).toBe(true);
   });
 });

@@ -22,6 +22,7 @@ import {
 } from "./state";
 import { applyLayerKey, closeLayersOnEscape, type LayersPanelState } from "./layers";
 import { panBy, worldToScreen, zoomAt } from "../render/camera";
+import { theme } from "../render/theme";
 import { SIM_SPEEDS, SPEED_KEY, type SimSpeed } from "../sim/physics";
 
 export interface InputElements {
@@ -44,9 +45,12 @@ export interface InputElements {
 const HANDLE_RADIUS = 16;
 const NODE_RADIUS = 12;
 const PATH_RADIUS = 12;
+/** Precise disc on the selected node's ×. The drawn marker is larger and ignores pointers. */
+export const REMOVE_RADIUS = 4;
 const DRAG_THRESHOLD = 5;
 
-type Hit =
+export type PlanningHit =
+  | { type: "remove" }
   | { type: "handle"; index: number }
   | { type: "node"; index: number }
   | { type: "path"; step: number }
@@ -56,7 +60,7 @@ type Drag =
   | { kind: "pan"; lastX: number; lastY: number; moved: boolean }
   | { kind: "handle"; index: number }
   | { kind: "node"; index: number; rail: RailSample[] }
-  | { kind: "pending"; hit: Hit; x: number; y: number };
+  | { kind: "pending"; hit: PlanningHit; x: number; y: number };
 
 export function bindInput(
   game: Game,
@@ -73,14 +77,14 @@ export function bindInput(
     pointerId = event.pointerId;
     canvas.setPointerCapture(event.pointerId);
     const size = getSize();
-    const hit = hitTest(game, size.width, size.height, event.offsetX, event.offsetY);
+    const hit = planningPointerHit(game, size.width, size.height, event.offsetX, event.offsetY);
     if (isEditing(game) && hit.type === "handle") {
       selectNode(game, hit.index);
       drag = { kind: "handle", index: hit.index };
       canvas.classList.add("aiming");
       return;
     }
-    if (isEditing(game) && (hit.type === "node" || hit.type === "path")) {
+    if (isEditing(game) && (hit.type === "node" || hit.type === "path" || hit.type === "remove")) {
       if (hit.type === "node") selectNode(game, hit.index);
       drag = { kind: "pending", hit, x: event.offsetX, y: event.offsetY };
       return;
@@ -128,8 +132,7 @@ export function bindInput(
     drag = null;
     canvas.classList.remove("aiming", "panning");
     if (!finished || !isEditing(game)) return;
-    if (finished.kind === "pending" && finished.hit.type === "path") addNode(game, finished.hit.step);
-    if (finished.kind === "pending" && finished.hit.type === "node") selectNode(game, finished.hit.index);
+    if (finished.kind === "pending") settlePlanningClick(game, finished.hit);
     if (finished.kind === "pan" && !finished.moved) selectNode(game, null);
   };
   canvas.addEventListener("pointerup", endPointer);
@@ -250,8 +253,30 @@ function slideNode(
   moveNodeAlong(game, index, rail, best);
 }
 
-function hitTest(game: Game, width: number, height: number, sx: number, sy: number): Hit {
+/**
+ * What a planning click means. A press that does not drag settles as this.
+ * The × deletes only on a precise hit; a drag that starts there pans instead.
+ */
+export function settlePlanningClick(game: Game, hit: PlanningHit): void {
+  if (!isEditing(game)) return;
+  if (hit.type === "remove") deleteSelected(game);
+  else if (hit.type === "path") addNode(game, hit.step);
+  else if (hit.type === "node") selectNode(game, hit.index);
+}
+
+/**
+ * Screen-space pick. The delete × is a small disc offset from the selected
+ * node and wins only there. A click on the path, including beside that node,
+ * picks the path.
+ */
+export function planningPointerHit(game: Game, width: number, height: number, sx: number, sy: number): PlanningHit {
   if (!isEditing(game)) return { type: "empty" };
+  const remove = removeMarkerPoint(game, width, height);
+  if (remove) {
+    const dx = remove.x - sx;
+    const dy = remove.y - sy;
+    if (dx * dx + dy * dy <= REMOVE_RADIUS * REMOVE_RADIUS) return { type: "remove" };
+  }
   const handle = closestHandle(game, width, height, sx, sy);
   if (handle !== null) return { type: "handle", index: handle };
   const node = closestNode(game, width, height, sx, sy);
@@ -259,6 +284,20 @@ function hitTest(game: Game, width: number, height: number, sx: number, sy: numb
   const step = closestPathStep(game, width, height, sx, sy);
   if (step !== null) return { type: "path", step };
   return { type: "empty" };
+}
+
+/** Centre of the ×, or null when the selected node is not one the player can delete. */
+function removeMarkerPoint(game: Game, width: number, height: number): { x: number; y: number } | null {
+  if (!isEditing(game)) return null;
+  const index = game.selected;
+  if (index === null || index < game.cursor.index) return null;
+  const node = game.nodes[index];
+  if (!node) return null;
+  if (game.mode !== "planning" && (game.ship.step - node.step) * game.level.dt > theme.nodes.ignite) return null;
+  const pos = nodePosition(game, index);
+  if (!pos) return null;
+  const screen = worldToScreen(game.camera, width, height, pos.x, pos.y);
+  return { x: screen.x + theme.nodes.deleteX, y: screen.y + theme.nodes.deleteY };
 }
 
 function closestHandle(game: Game, width: number, height: number, sx: number, sy: number): number | null {
