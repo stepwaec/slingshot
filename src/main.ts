@@ -47,6 +47,7 @@ import { sampleBurnAnim, tailFromBurn, thrustDuration } from "./render/burn-anim
 import { theme } from "./render/theme";
 import { toggleLayer, type LayersPanelState } from "./game/layers";
 import { mountLayersMenu, syncLayersMenu } from "./hud/layers-menu";
+import { objectiveText } from "./hud/objective";
 import { ASTRO_CAPACITY, ASTRO_DV, curvePoint, petrovaCurve } from "./sim/astrophage";
 
 const levels: readonly Level[] = [...LEVELS, ...WORLD_CHARTS, observatory];
@@ -97,6 +98,7 @@ const planningActions = required<HTMLElement>("#planning-actions");
 const flightActions = required<HTMLElement>("#flight-actions");
 const fpsValue = required<HTMLElement>("#fps");
 const planNote = required<HTMLElement>("#plan-note");
+const objective = required<HTMLElement>("#objective");
 const previewRangeInput = required<HTMLInputElement>("#preview-range");
 const previewReadout = required<HTMLElement>("#preview-readout");
 const levelSelect = required<HTMLSelectElement>("#level");
@@ -134,7 +136,7 @@ const doseFill = required<HTMLElement>("#dose-fill");
 const doseRate = required<HTMLElement>("#dose-rate");
 const layersPanel: LayersPanelState = { open: false };
 
-const game = createGame();
+const game = createGame(LEVELS[0] ?? observatory);
 if (import.meta.env.DEV) {
   (window as unknown as { __slingshot?: { game: Game; setPlan: typeof setPlan } }).__slingshot = { game, setPlan };
 }
@@ -461,6 +463,7 @@ function syncHud(current: Game): void {
     if (spreadSigma >= 0.6) line += `  ·  spread ±${Math.round(spreadSigma)} px`;
   }
   telemetry.textContent = line;
+  syncObjective(current, planning);
   fpsValue.textContent = `${Math.round(fps)} fps`;
 
   launchButton.disabled = !canLaunch(current);
@@ -726,6 +729,14 @@ function syncPreview(current: Game): void {
   previewRangeInput.max = String(range.maxSeconds);
   if (document.activeElement !== previewRangeInput) previewRangeInput.value = String(seconds);
   previewReadout.textContent = `${seconds.toFixed(1)}s`;
+}
+
+function syncObjective(current: Game, planning: boolean): void {
+  const status = planning ? "flying" : current.ship.status;
+  const leg = planning ? current.initial.leg : current.ship.leg;
+  const text = objectiveText(current.level.objectives, leg, status, planning && current.prediction.status === "won");
+  objective.hidden = text === null;
+  if (text !== null) objective.textContent = text;
 }
 
 function syncPlanNote(current: Game): void {

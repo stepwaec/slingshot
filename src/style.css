@@ -1136,6 +1136,19 @@ html, body, #app {
   white-space: pre;
 }
 
+#objective {
+  position: absolute;
+  left: 40px;
+  bottom: 68px;
+  margin: 0;
+  font: 500 11px/1 var(--ui);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+#objective[hidden] { display: none; }
+
 #plan-note {
   position: absolute;
   left: 40px;
