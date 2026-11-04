@@ -556,9 +556,24 @@ export function reset(game: Game): void {
   recompute(game, 0, "coast");
 }
 
+function legBodyName(game: Game): string {
+  const list = game.level.objectives;
+  const index = game.ship.leg < 0 ? 0 : list && game.ship.leg >= list.length ? list.length - 1 : game.ship.leg;
+  const id = list && list.length > 0 ? list[index].bodyId : game.level.targetId;
+  const body = game.level.bodies.find((item) => item.id === id);
+  return body?.name ?? "the target";
+}
+
 export function outcomeCopy(game: Game): { title: string; detail: string } | null {
   if (game.mode !== "finished") return null;
   if (game.ship.status === "won") {
+    const objectives = game.level.objectives;
+    if (objectives && objectives.length > 1) {
+      return {
+        title: "Mission complete",
+        detail: "Every leg is done. The ship is in a stable orbit.",
+      };
+    }
     return {
       title: "In orbit around Planet X",
       detail: "The ship is bound to Planet X. Periapsis clears the surface, and apoapsis stays inside the capture radius.",
@@ -575,7 +590,9 @@ export function outcomeCopy(game: Game): { title: string; detail: string } | nul
     game.ship.lostReason === "timeout"
       ? "Time ran out."
       : game.ship.lostReason === "flyby"
-        ? "The ship flew past Planet X without being captured."
+        ? game.level.objectives && game.level.objectives.length > 0
+          ? `The ship flew past ${legBodyName(game)} without being captured.`
+          : "The ship flew past Planet X without being captured."
     : game.ship.lostReason === "hull"
       ? "The hull failed."
       : game.ship.lostReason === "dose"

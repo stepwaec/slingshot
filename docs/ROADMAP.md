@@ -69,7 +69,7 @@ One persistent world, grown over time. The first region is Sol: the Sun, the pla
 | --- | --- | --- |
 | OW1: world data model and region/mission definition | In progress, opened 2026-11-04 in [PR #106](https://github.com/stepwaec/slingshot/pull/106) | A world holds the shared bodies, belts, and physics. A region names a subset of those bodies and a bounds box. A mission names a region plus the start state, the camera bounds, the objectives, and the scoring. Compiling a mission produces the level the sim already runs, and the bodies in that level are the world's own objects. |
 | OW2: Sol world | In progress, opened 2026-11-04 in [PR #107](https://github.com/stepwaec/slingshot/pull/107) | The Sun, the eight planets, and the major moons on Kepler circles, plus an asteroid belt between Mars and Jupiter and a Kuiper belt beyond Neptune. Distances are compressed and time is sped up. Order and parentage stay real. |
-| OW3: multi-leg objectives and orbit capture | Planned | Ordered legs. A capture leg completes only from a burn inside that body's capture sphere that leaves a stable orbit. A flyby leg completes by passing through. The flight continues until the last leg. |
+| OW3: multi-leg objectives and orbit capture | In progress | Ordered legs. A capture leg completes only from a burn inside that body's capture sphere that leaves a stable orbit. A flyby leg completes by passing through. The flight continues until the last leg. |
 | OW4: Mission 1, Moon and back | Planned | Start in Earth orbit, capture the Moon, return to a stable Earth orbit. The mission is the first campaign entry. It uses the Sol world and the OW3 rules. |
 | OW5: later expansion | Planned | Further Sol missions, then other catalogue regions. Not built in this pass. |
 

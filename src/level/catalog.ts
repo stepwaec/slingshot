@@ -85,6 +85,7 @@ export function simConfigFromLevel(level: Level, upgrades: readonly string[] = [
     config.petrova = level.petrova;
     config.knotFuel = flattenKnots(level.petrova).map((knot) => knot.fuel);
   }
+  if (level.objectives && level.objectives.length > 0) config.objectives = level.objectives;
   return config;
 }
 
