@@ -242,4 +242,41 @@ describe("tidal stress", () => {
       expect(flown.path[i].y).toBe(predicted.path[i].y);
     }
   });
+
+  it("keeps the new Observatory bodies finite and on the right side of the line", () => {
+    const config = simConfigFromLevel(observatory);
+    const bodies = observatory.bodies;
+    const byLook = (look: string) => {
+      const body = bodies.find((item) => item.look === look);
+      if (!body) throw new Error(look);
+      return body;
+    };
+    const outside = (look: string, gap = 1) => {
+      const body = byLook(look);
+      const pose = bodyPose(body, 0, bodies, observatory.g);
+      const stress = tidalStressAt(pose.x + body.radius + gap, pose.y, config, 0);
+      expect(Number.isFinite(stress), look).toBe(true);
+      return stress;
+    };
+
+    for (const look of ["red-dwarf", "blue-giant", "red-giant", "binary-hot", "binary-cool", "gas-giant", "moon-chain", "moon-captured"]) {
+      expect(outside(look), look).toBeLessThan(TIDAL_VISIBLE);
+    }
+    expect(outside("double-big")).toBeGreaterThanOrEqual(TIDAL_VISIBLE);
+    expect(outside("double-small")).toBeGreaterThanOrEqual(TIDAL_VISIBLE);
+
+    const big = byLook("double-big");
+    const pose = bodyPose(big, 0, bodies, observatory.g);
+    const clear = tidalStressAt(pose.x + 120, pose.y + 120, config, 10);
+    expect(Number.isFinite(clear)).toBe(true);
+    expect(clear).toBeLessThan(TIDAL_VISIBLE);
+
+    for (const time of [0, 7, 20]) {
+      const hot = bodyPose(byLook("binary-hot"), time, bodies, observatory.g);
+      const field = tidalTensorAt(hot.x + 80, hot.y, config, time);
+      expect(Number.isFinite(field.stress)).toBe(true);
+      expect(Number.isFinite(field.angle)).toBe(true);
+      expect(field.stress).toBeLessThan(TIDAL_VISIBLE);
+    }
+  });
 });
