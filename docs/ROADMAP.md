@@ -2,7 +2,7 @@
 
 Repository: [stepwaec/slingshot](https://github.com/stepwaec/slingshot). Game design, physics rules and architecture are in [DESIGN.md](DESIGN.md).
 
-Last updated: 2026-10-30 (Europe/Zurich).
+Last updated: 2026-11-04 (Europe/Zurich).
 
 Status values: **Done** (merged, with PR link), **In progress**, **On hold**, **Planned**, **Ready to start**, **Scheduled soon**. Every planned package is scoped with Stephan before it is built.
 
@@ -11,6 +11,8 @@ Note on numbering: Brainstormer's first draft called the flight loop "WP2" and r
 **Pivot, 2026-10-30.** Stephan measured about 6 fps in Safari on an M2 Mac on Frost. Rendering v2 is in progress and is the top priority. R2.0 and R2.1 come first, then R2.2 and R2.3, prioritising the bodies in Frost and the Sol campaign. The target is 60 fps in Safari on an M2. Frost was the baseline until the level cleanup removed it. The baseline is now the Observatory, the busiest chart still in the game. New implementation on the old sprite pipeline is paused, including the minimap art and new body or visual work. The gravity and time heat map ([PR #79](https://github.com/stepwaec/slingshot/pull/79)) is a fragment-shader overlay and continues. The Layers menu continues. The Minimap waits until after R2.3.
 
 **Feature freeze, 2026-10-30.** New objects and items are on hold until the level cleanup and Rendering v2 (R2.4, R2.5, and R2.6 legacy-renderer removal) are done. That covers the JWST / Webb telescope, cryosleep, and new Astrophage content. New levels will be built later from existing objects. Rendering v2 itself continues.
+
+**Open world, 2026-11-04.** Stephan lifted that freeze for one change of direction. Standalone level maps are replaced by one persistent world that grows over time. The first region is Sol. A level is a mission in a region of that world. The packages are OW1–OW5 in the Open world section. The Observatory stays the showcase. JWST, cryosleep, and new Astrophage content stay on hold. New regions reuse objects that are already in the catalogue.
 
 ## Work packages
 
@@ -43,8 +45,8 @@ Note on numbering: Brainstormer's first draft called the flight loop "WP2" and r
 | WP13: three-body chaos | Planned | Multi-sun systems (Trisolaran style) where three-body chaos means planning uses widening probability cones instead of exact lines. |
 | WP14: world builder | Planned | Build and share levels, using the JSON level format from WP7c. |
 | WP15: galaxy map | Planned | A galaxy-scale mission map where galaxies move relative to each other; each level stays one solar system. |
-| Orbit capture | Planned | Scheduled after the remaining megastructures (ringworld, space elevator, wormhole pair) and the #36 visuals ([PR #36](https://github.com/stepwaec/slingshot/pull/36)), before WP12-follow-ups/late game. A level counts as complete only when the ship reaches a stable orbit around the target, and that orbit must come from a capture burn made inside the target zone. Flybys and crashes don't count. Feedback: an "orbit stable" state, and a hint when the ship is in the zone but too fast. The prediction shows the resulting orbit. Deterministic, coordinated with LU2 moving (Kepler on-rails) targets. Scoring may reward an efficient capture burn. Acceptance: tests for capture vs flyby vs crash, and prediction matches flight. |
-| Sol campaign | Planned | No Sol mission is in the menu yet. New levels will be built later from existing objects. Scheduled after LU2 (moving bodies, done in [PR #45](https://github.com/stepwaec/slingshot/pull/45)) and Orbit capture. It depends on both. The campaign opens in our solar system with the real Sun and planets, all moving from level 1, then ventures out to the existing star levels. Draft missions: (1) Moon orbit, a tutorial for burning and capturing into orbit; (2) Mars transfer, the first launch window, lead a moving target; (3) Venus slingshot inward to Mercury, with solar heat; (4) Jupiter assist with a radiation belt; (5) Saturn's rings and a Titan capture; (6) Kuiper belt and heliopause as the jump to the star levels. Build missions 1, 2 and 4 first. Realism vs fun: real planet order, relative sizes and Kepler orbits, but compressed distances and sped-up time so a transfer takes about a minute; time-warp on long cruise stretches; slightly boosted gravity early on; start near a launch window with a "next window" hint if missed. Easter eggs: a Voyager probe, a monolith near Jupiter, a dimming-sun teaser (Project Hail Mary). Cruise time-warp is the planning preview slider and the 8×, 16× and 32× speeds: more fixed steps per frame, never a larger `dt`, with the preview growing for the long transfers. The James Webb Space Telescope is a prop at the Sun-Earth L2 point, on the Sun-Earth line just beyond Earth, co-rotating with Earth: small, no collision like Voyager, with a small halo-orbit wobble around L2, shown in the gallery/Observatory too. A later mission, JWST maintenance: fly to L2 and match a halo orbit or rendezvous with Webb. L2 is unstable, so it is a station-keeping challenge. The Sol bodies are in the Observatory ([PR #73](https://github.com/stepwaec/slingshot/pull/73)). Mission 1 (Moon orbit) must match `design/mockups/sol-moon.svg` and comes after Orbit capture. It is not built yet. |
+| Orbit capture | Folded into OW3 | The open-world package OW3 is the capture rule. The earlier scope stands: scheduled after the remaining megastructures (ringworld, space elevator, wormhole pair) and the #36 visuals ([PR #36](https://github.com/stepwaec/slingshot/pull/36)), before WP12-follow-ups/late game. A level counts as complete only when the ship reaches a stable orbit around the target, and that orbit must come from a capture burn made inside the target zone. Flybys and crashes don't count. Feedback: an "orbit stable" state, and a hint when the ship is in the zone but too fast. The prediction shows the resulting orbit. Deterministic, coordinated with LU2 moving (Kepler on-rails) targets. Scoring may reward an efficient capture burn. Acceptance: tests for capture vs flyby vs crash, and prediction matches flight. |
+| Sol campaign | Folded into OW2, OW4, and OW5 | The Sol system is the first region of the open world (OW2). Mission 1 is OW4. Later Sol missions are OW5. No Sol mission is in the menu yet. New levels will be built later from existing objects. Scheduled after LU2 (moving bodies, done in [PR #45](https://github.com/stepwaec/slingshot/pull/45)) and Orbit capture. It depends on both. The campaign opens in our solar system with the real Sun and planets, all moving from level 1, then ventures out to the existing star levels. Draft missions: (1) Moon orbit, a tutorial for burning and capturing into orbit; (2) Mars transfer, the first launch window, lead a moving target; (3) Venus slingshot inward to Mercury, with solar heat; (4) Jupiter assist with a radiation belt; (5) Saturn's rings and a Titan capture; (6) Kuiper belt and heliopause as the jump to the star levels. Build missions 1, 2 and 4 first. Realism vs fun: real planet order, relative sizes and Kepler orbits, but compressed distances and sped-up time so a transfer takes about a minute; time-warp on long cruise stretches; slightly boosted gravity early on; start near a launch window with a "next window" hint if missed. Easter eggs: a Voyager probe, a monolith near Jupiter, a dimming-sun teaser (Project Hail Mary). Cruise time-warp is the planning preview slider and the 8×, 16× and 32× speeds: more fixed steps per frame, never a larger `dt`, with the preview growing for the long transfers. The James Webb Space Telescope is a prop at the Sun-Earth L2 point, on the Sun-Earth line just beyond Earth, co-rotating with Earth: small, no collision like Voyager, with a small halo-orbit wobble around L2, shown in the gallery/Observatory too. A later mission, JWST maintenance: fly to L2 and match a halo orbit or rendezvous with Webb. L2 is unstable, so it is a station-keeping challenge. The Sol bodies are in the Observatory ([PR #73](https://github.com/stepwaec/slingshot/pull/73)). Mission 1 (Moon orbit) must match `design/mockups/sol-moon.svg` and comes after Orbit capture. It is not built yet. |
 | Astrophage | In progress, opened 2026-10-30 in [PR #82](https://github.com/stepwaec/slingshot/pull/82) | Project Hail Mary nod, hints only. Designed in [PR #72](https://github.com/stepwaec/slingshot/pull/72) and in the game in [PR #82](https://github.com/stepwaec/slingshot/pull/82): infected stars (cells and a crimson shimmer, no dimming veil; `dims` multiplies that star's solar recharge and radiation), a living Petrova line with harvestable knots, a spin drive with its own tank, the Astrophage fuel row, and the Astrophage map on A. Dim star is the infected system. Tau Ceti is the clean, yellower star with the tilted dust disk, three Kepler planets, and an eaten line. Prediction matches flight, including fuel scooped from knots. Parked later ideas: spreading infection that dims stars over time; curing stars with Taumoeba. New Astrophage content is on hold until the level cleanup and Rendering v2 (R2.4, R2.5, and R2.6 legacy-renderer removal) are done. Easter-egg references stay as hints only. |
 | Retire legacy levels | In progress | Remove the current levels only after the Observatory/Gallery showcase level and Sol campaign missions 1, 2 and 4 (Moon, Mars, Jupiter) are merged, so the game always has playable levels. Before deleting, preserve any mechanic or object that only exists in an old level by moving it into the Observatory or a later campaign mission, and list those carry-overs in the roadmap. Update tests and the level select. Git history keeps the old levels. Stephan moved this ahead of the Sol missions: the old and standalone levels are removed, and the Observatory is the playable chart until new levels are built from existing objects. Sol missions 1, 2 and 4 are not in the menu yet. |
 | Late game: easter eggs and megastructures (after WP13) | In progress, opened 2026-10-30 in [PR #55](https://github.com/stepwaec/slingshot/pull/55) | Stellar engine, Dyson swarm and Shkadov thruster from the PR #40 designs, in the game in [PR #48](https://github.com/stepwaec/slingshot/pull/48). Ringworld, the space elevator and the wormhole pair are in [PR #55](https://github.com/stepwaec/slingshot/pull/55). Torch is the stellar-engine level: the jet core burns hull, the margins refill fuel, and the stream pushes the ship. A Dyson swarm multiplies that star's solar recharge by 1 − coverage and nicks hull on a collector shell. A Shkadov mirror is solid, and every body drifts toward it. Ringworld, the space elevator and the wormhole pair share one geometry module with the drawing. Hoop crosses two gaps in a solid ring (the ring's own pull cancels at the centre and points outward inside). Cable starts on the counterweight and leaves at ω × r; the tether itself crashes. Fold enters a wormhole mouth and comes out of the other with its speed kept and its heading turned; the exit adds its clock offset to outside time, and the trip back subtracts it. Easter eggs are still undecided. |
@@ -58,6 +60,79 @@ Note on numbering: Brainstormer's first draft called the flight loop "WP2" and r
 | R2.6: remove the legacy sprite renderer | In progress, opened 2026-10-30 in [PR #103](https://github.com/stepwaec/slingshot/pull/103) | The fallback flag and `?sprites=1` are gone. Compact objects, belts and rocks drop their sprite paths along with the older shader families. Sprite drawing code that only served those bodies is deleted, and the game no longer loads their SVG body assets. The `design/` folder stays untouched, as the reference. If WebGL2 is missing, the game shows a simple "needs WebGL2" message. |
 | Sprite art still without a shader | Planned | Follow-up after R2.6. These still load SVG art because they have no shader yet: the ship and its modules, Tau Ceti and its three planets, comets, the rogue planet, nebulae, the quasar, Voyager, and Arrokoth. Overlay and HUD art stays too: the starfield, the predicted path, the drag arrow, magnetism, radiation, solar recharge, and the Astrophage map. The double planet and the captured moon are still uncovered by `planet.frag`. |
 | Minimap | Ready to come off hold once R2.3 merges | Paused until after R2.3. Once this gas-giant port merges, the Minimap can come off hold. Minimap art is on the old sprite pipeline. The Sol campaign and the interstellar levels still need the whole level in one view. It adds an entry to the Layers menu, or to settings, and it can be collapsed. A small corner panel shows the whole level. Bodies are dots sized by type, with their orbits as thin lines. The ship shows its heading, and the target zone is highlighted. The planned trajectory is a faint line with its burn nodes. A camera viewport rectangle; clicking or dragging on the minimap pans the main view there, and the pan moves the camera only. It updates live with moving bodies (LU2). Ghost markers are optional. The toggle is N. N is free in `src/game/input.ts`. G is gravity, M is magnetism and R is reset. D, L, A and T are reserved for radiation, the Layers panel, Astrophage and tidal stress. C stays free. It stays available in planning, pause and flight. Hazard zones for magnetism, radiation and Astrophage show as subtle tints when that layer is on. Drawing is cheap: a separate low-resolution render or a 2D canvas, within the budget in [design/threejs-notes.md](../design/threejs-notes.md) §9. |
+
+## Open world
+
+One persistent world, grown over time. The first region is Sol: the Sun, the planets, the major moons on Kepler orbits, and the belts. Later regions come from the object catalogue (other stars, Tau Ceti and Astrophage, compact objects). A mission is a start state, camera and region bounds, objectives, and scoring, sharing that world's bodies and physics. The Observatory stays a showcase chart and is not a mission.
+
+| Package | Status | Scope |
+| --- | --- | --- |
+| OW1: world data model and region/mission definition | Ready to start | A world holds the shared bodies, belts, and physics. A region names a subset of those bodies and a bounds box. A mission names a region plus the start state, the camera bounds, the objectives, and the scoring. Compiling a mission produces the level the sim already runs, and the bodies in that level are the world's own objects. |
+| OW2: Sol world | Planned | The Sun, the eight planets, and the major moons on Kepler circles, plus an asteroid belt between Mars and Jupiter and a Kuiper belt beyond Neptune. Distances are compressed and time is sped up. Order and parentage stay real. |
+| OW3: multi-leg objectives and orbit capture | Planned | Ordered legs. A capture leg completes only from a burn inside that body's capture sphere that leaves a stable orbit. A flyby leg completes by passing through. The flight continues until the last leg. |
+| OW4: Mission 1, Moon and back | Planned | Start in Earth orbit, capture the Moon, return to a stable Earth orbit. The mission is the first campaign entry. It uses the Sol world and the OW3 rules. |
+| OW5: later expansion | Planned | Further Sol missions, then other catalogue regions. Not built in this pass. |
+
+### OW1: world data model and region/mission definition
+
+**Goal.** Replace the idea of a level as its own map with a world, a region, and a mission. The world is the bodies, the belts, and the physics. A region is a named subset and a bounds box. A mission adds the start state, the camera and region bounds, the objectives, and the scoring. Two missions in one world read the same body objects and the same `g`, `dt`, and `c`.
+
+**Acceptance.**
+- Compiling two missions from one fixture world shares the body objects and the physics knobs.
+- A mission that does not set bounds uses the region's bounds, for the camera and for leaving the region.
+- An orbiting body's centre is included even when the region did not name it.
+- A short coast on a compiled mission predicts the same path the flight flies.
+- The Observatory still builds, and it is not a mission.
+
+**Out of scope.** Sol's bodies, the capture rule, menu entries, and HUD art.
+
+### OW2: Sol world
+
+**Goal.** Build the first region. The Sun, Mercury, Venus, Earth, the Moon, Mars, Jupiter, Saturn, Uranus, and Neptune, with the major moons, on deterministic Kepler circles (`ω = √(GM / a³)` about the parent). An asteroid belt sits between Mars and Jupiter. A Kuiper belt sits beyond Neptune. Distances are compressed and periods are sped up so a transfer is something a player can fly. The looks are the Sol bodies already in the game.
+
+**Acceptance.**
+- From the Sun, the order is Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, Neptune.
+- Each circular orbit's mean motion matches `√(GM / a³)` of its parent. The Moon orbits Earth. The Galilean moons orbit Jupiter. Titan orbits Saturn.
+- The asteroid belt's centre radius lies between Mars and Jupiter. The Kuiper belt lies beyond Neptune. Rocks placed from a belt are a pure function of its seed.
+- A chart compiled from the inner region flies, and prediction matches that flight.
+- The Observatory is unchanged.
+
+**Out of scope.** Mission objectives, the capture rule, JWST at L2, other stars, Tau Ceti, and compact objects.
+
+### OW3: multi-leg objectives and orbit capture
+
+**Goal.** A mission lists ordered legs. A capture leg completes only when a burn is applied while the ship is inside that body's capture sphere and the orbit is then stable: bound, periapsis above the surface plus the margin, apoapsis inside the sphere. Coasting into a stable orbit does not complete the leg. Entering the sphere and leaving without that burn fails a capture leg (a flyby) and completes a flyby leg. The flight stays in progress until the last leg, then it is won. Prediction uses the same rules as flight.
+
+**Acceptance.**
+- A ship that is already in a stable orbit, and does not burn, does not complete a capture leg.
+- A burn inside the sphere that leaves a stable orbit completes the leg. A burn that does not leave a stable orbit does not.
+- Entering a capture sphere and then leaving fails that leg. The same pass completes a flyby leg.
+- After the first of two legs, the flight is still going. After the second, it is won.
+- `predictPlan` and `flyPlan` match for a multi-leg plan, including the leg and the final status.
+- A flight with no objectives is unchanged. The Observatory is unchanged.
+
+**Out of scope.** The Sol mission, new body types, and the objective HUD art.
+
+### OW4: Mission 1, Moon and back
+
+**Goal.** The first campaign mission, in the Earth–Moon region of the Sol world. The ship starts in a low Earth orbit. Leg 1 is a lunar capture, matching `design/mockups/sol-moon.svg`: a burn inside the Moon's target zone that leaves a stable lunar orbit. Leg 2 is the return, a burn inside Earth's zone that leaves a stable Earth orbit. The mission is listed in the campaign menu. Scoring uses the mission profile. A one-line objective readout uses the existing HUD type until Claude's briefing lands.
+
+**Acceptance.**
+- At launch the ship is bound to Earth, above the surface, inside Earth's capture sphere, and outside the Moon's.
+- A published plan captures the Moon and then Earth. Prediction of that plan matches the flight.
+- A flyby of the Moon does not win.
+- The campaign menu lists this mission. The Observatory still loads.
+- Frame time for the Observatory and for this mission is reported. This VM has no GPU.
+
+**Out of scope.** Mars and the later Sol missions, JWST, new regions, and Claude's objective HUD (the one-line stand-in is the placeholder).
+
+### OW5: later expansion
+
+**Goal.** Grow the same world. Further Sol missions from the earlier draft: Mars, a Venus slingshot to Mercury, Jupiter, Saturn and Titan, the Kuiper belt, and JWST at the Sun–Earth L2 point. Then regions from the catalogue: other stars, Tau Ceti and Astrophage, compact objects. Each one is a mission in a region, not a new map.
+
+**Acceptance.** Not built in this pass. A later mission reuses the world, the compiler, and the leg rules. The Observatory stays the showcase.
+
+**Out of scope.** Building those missions, JWST art, and new Astrophage content.
 
 ## Living universe
 
@@ -198,6 +273,12 @@ Other gameplay ideas raised by Brainstormer and not yet scheduled: realistic vis
 ## Design requests for Claude
 
 Stephan points Claude at this section for the next visual pack.
+
+**Open world**, asked 2026-11-04. These sit ahead of the list below.
+
+- **Mission briefing and objective HUD.** Planning needs a short briefing for a mission in the world: where the ship starts, and the legs in order. Flight needs a readout for the active leg: which body, whether the leg is a capture or a flyby, and how many legs are done. Mission 1 is two legs, a lunar capture and the return to Earth orbit. Use the existing HUD tokens (11 px labels, 12 px mono values, the panel fill and the hairline border). Crisp, no grey. The game ships a one-line stand-in in the mono telemetry style until this pack lands. A mockup beside `design/mockups/sol-moon.svg` and `design/mockups/planning.svg` is the target.
+- **World map.** The minimap request below was for one level. The campaign is now a region of a larger world. The map should show the region the mission is in, the mission bounds, the active leg's target, and the ship. The Sol inner system is the first map. Orbit lines of the bodies in the region, dots sized by type, the planned trajectory, and the camera rectangle. Collapsible, key N, within the budget in `design/threejs-notes.md` §9. Do not draw the whole catalogue at once.
+- **Sol moons that have no face yet.** The Sun, Mercury, Venus, Earth, the Moon, Mars, Jupiter, Saturn, Titan, Uranus, Neptune, Pluto, Charon, Eris, Arrokoth, and Voyager are already in the game from [PR #73](https://github.com/stepwaec/slingshot/pull/73). The open world also places Io, Europa, Ganymede, Callisto, Enceladus, Rhea, Titania, and Triton. Those eight have no file under `design/assets/sol/`, so they use the library moon looks (`moon`, `moon-icy`, `moon-volcanic`) at the header radii. Distinct faces are the missing pack, if you want them to read as those moons. JWST stays the held request in the list below.
 
 **WP8:** fully designed in [PR #17](https://github.com/stepwaec/slingshot/pull/17).
 
