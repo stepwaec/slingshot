@@ -22,6 +22,7 @@ import {
 } from "./state";
 import { applyLayerKey, closeLayersOnEscape, type LayersPanelState } from "./layers";
 import { panBy, worldToScreen, zoomAt } from "../render/camera";
+import { shownPath, shownPoint } from "../render/path-frame";
 import { SIM_SPEEDS, SPEED_KEY, type SimSpeed } from "../sim/physics";
 
 export interface InputElements {
@@ -215,7 +216,8 @@ function aimHandle(
 ): void {
   const origin = nodePosition(game, index);
   if (!origin) return;
-  const screen = worldToScreen(game.camera, size.width, size.height, origin.x, origin.y);
+  const shown = shownPoint(game, origin.x, origin.y, game.nodes[index].step);
+  const screen = worldToScreen(game.camera, size.width, size.height, shown.x, shown.y);
   const dx = sx - screen.x;
   const dy = sy - screen.y;
   const pixels = Math.hypot(dx, dy);
@@ -238,9 +240,11 @@ function slideNode(
   if (rail.length === 0) return;
   let best = rail[0];
   let bestD = Infinity;
+  const framed = shownPath(game, rail);
   for (let i = 0; i < rail.length; i++) {
     const sample = rail[i];
-    const screen = worldToScreen(game.camera, size.width, size.height, sample.x, sample.y);
+    const at = framed[i] ?? sample;
+    const screen = worldToScreen(game.camera, size.width, size.height, at.x, at.y);
     const d = (screen.x - sx) * (screen.x - sx) + (screen.y - sy) * (screen.y - sy);
     if (d < bestD) {
       bestD = d;
@@ -282,7 +286,8 @@ function closestNode(game: Game, width: number, height: number, sx: number, sy: 
   for (let i = 0; i < game.nodes.length; i++) {
     const pos = nodePosition(game, i);
     if (!pos) continue;
-    const screen = worldToScreen(game.camera, width, height, pos.x, pos.y);
+    const shown = shownPoint(game, pos.x, pos.y, game.nodes[i].step);
+    const screen = worldToScreen(game.camera, width, height, shown.x, shown.y);
     const d = (screen.x - sx) * (screen.x - sx) + (screen.y - sy) * (screen.y - sy);
     if (d <= bestD) {
       bestD = d;
@@ -303,11 +308,13 @@ function closestPathStep(game: Game, width: number, height: number, sx: number, 
     bestStep = pose.step;
   }
   const path = game.prediction.path;
+  const framed = shownPath(game, path);
   // The step that ended the flight is already lost or won; a new burn there never fires.
   const closed = game.prediction.final.status !== "flying" ? game.prediction.final.step : -1;
   for (let i = 0; i < path.length; i++) {
     if (path[i].step === closed) continue;
-    const screen = worldToScreen(game.camera, width, height, path[i].x, path[i].y);
+    const at = framed[i] ?? path[i];
+    const screen = worldToScreen(game.camera, width, height, at.x, at.y);
     const d = (screen.x - sx) * (screen.x - sx) + (screen.y - sy) * (screen.y - sy);
     if (d <= bestD) {
       bestD = d;
@@ -321,7 +328,8 @@ function handlePoint(game: Game, width: number, height: number, index: number): 
   const pos = nodePosition(game, index);
   if (!pos) return null;
   const node = game.nodes[index];
-  const screen = worldToScreen(game.camera, width, height, pos.x, pos.y);
+  const shown = shownPoint(game, pos.x, pos.y, node.step);
+  const screen = worldToScreen(game.camera, width, height, shown.x, shown.y);
   const offset = burnHandleOffset(node.dvx, node.dvy, game.level.dvPerPixel, nodeIncoming(game, index));
   return { x: screen.x + offset.x, y: screen.y + offset.y };
 }

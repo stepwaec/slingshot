@@ -3,6 +3,7 @@ import { burnHandleOffset, isEditing, nodeIncoming, nodePosition, planFuel } fro
 import type { Vec2 } from "../../sim/physics";
 import { sampleBurnAnim, tailFromBurn } from "../burn-anim";
 import { projectToScreen } from "../camera";
+import { shownPoint } from "../path-frame";
 import { shader, srgbVec } from "./materials";
 import { paintNode, type NodePaint } from "../node-style";
 import { powerHex } from "../palette";
@@ -81,7 +82,9 @@ class NodesVisual implements Visual {
         visual.root.visible = false;
         continue;
       }
-      projectToScreen(at.x, at.y, width, height, this.scratch);
+      const framing = game.mode === "planning" || game.mode === "paused";
+      const shown = framing ? shownPoint(game, at.x, at.y, node.step) : at;
+      projectToScreen(shown.x, shown.y, width, height, this.scratch);
       const x = this.scratch.x;
       const y = height - this.scratch.y;
       const offset = burnHandleOffset(node.dvx, node.dvy, game.level.dvPerPixel, nodeIncoming(game, i));

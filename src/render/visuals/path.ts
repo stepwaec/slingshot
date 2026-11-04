@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { shipLoadout } from "../../game/upgrades";
 import { hasMagneticBody, solarRechargeRate, spreadAlong, type SpreadPoint, type Vec2 } from "../../sim/physics";
 import { projectToScreen } from "../camera";
+import { showPath, shownNow, type DrawnPoint } from "../path-frame";
 import { srgb01 } from "../palette";
 import type { Theme } from "../theme";
 import { disposeObject, type Visual, type VisualFactory, type VisualFrame } from "../visual";
@@ -11,7 +12,8 @@ import { disposeObject, type Visual, type VisualFactory, type VisualFrame } from
  * bright at the ship and transparent at the end, plus a tick every 10 s of
  * flight. Gold recharge stays a marker on that stroke. The closed capture
  * ellipse stays dotted. Samples come from the game prediction; nothing here
- * writes the sim.
+ * writes the sim. The stroke is drawn in the dominant body's frame, so an
+ * orbit closes on that body instead of tracing its motion around the Sun.
  */
 export const createPath: VisualFactory = (theme) => new PathVisual(theme);
 
@@ -131,6 +133,10 @@ class PathVisual implements Visual {
   private readonly cursor: Sample = { x: 0, y: 0, step: 0, rate: 1, sigma: 0, charge: 0 };
   private readonly scratch: Vec2 = { x: 0, y: 0 };
   private chain: readonly { x: number; y: number; step?: number; rate?: number }[] = [];
+  private framed: DrawnPoint[] = [];
+  private useFrame = false;
+  private shiftX = 0;
+  private shiftY = 0;
   private chainPrefix: { x: number; y: number; step: number; rate: number } | null = null;
   private chainClose = false;
   private pathPred: VisualFrame["game"]["prediction"] | null = null;
@@ -265,6 +271,13 @@ class PathVisual implements Visual {
     }
     const origin = game.mode === "paused" ? game.ship : game.initial;
     this.chain = game.prediction.path;
+    const now = shownNow(game.mode, game.ship.step, game.level.dt);
+    this.framed = showPath(game.prediction.path, game.level.bodies, game.level.g, game.level.dt, now);
+    this.useFrame = true;
+    const lastWorld = game.prediction.path[game.prediction.path.length - 1];
+    const lastDrawn = this.framed[this.framed.length - 1];
+    this.shiftX = lastWorld && lastDrawn ? lastDrawn.x - lastWorld.x : 0;
+    this.shiftY = lastWorld && lastDrawn ? lastDrawn.y - lastWorld.y : 0;
     this.spread = hasMagneticBody(game.level.bodies)
       ? spreadAlong(game.prediction.path, game.level.dt, game.level.bodies)
       : [];
@@ -298,6 +311,7 @@ class PathVisual implements Visual {
       this.chain = orbit;
       this.chainPrefix = null;
       this.chainClose = true;
+      this.useFrame = false;
       this.useSpread = false;
       const n = this.sample(width, height, this.orbit.centers, -1);
       const mint = srgb01(this.theme.colors.resultWin);
@@ -638,21 +652,32 @@ class PathVisual implements Visual {
     if (this.chainPrefix && index === 0) {
       this.cursor.x = this.chainPrefix.x;
       this.cursor.y = this.chainPrefix.y;
-    this.cursor.step = this.chainPrefix.step;
-    this.cursor.rate = this.chainPrefix.rate;
-    this.cursor.sigma = 0;
-    this.cursor.charge = this.chargeAt(this.cursor.x, this.cursor.y, this.cursor.step);
-    return;
+      this.cursor.step = this.chainPrefix.step;
+      this.cursor.rate = this.chainPrefix.rate;
+      this.cursor.sigma = 0;
+      this.cursor.charge = this.chargeAt(this.cursor.x, this.cursor.y, this.cursor.step);
+      return;
+    }
+    const i = index - (this.chainPrefix ? 1 : 0);
+    const point = i < this.chain.length ? this.chain[i] : this.chain[0];
+    const worldX = point.x;
+    const worldY = point.y;
+    let x = worldX;
+    let y = worldY;
+    if (this.useFrame && i >= 0 && i < this.framed.length) {
+      x = this.framed[i].x;
+      y = this.framed[i].y;
+    } else {
+      x += this.shiftX;
+      y += this.shiftY;
+    }
+    this.cursor.x = x;
+    this.cursor.y = y;
+    this.cursor.step = point.step ?? i;
+    this.cursor.rate = point.rate ?? 1;
+    this.cursor.sigma = this.useSpread ? (this.spread[i]?.sigma ?? 0) : 0;
+    this.cursor.charge = this.useSpread ? this.chargeAt(worldX, worldY, this.cursor.step) : 0;
   }
-  const i = index - (this.chainPrefix ? 1 : 0);
-  const point = i < this.chain.length ? this.chain[i] : this.chain[0];
-  this.cursor.x = point.x;
-  this.cursor.y = point.y;
-  this.cursor.step = point.step ?? i;
-  this.cursor.rate = point.rate ?? 1;
-  this.cursor.sigma = this.useSpread ? (this.spread[i]?.sigma ?? 0) : 0;
-  this.cursor.charge = this.useSpread ? this.chargeAt(point.x, point.y, this.cursor.step) : 0;
-}
 
   private paint(
     colors: Float32Array,

@@ -23,6 +23,7 @@ import { burnLimit, LEVELS, WORLD_CHARTS, observatory, pauseRuleOf, simConfigFro
 import { createClockLatches, readClocks, type ClockLatches } from "./hud/readout";
 import type { MissionScore } from "./sim/score";
 import { frameLevel, worldToScreen } from "./render/camera";
+import { shownPoint } from "./render/path-frame";
 import { SpaceView } from "./render/view";
 import { showNeedsWebGL2, webGL2Available } from "./render/webgl2";
 import {
@@ -534,7 +535,9 @@ function syncMarkers(
     if (nodeSpent(current, i)) continue;
     const pos = nodePosition(current, i);
     if (!pos) continue;
-    const screen = worldToScreen(current.camera, width, height, pos.x, pos.y);
+    const framing = current.mode === "planning" || current.mode === "paused";
+    const at = framing ? shownPoint(current, pos.x, pos.y, current.nodes[i].step) : pos;
+    const screen = worldToScreen(current.camera, width, height, at.x, at.y);
     let tag = tagPool[shown];
     if (!tag) {
       tag = document.createElement("span");
@@ -552,7 +555,9 @@ function syncMarkers(
 
   const selected = current.selected;
   const node = selected === null ? undefined : current.nodes[selected];
-  const pos = selected === null ? null : nodePosition(current, selected);
+  const raw = selected === null ? null : nodePosition(current, selected);
+  const framing = current.mode === "planning" || current.mode === "paused";
+  const pos = raw && node ? (framing ? shownPoint(current, raw.x, raw.y, node.step) : raw) : null;
   const canRemove = editing && selected !== null && selected >= current.cursor.index && pos !== null && !nodeSpent(current, selected);
   if (!canRemove || !pos) {
     nodeRemove.hidden = true;
