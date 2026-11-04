@@ -4,12 +4,14 @@ import type { Body } from "../sim/physics";
  * Draw-only sizes for the Sol chart and Mission 1.
  * `body.radius` stays the crash radius. Masses and orbits do not read this.
  *
- * The Sun's disc is 22 Earth diameters (the middle of the 20–30 range).
- * Earth's orbit is 820, so that photosphere (radius 748) stops short of Earth.
+ * The Sun's disc is 5 Earth diameters (radius 170). Twenty-two diameters,
+ * the middle of the old 20–30 range, reached past Mercury and Venus, and
+ * the corona (4.35 photosphere radii) covered Earth. Five keeps the bright
+ * wind inside Mercury's orbit and Earth outside that corona.
  * The Moon is 0.27 of Earth's diameter. Zoomed out, planets and moons keep
  * at least `MIN_BODY_PX` on screen. Zoomed in, the disc is the game-scale size.
  */
-export const SUN_EARTH_DIAMETERS = 22;
+export const SUN_EARTH_DIAMETERS = 5;
 export const MOON_EARTH_FRACTION = 0.27;
 /** CSS pixels. A disc this wide stays visible when the chart is zoomed out. */
 export const MIN_BODY_PX = 8;
