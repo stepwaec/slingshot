@@ -8,10 +8,12 @@ import type { Mission, Region, World } from "./types";
 /**
  * Sol, the first region of the open world.
  *
- * Distances are compressed. Orbits up to Mars keep their real AU ratios
- * against `SOL_AU`. Past Mars the radius grows with the square root of the
- * remaining AU, so Jupiter through Neptune stay on one chart and the order
- * does not change. Periods follow Kepler from the parent's mass.
+ * Distances are compressed, then opened by `DISTANCE_SCALE`. A coast to the
+ * Moon or another planet should take long enough to feel like a trip.
+ * Orbits up to Mars keep their real AU ratios against `SOL_AU`. Past Mars
+ * the radius grows with the square root of the remaining AU, so Jupiter
+ * through Neptune stay on one chart and the order does not change. Periods
+ * follow Kepler from the parent's mass.
  * JWST is not here. It waits at the Sun–Earth L2 point.
  *
  * The Sun is heavy enough that planets stay on their rails, and light enough
@@ -20,8 +22,14 @@ import type { Mission, Region, World } from "./types";
  * outweighing the Sun. Moon masses do not set their periods.
  */
 
+/**
+ * Half again the first chart. Kepler time grows faster than distance, so the
+ * Moon and the inner planets take longer to reach without changing masses.
+ */
+export const DISTANCE_SCALE = 3 / 2;
+
 /** Earth–Sun distance in world units. */
-export const SOL_AU = 820;
+export const SOL_AU = 820 * DISTANCE_SCALE;
 
 /** Real AU at which compression starts. Mars sits on this hinge. */
 const LINEAR_AU = 1.524;
@@ -33,7 +41,7 @@ const EARTH_MASS = 24_000;
 
 /** design/mockups/sol-moon.svg: the Moon's target zone is r 72. */
 const LUNA_CAPTURE = 72;
-/** Low Earth orbit at 52 sits inside this, and the Moon at 168 sits outside it. */
+/** Low Earth orbit at 52 sits inside this, and the Moon sits outside it. */
 const EARTH_CAPTURE = 96;
 
 /**
@@ -128,7 +136,7 @@ const neptune = solBody("neptune", "Neptune", "neptune", "planet", 9_000, circle
 const pluto = solBody("pluto", "Pluto", "pluto", "planet", 400, circle("sun", solRadius(39.48), 2.4, SUN_MASS));
 const eris = solBody("eris", "Eris", "eris", "planet", 500, circle("sun", solRadius(67.8), 0.35, SUN_MASS));
 
-const LUNA_DISTANCE = 168;
+const LUNA_DISTANCE = 168 * DISTANCE_SCALE;
 /**
  * Lead the Moon so a prograde burn from the far side of Earth (angle π)
  * meets it near angle 0 after one Hohmann half-period. The Sun still
@@ -147,18 +155,18 @@ const luna = solBody(
   LUNA_CAPTURE,
 );
 
-const io = libraryMoon("io", "Io", "moon-volcanic", 13, 40, "jupiter", 168, 0.2, 80_000);
-const europa = libraryMoon("europa", "Europa", "moon-icy", 12, 30, "jupiter", 230, 1.4, 80_000);
-const ganymede = libraryMoon("ganymede", "Ganymede", "moon", 14, 80, "jupiter", 310, 2.6, 80_000);
-const callisto = libraryMoon("callisto", "Callisto", "moon", 14, 50, "jupiter", 410, 4.1, 80_000);
+const io = libraryMoon("io", "Io", "moon-volcanic", 13, 40, "jupiter", 168 * DISTANCE_SCALE, 0.2, 80_000);
+const europa = libraryMoon("europa", "Europa", "moon-icy", 12, 30, "jupiter", 230 * DISTANCE_SCALE, 1.4, 80_000);
+const ganymede = libraryMoon("ganymede", "Ganymede", "moon", 14, 80, "jupiter", 310 * DISTANCE_SCALE, 2.6, 80_000);
+const callisto = libraryMoon("callisto", "Callisto", "moon", 14, 50, "jupiter", 410 * DISTANCE_SCALE, 4.1, 80_000);
 
-const enceladus = libraryMoon("enceladus", "Enceladus", "moon-icy", 12, 8, "saturn", 280, 0.5, 24_000);
-const rhea = libraryMoon("rhea", "Rhea", "moon", 14, 12, "saturn", 360, 2.1, 24_000);
-const titan = solBody("titan", "Titan", "titan", "moon", 200, circle("saturn", 480, 3.4, 24_000));
+const enceladus = libraryMoon("enceladus", "Enceladus", "moon-icy", 12, 8, "saturn", 280 * DISTANCE_SCALE, 0.5, 24_000);
+const rhea = libraryMoon("rhea", "Rhea", "moon", 14, 12, "saturn", 360 * DISTANCE_SCALE, 2.1, 24_000);
+const titan = solBody("titan", "Titan", "titan", "moon", 200, circle("saturn", 480 * DISTANCE_SCALE, 3.4, 24_000));
 
-const titania = libraryMoon("titania", "Titania", "moon", 14, 16, "uranus", 200, 1.1, 8_000);
-const triton = libraryMoon("triton", "Triton", "moon-icy", 12, 20, "neptune", 190, 4.6, 9_000);
-const charon = solBody("charon", "Charon", "charon", "moon", 60, circle("pluto", 46, 0.8, 400));
+const titania = libraryMoon("titania", "Titania", "moon", 14, 16, "uranus", 200 * DISTANCE_SCALE, 1.1, 8_000);
+const triton = libraryMoon("triton", "Triton", "moon-icy", 12, 20, "neptune", 190 * DISTANCE_SCALE, 4.6, 9_000);
+const charon = solBody("charon", "Charon", "charon", "moon", 60, circle("pluto", 46 * DISTANCE_SCALE, 0.8, 400));
 
 const bodies: readonly Body[] = [
   sun,
@@ -194,7 +202,7 @@ const asteroids: Belt = {
   id: "asteroids",
   centerId: "sun",
   radius: (marsOrbit + jupiterOrbit) / 2,
-  width: 420,
+  width: 420 * DISTANCE_SCALE,
   tier: "sparse",
   seed: 1103,
 };
@@ -206,15 +214,15 @@ const asteroids: Belt = {
 const kuiper: Belt = {
   id: "kuiper",
   centerId: "sun",
-  radius: neptuneOrbit + 1100,
-  width: 640,
+  radius: neptuneOrbit + 1100 * DISTANCE_SCALE,
+  width: 640 * DISTANCE_SCALE,
   tier: "kuiper",
   seed: 1104,
   arcStart: 0.5,
   arcSpan: 0.42,
 };
 
-const systemBounds = { minX: -12_000, maxX: 12_000, minY: -12_000, maxY: 12_000 };
+const systemBounds = { minX: -18_000, maxX: 18_000, minY: -18_000, maxY: 18_000 };
 
 export const solWorld: World = {
   id: "sol",
@@ -232,7 +240,7 @@ export const solInner: Region = {
   id: "inner",
   worldId: "sol",
   name: "Inner Sol",
-  bounds: { minX: -1600, maxX: 1600, minY: -1600, maxY: 1600 },
+  bounds: { minX: -2400, maxX: 2400, minY: -2400, maxY: 2400 },
   bodyIds: ["mercury", "venus", "earth", "luna", "mars"],
   beltIds: ["asteroids"],
 };
@@ -256,7 +264,7 @@ const chartMission: Mission = {
   name: "Sol",
   worldId: "sol",
   regionId: "system",
-  frame: { minX: -1600, maxX: 1600, minY: -1600, maxY: 1600 },
+  frame: { minX: -2400, maxX: 2400, minY: -2400, maxY: 2400 },
   ship: chartShip,
   orbit: { bodyId: "earth", radius: 52 },
   fuel: 160,
