@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import type { Game } from "../../game/state";
-import { bodyPose, type Body } from "../../sim/physics";
+import { activeTargetId, bodyPose, type Body } from "../../sim/physics";
 import type { Theme } from "../theme";
 import { disposeObject, type Visual, type VisualFactory, type VisualFrame } from "../visual";
 import { srgb01 } from "../palette";
@@ -139,8 +139,10 @@ class PlanetsVisual implements Visual {
     const ship = frame.game.ship;
     const now = frame.now / 1000;
     const scrim = frame.game.mode === "finished" && ship.status === "won";
+    const liveTarget = activeTargetId(frame.game.level, frame.game.ship.leg);
     for (const ring of this.rings) {
       const pose = bodyPose(ring.body, time, bodies);
+      const live = ring.body.id === liveTarget;
       ring.mesh.position.set(pose.x, pose.y, 0);
       ring.wave.position.set(pose.x, pose.y, 0);
       const capture = ring.body.captureRadius ?? ring.body.radius;
@@ -148,7 +150,7 @@ class PlanetsVisual implements Visual {
       const reach = capture + zone.padPx / safeZoom;
       ring.mesh.scale.set(reach, reach, 1);
       ring.wave.scale.set(reach, reach, 1);
-      if (ship.status === "won") {
+      if (live && ship.status === "won") {
         if (ring.wonAt < 0) ring.wonAt = frame.now;
       } else {
         ring.wonAt = -1;
@@ -156,14 +158,14 @@ class PlanetsVisual implements Visual {
       const wonAge = ring.wonAt < 0 ? 0 : (frame.now - ring.wonAt) / 1000;
       const look = targetZoneLook(
         {
-          status: ship.status,
-          lostReason: ship.lostReason,
-          enteredCapture: ship.enteredCapture,
+          status: live ? ship.status : "flying",
+          lostReason: live ? ship.lostReason : null,
+          enteredCapture: live ? ship.enteredCapture : false,
           distance: Math.hypot(ship.x - pose.x, ship.y - pose.y),
           captureRadius: capture,
           wonAge,
           now,
-          scrim,
+          scrim: live && scrim,
         },
         zone,
         { ring: colors.zoneRing, stable: colors.zoneStable, flash: colors.zoneFlash },

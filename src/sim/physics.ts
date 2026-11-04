@@ -417,6 +417,19 @@ export interface SimConfig {
   petrova?: readonly PetrovaLine[];
   /** Starting fuel in each knot, same order as `flattenKnots`. */
   knotFuel?: readonly number[];
+  /**
+   * Ordered legs. Omitted, or empty, keeps the single-target rule:
+   * a stable orbit wins on its own, and leaving the target sphere is a flyby.
+   * With legs, a capture completes only on a burn inside that sphere.
+   */
+  objectives?: readonly FlightObjective[];
+}
+
+/** One mission leg. `capture` needs a burn inside the sphere. `flyby` needs a pass through it. */
+export interface FlightObjective {
+  id: string;
+  bodyId: string;
+  kind: "capture" | "flyby";
 }
 
 /** How many times a flight may freeze so the player can edit burns. */
@@ -448,8 +461,13 @@ export interface SimState {
   status: FlightStatus;
   crashedBodyId: string | null;
   lostReason: LostReason | null;
-  /** True once the trajectory has touched the target's capture sphere. */
+  /** True once the trajectory has touched the active capture sphere. */
   enteredCapture: boolean;
+  /**
+   * Active objective. 0 when the flight has no objectives.
+   * A finished capture or flyby advances this. The last leg stays put and wins.
+   */
+  leg: number;
   /** Outside time in seconds. Home and Planet X share this frame. */
   t: number;
   /** Ship proper time in seconds. */
@@ -1209,6 +1227,7 @@ export function makeState(
     crashedBodyId: null,
     lostReason: null,
     enteredCapture: false,
+    leg: 0,
     t: 0,
     tau: 0,
     rate: properTimeRate(x, y, vx, vy, config, 0),
@@ -1409,7 +1428,17 @@ export function orbitAbout(
  */
 export function isCapturedOrbit(state: SimState, config: SimConfig): boolean {
   const body = targetBody(config);
-  if (!body?.captureRadius) return false;
+  if (!body) return false;
+  return isStableCapture(state, config, body);
+}
+
+/**
+ * Bound to `body`, periapsis above the surface plus margin, apoapsis inside
+ * the capture radius. A burn at the sphere's edge can sit at apoapsis, so the
+ * apoapsis check allows the radius itself.
+ */
+function isStableCapture(state: SimState, config: SimConfig, body: Body): boolean {
+  if (!body.captureRadius) return false;
   const elements = orbitAbout(state, body, gravityConstant(config), state.step * config.dt, config.bodies);
   if (!elements?.bound) return false;
   return (
@@ -1417,6 +1446,98 @@ export function isCapturedOrbit(state: SimState, config: SimConfig): boolean {
     elements.periapsis > body.radius + config.periapsisMargin &&
     elements.apoapsis <= body.captureRadius + 1e-3
   );
+}
+
+function hasObjectives(config: SimConfig): boolean {
+  return (config.objectives?.length ?? 0) > 0;
+}
+
+/** The body the active leg is about, or the single target when there are no legs. */
+function activeBody(state: SimState, config: SimConfig): Body | undefined {
+  const list = config.objectives;
+  if (!list || list.length === 0) return targetBody(config);
+  const index = state.leg < 0 ? 0 : state.leg >= list.length ? list.length - 1 : state.leg;
+  return findBody(config.bodies, list[index].bodyId);
+}
+
+/**
+ * The target the HUD and the capture ring follow.
+ * With no objectives this is `targetId`. With legs it is the active leg,
+ * or the last leg once that leg has been won.
+ */
+export function activeTargetId(
+  level: { targetId: string; objectives?: readonly { bodyId: string }[] },
+  leg: number,
+): string {
+  const list = level.objectives;
+  if (!list || list.length === 0) return level.targetId;
+  const index = leg < 0 ? 0 : leg >= list.length ? list.length - 1 : leg;
+  return list[index].bodyId;
+}
+
+function finishLeg(state: SimState, config: SimConfig): void {
+  const list = config.objectives;
+  if (!list) return;
+  if (state.leg + 1 >= list.length) {
+    state.status = "won";
+    return;
+  }
+  state.leg += 1;
+  state.enteredCapture = false;
+}
+
+function shipInsideBody(state: SimState, config: SimConfig, body: Body, radius: number, time: number): boolean {
+  const pose =
+    body.orbit || body.drift
+      ? bodyPose(body, time, config.bodies, gravityConstant(config))
+      : { x: body.x, y: body.y, vx: 0, vy: 0 };
+  return Math.hypot(state.x - pose.x, state.y - pose.y) <= radius + 1e-6;
+}
+
+/**
+ * Advance the active leg. A capture completes only when `burned` is set and
+ * the ship is inside the sphere on a stable orbit. Coasting into that orbit
+ * does not count. Leaving the sphere completes a flyby leg and fails a capture.
+ */
+function updateObjectives(
+  state: SimState,
+  config: SimConfig,
+  burned: boolean,
+  segment?: { x0: number; y0: number; x1: number; y1: number; t0: number; t1: number; jumped: boolean },
+): void {
+  const list = config.objectives;
+  if (!list || list.length === 0 || state.status !== "flying") return;
+  if (state.leg < 0 || state.leg >= list.length) return;
+  const objective = list[state.leg];
+  const body = findBody(config.bodies, objective.bodyId);
+  const radius = body?.captureRadius;
+  if (!body || radius === undefined) return;
+  const time = segment ? segment.t1 : state.step * config.dt;
+  if (!bodyPresent(body, time)) {
+    state.status = "lost";
+    state.lostReason = "burned";
+    return;
+  }
+  let crossed = false;
+  if (segment && !segment.jumped) {
+    crossed = body.orbit
+      ? movingCircleEntry(segment.x0, segment.y0, segment.x1, segment.y1, body, segment.t0, segment.t1, config.bodies, radius) !== null
+      : circleEntry(segment.x0, segment.y0, segment.x1, segment.y1, body.x, body.y, radius) !== null;
+  }
+  const inside = shipInsideBody(state, config, body, radius, time);
+  if (burned && objective.kind === "capture" && inside && isStableCapture(state, config, body)) {
+    finishLeg(state, config);
+    return;
+  }
+  if (burned) return;
+  if (inside || crossed) state.enteredCapture = true;
+  if (state.enteredCapture && !inside) {
+    if (objective.kind === "flyby") finishLeg(state, config);
+    else {
+      state.status = "lost";
+      state.lostReason = "flyby";
+    }
+  }
 }
 
 /** Points around the osculating ellipse, or null when the ship is not bound. */
@@ -2523,7 +2644,10 @@ export function step(state: SimState, config: SimConfig): void {
 
   const target = targetBody(config);
   const captureRadius = target?.captureRadius;
-  if (target && captureRadius !== undefined) {
+  if (hasObjectives(config)) {
+    updateObjectives(state, config, false, { x0, y0, x1, y1, t0, t1, jumped });
+    if (state.status !== "flying") return;
+  } else if (target && captureRadius !== undefined) {
     if (!bodyPresent(target, t1)) {
       state.status = "lost";
       state.lostReason = "burned";
@@ -2618,7 +2742,10 @@ export function advancePlan(
     }
     cursor.index = index + 1;
     const more = cursor.index < nodes.length && nodes[cursor.index].step === state.step;
-    if (!more && isCapturedOrbit(state, config)) state.status = "won";
+    if (!more) {
+      if (hasObjectives(config)) updateObjectives(state, config, true);
+      else if (isCapturedOrbit(state, config)) state.status = "won";
+    }
     if (before && hooks?.onBurn) hooks.onBurn(index, before, cloneState(state));
     if (state.status !== "flying") return;
   }
@@ -2646,7 +2773,7 @@ export function advanceFrame(
 }
 
 function predictionFrom(state: SimState, config: SimConfig, path: PathSample[]): Prediction {
-  const target = targetBody(config);
+  const target = activeBody(state, config);
   const orbit =
     state.status === "won" && target
       ? sampleOrbit(state, target, gravityConstant(config), 120, state.step * config.dt, config.bodies)

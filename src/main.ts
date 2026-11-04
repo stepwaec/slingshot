@@ -19,13 +19,14 @@ import {
   tick,
   type Game,
 } from "./game/state";
-import { burnLimit, LEVELS, observatory, pauseRuleOf, simConfigFromLevel, type Level } from "./level/catalog";
+import { burnLimit, LEVELS, WORLD_CHARTS, observatory, pauseRuleOf, simConfigFromLevel, type Level } from "./level/catalog";
 import { createClockLatches, readClocks, type ClockLatches } from "./hud/readout";
 import type { MissionScore } from "./sim/score";
 import { frameLevel, worldToScreen } from "./render/camera";
 import { SpaceView } from "./render/view";
 import { showNeedsWebGL2, webGL2Available } from "./render/webgl2";
 import {
+  activeTargetId,
   doseAt,
   hasMagneticBody,
   iceHarvestRate,
@@ -46,9 +47,10 @@ import { sampleBurnAnim, tailFromBurn, thrustDuration } from "./render/burn-anim
 import { theme } from "./render/theme";
 import { toggleLayer, type LayersPanelState } from "./game/layers";
 import { mountLayersMenu, syncLayersMenu } from "./hud/layers-menu";
+import { objectiveText } from "./hud/objective";
 import { ASTRO_CAPACITY, ASTRO_DV, curvePoint, petrovaCurve } from "./sim/astrophage";
 
-const levels: readonly Level[] = [...LEVELS, observatory];
+const levels: readonly Level[] = [...LEVELS, ...WORLD_CHARTS, observatory];
 
 function addLevelGroup(select: HTMLSelectElement, label: string, groupLevels: readonly Level[]): void {
   const group = document.createElement("optgroup");
@@ -96,6 +98,7 @@ const planningActions = required<HTMLElement>("#planning-actions");
 const flightActions = required<HTMLElement>("#flight-actions");
 const fpsValue = required<HTMLElement>("#fps");
 const planNote = required<HTMLElement>("#plan-note");
+const objective = required<HTMLElement>("#objective");
 const previewRangeInput = required<HTMLInputElement>("#preview-range");
 const previewReadout = required<HTMLElement>("#preview-readout");
 const levelSelect = required<HTMLSelectElement>("#level");
@@ -133,7 +136,7 @@ const doseFill = required<HTMLElement>("#dose-fill");
 const doseRate = required<HTMLElement>("#dose-rate");
 const layersPanel: LayersPanelState = { open: false };
 
-const game = createGame();
+const game = createGame(LEVELS[0] ?? observatory);
 if (import.meta.env.DEV) {
   (window as unknown as { __slingshot?: { game: Game; setPlan: typeof setPlan } }).__slingshot = { game, setPlan };
 }
@@ -154,6 +157,7 @@ let spreadFor: Game["prediction"] | null = null;
 let spreadSigma = 0;
 
 if (LEVELS.length > 0) addLevelGroup(levelSelect, "Campaign", LEVELS);
+if (WORLD_CHARTS.length > 0) addLevelGroup(levelSelect, "World", WORLD_CHARTS);
 addLevelGroup(levelSelect, "Showcase", [observatory]);
 upgradeToggle.addEventListener("click", () => {
   upgradePanel.hidden = !upgradePanel.hidden;
@@ -441,8 +445,11 @@ function syncHud(current: Game): void {
   syncUpgrades(current);
 
   const pose = planning ? current.initial : current.ship;
-  const target = current.level.bodies.find((body) => body.id === current.level.targetId);
-  const distance = target ? Math.hypot(pose.x - target.x, pose.y - target.y) : 0;
+  const targetId = activeTargetId(current.level, pose.leg);
+  const target = current.level.bodies.find((body) => body.id === targetId);
+  const time = planning ? 0 : current.ship.t;
+  const at = target && (target.orbit || target.drift) ? bodyPose(target, time, current.level.bodies, current.level.g) : target;
+  const distance = at ? Math.hypot(pose.x - at.x, pose.y - at.y) : 0;
   const speed = Math.hypot(pose.vx, pose.vy);
   const vText = planning ? "  —" : speed.toFixed(2).padStart(5, " ");
   const dText = Math.round(distance).toString().padStart(4, " ");
@@ -456,6 +463,7 @@ function syncHud(current: Game): void {
     if (spreadSigma >= 0.6) line += `  ·  spread ±${Math.round(spreadSigma)} px`;
   }
   telemetry.textContent = line;
+  syncObjective(current, planning);
   fpsValue.textContent = `${Math.round(fps)} fps`;
 
   launchButton.disabled = !canLaunch(current);
@@ -721,6 +729,14 @@ function syncPreview(current: Game): void {
   previewRangeInput.max = String(range.maxSeconds);
   if (document.activeElement !== previewRangeInput) previewRangeInput.value = String(seconds);
   previewReadout.textContent = `${seconds.toFixed(1)}s`;
+}
+
+function syncObjective(current: Game, planning: boolean): void {
+  const status = planning ? "flying" : current.ship.status;
+  const leg = planning ? current.initial.leg : current.ship.leg;
+  const text = objectiveText(current.level.objectives, leg, status, planning && current.prediction.status === "won");
+  objective.hidden = text === null;
+  if (text !== null) objective.textContent = text;
 }
 
 function syncPlanNote(current: Game): void {
