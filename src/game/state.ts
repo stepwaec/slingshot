@@ -81,6 +81,8 @@ export interface Game {
    * Ghosts read it. Prediction and flight do not.
    */
   cursorStep: number | null;
+  /** While flying, the camera stays on the ship until the player pans. */
+  follow: boolean;
   /**
    * Preview length in seconds, chosen on the planning slider.
    * `null` keeps today's look-ahead and still follows the ship.
@@ -133,6 +135,7 @@ export function createGame(level: Level = observatory, camera: Camera = { x: 0, 
     astrophage: false,
     tidal: false,
     cursorStep: null,
+    follow: false,
     previewSeconds: null,
   };
 }
@@ -476,6 +479,7 @@ export function launch(game: Game): void {
   game.spentNodes = 0;
   game.selected = null;
   game.frameSamples = [];
+  game.follow = true;
 }
 
 /** One rendered frame. Sim speed and slow motion add fixed steps; neither changes dt. */
@@ -614,6 +618,7 @@ function restoreShip(game: Game): void {
   game.cursor = { index: 0 };
   game.spentNodes = 0;
   game.frameSamples = [];
+  game.follow = false;
   game.pausesUsed = 0;
   game.score = startingScore(game.level);
   game.slowPhase = 0;

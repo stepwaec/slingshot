@@ -22,7 +22,7 @@ import {
 import { burnLimit, LEVELS, WORLD_CHARTS, observatory, pauseRuleOf, simConfigFromLevel, type Level } from "./level/catalog";
 import { createClockLatches, readClocks, type ClockLatches } from "./hud/readout";
 import type { MissionScore } from "./sim/score";
-import { frameLevel, worldToScreen } from "./render/camera";
+import { frameContent, worldToScreen } from "./render/camera";
 import { shownPoint } from "./render/path-frame";
 import { SpaceView } from "./render/view";
 import { showNeedsWebGL2, webGL2Available } from "./render/webgl2";
@@ -178,7 +178,7 @@ levelSelect.addEventListener("change", () => {
   loadLevel(game, next);
   resetShipLook();
   view?.reload(next);
-  frameLevel(game.camera, canvas.clientWidth, canvas.clientHeight, next);
+  fitCamera();
   framed = true;
 });
 
@@ -203,7 +203,7 @@ bindInput(
     layersPanel,
   },
   () => ({ width: canvas.clientWidth, height: canvas.clientHeight }),
-  () => frameLevel(game.camera, canvas.clientWidth, canvas.clientHeight, game.level),
+  () => fitCamera(),
 );
 
 previewRangeInput.addEventListener("input", () => {
@@ -222,9 +222,13 @@ function resize(): void {
   if (width < 2 || height < 2) return;
   view?.resize(width, height);
   if (!framed) {
-    frameLevel(game.camera, width, height, game.level);
+    fitCamera();
     framed = true;
   }
+}
+
+function fitCamera(): void {
+  frameContent(game.camera, canvas.clientWidth, canvas.clientHeight, game.level, game.prediction.path);
 }
 
 function loop(now: number): void {
@@ -235,6 +239,10 @@ function loop(now: number): void {
     fpsStamp = now;
   }
   tick(game);
+  if (game.follow && game.mode === "flying") {
+    game.camera.x = game.ship.x;
+    game.camera.y = game.ship.y;
+  }
   if (view && canvas.clientWidth > 1 && canvas.clientHeight > 1) view.render(game, now);
   syncHud(game);
   requestAnimationFrame(loop);
