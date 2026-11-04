@@ -189,7 +189,8 @@ const LOOK_SPEC: Partial<Record<BodyLook, ExhibitSpec>> = {
     reach: 170,
     extra: {
       magnet: { b1Reach: 70, tilt: 0, averaged: true },
-      beam: { reach: 150, period: 4, base: 4, tip: 16, damage: 0 },
+      // pulsar.svg: reach 228 = 28.5 r, full width 4 at the surface and 18 at the tip.
+      beam: { reach: 228, period: 4, base: 4, tip: 18, damage: 0 },
     },
   },
   magnetar: { radius: 9, mass: 2000, reach: 170, extra: { magnet: { b1Reach: 84, tilt: 0.35 } } },

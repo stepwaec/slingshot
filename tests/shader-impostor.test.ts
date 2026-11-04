@@ -72,13 +72,13 @@ describe("shader impostors", () => {
     expect(material.uniforms.uR.value).toBeCloseTo(80);
   });
 
-  it("does not stack an impostor on the hazard progenitor or quasar core", () => {
+  it("leaves the supernova progenitor to the hazard visual and draws the quasar hole", () => {
     const nova = observatory.bodies.find((body) => body.supernova);
     const quasar = observatory.bodies.find((body) => body.quasar);
     const sun = observatory.bodies.find((body) => body.id === "look-sun");
     if (!nova || !quasar || !sun) throw new Error("missing exhibit");
     expect(drawsImpostor(nova)).toBe(false);
-    expect(drawsImpostor(quasar)).toBe(false);
+    expect(drawsImpostor(quasar)).toBe(true);
     expect(drawsImpostor(sun)).toBe(true);
     expect(shaderFamily({ ...nova, look: "red-giant" })).toBe("star");
   });
