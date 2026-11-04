@@ -142,6 +142,15 @@ function syncSheetIfActive(camera: Camera, width: number, height: number): void 
 }
 
 export function frameLevel(camera: Camera, width: number, height: number, level: Level): void {
+  const framed = level.frame;
+  if (framed) {
+    const worldW = Math.max(1, framed.maxX - framed.minX);
+    const worldH = Math.max(1, framed.maxY - framed.minY);
+    camera.x = (framed.minX + framed.maxX) / 2;
+    camera.y = (framed.minY + framed.maxY) / 2;
+    camera.zoom = Math.min(width / worldW, height / worldH) * 0.9;
+    return;
+  }
   let minX = Infinity;
   let maxX = -Infinity;
   let minY = Infinity;

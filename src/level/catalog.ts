@@ -85,5 +85,5 @@ export function simConfigFromLevel(level: Level, upgrades: readonly string[] = [
   return config;
 }
 
-export type { Level, LevelPhysics, MissionProfile } from "./schema";
+export type { Level, LevelPhysics, MissionProfile, Objective, ObjectiveKind } from "./schema";
 export { LevelError, loadLevelData, loadLevelJson } from "./schema";

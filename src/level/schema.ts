@@ -73,6 +73,17 @@ export interface LevelPhysics {
   doseLimit?: number;
 }
 
+/** One leg of a mission. The sim reads this from OW3 onward. OW1 only stores it. */
+export type ObjectiveKind = "capture" | "flyby";
+
+export interface Objective {
+  id: string;
+  bodyId: string;
+  kind: ObjectiveKind;
+  /** Stand-in HUD copy. Omitted legs use the body name. */
+  label?: string;
+}
+
 export interface Level {
   id: string;
   name: string;
@@ -86,6 +97,13 @@ export interface Level {
   /** Fuel spent per unit of delta-v. Cost = fuelPerDv * |dv|. */
   fuelPerDv: number;
   bounds: Bounds;
+  /**
+   * Camera box. When set, framing uses this instead of every orbit.
+   * Missions set it to the region bounds. Omitted levels frame their bodies.
+   */
+  frame?: Bounds;
+  /** Ordered legs. Omitted levels keep the single-target rules. */
+  objectives?: readonly Objective[];
   maxSteps: number;
   /** Delta-v imparted per pixel of aim-drag. */
   dvPerPixel: number;
