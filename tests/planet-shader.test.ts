@@ -18,6 +18,8 @@ describe("rocky planet shader", () => {
     expect(planetKey(body({ kind: "home" }))).toBe("ocean");
     expect(planetKey(body({ kind: "target" }))).toBe("planetx");
     expect(planetKey(body({ kind: "moon" }))).toBe("barren");
+    expect(planetKey(body({ kind: "planet" }))).toBeNull();
+    expect(planetKey(body({ kind: "planet", elevator: { phase: 0, omega: 0 } }))).toBe("ocean");
     expect(planetKey(body({ kind: "planet", look: "dwarf" }))).toBe("dwarf");
     expect(planetKey(body({ kind: "planet", look: "earth" }))).toBe("earth");
     expect(planetKey(body({ kind: "moon", look: "luna" }))).toBe("moon");

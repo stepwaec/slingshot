@@ -616,7 +616,8 @@ export const PLANETS: Record<PlanetKey, PlanetParams> = {
  * Which rocky look draws this body. Null keeps the sprite (stars, gas
  * giants, the double planet, the captured moon, props).
  * A home with no look is the ocean world. A target with no look is Planet X.
- * A moon with no look is the barren moon.
+ * A moon with no look is the barren moon. An elevator anchor with no look
+ * is that same ocean world (space-elevator.svg calls the placeholder the home planet).
  */
 export function planetKey(body: Body): PlanetKey | null {
   switch (body.look) {
@@ -663,6 +664,7 @@ export function planetKey(body: Body): PlanetKey | null {
   if (body.kind === "home") return "ocean";
   if (body.kind === "target") return "planetx";
   if (body.kind === "moon") return "barren";
+  if (body.elevator) return "ocean";
   return null;
 }
 
