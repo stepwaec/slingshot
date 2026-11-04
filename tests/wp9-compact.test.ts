@@ -133,6 +133,9 @@ describe("WP9 compact objects", () => {
     const pulsar = observatory.bodies.find((body) => body.look === "pulsar");
     if (!pulsar?.beam) throw new Error("observatory pulsar");
     expect(pulsar.beam.damage ?? 0).toBe(0);
+    expect(pulsar.beam.reach).toBe(228);
+    expect(pulsar.beam.tip).toBe(18);
+    expect(pulsar.beam.reach / pulsar.radius).toBeCloseTo(28.5, 5);
     expect(pulsar.magnet?.averaged).toBe(true);
     const config = flightConfig([pulsar]);
     const state = makeState(pulsar.x, pulsar.y + 50, 1, 0, config);

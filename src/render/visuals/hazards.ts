@@ -2,7 +2,6 @@ import * as THREE from "three";
 import { jetAngle, shellRadius, type QuasarJet, type Supernova } from "../../sim/events";
 import { bodyPose, type Body } from "../../sim/physics";
 import { isEditing } from "../../game/state";
-import { artMesh, loadArtTexture, poseArt, rasterPixels, type ArtFit } from "../art-sprite";
 import { projectToScreen, syncTopDown } from "../camera";
 import {
   blastCall,
@@ -24,7 +23,6 @@ import {
   type FilamentSpec,
 } from "../hazard-look";
 import { formatClock, hashId } from "../event-look";
-import { silenceNightRim } from "../surface-art";
 import type { Theme } from "../theme";
 import { disposeObject, type Visual, type VisualFactory, type VisualFrame } from "../visual";
 import { shader, srgbVec } from "./materials";
@@ -346,10 +344,6 @@ interface NovaView {
 interface QuasarView {
   body: Body;
   jet: QuasarJet;
-  glow: THREE.Mesh;
-  glowFit: ArtFit;
-  core: THREE.Mesh;
-  coreFit: ArtFit;
   jets: THREE.Mesh[];
   jetTan: { value: number }[];
   jetHalf: { value: number }[];
@@ -369,8 +363,6 @@ class HazardsVisual implements Visual {
   private readonly quasars: QuasarView[] = [];
   private readonly chips: Chip[] = [];
   private readonly dummy = new THREE.Object3D();
-  private bakeGen = 0;
-
   constructor(theme: Theme, level: Parameters<VisualFactory>[1]) {
     this.theme = theme;
     this.object.name = "hazards";
@@ -385,7 +377,6 @@ class HazardsVisual implements Visual {
       this.chips.push(chip);
       this.object.add(chip.mesh);
     }
-    this.bakeOnce();
   }
 
   update(frame: VisualFrame): void {
@@ -528,8 +519,6 @@ class HazardsVisual implements Visual {
     const angle = jetAngle(jet, time);
     const rx = shadow * spec.diskRx;
     const ry = shadow * spec.diskRy;
-    poseArt(view.glow, view.glowFit, pose.x, pose.y, shadow, 0);
-    poseArt(view.core, view.coreFit, pose.x, pose.y, shadow, 0);
     const start = shadow * spec.jetStart;
     const reach = jet.reach;
     const length = Math.max(1, reach - start);
@@ -762,13 +751,6 @@ class HazardsVisual implements Visual {
   private buildQuasar(body: Body, jet: QuasarJet): QuasarView {
     const colors = this.theme.colors;
     const spec = this.theme.quasar;
-    const glowFit = quasarFit(this.theme, "quasar-glow", prepQuasarGlow);
-    const glow = artMesh(glowFit, `${body.id}-glow`);
-    glow.renderOrder = 0;
-    const coreFit = quasarFit(this.theme, "quasar-core", prepQuasarCore);
-    const core = artMesh(coreFit, `${body.id}-core`);
-    core.renderOrder = 4;
-    this.object.add(glow);
     const jetTan: { value: number }[] = [];
     const jetHalf: { value: number }[] = [];
     const jetZoom: { value: number }[] = [];
@@ -808,7 +790,6 @@ class HazardsVisual implements Visual {
       this.object.add(mesh);
       return mesh;
     });
-    this.object.add(core);
     const edges = [0, 1, 2, 3].map((i) => {
       const line = makeLine(colors.eventWarn, 6, spec.sweepAlpha, spec.sweepDash, spec.sweepGap);
       line.mesh.name = `${body.id}-sweep-${i}`;
@@ -823,50 +804,8 @@ class HazardsVisual implements Visual {
       this.object.add(ring.mesh);
       return ring;
     });
-    return { body, jet, glow, glowFit, core, coreFit, jets, jetTan, jetHalf, jetZoom, jetNow, edges, arcs };
+    return { body, jet, jets, jetTan, jetHalf, jetZoom, jetNow, edges, arcs };
   }
-
-  /** One raster per picture. Zoom and motion after that are transforms and uniforms. */
-  private bakeOnce(): void {
-    const gen = ++this.bakeGen;
-    const pixels = (fit: ArtFit) => rasterPixels(fit.viewW, fit.viewH, 2, 1);
-    for (const view of this.quasars) {
-      void this.paint(view.glow, view.glowFit, pixels(view.glowFit), gen);
-      void this.paint(view.core, view.coreFit, pixels(view.coreFit), gen);
-    }
-  }
-
-  private async paint(mesh: THREE.Mesh, fit: ArtFit, pixels: { width: number; height: number }, gen: number): Promise<void> {
-    const texture = await loadArtTexture(fit, pixels, 1);
-    texture.generateMipmaps = true;
-    texture.minFilter = THREE.LinearMipmapLinearFilter;
-    texture.needsUpdate = true;
-    if (gen !== this.bakeGen) {
-      texture.dispose();
-      return;
-    }
-    const material = mesh.material as THREE.MeshBasicMaterial;
-    const previous = material.map;
-    material.map = texture;
-    material.opacity = 1;
-    material.needsUpdate = true;
-    previous?.dispose();
-  }
-}
-
-/** Shadow r 9 sits at the sample's core (230, 165), which is the view centre. */
-function quasarFit(theme: Theme, tag: string, prep: (doc: Document) => void): ArtFit {
-  return {
-    url: theme.assets.quasar,
-    viewW: 460,
-    viewH: 330,
-    svgRadius: 9,
-    ox: 0,
-    oy: 0,
-    light: null,
-    spin: "none",
-    bake: { tag, prep },
-  };
 }
 
 /** Screen-space uniforms for the red-giant progenitor. The quad only has to cover the disc. */
@@ -886,28 +825,6 @@ export function placeProgenitor(star: THREE.Mesh, x: number, y: number, radius: 
 
 function numberOf(uniform: { value: unknown } | undefined): number {
   return typeof uniform?.value === "number" ? uniform.value : 0;
-}
-
-/** Glow only. Jets stay a shader so the sheath matches `quasarDamage`. */
-function prepQuasarGlow(doc: Document): void {
-  const root = doc.getElementById("quasar");
-  if (!root) return;
-  for (const child of [...root.children]) {
-    const glow = child.localName === "circle" && child.getAttribute("r") === "90";
-    if (!glow) child.remove();
-  }
-  silenceNightRim(doc, root);
-}
-
-/** Disk, shadow and rim. The lethal chip and the sample jets are not part of the body. */
-function prepQuasarCore(doc: Document): void {
-  const root = doc.getElementById("quasar");
-  if (!root) return;
-  for (const child of [...root.children]) {
-    if (child.localName === "circle" && child.getAttribute("r") === "90") child.remove();
-    else if (child.querySelector("path, text")) child.remove();
-  }
-  silenceNightRim(doc, root);
 }
 
 function shownTime(game: VisualFrame["game"]): number {
