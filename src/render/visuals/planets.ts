@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import type { Game } from "../../game/state";
-import { bodyPose, type Body } from "../../sim/physics";
+import { activeTargetId, bodyPose, type Body } from "../../sim/physics";
 import type { Theme } from "../theme";
 import { disposeObject, type Visual, type VisualFactory, type VisualFrame } from "../visual";
 import { srgb01 } from "../palette";
@@ -187,7 +187,7 @@ class PlanetsVisual implements Visual {
     const ship = frame.game.ship;
     const now = frame.now / 1000;
     const scrim = frame.game.mode === "finished" && ship.status === "won";
-    const liveTarget = frame.game.level.targetId;
+    const liveTarget = activeTargetId(frame.game.level, frame.game.ship.leg);
     for (const ring of this.rings) {
       const pose = bodyPose(ring.body, time, bodies);
       const live = ring.body.id === liveTarget;

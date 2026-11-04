@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { movingBodies } from "../../game/ghosts";
 import { isEditing } from "../../game/state";
-import { bodyPose, bodyPresent, type Body } from "../../sim/physics";
+import { activeTargetId, bodyPose, bodyPresent, type Body } from "../../sim/physics";
 import {
   aheadFade,
   burnsAhead,
@@ -725,7 +725,9 @@ class GhostsVisual implements Visual {
     const zoom = game.camera.zoom > 0 ? game.camera.zoom : 1;
     const bodies = movingBodies(game.level.bodies);
     const drawn = game.mode === "planning" ? 0 : game.ship.step;
-    const targetIndex = bodies.findIndex((body) => body.id === game.level.targetId);
+    const leg = game.mode === "paused" ? game.ship.leg : game.initial.leg;
+    const activeId = activeTargetId(game.level, leg);
+    const targetIndex = bodies.findIndex((body) => body.id === activeId);
     const won = game.prediction.status === "won";
     const capture = won ? game.prediction.steps : null;
     const slots = planGhosts(game.nodes, game.cursorStep, drawn, bodies.length, targetIndex, capture);
@@ -744,7 +746,7 @@ class GhostsVisual implements Visual {
       const pose = bodyPose(body, time, game.level.bodies, game.level.g);
       const ship = shipAtStep(game.prediction.path, slot.step, fallback);
       const colliding = !!ship && shipInside(ship.x, ship.y, pose.x, pose.y, body.radius);
-      const target = body.id === game.level.targetId;
+      const target = body.id === activeId;
       const kind = pickGhostKind({
         present,
         colliding,

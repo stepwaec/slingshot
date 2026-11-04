@@ -26,6 +26,7 @@ import { frameLevel, worldToScreen } from "./render/camera";
 import { SpaceView } from "./render/view";
 import { showNeedsWebGL2, webGL2Available } from "./render/webgl2";
 import {
+  activeTargetId,
   doseAt,
   hasMagneticBody,
   iceHarvestRate,
@@ -442,8 +443,11 @@ function syncHud(current: Game): void {
   syncUpgrades(current);
 
   const pose = planning ? current.initial : current.ship;
-  const target = current.level.bodies.find((body) => body.id === current.level.targetId);
-  const distance = target ? Math.hypot(pose.x - target.x, pose.y - target.y) : 0;
+  const targetId = activeTargetId(current.level, pose.leg);
+  const target = current.level.bodies.find((body) => body.id === targetId);
+  const time = planning ? 0 : current.ship.t;
+  const at = target && (target.orbit || target.drift) ? bodyPose(target, time, current.level.bodies, current.level.g) : target;
+  const distance = at ? Math.hypot(pose.x - at.x, pose.y - at.y) : 0;
   const speed = Math.hypot(pose.vx, pose.vy);
   const vText = planning ? "  —" : speed.toFixed(2).padStart(5, " ");
   const dText = Math.round(distance).toString().padStart(4, " ");
