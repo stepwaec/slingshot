@@ -39,11 +39,11 @@ const mission: Mission = {
   fuel: 120,
   fuelPerDv: 1,
   maxSteps: 12_000,
-  dvPerPixel: 0.5,
+  dvPerPixel: 0.1,
   periapsisMargin: 4,
   scoring: { deadline: 180, crewLimit: 180, fuelStarMin: 30, crewWeight: 2, fuelWeight: 1 },
   objectives: [
-    { id: "luna", bodyId: "luna", kind: "capture", label: "Capture the Moon" },
+    { id: "luna", bodyId: "luna", kind: "capture", label: "One lap around the Moon", laps: 1 },
     { id: "earth", bodyId: "earth", kind: "capture", label: "Return to Earth orbit" },
   ],
   targetId: "earth",

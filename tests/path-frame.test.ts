@@ -4,12 +4,12 @@ import { showPath } from "../src/render/path-frame";
 import { bodyPose, flyPlan, makeState, predictPlan, type Body, type BurnNode } from "../src/sim/physics";
 import { moonMission } from "../src/world/moon-mission";
 
-/** Departure, lunar capture, leave the Moon, Earth capture. Same burns as the mission test. */
+/** Departure, lunar insertion, leave after one lap, Earth capture. Same burns as the mission test. */
 const plan: BurnNode[] = [
-  { step: 0, dvx: 0, dvy: -6.15 },
-  { step: 1890, dvx: 0.542338481131118, dvy: 3.880447072991457 },
-  { step: 1920, dvx: -1.414213562373095, dvy: 1.4142135623730951 },
-  { step: 8640, dvx: -13.83714503852748, dvy: -28.661266346109254 },
+  { step: 0, dvx: -0.8628732259524066, dvy: -6.139662026197736 },
+  { step: 1209, dvx: 9.207295198561756, dvy: 8.181441674484159 },
+  { step: 2911, dvx: 4.169690499008103, dvy: -2.7592899707137617 },
+  { step: 4679, dvx: 3.6546281923744104, dvy: 15.317513431665407 },
 ];
 
 function body(id: string): Body {
@@ -51,9 +51,10 @@ describe("predicted path in the dominant body's frame", () => {
     }
     // Inertial samples follow Earth around the Sun, so the coast leaves the drawn Earth.
     expect(maxInertial).toBeGreaterThan(1000);
-    // The drawn coast stays on the low Earth orbit and wraps the planet.
-    expect(minDrawn).toBeGreaterThan(48);
-    expect(maxDrawn).toBeLessThan(60);
+    // The drawn coast stays near low Earth orbit and wraps the planet.
+    // The heavier Moon lets that orbit breathe, so the band is wider than 52±4.
+    expect(minDrawn).toBeGreaterThan(36);
+    expect(maxDrawn).toBeLessThan(80);
     expect(quadrant).toEqual([true, true, true, true]);
   });
 
@@ -75,7 +76,7 @@ describe("predicted path in the dominant body's frame", () => {
     const sepX = earthThen.x - moonThen.x;
     const sepY = earthThen.y - moonThen.y;
     const sep = Math.hypot(sepX, sepY);
-    const shell = 62;
+    const shell = 90;
     const crossing = { x: moonThen.x + (sepX / sep) * shell, y: moonThen.y + (sepY / sep) * shell, step };
     const moonFrame = { x: moonNow.x + (sepX / sep) * shell, y: moonNow.y + (sepY / sep) * shell };
     const earthFrame = {

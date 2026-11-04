@@ -79,6 +79,11 @@ export interface Objective {
   kind: ObjectiveKind;
   /** Stand-in HUD copy. Omitted legs use the body name. */
   label?: string;
+  /**
+   * Capture completes after this many revolutions inside the sphere,
+   * once a burn has fired there. Omitted keeps the one-instant orbit check.
+   */
+  laps?: number;
 }
 
 export interface Level {
