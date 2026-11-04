@@ -5,7 +5,7 @@ import type { Theme } from "../theme";
 import { disposeObject, type Visual, type VisualFactory, type VisualFrame } from "../visual";
 import { srgb01 } from "../palette";
 import { markEmissive } from "../shaders/bloom";
-import { targetZoneLook } from "../target-zone";
+import { drawsCaptureRing, targetZoneLook } from "../target-zone";
 import { shader, srgbVec } from "./materials";
 
 /**
@@ -89,7 +89,7 @@ class PlanetsVisual implements Visual {
     this.object.name = "planets";
     for (const body of level.bodies) {
       if (body.kind === "star" || body.kind === "rogue" || body.kind === "blackhole" || body.look === "comet" || body.look === "asteroid") continue;
-      if (body.captureRadius !== undefined) {
+      if (drawsCaptureRing(body)) {
         const color = srgbVec(theme.colors.zoneRing);
         const waveColor = srgbVec(theme.colors.zoneRing);
         const uniforms = {

@@ -21,6 +21,17 @@ import type { Theme } from "./theme";
 
 export type ZonePhase = "idle" | "inside" | "flash" | "stable" | "flyby";
 
+/**
+ * The mint ring is the capture sphere (`captureRadius`), not a tide line
+ * and not a sphere of influence. Earth and the Moon keep the sphere for
+ * the mission and do not draw it.
+ */
+export function drawsCaptureRing(body: { id: string; look?: string; captureRadius?: number }): boolean {
+  if (body.captureRadius === undefined) return false;
+  if (body.id === "earth" || body.id === "luna" || body.look === "earth" || body.look === "luna") return false;
+  return true;
+}
+
 export type ZoneSpec = Theme["zone"];
 
 export interface ZoneColors {
