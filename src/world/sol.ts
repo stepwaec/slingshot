@@ -105,13 +105,19 @@ const sun = solBody("sun", "Sun", "sol-sun", "star", SUN_MASS);
 
 const mercury = solBody("mercury", "Mercury", "mercury", "planet", 1_200, circle("sun", solRadius(0.387), 0.6, SUN_MASS));
 const venus = solBody("venus", "Venus", "venus", "planet", 20_000, circle("sun", solRadius(0.723), 2.2, SUN_MASS));
+/**
+ * Earth sits down-left of the Sun, so from Earth the Sun is up and to the
+ * right, matching the light in design/mockups/sol-moon.svg.
+ */
+const EARTH_PHASE = (5 * Math.PI) / 4;
+
 const earth = solBody(
   "earth",
   "Earth",
   "earth",
   "planet",
   EARTH_MASS,
-  circle("sun", solRadius(1), 0, SUN_MASS),
+  circle("sun", solRadius(1), EARTH_PHASE, SUN_MASS),
   EARTH_CAPTURE,
 );
 const mars = solBody("mars", "Mars", "mars", "planet", 2_500, circle("sun", solRadius(LINEAR_AU), 3.7, SUN_MASS));
@@ -122,13 +128,22 @@ const neptune = solBody("neptune", "Neptune", "neptune", "planet", 9_000, circle
 const pluto = solBody("pluto", "Pluto", "pluto", "planet", 400, circle("sun", solRadius(39.48), 2.4, SUN_MASS));
 const eris = solBody("eris", "Eris", "eris", "planet", 500, circle("sun", solRadius(67.8), 0.35, SUN_MASS));
 
+const LUNA_DISTANCE = 168;
+/**
+ * Lead the Moon so a prograde burn from the far side of Earth (angle π)
+ * meets it near angle 0 after one Hohmann half-period. The Sun still
+ * perturbs that coast. Mission 1 searches around this phase.
+ */
+const LUNA_TRANSFER = Math.PI * Math.sqrt(((52 + LUNA_DISTANCE) / 2) ** 3 / EARTH_MASS);
+const LUNA_PHASE = -keplerMeanMotion(G, EARTH_MASS, LUNA_DISTANCE) * LUNA_TRANSFER - 0.15;
+
 const luna = solBody(
   "luna",
   "Moon",
   "luna",
   "moon",
   EARTH_MASS / 81,
-  circle("earth", 168, 0, EARTH_MASS),
+  circle("earth", LUNA_DISTANCE, LUNA_PHASE, EARTH_MASS),
   LUNA_CAPTURE,
 );
 

@@ -1,4 +1,5 @@
 import type { PauseRule, SimConfig } from "../sim/physics";
+import { moonMission } from "../world/moon-mission";
 import { solChart } from "../world/sol";
 import { observatory } from "./observatory";
 import type { Level, LevelPhysics } from "./schema";
@@ -7,11 +8,10 @@ import { placeBelts } from "../sim/belts";
 import { ASTRO_CAPACITY, ASTRO_DV, ASTRO_HARVEST_RATE, flattenKnots } from "../sim/astrophage";
 
 /**
- * Campaign missions. Empty until Mission 1. The Sol world is `WORLD_CHARTS`.
- * The Observatory is the showcase and is not part of either list.
+ * Campaign missions. Mission 1 is Moon and back. The Sol chart is
+ * `WORLD_CHARTS`. The Observatory is the showcase and is on neither list.
  */
-
-export const LEVELS: readonly Level[] = [];
+export const LEVELS: readonly Level[] = [moonMission];
 
 /** The persistent world, as a flyable chart. Not a campaign mission. */
 export const WORLD_CHARTS: readonly Level[] = [solChart];
