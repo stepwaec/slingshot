@@ -24,6 +24,12 @@ import {
 } from "../sim/physics";
 import type { Camera } from "../render/camera";
 import { scoreMission, type MissionScore } from "../sim/score";
+import {
+  guideOffer,
+  mergeGuideBurns,
+  type GuideIntent,
+  type GuidePlan,
+} from "../sim/guidance";
 import { enforceLayerAvailability } from "./layers";
 import { UPGRADE_POINTS, UPGRADES, isUpgradeId, type UpgradeId } from "./upgrades";
 
@@ -88,6 +94,19 @@ export interface Game {
    * `null` keeps today's look-ahead and still follows the ship.
    */
   previewSeconds: number | null;
+  /**
+   * Moon flyby / capture ghosts. Null when the path is not near the Moon,
+   * the pass is already captured, or the player dismissed it.
+   * Drawing reads this. The sim does not.
+   */
+  guide: GuideState | null;
+  /** Abort hides the offer until the plan changes or the player pauses again. */
+  guideDismissed: boolean;
+}
+
+/** A guide plan plus which ghost Accept will insert. */
+export interface GuideState extends GuidePlan {
+  selected: GuideIntent | null;
 }
 
 /** Planning, or a tactical pause mid-flight. Burns can be edited in both. */
@@ -137,6 +156,8 @@ export function createGame(level: Level = observatory, camera: Camera = { x: 0, 
     cursorStep: null,
     follow: false,
     previewSeconds: null,
+    guide: null,
+    guideDismissed: false,
   };
 }
 
@@ -210,6 +231,7 @@ export function loadLevel(game: Game, level: Level): void {
   game.selected = null;
   game.cursorStep = null;
   game.previewSeconds = null;
+  game.guideDismissed = false;
   game.mode = "planning";
   game.points = UPGRADE_POINTS;
   game.upgrades = [];
@@ -256,6 +278,7 @@ export function buyUpgrade(game: Game, id: string): boolean {
   if (!spec || game.points < spec.cost) return false;
   game.points -= spec.cost;
   game.upgrades.push(id);
+  game.guideDismissed = false;
   restoreShip(game);
   recompute(game, 0, "coast");
   return true;
@@ -275,6 +298,7 @@ export function canLaunch(game: Game): boolean {
 /** Replace the plan and predict it from the start. Planning only. */
 export function setPlan(game: Game, nodes: readonly BurnNode[]): void {
   if (game.mode !== "planning") return;
+  game.guideDismissed = false;
   game.nodes = nodes.map((node) => ({ step: node.step, dvx: node.dvx, dvy: node.dvy }));
   game.nodes.sort((a, b) => a.step - b.step);
   game.selected = null;
@@ -317,6 +341,7 @@ export function addNode(game: Game, step: number): void {
     return;
   }
   if (queuedBurns(game) >= burnLimit(game.level)) return;
+  game.guideDismissed = false;
   let index = game.nodes.findIndex((node) => node.step > step);
   if (index < 0) index = game.nodes.length;
   game.nodes.splice(index, 0, { step, dvx: 0, dvy: 0 });
@@ -326,6 +351,7 @@ export function addNode(game: Game, step: number): void {
 
 export function deleteNode(game: Game, index: number): void {
   if (!isEditing(game) || index < game.cursor.index || index >= game.nodes.length) return;
+  game.guideDismissed = false;
   game.nodes.splice(index, 1);
   if (game.selected !== null) {
     if (game.nodes.length === 0 || game.selected === index) {
@@ -345,6 +371,7 @@ export function deleteSelected(game: Game): void {
 
 export function clearPlan(game: Game): void {
   if (game.mode === "flying") return;
+  game.guideDismissed = false;
   if (game.mode === "paused") {
     game.nodes.length = game.cursor.index;
     game.selected = null;
@@ -369,7 +396,8 @@ export function setNodeBurn(game: Game, index: number, dvx: number, dvy: number)
   node.dvx = dvx;
   node.dvy = dvy;
   game.selected = index;
-  recompute(game, index, "burn");
+  // The handle drag calls this every move. The ghost waits until the pointer is up.
+  recompute(game, index, "burn", undefined, false);
 }
 
 /**
@@ -434,7 +462,7 @@ export function moveNodeAlong(game: Game, index: number, rail: readonly RailSamp
     reached: true,
   };
   game.selected = index;
-  recompute(game, index, "burn", snapshots);
+  recompute(game, index, "burn", snapshots, false);
 }
 
 export function nodePosition(game: Game, index: number): Vec2 | null {
@@ -512,6 +540,7 @@ export function setPreviewSeconds(game: Game, seconds: number): void {
   const range = previewRange(origin, config);
   const clamped = Math.min(range.maxSeconds, Math.max(range.minSeconds, seconds));
   if (game.previewSeconds !== null && game.previewSeconds === clamped) return;
+  game.guideDismissed = false;
   game.previewSeconds = clamped;
   recompute(game, game.nodes.length, "coast");
 }
@@ -536,6 +565,7 @@ export function pause(game: Game): boolean {
   if (!next) return false;
   game.pausesUsed = next.used;
   game.score = next.score;
+  game.guideDismissed = false;
   game.mode = "paused";
   game.selected = null;
   recompute(game, 0, "coast");
@@ -551,6 +581,7 @@ export function resume(game: Game): void {
 /** Back to planning. The nodes stay. Pause budget refills. */
 export function reset(game: Game): void {
   restoreShip(game);
+  game.guideDismissed = false;
   game.mode = "planning";
   recompute(game, 0, "coast");
 }
@@ -642,6 +673,7 @@ function recompute(
   from: number,
   kind: PlanReuse["kind"],
   snapshots?: readonly NodeSnapshot[],
+  guide = true,
 ): void {
   const started = performance.now();
   const prior = snapshots ?? game.prediction?.snapshots;
@@ -654,4 +686,70 @@ function recompute(
   const config = simConfigFromLevel(game.level, game.upgrades);
   game.prediction = predictPlan(origin, config, game.nodes, reuse, extensionSteps(origin, config, game.previewSeconds));
   game.predictMs = performance.now() - started;
+  if (guide && !game.guideDismissed && isEditing(game)) refreshGuide(game);
+  else game.guide = null;
+}
+
+/** Rebuild the Moon ghosts from the prediction on screen. Does not change the plan. */
+export function refreshGuide(game: Game): void {
+  if (!isEditing(game) || game.guideDismissed) {
+    game.guide = null;
+    return;
+  }
+  const origin = planOrigin(game);
+  const config = simConfigFromLevel(game.level, game.upgrades);
+  const selected = game.guide?.selected ?? null;
+  const plan = guideOffer(origin, config, game.nodes, game.prediction, {
+    burnLimit: burnLimit(game.level),
+    extension: extensionSteps(origin, config, game.previewSeconds),
+  });
+  if (!plan) {
+    game.guide = null;
+    return;
+  }
+  const keep = selected !== null && plan.options.some((option) => option.intent === selected) ? selected : null;
+  game.guide = { bodyId: plan.bodyId, bodyName: plan.bodyName, options: plan.options, selected: keep };
+}
+
+/** Highlight one ghost. Accept inserts that ghost's burns. */
+export function selectGuide(game: Game, intent: GuideIntent): void {
+  const guide = game.guide;
+  if (!guide || !isEditing(game)) return;
+  if (!guide.options.some((option) => option.intent === intent)) return;
+  guide.selected = intent;
+}
+
+/** Hide the chips and the ghosts until the plan changes. */
+export function dismissGuide(game: Game): void {
+  game.guideDismissed = true;
+  game.guide = null;
+}
+
+/**
+ * Merge the selected ghost's burns into the plan.
+ * They are ordinary nodes: later edits use the same move and delete path,
+ * and a burn that has already fired is left alone.
+ */
+export function acceptGuide(game: Game): boolean {
+  const guide = game.guide;
+  if (!isEditing(game) || !guide?.selected) return false;
+  const option = guide.options.find((item) => item.intent === guide.selected);
+  if (!option) return false;
+  const origin = planOrigin(game);
+  for (let i = 0; i < option.burns.length; i++) {
+    if (option.burns[i].step < origin.step) return false;
+  }
+  const merged = mergeGuideBurns(game.nodes, option.burns);
+  if (merged.length - game.cursor.index > burnLimit(game.level)) return false;
+  for (let i = 0; i < game.cursor.index; i++) {
+    const prev = game.nodes[i];
+    const next = merged[i];
+    if (!next || next.step !== prev.step || next.dvx !== prev.dvx || next.dvy !== prev.dvy) return false;
+  }
+  game.guideDismissed = true;
+  game.guide = null;
+  game.nodes = merged;
+  game.selected = null;
+  recompute(game, game.cursor.index, "coast");
+  return true;
 }

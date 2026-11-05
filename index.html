@@ -131,6 +131,13 @@
         <p id="plan-note" hidden></p>
         <span id="fps">— fps</span>
         <div class="dock">
+          <div id="guide" hidden role="group" aria-label="Moon guidance">
+            <span id="guide-label">Moon</span>
+            <button type="button" id="guide-flyby" aria-pressed="false">Flyby</button>
+            <button type="button" id="guide-capture" aria-pressed="false">Capture</button>
+            <button type="button" id="guide-accept" disabled>Accept</button>
+            <button type="button" id="guide-abort">Abort</button>
+          </div>
           <div id="node-row" hidden>
             <p id="node-readout" hidden></p>
             <button id="delete" type="button">Delete</button>

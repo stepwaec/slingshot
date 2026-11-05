@@ -2,7 +2,7 @@
 
 Repository: [stepwaec/slingshot](https://github.com/stepwaec/slingshot). Game design, physics rules and architecture are in [DESIGN.md](DESIGN.md).
 
-Last updated: 2026-11-04 (Europe/Zurich).
+Last updated: 2026-11-05 (Europe/Zurich).
 
 Status values: **Done** (merged, with PR link), **In progress**, **On hold**, **Planned**, **Ready to start**, **Scheduled soon**. Every planned package is scoped with Stephan before it is built.
 
@@ -61,6 +61,7 @@ Note on numbering: Brainstormer's first draft called the flight loop "WP2" and r
 | R2.6: remove the legacy sprite renderer | Done, merged 2026-10-30 in [PR #103](https://github.com/stepwaec/slingshot/pull/103) | The fallback flag and `?sprites=1` are gone. Compact objects, belts and rocks drop their sprite paths along with the older shader families. Sprite drawing code that only served those bodies is deleted, and the game no longer loads their SVG body assets. The `design/` folder stays untouched, as the reference. If WebGL2 is missing, the game shows a simple "needs WebGL2" message. |
 | Sprite art still without a shader | Planned | R2.6 has merged. These still load SVG art because they have no shader yet: the ship and its modules, Tau Ceti and its three planets, comets, the rogue planet, nebulae, the quasar, Voyager, and Arrokoth. Overlay and HUD art stays too: the starfield, the predicted path, the drag arrow, magnetism, radiation, solar recharge, and the Astrophage map. The double planet and the captured moon are still uncovered by `planet.frag`. |
 | Minimap | Ready to come off hold. R2.3 merged in [PR #95](https://github.com/stepwaec/slingshot/pull/95). | The R2.3 wait is over. Minimap art is on the old sprite pipeline. The Sol campaign and the interstellar levels still need the whole level in one view. It adds an entry to the Layers menu, or to settings, and it can be collapsed. A small corner panel shows the whole level. Bodies are dots sized by type, with their orbits as thin lines. The ship shows its heading, and the target zone is highlighted. The planned trajectory is a faint line with its burn nodes. A camera viewport rectangle; clicking or dragging on the minimap pans the main view there, and the pan moves the camera only. It updates live with moving bodies (LU2). Ghost markers are optional. The toggle is N. N is free in `src/game/input.ts`. G is gravity, M is magnetism and R is reset. D, L, A and T are reserved for radiation, the Layers panel, Astrophage and tidal stress. C stays free. It stays available in planning, pause and flight. Hazard zones for magnetism, radiation and Astrophage show as subtle tints when that layer is on. Drawing is cheap: a separate low-resolution render or a 2D canvas, within the budget in [design/threejs-notes.md](../design/threejs-notes.md) §9. |
+| Guided trajectory help | In progress | Moon only. When the planned path enters the Moon's capture sphere and the capture is not already solved, Flyby and Capture chips offer a faint ghost. Accept inserts real boost burns. Abort dismisses the offer. See the section below. |
 
 ### Physical tidal stress
 
@@ -80,6 +81,22 @@ Tidal forces always exist. The stress on the ship is `2GM L / r³` from every ma
 - After a replan, and after several replans in one flight, the flown samples match the prediction that was on screen, sample for sample.
 
 **Out of scope.** Planning-horizon limits, overlap selection, and the events themselves.
+
+### Guided trajectory help
+
+**Status:** In progress.
+
+**Goal.** When the planned path comes near the Moon, offer a faint ghost for a flyby or a capture. The player picks one and Accepts. Accept inserts real boost burns on the plan, the same nodes a click would add. The player can still move or delete them. Burns that have already fired stay locked. Prediction after Accept matches the flight, including lunar skim. Nothing is applied until Accept.
+
+Capture v1 is one circularising burn where the inbound pass crosses a low altitude the Moon can hold (about 34). Flyby v1 is one tangential burn at the capture-sphere entry that puts periapsis near 44, above the surface and inside the sphere. The coast in from Earth stays the player's. A plan that already completes the lunar capture does not get a second offer. Other moons are not offered.
+
+**Acceptance.**
+- Flyby and Capture chips, plus Accept and Abort, while planning or paused. The path is unchanged until Accept.
+- Accept adds the burn. Move, retarget, and delete use the existing node controls. A fired burn stays put.
+- The ghost is the framed path: world coordinates, then the Moon ghost where the Moon dominates, same as the predicted line.
+- After Accept, and after a pause that Accepts the capture, the flown samples match the prediction.
+
+**Out of scope.** A periapsis drag ring, training-wheels fade, scored assist, multi-body chain solvers, mission-only gating, other bodies, and a full transfer planner for passes that never reach the low orbit.
 
 ### Events that break the plan
 
