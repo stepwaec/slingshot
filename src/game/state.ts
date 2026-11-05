@@ -5,6 +5,7 @@ import {
   cloneState,
   frameStepCount,
   extensionSteps,
+  extendForecast,
   makeState,
   planHorizonEnd,
   predictPlan,
@@ -27,6 +28,8 @@ import { scoreMission, type MissionScore } from "../sim/score";
 import {
   guideOffer,
   mergeGuideBurns,
+  MOON_REACH_HINT,
+  planReachesMoon,
   type GuideIntent,
   type GuidePlan,
 } from "../sim/guidance";
@@ -90,7 +93,8 @@ export interface Game {
   /** While flying, the camera stays on the ship until the player pans. */
   follow: boolean;
   /**
-   * Preview length in seconds, chosen on the planning slider.
+   * Preview coast in seconds, past the latest burn (or past the ship).
+   * The slider and the fade-tip drag both set it.
    * `null` keeps today's look-ahead and still follows the ship.
    */
   previewSeconds: number | null;
@@ -102,6 +106,11 @@ export interface Game {
   guide: GuideState | null;
   /** Abort hides the offer until the plan changes or the player pauses again. */
   guideDismissed: boolean;
+  /**
+   * One line when a Moon click cannot offer flyby or capture.
+   * Cleared when the offer appears, or when the player dismisses it.
+   */
+  guideHint: string | null;
 }
 
 /** A guide plan plus which ghost Accept will insert. */
@@ -158,6 +167,7 @@ export function createGame(level: Level = observatory, camera: Camera = { x: 0, 
     previewSeconds: null,
     guide: null,
     guideDismissed: false,
+    guideHint: null,
   };
 }
 
@@ -232,6 +242,7 @@ export function loadLevel(game: Game, level: Level): void {
   game.cursorStep = null;
   game.previewSeconds = null;
   game.guideDismissed = false;
+  game.guideHint = null;
   game.mode = "planning";
   game.points = UPGRADE_POINTS;
   game.upgrades = [];
@@ -532,17 +543,40 @@ export function setSpeed(game: Game, speed: SimSpeed): void {
   game.speed = speed;
 }
 
-/** Fix the planning preview at `seconds`. The coast after the latest burn uses this length. */
-export function setPreviewSeconds(game: Game, seconds: number): void {
+/** Coast length on screen, in seconds. `null` is today's look-ahead. */
+export function currentPreviewSeconds(game: Game): number {
+  const origin = planOrigin(game);
+  const config = simConfigFromLevel(game.level, game.upgrades);
+  if (game.previewSeconds !== null) return game.previewSeconds;
+  return previewRange(origin, config).defaultSeconds;
+}
+
+/**
+ * Fix the planning preview at `seconds`. The coast after the latest burn uses this length.
+ * A longer coast continues the forecast already on screen. A shorter one rebuilds it.
+ * `guide` false skips the Moon offer; a tip drag refreshes that once, on release.
+ */
+export function setPreviewSeconds(game: Game, seconds: number, guide = true): void {
   if (!isEditing(game) || !Number.isFinite(seconds)) return;
   const origin = planOrigin(game);
   const config = simConfigFromLevel(game.level, game.upgrades);
   const range = previewRange(origin, config);
   const clamped = Math.min(range.maxSeconds, Math.max(range.minSeconds, seconds));
-  if (game.previewSeconds !== null && game.previewSeconds === clamped) return;
-  game.guideDismissed = false;
+  const nextSteps = extensionSteps(origin, config, clamped);
+  if (nextSteps === extensionSteps(origin, config, game.previewSeconds)) return;
+  if (guide) game.guideDismissed = false;
+  const previous = game.prediction;
+  const longer = nextSteps > extensionSteps(origin, config, game.previewSeconds);
   game.previewSeconds = clamped;
-  recompute(game, game.nodes.length, "coast");
+  const started = performance.now();
+  const extended = longer ? extendForecast(origin, config, game.nodes, previous, nextSteps) : null;
+  if (extended) {
+    game.prediction = extended;
+    game.predictMs = performance.now() - started;
+    if (guide && !game.guideDismissed) refreshGuide(game);
+    return;
+  }
+  recompute(game, game.nodes.length, "coast", undefined, guide);
 }
 
 export function setSlow(game: Game, slow: boolean): void {
@@ -582,6 +616,7 @@ export function resume(game: Game): void {
 export function reset(game: Game): void {
   restoreShip(game);
   game.guideDismissed = false;
+  game.guideHint = null;
   game.mode = "planning";
   recompute(game, 0, "coast");
 }
@@ -707,8 +742,27 @@ export function refreshGuide(game: Game): void {
     game.guide = null;
     return;
   }
+  game.guideHint = null;
   const keep = selected !== null && plan.options.some((option) => option.intent === selected) ? selected : null;
   game.guide = { bodyId: plan.bodyId, bodyName: plan.bodyName, options: plan.options, selected: keep };
+}
+
+/**
+ * Moon click. A path that already enters the capture sphere opens the same
+ * flyby / capture offer as the automatic chips. Anything else is a hint.
+ */
+export function openBodyGuide(game: Game, bodyId: string): void {
+  if (!isEditing(game) || bodyId !== "luna") return;
+  const origin = planOrigin(game);
+  const config = simConfigFromLevel(game.level, game.upgrades);
+  if (!planReachesMoon(origin, config, game.prediction)) {
+    game.guide = null;
+    game.guideHint = MOON_REACH_HINT;
+    return;
+  }
+  game.guideHint = null;
+  game.guideDismissed = false;
+  refreshGuide(game);
 }
 
 /** Highlight one ghost. Accept inserts that ghost's burns. */
@@ -719,10 +773,16 @@ export function selectGuide(game: Game, intent: GuideIntent): void {
   guide.selected = intent;
 }
 
+/** Drop the Moon-miss line. Does not hide an offer that is still up. */
+export function clearGuideHint(game: Game): void {
+  game.guideHint = null;
+}
+
 /** Hide the chips and the ghosts until the plan changes. */
 export function dismissGuide(game: Game): void {
   game.guideDismissed = true;
   game.guide = null;
+  game.guideHint = null;
 }
 
 /**

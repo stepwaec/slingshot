@@ -37,6 +37,7 @@ html, body, #app {
 
 #space.panning { cursor: grabbing; }
 #space.aiming { cursor: crosshair; }
+#space.extending { cursor: ew-resize; }
 
 #node-layer,
 #aim-label {
@@ -1240,6 +1241,13 @@ html, body, #app {
   text-transform: uppercase;
   color: var(--muted);
 }
+
+#guide-hint {
+  font: 500 12px/1.3 var(--ui);
+  color: var(--text);
+}
+
+#guide-hint[hidden] { display: none; }
 
 #guide button {
   height: 28px;
