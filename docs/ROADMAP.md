@@ -149,7 +149,7 @@ One persistent world, grown over time. The first region is Sol: the Sun, the pla
 - The asteroid belt's centre radius lies between Mars and Jupiter. The Kuiper belt lies beyond Neptune. Rocks placed from a belt are a pure function of its seed.
 - A chart compiled from the inner region flies, and prediction matches that flight.
 - The Observatory is unchanged.
-- Visual scale only: the Sun's disc is 8 Earth diameters and the Moon is 0.27 of Earth. Planet orbits and the Moon's path stay outside the disc and its bright corona. Crash radii, masses, and orbits stay as they are. Zoomed out, planets and moons keep an 8 px radius so they stay visible. Zoomed in, they use that game-scale size.
+- The Sun's drawn disc is 8 Earth diameters, and that same disc is the crash radius. The art header stays 46, which tides and close passes still use. The bright corona (`wiR`) is not lethal: it reaches Mercury's sunward limb. The Moon is 0.27 of Earth. Planet orbits and the Moon's path stay outside the disc and that corona. Masses and orbits stay as they are. Zoomed out, planets and moons keep an 8 px radius so they stay visible. Zoomed in, they use that game-scale size.
 
 **Out of scope.** Mission objectives, the capture rule, JWST at L2, other stars, Tau Ceti, and compact objects.
 
@@ -175,6 +175,7 @@ One persistent world, grown over time. The first region is Sol: the Sun, the pla
 - At launch the ship is bound to Earth, above the surface, inside Earth's capture sphere, and outside the Moon's.
 - A published plan captures the Moon and then Earth. Prediction of that plan matches the flight.
 - A flyby of the Moon does not win.
+- A plan whose closest point is inside the Sun's drawn disc crashes in prediction and in flight. A path that stays outside that disc does not.
 - The campaign menu lists this mission. The Observatory still loads.
 - Frame time for the Observatory and for this mission is reported. This VM has no GPU.
 

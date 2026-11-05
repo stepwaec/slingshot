@@ -218,8 +218,17 @@ export interface Body {
   x: number;
   y: number;
   mass: number;
-  /** Surface radius. Touching it crashes the ship. */
+  /**
+   * Surface radius. Touching it crashes the ship, unless `crashRadius` is set.
+   * Tides, drag, close passes, and shadows keep using this radius.
+   */
   radius: number;
+  /**
+   * Lethal disc when the drawn surface is larger than `radius`.
+   * The Sol Sun stores its photosphere here. Omitted means `radius`.
+   * Gravity does not read this.
+   */
+  crashRadius?: number;
   /**
    * Sphere of influence around the target. A captured orbit must keep its
    * apoapsis inside this radius. Entering and then leaving it unbound is a flyby.
@@ -283,6 +292,13 @@ export interface Body {
 export function bodySolid(body: Body): boolean {
   if (body.look === "voyager" || body.solid === false) return false;
   return true;
+}
+
+/** Radius that ends the flight. `crashRadius`, when set, replaces the surface. */
+export function bodyCrashRadius(body: Body): number {
+  const crash = body.crashRadius;
+  if (crash !== undefined && crash > 0) return crash;
+  return body.radius;
 }
 
 /**
@@ -2683,9 +2699,10 @@ export function step(state: SimState, config: SimConfig): void {
     if (!bodySolid(body)) continue;
     if (!bodyPresent(body, t0) && !bodyPresent(body, t1)) continue;
     const moving = body.orbit !== undefined || body.drift !== undefined || body.script?.kind === "consume";
+    const crashRadius = bodyCrashRadius(body);
     const hit = moving
-      ? movingCircleEntry(x0, y0, x1, y1, body, t0, t1, bodies, body.radius)
-      : circleEntry(x0, y0, x1, y1, body.x, body.y, body.radius);
+      ? movingCircleEntry(x0, y0, x1, y1, body, t0, t1, bodies, crashRadius)
+      : circleEntry(x0, y0, x1, y1, body.x, body.y, crashRadius);
     if (hit !== null && hit < crashT) {
       crashT = hit;
       crashBody = body.id;
@@ -2805,9 +2822,10 @@ export function step(state: SimState, config: SimConfig): void {
       const dx = state.x - cx;
       const dy = state.y - cy;
       const distance = Math.hypot(dx, dy);
+      const crashRadius = bodyCrashRadius(body);
       if (distance > 1e-8) {
-        state.x = cx + (dx / distance) * body.radius;
-        state.y = cy + (dy / distance) * body.radius;
+        state.x = cx + (dx / distance) * crashRadius;
+        state.y = cy + (dy / distance) * crashRadius;
       }
     }
     const impact = acceleration(state.x, state.y, config, t0 + crashT * dt);

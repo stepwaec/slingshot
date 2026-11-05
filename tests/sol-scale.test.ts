@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { STAR_PARAMS } from "../src/render/shaders/star-params";
 import { moonMission } from "../src/world/moon-mission";
 import { solWorld } from "../src/world/sol";
+import { bodyCrashRadius } from "../src/sim/physics";
 import {
   MIN_BODY_PX,
   MOON_EARTH_FRACTION,
@@ -9,6 +10,7 @@ import {
   isSolChart,
   solDrawnRadius,
   solGameVisualRadius,
+  solSunDiscRadius,
 } from "../src/render/sol-scale";
 
 function body(id: string) {
@@ -22,12 +24,19 @@ describe("Sol visual scale", () => {
   const earth = body("earth");
   const moon = body("luna");
 
-  it("keeps crash radii, and draws the Sun at 8 Earth diameters and the Moon at 0.27", () => {
+  it("draws the Sun at 8 Earth diameters and crashes on that same disc", () => {
     expect(sun.radius).toBe(46);
     expect(earth.radius).toBe(34);
     expect(moon.radius).toBe(18);
+    expect(earth.crashRadius).toBeUndefined();
+    expect(moon.crashRadius).toBeUndefined();
     expect(SUN_EARTH_DIAMETERS).toBe(8);
-    expect(solGameVisualRadius(sun, earth.radius)).toBe(8 * earth.radius);
+    const disc = solSunDiscRadius(earth.radius);
+    expect(disc).toBe(8 * earth.radius);
+    expect(sun.crashRadius).toBe(disc);
+    expect(bodyCrashRadius(sun)).toBe(disc);
+    expect(bodyCrashRadius(earth)).toBe(earth.radius);
+    expect(solGameVisualRadius(sun, earth.radius)).toBe(disc);
     expect(solGameVisualRadius(moon, earth.radius)).toBeCloseTo(MOON_EARTH_FRACTION * earth.radius, 8);
     expect(solGameVisualRadius(earth, earth.radius)).toBe(earth.radius);
     expect(isSolChart(solWorld.bodies)).toBe(true);
@@ -50,6 +59,10 @@ describe("Sol visual scale", () => {
     expect(nearestMoon).toBeGreaterThan(corona);
     expect(moonMission.orbit.radius).toBeGreaterThan(earth.radius + moonMission.periapsisMargin);
     expect(earth.orbit?.radius).toBeGreaterThan(sun.radius);
+    const mercury = body("mercury");
+    const sunward = (mercury.orbit?.radius ?? 0) - mercury.radius;
+    expect(sunward).toBeGreaterThan(drawn);
+    expect(sunward).toBeLessThan(corona);
   });
 
   it("uses a pixel floor zoomed out and the game-scale radius zoomed in", () => {
