@@ -1,10 +1,12 @@
 import "./style.css";
 import { bindInput } from "./game/input";
 import {
+  acceptGuide,
   burnHandleOffset,
   canLaunch,
   canPause,
   createGame,
+  dismissGuide,
   isEditing,
   loadLevel,
   missionResult,
@@ -13,6 +15,7 @@ import {
   outcomeCopy,
   planFuel,
   queuedBurns,
+  selectGuide,
   setPlan,
   setPreviewSeconds,
   speedAllowed,
@@ -124,6 +127,12 @@ const clockStars = required<HTMLElement>("#clock-stars");
 const clockPoints = required<HTMLElement>("#clock-points");
 const deadlineFill = required<HTMLElement>("#deadline-fill");
 const routeActions = required<HTMLElement>("#route-actions");
+const guideBar = required<HTMLElement>("#guide");
+const guideLabel = required<HTMLElement>("#guide-label");
+const guideFlyby = required<HTMLButtonElement>("#guide-flyby");
+const guideCapture = required<HTMLButtonElement>("#guide-capture");
+const guideAccept = required<HTMLButtonElement>("#guide-accept");
+const guideAbort = required<HTMLButtonElement>("#guide-abort");
 const layersButton = required<HTMLButtonElement>("#layers");
 const layersPanelEl = required<HTMLElement>("#layers-panel");
 const astroRow = required<HTMLElement>("#astro-row");
@@ -164,6 +173,21 @@ if (WORLD_CHARTS.length > 0) addLevelGroup(levelSelect, "World", WORLD_CHARTS);
 addLevelGroup(levelSelect, "Showcase", [observatory]);
 upgradeToggle.addEventListener("click", () => {
   upgradePanel.hidden = !upgradePanel.hidden;
+});
+guideFlyby.addEventListener("click", () => {
+  selectGuide(game, "flyby");
+  syncGuide(game);
+});
+guideCapture.addEventListener("click", () => {
+  selectGuide(game, "capture");
+  syncGuide(game);
+});
+guideAccept.addEventListener("click", () => {
+  if (acceptGuide(game)) syncHud(game);
+});
+guideAbort.addEventListener("click", () => {
+  dismissGuide(game);
+  syncGuide(game);
 });
 const hullSegments: HTMLElement[] = [];
 for (let i = 0; i < 10; i++) {
@@ -475,6 +499,7 @@ function syncHud(current: Game): void {
   }
   telemetry.textContent = line;
   syncObjective(current, planning);
+  syncGuide(current);
   fpsValue.textContent = `${Math.round(fps)} fps`;
 
   launchButton.disabled = !canLaunch(current);
@@ -747,6 +772,20 @@ function syncPreview(current: Game): void {
   previewRangeInput.max = String(range.maxSeconds);
   if (document.activeElement !== previewRangeInput) previewRangeInput.value = String(seconds);
   previewReadout.textContent = `${seconds.toFixed(1)}s`;
+}
+
+function syncGuide(current: Game): void {
+  const guide = isEditing(current) ? current.guide : null;
+  guideBar.hidden = guide === null;
+  if (!guide) return;
+  guideLabel.textContent = guide.bodyName;
+  const flyby = guide.options.some((option) => option.intent === "flyby");
+  const capture = guide.options.some((option) => option.intent === "capture");
+  guideFlyby.hidden = !flyby;
+  guideCapture.hidden = !capture;
+  guideFlyby.setAttribute("aria-pressed", guide.selected === "flyby" ? "true" : "false");
+  guideCapture.setAttribute("aria-pressed", guide.selected === "capture" ? "true" : "false");
+  guideAccept.disabled = guide.selected === null;
 }
 
 function syncObjective(current: Game, planning: boolean): void {

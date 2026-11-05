@@ -1220,6 +1220,41 @@ html, body, #app {
   gap: 10px;
 }
 
+#guide {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(560px, calc(100vw - 48px));
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel);
+  pointer-events: auto;
+}
+
+#guide[hidden] { display: none; }
+
+#guide-label {
+  font: 500 11px/1 var(--ui);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+#guide button {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 8px;
+  font: 600 12px/1 var(--ui);
+}
+
+#guide button[aria-pressed="true"],
+#guide-accept:not(:disabled) {
+  background: var(--accent);
+  color: var(--ink);
+  border-color: var(--accent);
+}
+
 #route-actions {
   display: flex;
   gap: 8px;

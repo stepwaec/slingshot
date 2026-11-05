@@ -8,6 +8,7 @@ import { createImpostors } from "./impostors";
 import { createMega } from "./mega";
 import { createHazards } from "./hazards";
 import { createGhosts } from "./ghosts";
+import { createGuide } from "./guide";
 import { createComet } from "./comet";
 import { createGravity } from "./gravity";
 import { createMagnetism } from "./magnetism";
@@ -52,6 +53,7 @@ export const visualFactories = {
   ghosts: createGhosts,
   hazards: createHazards,
   placards: createPlacards,
+  guide: createGuide,
   path: createPath,
   recharge: createRecharge,
   ship: createShip,

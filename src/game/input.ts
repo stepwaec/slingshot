@@ -10,6 +10,7 @@ import {
   nodeIncoming,
   nodePosition,
   pause,
+  refreshGuide,
   reset,
   resume,
   selectNode,
@@ -136,6 +137,7 @@ export function bindInput(
     if (!finished || !isEditing(game)) return;
     if (finished.kind === "pending") settlePlanningClick(game, finished.hit);
     if (finished.kind === "pan" && !finished.moved) selectNode(game, null);
+    if (finished.kind === "handle" || finished.kind === "node") refreshGuide(game);
   };
   canvas.addEventListener("pointerup", endPointer);
   canvas.addEventListener("pointercancel", endPointer);
