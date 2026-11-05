@@ -42,7 +42,7 @@ Reference shader: `design/shaders/star.frag`. Covers the sun (`star.svg`, varian
 2. **Wisp ring:** a radial ramp to `wiR`, displaced by noise on the ring and turning with `wiSpin`.
 3. **Flame ring:** a ramp to `flR` with stops 0.74, 0.82, 0.91 and 1, displaced and turning the other way.
 
-   Layers 1–3 breathe by ±`breathe` over `breatheT`. The disc never breathes, so the crash radius never moves.
+   Layers 1–3 breathe by ±`breathe` over `breatheT`. The disc never breathes, so the crash radius never moves. On the Sol chart the drawn photosphere is not the header 46: `uR` and the crash test both use 8 Earth diameters (`crashRadius`). The wisp corona and the haze stay outside that disc.
 4. **Prominences:** three loops footed on the limb, at −147.5°, −243.6° and −314.8°.
    - Heights 0.34, 0.38 and 0.47 radii; half-widths 0.20, 0.24 and 0.185.
    - Periods 12, 16 and 14 s, starting at 0, 5 and 9 s.

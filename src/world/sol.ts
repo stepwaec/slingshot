@@ -1,6 +1,7 @@
 import type { Belt } from "../sim/belts";
 import { keplerMeanMotion, type Body, type BodyLook, type BodyOrbit } from "../sim/physics";
 import { solArt, type SolLook } from "../render/sol-art";
+import { solSunDiscRadius } from "../render/sol-scale";
 import { compileMission } from "./compile";
 import { shipOnCircle } from "./orbit";
 import type { Mission, Region, World } from "./types";
@@ -145,6 +146,11 @@ const earth = solBody(
   circle("sun", solRadius(1), EARTH_PHASE, SUN_MASS),
   EARTH_CAPTURE,
 );
+/**
+ * The impostor draws this photosphere, not the 46 px art header.
+ * `step` crashes on the same disc. The header stays `radius` for tides.
+ */
+sun.crashRadius = solSunDiscRadius(earth.radius);
 const mars = solBody("mars", "Mars", "mars", "planet", 2_500, circle("sun", solRadius(LINEAR_AU), 3.7, SUN_MASS));
 const jupiter = solBody("jupiter", "Jupiter", "jupiter", "planet", 80_000, circle("sun", solRadius(5.203), 1.15, SUN_MASS));
 const saturn = solBody("saturn", "Saturn", "saturn", "planet", 24_000, circle("sun", solRadius(9.537), 4.3, SUN_MASS));
