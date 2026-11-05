@@ -2,19 +2,23 @@ import {
   addNode,
   buildMoveRail,
   burnHandleOffset,
+  clearGuideHint,
   clearPlan,
+  currentPreviewSeconds,
   deleteSelected,
   isEditing,
   launch,
   moveNodeAlong,
   nodeIncoming,
   nodePosition,
+  openBodyGuide,
   pause,
   refreshGuide,
   reset,
   resume,
   selectNode,
   setNodeBurn,
+  setPreviewSeconds,
   setSlow,
   setSpeed,
   speedAllowed,
@@ -23,9 +27,10 @@ import {
 } from "./state";
 import { applyLayerKey, closeLayersOnEscape, type LayersPanelState } from "./layers";
 import { panBy, wheelZoomFactor, worldToScreen, zoomAt } from "../render/camera";
-import { shownPath, shownPoint } from "../render/path-frame";
+import { shownNow, shownPath, shownPoint } from "../render/path-frame";
+import { isSolChart, solDrawnRadius } from "../render/sol-scale";
 import { theme } from "../render/theme";
-import { SIM_SPEEDS, SPEED_KEY, type SimSpeed } from "../sim/physics";
+import { bodyPose, SIM_SPEEDS, SPEED_KEY, type SimSpeed } from "../sim/physics";
 
 export interface InputElements {
   canvas: HTMLCanvasElement;
@@ -47,6 +52,13 @@ export interface InputElements {
 const HANDLE_RADIUS = 16;
 const NODE_RADIUS = 12;
 const PATH_RADIUS = 12;
+/** Grab radius for the fade tip, in CSS pixels. Larger than the drawn end ring so it can be pulled. */
+const TIP_RADIUS = 32;
+/**
+ * Screen pixels of tip drag for one second of preview.
+ * The coast grows from the current end; it is not a 1:1 pull along the ship's speed.
+ */
+const TIP_PIXELS_PER_SECOND = 4;
 /** Precise disc on the selected node's ×. The drawn marker is larger and ignores pointers. */
 export const REMOVE_RADIUS = 4;
 const DRAG_THRESHOLD = 5;
@@ -55,6 +67,8 @@ export type PlanningHit =
   | { type: "remove" }
   | { type: "handle"; index: number }
   | { type: "node"; index: number }
+  | { type: "tip" }
+  | { type: "body"; id: string }
   | { type: "path"; step: number }
   | { type: "empty" };
 
@@ -62,7 +76,19 @@ type Drag =
   | { kind: "pan"; lastX: number; lastY: number; moved: boolean }
   | { kind: "handle"; index: number }
   | { kind: "node"; index: number; rail: RailSample[] }
+  | { kind: "tip"; x: number; y: number; base: number; raw: number | null; dirX: number; dirY: number }
   | { kind: "pending"; hit: PlanningHit; x: number; y: number };
+
+/**
+ * Move the fade tip. `alongPx` is signed screen pixels along the outgoing tangent.
+ * Positive grows the coast from the length at pointer-down. The same `step` flies it.
+ */
+export function extendTip(game: Game, alongPx: number, baseSeconds: number): void {
+  const dt = game.level.dt > 0 ? game.level.dt : 1 / 60;
+  const raw = baseSeconds + alongPx / TIP_PIXELS_PER_SECOND;
+  const snapped = Math.max(dt, Math.round(raw / dt) * dt);
+  setPreviewSeconds(game, snapped, false);
+}
 
 export function bindInput(
   game: Game,
@@ -86,7 +112,7 @@ export function bindInput(
       canvas.classList.add("aiming");
       return;
     }
-    if (isEditing(game) && (hit.type === "node" || hit.type === "path" || hit.type === "remove")) {
+    if (isEditing(game) && (hit.type === "node" || hit.type === "path" || hit.type === "remove" || hit.type === "tip" || hit.type === "body")) {
       if (hit.type === "node") selectNode(game, hit.index);
       drag = { kind: "pending", hit, x: event.offsetX, y: event.offsetY };
       return;
@@ -98,7 +124,13 @@ export function bindInput(
   canvas.addEventListener("pointermove", (event) => {
     if (pointerId === null || drag === null || event.pointerId !== pointerId) {
       const size = getSize();
-      game.cursorStep = isEditing(game) ? closestPathStep(game, size.width, size.height, event.offsetX, event.offsetY) : null;
+      const editing = isEditing(game);
+      game.cursorStep = editing ? closestPathStep(game, size.width, size.height, event.offsetX, event.offsetY) : null;
+      const over =
+        editing &&
+        overTip(game, size.width, size.height, event.offsetX, event.offsetY) &&
+        tipOwnsClick(game, size.width, size.height, event.offsetX, event.offsetY);
+      canvas.classList.toggle("extending", over);
       return;
     }
     game.cursorStep = null;
@@ -108,6 +140,19 @@ export function bindInput(
         const rail = buildMoveRail(game, drag.hit.index);
         drag = { kind: "node", index: drag.hit.index, rail };
         canvas.classList.add("aiming");
+      } else if (drag.hit.type === "tip") {
+        const size = getSize();
+        const aim = tipDirection(game, size.width, size.height);
+        drag = {
+          kind: "tip",
+          x: drag.x,
+          y: drag.y,
+          base: currentPreviewSeconds(game),
+          raw: game.previewSeconds,
+          dirX: aim.x,
+          dirY: aim.y,
+        };
+        canvas.classList.add("extending");
       } else {
         drag = { kind: "pan", lastX: drag.x, lastY: drag.y, moved: true };
         canvas.classList.add("panning");
@@ -125,6 +170,11 @@ export function bindInput(
       aimHandle(game, getSize(), drag.index, event.offsetX, event.offsetY, event.shiftKey);
       return;
     }
+    if (drag.kind === "tip") {
+      const along = (event.offsetX - drag.x) * drag.dirX + (event.offsetY - drag.y) * drag.dirY;
+      extendTip(game, along, drag.base);
+      return;
+    }
     slideNode(game, getSize(), drag.index, drag.rail, event.offsetX, event.offsetY);
   });
 
@@ -133,16 +183,24 @@ export function bindInput(
     const finished = drag;
     pointerId = null;
     drag = null;
-    canvas.classList.remove("aiming", "panning");
+    canvas.classList.remove("aiming", "panning", "extending");
     if (!finished || !isEditing(game)) return;
     if (finished.kind === "pending") settlePlanningClick(game, finished.hit);
-    if (finished.kind === "pan" && !finished.moved) selectNode(game, null);
+    if (finished.kind === "pan" && !finished.moved) {
+      selectNode(game, null);
+      clearGuideHint(game);
+    }
     if (finished.kind === "handle" || finished.kind === "node") refreshGuide(game);
+    if (finished.kind === "tip") {
+      if (game.previewSeconds !== finished.raw) game.guideDismissed = false;
+      refreshGuide(game);
+    }
   };
   canvas.addEventListener("pointerup", endPointer);
   canvas.addEventListener("pointercancel", endPointer);
   canvas.addEventListener("pointerleave", () => {
     game.cursorStep = null;
+    if (drag === null) canvas.classList.remove("extending");
   });
 
   canvas.addEventListener(
@@ -281,12 +339,14 @@ export function settlePlanningClick(game: Game, hit: PlanningHit): void {
   if (hit.type === "remove") deleteSelected(game);
   else if (hit.type === "path") addNode(game, hit.step);
   else if (hit.type === "node") selectNode(game, hit.index);
+  else if (hit.type === "body") openBodyGuide(game, hit.id);
 }
 
 /**
  * Screen-space pick. The delete × is a small disc offset from the selected
- * node and wins only there. A click on the path, including beside that node,
- * picks the path.
+ * node and wins only there. The fade tip wins over the path so it can be
+ * dragged. The Moon's disc wins over the path so a click there offers
+ * capture. A click on the path, including beside a node, picks the path.
  */
 export function planningPointerHit(game: Game, width: number, height: number, sx: number, sy: number): PlanningHit {
   if (!isEditing(game)) return { type: "empty" };
@@ -300,9 +360,81 @@ export function planningPointerHit(game: Game, width: number, height: number, sx
   if (handle !== null) return { type: "handle", index: handle };
   const node = closestNode(game, width, height, sx, sy);
   if (node !== null) return { type: "node", index: node };
+  if (overTip(game, width, height, sx, sy) && tipOwnsClick(game, width, height, sx, sy)) return { type: "tip" };
+  const body = moonUnderPointer(game, width, height, sx, sy);
+  if (body) return { type: "body", id: body };
   const step = closestPathStep(game, width, height, sx, sy);
   if (step !== null) return { type: "path", step };
   return { type: "empty" };
+}
+
+function tipPoint(game: Game, width: number, height: number): { x: number; y: number } | null {
+  const path = game.prediction.path;
+  if (path.length === 0) return null;
+  const last = path[path.length - 1];
+  const shown = shownPoint(game, last.x, last.y, last.step);
+  return worldToScreen(game.camera, width, height, shown.x, shown.y);
+}
+
+function overTip(game: Game, width: number, height: number, sx: number, sy: number): boolean {
+  const tip = tipPoint(game, width, height);
+  if (!tip) return false;
+  const dx = tip.x - sx;
+  const dy = tip.y - sy;
+  return dx * dx + dy * dy <= TIP_RADIUS * TIP_RADIUS;
+}
+
+/**
+ * The fade tip owns the click unless an earlier pass is stacked on the same pixel.
+ * That earlier pass stays a path click, so a loop can still take a burn.
+ */
+function tipOwnsClick(game: Game, width: number, height: number, sx: number, sy: number): boolean {
+  const path = game.prediction.path;
+  if (path.length === 0) return false;
+  const step = closestPathStep(game, width, height, sx, sy);
+  if (step === null) return true;
+  const last = path[path.length - 1].step;
+  return Math.abs(last - step) * game.level.dt <= 1;
+}
+
+/** Unit screen vector along the last step of the drawn plan. x right, y down. */
+function tipDirection(game: Game, width: number, height: number): { x: number; y: number } {
+  const path = game.prediction.path;
+  if (path.length < 2) return { x: 1, y: 0 };
+  const prev = path[path.length - 2];
+  const last = path[path.length - 1];
+  const a = shownPoint(game, prev.x, prev.y, prev.step);
+  const b = shownPoint(game, last.x, last.y, last.step);
+  const sa = worldToScreen(game.camera, width, height, a.x, a.y);
+  const sb = worldToScreen(game.camera, width, height, b.x, b.y);
+  const dx = sb.x - sa.x;
+  const dy = sb.y - sa.y;
+  const len = Math.hypot(dx, dy);
+  if (len < 0.5) return { x: 1, y: 0 };
+  return { x: dx / len, y: dy / len };
+}
+
+/** The Moon's drawn disc, or null. Other bodies are not a capture click in v1. */
+function moonUnderPointer(game: Game, width: number, height: number, sx: number, sy: number): string | null {
+  const bodies = game.level.bodies;
+  let moon: (typeof bodies)[number] | null = null;
+  let earthRadius = 0;
+  for (let i = 0; i < bodies.length; i++) {
+    const body = bodies[i];
+    if (body.id === "luna" && body.kind === "moon") moon = body;
+    if (body.id === "earth") earthRadius = body.radius;
+  }
+  if (!moon) return null;
+  const time = shownNow(game.mode, game.ship.step, game.level.dt);
+  const pose = bodyPose(moon, time, bodies, game.level.g);
+  const screen = worldToScreen(game.camera, width, height, pose.x, pose.y);
+  const zoom = game.camera.zoom > 0 ? game.camera.zoom : 1;
+  const drawn = solDrawnRadius(moon, isSolChart(bodies), zoom, earthRadius);
+  const radius = drawn * zoom + 4;
+  const dx = screen.x - sx;
+  const dy = screen.y - sy;
+  if (dx * dx + dy * dy <= radius * radius) return moon.id;
+  return null;
 }
 
 /** Centre of the ×, or null when the selected node is not one the player can delete. */

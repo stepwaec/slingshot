@@ -419,6 +419,16 @@ function buildFlyby(
   return best;
 }
 
+/** Shown when a Moon click cannot use the flyby / capture offer. */
+export const MOON_REACH_HINT = "Path doesn't reach the Moon";
+
+/** True when the drawn plan comes inside the Moon's capture sphere. Same test as `guideOffer`. */
+export function planReachesMoon(from: SimState, config: SimConfig, predicted: ForecastLike): boolean {
+  const moon = moonBody(config);
+  if (!moon) return false;
+  return pathEnters(predicted.path, from.step, moon, config) !== null;
+}
+
 /**
  * Ghost burns for a Moon pass that is still ahead and not already captured.
  * `predicted` is the plan as drawn. This does not write it.

@@ -86,7 +86,7 @@ Tidal forces always exist. The stress on the ship is `2GM L / r³` from every ma
 
 **Status:** In progress.
 
-**Goal.** When the planned path comes near the Moon, offer a faint ghost for a flyby or a capture. The player picks one and Accepts. Accept inserts real boost burns on the plan, the same nodes a click would add. The player can still move or delete them. Burns that have already fired stay locked. Prediction after Accept matches the flight, including lunar skim. Nothing is applied until Accept.
+**Goal.** When the planned path comes near the Moon, offer a faint ghost for a flyby or a capture. The player picks one and Accepts. Accept inserts real boost burns on the plan, the same nodes a click would add. The player can still move or delete them. Burns that have already fired stay locked. Prediction after Accept matches the flight, including lunar skim. Nothing is applied until Accept. Clicking the Moon opens that same offer when the path already enters its capture sphere. If the path never reaches the Moon, the click shows a one-line hint and does not solve a transfer.
 
 Capture v1 is one circularising burn where the inbound pass crosses a low altitude the Moon can hold (about 34). Flyby v1 is one tangential burn at the capture-sphere entry that puts periapsis near 44, above the surface and inside the sphere. The coast in from Earth stays the player's. A plan that already completes the lunar capture does not get a second offer. Other moons are not offered.
 
@@ -97,6 +97,14 @@ Capture v1 is one circularising burn where the inbound pass crosses a low altitu
 - After Accept, and after a pause that Accepts the capture, the flown samples match the prediction.
 
 **Out of scope.** A periapsis drag ring, training-wheels fade, scored assist, multi-body chain solvers, mission-only gating, other bodies, and a full transfer planner for passes that never reach the low orbit.
+
+### Planning past the tip
+
+**Status:** In progress.
+
+The preview still opens at today's horizon. In planning or pause, dragging the fade tip lengthens that coast from the current end. Burns can be placed on the new stretch. The line still fades out at the new end. The same `step` draws the extension and flies it.
+
+Mission 1's timeout is `LOST_TIMEOUT_SECONDS` in `src/world/moon-mission.ts`: 400 s (24_000 steps). It was 200 s (12_000 steps). The extra time is so a flying ship can be paused, the tip extended, and a correction added before "Time ran out."
 
 ### Events that break the plan
 

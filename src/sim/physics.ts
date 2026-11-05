@@ -3102,7 +3102,7 @@ export function extensionSteps(state: SimState, config: SimConfig, previewSecond
 export interface PreviewRange {
   /** Shortest slider value, in seconds. Never above the default. */
   minSeconds: number;
-  /** Longest slider value, in seconds. Grows with the level diagonal until the flight and the step cap. */
+  /** Longest preview, in seconds. The chart size caps a short horizon. A horizon that already fills the chart can still grow out to the flight. */
   maxSeconds: number;
   /** Today's look-ahead, in seconds. The slider starts here. */
   defaultSeconds: number;
@@ -3117,7 +3117,13 @@ export function previewRange(state: SimState, config: SimConfig): PreviewRange {
   const extentSeconds = extent / PREVIEW_EXTENT_PER_SECOND;
   const flightSeconds = Math.max(0, config.maxSteps - state.step) * dt;
   const capSeconds = PREDICTION_STEP_CAP * dt;
-  const maxSeconds = Math.max(defaultSeconds, Math.min(extentSeconds, flightSeconds, capSeconds));
+  const flightLimited = Math.min(flightSeconds, capSeconds);
+  const chartLimited = Math.min(extentSeconds, flightLimited);
+  // A wide chart can preview further. A horizon that already fills the
+  // chart allowance (Mission 1) can still grow, out to the flight timeout,
+  // so the tip is not the end of planning.
+  let maxSeconds = Math.max(defaultSeconds, chartLimited);
+  if (chartLimited <= defaultSeconds + 1e-9) maxSeconds = Math.max(maxSeconds, flightLimited);
   const minSeconds = Math.min(defaultSeconds, Math.max(dt, 2));
   return { minSeconds, maxSeconds, defaultSeconds };
 }
@@ -3267,6 +3273,60 @@ export function predictPlan(
     ...summary,
     snapshots,
     tail,
+    final: cloneState(state),
+  };
+}
+
+/**
+ * Continue a forecast whose nodes are unchanged.
+ * Returns null when the coast must be rebuilt: a shorter tip, a burn the
+ * old line never reached, or a flight that already ended. The added samples
+ * use `advancePlan`, the same step as `predictPlan` and flight.
+ */
+export function extendForecast(
+  from: SimState,
+  config: SimConfig,
+  nodes: readonly BurnNode[],
+  previous: PlanForecast,
+  extension: number,
+): PlanForecast | null {
+  if (previous.final.status !== "flying") return null;
+  if (previous.snapshots.length !== nodes.length) return null;
+  const end = planHorizonEnd(from, config, nodes, extension);
+  const at = previous.final.step;
+  if (!(end > at)) return null;
+  const last = previous.path.length > 0 ? previous.path[previous.path.length - 1].step : from.step;
+  if (last !== at) return null;
+
+  for (let i = 0; i < nodes.length; i++) {
+    const snap = previous.snapshots[i];
+    const node = nodes[i];
+    if (snap.step !== node.step || snap.dvx !== node.dvx || snap.dvy !== node.dvy) return null;
+    if (!snap.reached && node.step <= end) return null;
+    if (node.step > at && node.step <= end) return null;
+  }
+
+  const state = cloneState(previous.final);
+  let index = 0;
+  while (index < nodes.length && nodes[index].step < state.step) index += 1;
+  const cursor = { index };
+  const added: PathSample[] = [];
+  let guard = 0;
+  const guardLimit = end - at + nodes.length + 2;
+  while (state.status === "flying" && state.step <= end && guard++ <= guardLimit) {
+    if (state.step === end && !nodeAtStep(nodes, state.step)) break;
+    advancePlan(state, config, nodes, cursor, {
+      onIntegrated: (integrated) => {
+        added.push({ x: integrated.x, y: integrated.y, step: integrated.step, rate: integrated.rate });
+      },
+    });
+  }
+
+  const summary = predictionFrom(state, config, previous.path.concat(added));
+  return {
+    ...summary,
+    snapshots: previous.snapshots,
+    tail: previous.tail.concat(added),
     final: cloneState(state),
   };
 }

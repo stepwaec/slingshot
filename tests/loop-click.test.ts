@@ -30,17 +30,24 @@ describe("stacked loop clicks", () => {
     if (next.type !== "path") return;
     expect(next.step).toBe(late);
     expect(next.step).toBeGreaterThan(between);
+
+    const tip = worldToScreen(game.camera, WIDTH, HEIGHT, 400, 200);
+    expect(planningPointerHit(game, WIDTH, HEIGHT, tip.x, tip.y).type).toBe("tip");
   });
 });
 
-/** Two world samples on the same pixel, a coast apart. A real Earth cycloid does not stack. */
+/**
+ * Two world samples on the same pixel, a coast apart, then the fade tip
+ * somewhere else. A real Earth cycloid does not stack. The tip is not a burn.
+ */
 function plant(game: Game, early: number, late: number): void {
   game.prediction = {
     ...game.prediction,
     path: [
       { x: 40, y: -20, step: early, rate: 1 },
       { x: 40, y: -20, step: late, rate: 1 },
+      { x: 400, y: 200, step: late + 800, rate: 1 },
     ],
-    final: { ...game.prediction.final, status: "flying" },
+    final: { ...game.prediction.final, status: "flying", step: late + 800 },
   };
 }

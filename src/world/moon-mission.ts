@@ -13,6 +13,13 @@ import type { Mission, Region } from "./types";
 
 const LEO = 52;
 
+/**
+ * Seconds of flight before Mission 1 is lost to timeout ("Time ran out.").
+ * Was 200 (12_000 steps at dt 1/60). Twice that leaves room to pause,
+ * pull the prediction tip out, and add a correction while still flying.
+ */
+export const LOST_TIMEOUT_SECONDS = 400;
+
 export const earthMoonRegion: Region = {
   id: "earth-moon",
   worldId: "sol",
@@ -38,7 +45,7 @@ const mission: Mission = {
   orbit: { bodyId: "earth", radius: LEO },
   fuel: 120,
   fuelPerDv: 1,
-  maxSteps: 12_000,
+  maxSteps: Math.round(LOST_TIMEOUT_SECONDS / solWorld.dt),
   dvPerPixel: 0.1,
   periapsisMargin: 4,
   scoring: { deadline: 180, crewLimit: 180, fuelStarMin: 30, crewWeight: 2, fuelWeight: 1 },

@@ -129,6 +129,7 @@ const deadlineFill = required<HTMLElement>("#deadline-fill");
 const routeActions = required<HTMLElement>("#route-actions");
 const guideBar = required<HTMLElement>("#guide");
 const guideLabel = required<HTMLElement>("#guide-label");
+const guideHint = required<HTMLElement>("#guide-hint");
 const guideFlyby = required<HTMLButtonElement>("#guide-flyby");
 const guideCapture = required<HTMLButtonElement>("#guide-capture");
 const guideAccept = required<HTMLButtonElement>("#guide-accept");
@@ -775,8 +776,20 @@ function syncPreview(current: Game): void {
 }
 
 function syncGuide(current: Game): void {
-  const guide = isEditing(current) ? current.guide : null;
-  guideBar.hidden = guide === null;
+  const editing = isEditing(current);
+  const guide = editing ? current.guide : null;
+  const hint = editing && !guide ? current.guideHint : null;
+  guideBar.hidden = guide === null && hint === null;
+  guideHint.hidden = hint === null;
+  if (hint) {
+    guideLabel.textContent = "Moon";
+    guideHint.textContent = hint;
+    guideFlyby.hidden = true;
+    guideCapture.hidden = true;
+    guideAccept.hidden = true;
+    return;
+  }
+  guideAccept.hidden = false;
   if (!guide) return;
   guideLabel.textContent = guide.bodyName;
   const flyby = guide.options.some((option) => option.intent === "flyby");
